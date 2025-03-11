@@ -1189,7 +1189,7 @@ void Allocate_Arrays_Pre_Load(MSEBoxModel *bm) {
 	/* These are always allocated even if the management option is off */
 	bm->reg_season = (int *) i_alloc1d(bm->K_num_reg);
 	bm->phased_out = Util_Alloc_Init_2D_Double(nfleets, bm->K_num_tot_sp, 1.0);
-	bm->BiTAC_sp = (double ****) alloc4d(2, bm->K_num_tot_sp, totalreg_id + 1, 6);
+	bm->BiTAC_sp = (double ****) alloc4d(2, totalreg_id + 1, bm->K_num_tot_sp, 6);
 	bm->BiTACamt = Util_Alloc_Init_4D_Double(2, nfleets, bm->K_num_tot_sp, 6, 0.0);
 	bm->TACamt = Util_Alloc_Init_3D_Double(K_num_TAC_entries, nfleets, bm->K_num_tot_sp, 0.0);
 	bm->TripCatch = Util_Alloc_Init_2D_Double(nfleets, bm->K_num_tot_sp, 0.0);
