@@ -3,7 +3,7 @@ name: build_run_SETAS
 
 on:
   push:
-    branches: [main, master, dev]
+    branches: [main, master, dev, workflow_attest]
   pull_request:
     branches: [main, master, dev]
 
