@@ -7,6 +7,7 @@ test_setas_model <- function() {
   # check the console output for error messages to manually fail the workflow
   # read in the out.txt file
   lines <- readLines("example/out.txt")
+  print(tail(lines, 10))
   # find line with missing parameter error
   error_line <- grepl("Could not find parameter", lines)
   if (any(TRUE %in% error_line)) {
