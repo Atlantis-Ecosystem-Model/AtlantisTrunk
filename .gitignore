@@ -22,3 +22,7 @@ atlantis/.DS_Store
 Trunk2025.xcworkspace/xcuserdata/ful083.xcuserdatad/UserInterfaceState.xcuserstate
 .DS_Store
 Trunk2025.xcworkspace/xcuserdata/ful083.xcuserdatad/UserInterfaceState.xcuserstate
+
+# user files
+.Rproj*
+*.Rproj
