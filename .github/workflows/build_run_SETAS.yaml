@@ -54,7 +54,7 @@ jobs:
       # read in log file and check for "Atlantis Done" + other related tests to
       # check why Atlantis may have failed
         run: |
-          source("data-raw/test_setas_model.r")
+          source("data-raw/test_setas_model.R")
           test_setas_model()
         shell: Rscript {0}
 
