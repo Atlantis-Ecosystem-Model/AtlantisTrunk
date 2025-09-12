@@ -855,8 +855,8 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 	int maxij = bm->K_num_stocks_per_sp;
 	int overall_checkday = (int) (floor(bm->dayt));
     int this_flag_recruit, is_maternal_raised = 0;
-	double clear, E1_sp, spSpeed, this_HowFar, vertdistrib, mignum, mignum_actual, spawnmove = 1.0, totmig, midpoint, FSMG_grow, migtime, oldden, totdenom = 0, maxstock, min_spawntemp_sp, max_spawntemp_sp, temp_effect, finalmig, avgsn, avgrn, dynsn, dynrn, min_O2_sp, current_enviro, min_spawnsalt_sp, max_spawnsalt_sp, salt_effect, o2_effect, contract_sp, oldsn, oldrn, this_tot_biom, pH_scale, orig_newden, check_day, stagger_scalar, noise_effect, light_effect, K_salt_const_sp, K_o2_const_sp, numScalar_final, growth_period, den_diff, start_n, end_n;
-    double numScalar, K_temp_const_sp = 0.0;
+	double clear, E1_sp, spSpeed, this_HowFar, vertdistrib, mignum, mignum_actual, spawnmove, totmig, midpoint, FSMG_grow, migtime, oldden, totdenom = 0, maxstock, min_spawntemp_sp, max_spawntemp_sp, temp_effect, finalmig, avgsn, avgrn, dynsn, dynrn, min_O2_sp, current_enviro, min_spawnsalt_sp, max_spawnsalt_sp, salt_effect, o2_effect, contract_sp, oldsn, oldrn, this_tot_biom, pH_scale, orig_newden, check_day, stagger_scalar, noise_effect, light_effect, K_salt_const_sp, K_o2_const_sp, numScalar_final, growth_period, den_diff, start_n, end_n;
+    double numScalar, K_temp_const_sp = 0.0; 
     // double step1, step2;  OLD WAY OF DOING AGE - DEPRECATE
     double ReturnPeriod;
     double IBoxProp;
@@ -1738,7 +1738,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 							stage = FunctGroupArray[sp].cohort_stage[n];
 
 							/* Update stored vertdistrib value - so can condition catch timeseries if need be */
-							bm->boxes[ij].vert_vdistrib[sp][stage][k] = tempdistrib[k][stage];
+							bm->boxes[ij].vert_vdistrib[sp][stage][k] = tempdistrib[stage][k];
 
 							/*
 							if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
@@ -1748,6 +1748,9 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 							*/
 
                             switch (sp_ddepend_move) {
+                            
+							spawnmove = 1.0;
+                              
 								case weight_ddepend:
 								case switch_ddepend:
 								case only_ddepend:
@@ -1756,7 +1759,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                 as if ideal free distributed then determine ideal distribution */
                                 /* FIX -- may want to have depth based on roc too not just always at optimal,
                                 otherwise with conditions change may not see distribution changes */
-                                vertdistrib = tempdistrib[k][stage];
+                                vertdistrib = tempdistrib[stage][k];
 
                                 if(!stage) {
                                     thiscase1 = 1;
@@ -1821,11 +1824,12 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                     
                                 // This needs to be a minimum (so never goes negative), but we need to multiply with vertdistrib AFTER this
                                 // step so that distinguish horizontal and vertical movement limitations
-                                newden[sp][n][k][ij] = min(1.0,(spSpeed * dt / bm->width)) * (newden[sp][n][k][ij] - currentden[sp][n][k][ij])
-                                    + currentden[sp][n][k][ij];
-                                newden[sp][n][k][ij] *= vertdistrib;
+                                newden[sp][n][k][ij] = min(1.0,(spSpeed * dt / bm->box_width[ij])) * (newden[sp][n][k][ij] - currentden[sp][n][k][ij])
+                                    + currentden[sp][n][k][ij]; /* JMK box_width[ij] */
+                                
+								newden[sp][n][k][ij] *= vertdistrib;
                                  
-                                /*
+								/*
                                 if(sp == bm->which_check) {
                                     fprintf(llogfp, "Time: %e %s-%d box %d-%d newden: %.20e ", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, newden[sp][n][k][ij]);
                                     fprintf(llogfp, "currentden: %.20e orig_newden: %.20e ", currentden[sp][n][k][ij], orig_newden);
@@ -1839,8 +1843,8 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 										printf("newden[%s][%d][%d][%d] = %.20e\n", FunctGroupArray[sp].groupCode, n, k, ij, newden[sp][n][k][ij]);
 										printf("currentden[%s][%d][%d][%d] = %.20e orig_newden = %.20e\n",
 											   FunctGroupArray[sp].groupCode, n, k, ij, currentden[sp][n][k][ij], orig_newden);
-										printf("(spSpeed * dt / bm->width) = %.20e\n", (spSpeed * dt / bm->width));
-										printf("spSpeed  = %.20e,  dt = %.20e, bm->width = %.20e, vertdistrib = %.20e\n", spSpeed, dt, bm->width, vertdistrib);
+										printf("(spSpeed * dt / bm->box_width[ij]) = %.20e\n", (spSpeed * dt / bm->box_width[ij]));
+										printf("spSpeed  = %.20e,  dt = %.20e, bm->box_width[ij] = %.20e, vertdistrib = %.20e\n", spSpeed, dt, bm->box_width[ij], vertdistrib);
 										printf("spawnmove = %.20e roc = %.20e totroc = %.20e (age_mat: %d roc-age_mat: %.20e totroc-age_mat: %.20e)\n", spawnmove, roc[ij][n], totroc[n], age_mat, roc[ij][age_mat], totroc[age_mat]);
 										quit("");
                                 }
@@ -1876,8 +1880,8 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 
                                         // This needs to be a minimum (so never goes negative), but we need to multiply with vertdistrib AFTER this
                                         // step so that distinguish horizontal and vertical movement limitations
-                                        newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (newden[sp][n][k][ij] - currentden[sp][n][k][ij])
-                                                + currentden[sp][n][k][ij];
+                                        newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->box_width[ij])) * (newden[sp][n][k][ij] - currentden[sp][n][k][ij])
+                                                + currentden[sp][n][k][ij]; /*JMK */
                                         newden[sp][n][k][ij] *= vertdistrib;
                                     }
                                     
@@ -1902,8 +1906,8 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 
                                         // This needs to be a minimum (so never goes negative), but we need to multiply with vertdistrib AFTER this
                                         // step so that distinguish horizontal and vertical movement limitations
-                                        newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (newden[sp][n][k][ij] - currentden[sp][n][k][ij])
-                                                + currentden[sp][n][k][ij];
+                                        newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->box_width[ij])) * (newden[sp][n][k][ij] - currentden[sp][n][k][ij])
+                                                + currentden[sp][n][k][ij];/*JMK*/
                                         newden[sp][n][k][ij] *= vertdistrib;
                                     }
                                     

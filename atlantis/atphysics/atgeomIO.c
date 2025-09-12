@@ -47,6 +47,7 @@ void parseProjectionString(MSEBoxModel *bm, FILE *fp);
 static int getUniqueIBox( MSEBoxModel *bm, Box *b);
 static void Get_DistID(MSEBoxModel *bm);
 
+static void Compute_Box_Widths(MSEBoxModel *bm); /* JMK */
 static void CopyBGMFile(MSEBoxModel *bm, char *name){
 
 	char str[STRLEN];
@@ -242,6 +243,8 @@ void readMSEBoxModelGeom(char *name, MSEBoxModel *bm)
 
     /* Close the file */
     fclose(fp);
+	
+
 
 	/* Determine maximum width of model domain  - first get lower left and upper right
 	corners and then get the distance between them */
@@ -249,7 +252,6 @@ void readMSEBoxModelGeom(char *name, MSEBoxModel *bm)
 	maxsouth = MAXDOUBLE;
 	maxwest = -MAXDOUBLE;
 	maxnorth = -MAXDOUBLE;
-
     for(i=0; i<bm->nbox; i++){
 		if(bm->boxes[i].inside.x < maxeast)
 			maxeast = bm->boxes[i].inside.x;
@@ -270,8 +272,8 @@ void readMSEBoxModelGeom(char *name, MSEBoxModel *bm)
     }
 
     /* Get ordered list of boxes */
-    Get_DistID(bm);
-    
+    Compute_Box_Widths(bm);
+	Get_DistID(bm);
     return;
 }
 
@@ -847,6 +849,75 @@ static int getUniqueIBox( MSEBoxModel *bm, Box *b){
 	return 1;
 }
 
+
+/* JMK Compute per-box widths as the diagonal of each box's bounding box,
+   and print geometry for each box unconditionally. */
+#include <float.h>
+#include <math.h>
+
+/* JMK: width-from-center = max distance from inside point to any polygon vertex (radius).
+   Stores the radius in bm->box_width[i] and prints both radius and diameter. */
+static void Compute_Box_Widths(MSEBoxModel *bm)
+{
+    if (!bm || bm->nbox <= 0) return;
+
+    if (bm->box_width) { free(bm->box_width); bm->box_width = NULL; }
+    bm->box_width = (double*)malloc((size_t)bm->nbox * sizeof(double));
+    if (!bm->box_width) {
+        quit("Compute_Box_Widths: no memory for box_width (%d)\n", bm->nbox);
+    }
+
+    for (int i = 0; i < bm->nbox; i++) {
+        polyline *poly = bm->boxes[i].bnd;
+
+        if (!poly || poly->np <= 0 || !poly->start) {
+            bm->box_width[i] = 0.0;  /* no geometry */
+/*            fprintf(stderr,
+                    "JMK Geometry for box %d (%s):\n"
+                    "   Inside point: (%.6f, %.6f)\n"
+                    "   No boundary vertices found.\n"
+                    "   Width-from-center (radius) = %.6f, diameter = %.6f\n",
+                    i, bm->boxes[i].label,
+                    bm->boxes[i].inside.x, bm->boxes[i].inside.y,
+                    bm->box_width[i], 2.0*bm->box_width[i]);*/
+            continue;
+        }
+
+        /* center (inside point) */
+        const double cx = bm->boxes[i].inside.x;
+        const double cy = bm->boxes[i].inside.y;
+
+        /* find max distance from center to any vertex */
+        double max_r = 0.0;
+        int    max_v = -1;
+        int    v     = 0;
+
+        for (linepoint *lp = poly->start; lp != NULL; lp = lp->next, v++) {
+            const double dx = lp->p.x - cx;
+            const double dy = lp->p.y - cy;
+            const double r  = sqrt(dx*dx + dy*dy);
+            if (r > max_r) { max_r = r; max_v = v; }
+        }
+
+        /* store radius in box_width (distance from center to farthest boundary point) */
+        bm->box_width[i] = max_r;
+
+        /* --- JMK logging (always) --- */
+        /* fprintf(stderr, "JMK Geometry for box %d (%s):\n", i, bm->boxes[i].label);
+        fprintf(stderr, "   Inside point: (%.6f, %.6f)\n", cx, cy);*/
+
+        v = 0;
+        for (linepoint *lp = poly->start; lp != NULL; lp = lp->next, v++) {
+            /*fprintf(stderr, "   Vert %d: (%.6f, %.6f)\n", v, lp->p.x, lp->p.y);*/
+        }
+
+        fprintf(stderr,
+        "JMK   Box %d: Width-from-center (radius) = %.6f, diameter = %.6f (max at vertex %d)\n",
+        i, bm->box_width[i], 2.0 * bm->box_width[i], max_v);
+		}
+}/* JMK geometry */
+
+
 static void Get_DistID(MSEBoxModel *bm) {
     int ij, k;
     double *ax, *bx, *cx, *dx, *ex;
@@ -880,7 +951,10 @@ static void Get_DistID(MSEBoxModel *bm) {
         
         for (k=0; k < bm->nbox; k++) {
             bm->boxes[ij].distID[k] = (int)(bx[k]);
-        }
+      }
+	  
+	  
+         
     
     }
     

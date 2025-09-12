@@ -4140,6 +4140,7 @@ typedef struct {
 	polyline *bnd; /* boundary of the model */
 	Box *boxes; /* array of boxes */
 	Face *faces; /* array of open faces */
+	double *box_width;  /* length nbox: per-box width (e.g., bbox diagonal) JMK */
 	MapProjection *projection; /* Information about the model projection */
 
 	/* Run parameters */
