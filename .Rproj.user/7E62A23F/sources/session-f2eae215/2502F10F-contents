@@ -1,0 +1,15 @@
+==21926== Memcheck, a memory error detector
+==21926== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==21926== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
+==21926== Command: atlantisMerged -i atlantisMerged -i AMPS_2024.nc 0 -o AMPS_OUT.nc -r PugetSound_run.prm -f PugetSound_force.prm -p PugetSound_physics.prm -b AMPSbioparam_mv1_2024_V12.prm -h AMPS_atharvest_2024_calib.prm -e VMPA_setas_economics.prm -s PugetSoundAtlantisFunctionalGroups_2024_V1.csv -q PugetSound_fisheries.csv -m PugetMigrations_mod_bf.csv -d outputFolder
+==21926== Parent PID: 21925
+==21926== 
+==21926== 
+==21926== HEAP SUMMARY:
+==21926==     in use at exit: 0 bytes in 0 blocks
+==21926==   total heap usage: 1,312 allocs, 1,312 frees, 198,803 bytes allocated
+==21926== 
+==21926== All heap blocks were freed -- no leaks are possible
+==21926== 
+==21926== For lists of detected and suppressed errors, rerun with: -s
+==21926== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

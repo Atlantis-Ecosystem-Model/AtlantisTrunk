@@ -1,0 +1,50 @@
+==22470== Memcheck, a memory error detector
+==22470== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==22470== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
+==22470== Command: atlantisMerged -i AMPS_2024.nc 0 -o AMPS_OUT.nc -r PugetSound_run.prm -f PugetSound_force.prm -p PugetSound_physics.prm -b AMPSbioparam_mv1_2024_V12.prm -h AMPS_atharvest_2024_calib.prm -e VMPA_setas_economics.prm -s PugetSoundAtlantisFunctionalGroups_2024_V1.csv -q PugetSound_fisheries.csv -m PugetMigrations_mod_bf.csv -d outputFolder
+==22470== Parent PID: 6923
+==22470== 
+==22470== Use of uninitialised value of size 8
+==22470==    at 0x26591D: Read_Contaminant_Values (atBiologyXMLParamIO.c:3803)
+==22470==    by 0x2666A1: Read_Biology_Parameters (atBiologyXMLParamIO.c:3924)
+==22470==    by 0x1D0677: Ecology_Init (atbiolsetup.c:488)
+==22470==    by 0x111AC3: setupMSEBoxModel (atlantismain.c:1429)
+==22470==    by 0x10E9DE: main (atlantismain.c:619)
+==22470== 
+==22470== Invalid write of size 8
+==22470==    at 0x26591D: Read_Contaminant_Values (atBiologyXMLParamIO.c:3803)
+==22470==    by 0x2666A1: Read_Biology_Parameters (atBiologyXMLParamIO.c:3924)
+==22470==    by 0x1D0677: Ecology_Init (atbiolsetup.c:488)
+==22470==    by 0x111AC3: setupMSEBoxModel (atlantismain.c:1429)
+==22470==    by 0x10E9DE: main (atlantismain.c:619)
+==22470==  Address 0x0 is not stack'd, malloc'd or (recently) free'd
+==22470== 
+==22470== 
+==22470== Process terminating with default action of signal 11 (SIGSEGV)
+==22470==  Access not within mapped region at address 0x0
+==22470==    at 0x26591D: Read_Contaminant_Values (atBiologyXMLParamIO.c:3803)
+==22470==    by 0x2666A1: Read_Biology_Parameters (atBiologyXMLParamIO.c:3924)
+==22470==    by 0x1D0677: Ecology_Init (atbiolsetup.c:488)
+==22470==    by 0x111AC3: setupMSEBoxModel (atlantismain.c:1429)
+==22470==    by 0x10E9DE: main (atlantismain.c:619)
+==22470==  If you believe this happened as a result of a stack
+==22470==  overflow in your program's main thread (unlikely but
+==22470==  possible), you can try to increase the size of the
+==22470==  main thread stack using the --main-stacksize= flag.
+==22470==  The main thread stack size used in this run was 8388608.
+==22470== 
+==22470== HEAP SUMMARY:
+==22470==     in use at exit: 286,616,978 bytes in 127,023 blocks
+==22470==   total heap usage: 12,298,036 allocs, 12,171,013 frees, 1,558,028,816 bytes allocated
+==22470== 
+==22470== LEAK SUMMARY:
+==22470==    definitely lost: 408 bytes in 5 blocks
+==22470==    indirectly lost: 2,372 bytes in 5 blocks
+==22470==      possibly lost: 0 bytes in 0 blocks
+==22470==    still reachable: 286,614,198 bytes in 127,013 blocks
+==22470==         suppressed: 0 bytes in 0 blocks
+==22470== Rerun with --leak-check=full to see details of leaked memory
+==22470== 
+==22470== Use --track-origins=yes to see where uninitialised values come from
+==22470== For lists of detected and suppressed errors, rerun with: -s
+==22470== ERROR SUMMARY: 2 errors from 2 contexts (suppressed: 0 from 0)

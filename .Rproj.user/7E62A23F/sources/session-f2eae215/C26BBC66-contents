@@ -1,0 +1,6 @@
+==21968== Memcheck, a memory error detector
+==21968== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==21968== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
+==21968== Command: atlantisMerged -i AMPS_2024.nc 0 -o AMPS_OUT.nc -r PugetSound_run.prm -f PugetSound_force.prm -p PugetSound_physics.prm -b AMPSbioparam_mv1_2024_V12.prm -h AMPS_atharvest_2024_calib.prm -e VMPA_setas_economics.prm -s PugetSoundAtlantisFunctionalGroups_2024_V1.csv -q PugetSound_fisheries.csv -m PugetMigrations_mod_bf.csv -d outputFolder
+==21968== Parent PID: 21967
+==21968== 

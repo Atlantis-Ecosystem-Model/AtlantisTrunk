@@ -1,0 +1,21 @@
+==25880== Memcheck, a memory error detector
+==25880== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==25880== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
+==25880== Command: atlantisMerged -i AMPS_2024.nc 0 -o AMPS_OUT.nc -r PugetSound_run.prm -f PugetSound_force.prm -p PugetSound_physics.prm -b AMPSbioparam_mv1_2024_V12.prm -h AMPS_atharvest_2024_calib.prm -e VMPA_setas_economics.prm -s PugetSoundAtlantisFunctionalGroups_2024_V1.csv -q PugetSound_fisheries.csv -m PugetMigrations_mod_bf.csv -d outputFolder
+==25880== Parent PID: 6923
+==25880== 
+==25880== 
+==25880== HEAP SUMMARY:
+==25880==     in use at exit: 311,385,017 bytes in 137,212 blocks
+==25880==   total heap usage: 60,053,032 allocs, 59,915,820 frees, 4,412,054,716 bytes allocated
+==25880== 
+==25880== LEAK SUMMARY:
+==25880==    definitely lost: 408 bytes in 5 blocks
+==25880==    indirectly lost: 2,372 bytes in 5 blocks
+==25880==      possibly lost: 0 bytes in 0 blocks
+==25880==    still reachable: 311,382,237 bytes in 137,202 blocks
+==25880==         suppressed: 0 bytes in 0 blocks
+==25880== Rerun with --leak-check=full to see details of leaked memory
+==25880== 
+==25880== For lists of detected and suppressed errors, rerun with: -s
+==25880== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

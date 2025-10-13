@@ -1,0 +1,159 @@
+#' Code to manage and run Atlantis simulations using parallel processing and doAzure
+#'  
+#' @author Hem Nalini Morzaria Luna
+#' @date June 2017, updated March 2019
+#' # https://github.com/Azure/doAzureParallel
+#wget http://www.omegahat.net/XMLSchema/XMLSchema_0.7-0.tar.gz
+#wget http://www.omegahat.net/SSOAP/SSOAP_0.9-0.tar.gz
+#install.packages("~/XMLSchema_0.7-0.tar.gz", repos = NULL, type = "source")
+#install.packages("~/SSOAP_0.9-0.tar.gz", repos = NULL, type = "source")
+
+#current Atlantis model manual https://research.csiro.au/atlantis/wp-content/uploads/sites/52/2021/01/AtlantisUserGuide_PartI.pdf
+
+# set locale to avoid multibyte errors
+Sys.setlocale("LC_CTYPE", "en_US.UTF-8")# https://www.r-bloggers.com/web-scraping-and-invalid-multibyte-string/
+
+#install.packages(c("XMLSchema", "SSOAP"), repos = c("http://packages.ropensci.org", "http://cran.rstudio.com"))
+
+# List of packages for session
+.packages = c("XML","RCurl","devtools", "dtplyr","stringi","data.table","tidyverse","stringr","R.utils",
+              "magrittr","future","parallel","doSNOW","XMLSchema", "SSOAP","here")
+#install.packages(.packages, dependencies = TRUE)
+
+# Load packages into session 
+lapply(.packages, require, character.only=TRUE)
+
+#give write read permission to whole amps_runs folder
+
+ system("sudo chmod -R a+rwx ~/AtlantisTrunk", wait = TRUE)
+#
+ #find string
+# grep -rnw 'home/trunk_6644/atlantis' -e '17'
+ 
+# system("sudo apt-get update; sudo apt-get upgrade -y", wait = TRUE)
+# system("sudo apt-get install subversion build-essential subversion flip autoconf libnetcdf-dev libxml2-dev libproj-dev -y", wait = TRUE)
+#
+# system("sudo apt-get update; sudo apt-get upgrade -y; sudo apt-get autoremove -y", wait = TRUE)
+# system("sudo dpkg –configure -a -y; sudo apt-get install -f -y", wait = TRUE)
+# system("sudo apt-get autoremove") 
+
+# # Get code from CSIRO SVN, if need to change version use r -5468 for example
+
+ #List revisions
+ #svn list -v https://svnserv.csiro.au/svn/ext/atlantis/Atlantis/trunk --username hmorzarialuna.992 --password CS2@@9M0971o5p$
+ #svnlook history https://svnserv.csiro.au/svn/ext/atlantis/Atlantis/trunk --username hmorzarialuna.992 --password CS2@@9M0971o5p$
+ #svn log -v  -l 1 https://svnserv.csiro.au/svn/ext/atlantis/Atlantis/trunk --username hmorzarialuna.992 --password CS2@@9M0971o5p$
+ #svn log -v  -l 10 https://svnserv.csiro.au/svn/ext/atlantis/Atlantis/trunk --username alaia.morell.928 --password tambourPLAGE21!
+
+# system("svn co https://svnserv.csiro.au/svn/ext/atlantis/Atlantis/trunk --username hmorzarialuna.992 --password CS2@@9M0971o5p$ --quiet", wait = TRUE)
+# system("svn co https://svnserv.csiro.au/svn/ext/atlantis/Atlantis/branches/AtlantisSalmon -r 6533 --username hmorzarialuna.992 --password CS2@@9M0971o5p$ --quiet", wait = TRUE)
+# system("svn --no-auth-cache co https://svnserv.csiro.au/svn/ext/atlantis/Atlantis/branches/bec_dev -r 6677 --username  isaac.kaplan.768 --password TrevorBarker84! --quiet", wait = TRUE)
+# system("svn co https://svnserv.csiro.au/svn/ext/atlantis/Atlantis/trunk -r 6717 --username hmorzarialuna.992 --password CS2@@9M0971o5p$ --quiet", wait = TRUE)
+ # system("svn co https://svnserv.csiro.au/svn/ext/atlantis/Atlantis/trunk --username hmorzarialuna.992 --password CS2@@9M0971o5p$ --quiet", wait = TRUE)
+ 
+# svn --config-option servers:global:http-timeout=120 co https://svnserv.csiro.au/svn/ext/atlantis/Atlantis/trunk --username hmorzarialuna.992 --password CS2@@9M0971o5p$
+ 
+# # # Rebuild recompile via MAKE:
+# system("cd AtlantisTrunk/atlantis; sudo aclocal; sudo autoheader; sudo autoconf; sudo automake -a; sudo ./configure; sudo make -j$(nproc) -i CFLAGS='-DACCEPT_USE_OF_DEPRECATED_PROJ_API_H -Wno-misleading-indentation -Wno-format -Wno-implicit-fallthrough -Wno-unused-but-set-variable -Wall -Wno-pedantic -Wno-error'; sudo make -d install", wait = TRUE)
+# ./configure --enable-rassesslink #this might work if there is an R problem
+# system("cd AtlantisSalmon; aclocal; autoheader; autoconf; automake -a; ./configure; sudo make CFLAGS='-Wno-misleading-indentation -Wno-format -Wno-implicit-fallthrough'; sudo make -d install; cd atlantismain", wait = TRUE)
+# system("cd trunk_ICKpopecol/atlantis; aclocal; autoheader; autoconf; automake -a; ./configure; sudo make CFLAGS='-DACCEPT_USE_OF_DEPRECATED_PROJ_API_H -Wno-misleading-indentation -Wno-format -Wno-implicit-fallthrough'; sudo make -d install; cd atlantismain", wait = TRUE)
+# system("cd trunk_v6536_Nov_2020/atlantis; aclocal; autoheader; autoconf; automake -a; ./configure; sudo make CFLAGS='-DACCEPT_USE_OF_DEPRECATED_PROJ_API_H -Wno-misleading-indentation -Wno-format -Wno-implicit-fallthrough -Wno-unused-but-set-variable'; sudo make -d install; cd atlantismain", wait = TRUE)
+# system("cd AtlantisMig2020/atlantis; aclocal; autoheader; autoconf; automake -a; ./configure; sudo make CFLAGS='-DACCEPT_USE_OF_DEPRECATED_PROJ_API_H -Wno-misleading-indentation -Wno-format -Wno-implicit-fallthrough -Wno-unused-but-set-variable'; sudo make -d install; cd atlantismain", wait = TRUE)
+# system("cd atlantismigbranch/atlantis; aclocal; autoheader; autoconf; automake -a; ./configure; sudo make CFLAGS='-DACCEPT_USE_OF_DEPRECATED_PROJ_API_H -Wno-misleading-indentation -Wno-format -Wno-implicit-fallthrough -Wno-unused-but-set-variable -Wno-unknown-warning-option -Wno-error -Wno-pointer-bool-conversion'; sudo make -d install; cd atlantismain", wait = TRUE)
+ 
+#SUDO system("cd AtlantisMig2020/atlantis; aclocal; autoheader; autoconf; automake -a; sudo ./configure; sudo make CFLAGS='-DACCEPT_USE_OF_DEPRECATED_PROJ_API_H -Wno-misleading-indentation -Wno-format -Wno-implicit-fallthrough -Wno-unused-but-set-variable -Wno-error -Wno-pointer-bool-conversion'; sudo make -d install; cd atlantismain", wait = TRUE)
+#NOT SUDO system("cd trunk/atlantis; aclocal; autoheader; autoconf; automake -a; ./configure; make CFLAGS='-DACCEPT_USE_OF_DEPRECATED_PROJ_API_H -Wno-misleading-indentation -Wno-implicit-fallthrough -Wno-unused-but-set-variable -Wno-unknown-warning-option -Wno-error'; make -d install; cd atlantismain", wait = TRUE)
+ 
+# system("cd trunk/atlantis; aclocal; autoheader; autoconf; automake -a; sudo ./configure; sudo make CFLAGS='-DACCEPT_USE_OF_DEPRECATED_PROJ_API_H -Wno-misleading-indentation -Wno-format -Wno-implicit-fallthrough -Wno-unused-but-set-variable -Wno-error -Wno-pointer-bool-conversion'; sudo make -d install; cd atlantismain", wait = TRUE)
+ system("cd trunk/atlantisTrunk/atlantis; aclocal; autoheader; autoconf; automake -a; sudo ./configure; sudo make CFLAGS='-DACCEPT_USE_OF_DEPRECATED_PROJ_API_H -Wno-misleading-indentation -Wno-format -Wno-implicit-fallthrough -Wno-unused-but-set-variable -Wno-error'; sudo make -d install; cd atlantismain", wait = TRUE)
+ cd ~/psatlantismodellocal/Atlantis_PCB118
+ 
+ #sudo apt-get install valgrind
+#G_SLICE=always-malloc G_DEBUG=gc-friendly  valgrind -v --tool=memcheck --leak-check=full --num-callers=40 --log-file=valgrind.log ./trunk/atlantis/atlantismain/atlantisMerged
+#valgrind -q ./trunk/atlantis/atlantismain/atlantisMerged it is to spot memory leaks a
+ 
+# Valgrind in 2 different ways. One has the standard error outputs (usually enough to spot errors), and the other way of runningnd inconsistencies (not used very often).
+# Option 1: 
+#  valgrind --tool=memcheck --log-file=valgrind%p.log atlantisMerged -i AMPS_2024.nc 0 -o AMPS_OUT.nc -r PugetSound_run.prm -f PugetSound_force.prm -p PugetSound_physics.prm -b AMPSbioparam_mv1_2024_V12.prm  -h AMPS_atharvest_2024_calib.prm -e VMPA_setas_economics.prm -s PugetSoundAtlantisFunctionalGroups_2024_V1.csv -q PugetSound_fisheries.csv -m PugetMigrations_mod_bf.csv -d outputFolder 2>outamps    
+
+ 
+# Option2: 
+# valgrind  -s --tool=memcheck --log-file=valgrind%p.log --track-origins=yes --leak-check=full --track-fds=yes --show-reachable=yes -i atlantisMerged -i AMPS_2024.nc 0 -o AMPS_OUT.nc -r PugetSound_run.prm -f PugetSound_force.prm -p PugetSound_physics.prm -b AMPSbioparam_mv1_2024_V12.prm  -h AMPS_atharvest_2024_calib.prm -e VMPA_setas_economics.prm -s PugetSoundAtlantisFunctionalGroups_2024_V1.csv -q PugetSound_fisheries.csv -m PugetMigrations_mod_bf.csv -d outputFolder 2>outamps    
+
+ 
+# valgrind -s --tool=memcheck  --leak-check=full --log-file=valgrind%p.log atlantisMerged -i AMPS_2024.nc 0 -o AMPS_OUT.nc -r PugetSound_run.prm -f PugetSound_force.prm -p PugetSound_physics.prm -b AMPSbioparam_mv1_2024_V10_01_28_2025.prm  -h AMPS_atharvest_2024_calib.prm -e VMPA_setas_economics.prm -s PugetSoundAtlantisFunctionalGroups_2024_V1.csv -q PugetSound_fisheries.csv -m PugetMigrations_mod_bf.csv -d outputFolder 2>outamps    
+    
+# valgrind -s --tool=memcheck  --leak-check=full --log-file=valgrind%p.log atlantisMerged -i AMPS_2024.nc 0 -o AMPS_OUT.nc -r PugetSound_run.prm -f PugetSound_force.prm -p PugetSound_physics.prm -b AMPSbioparam_mv1_2024_V10_01_28_2025.prm  -h AMPS_atharvest_2024_calib.prm -e VMPA_setas_economics.prm -s PugetSoundAtlantisFunctionalGroups_2024_V1.csv -q PugetSound_fisheries.csv -m PugetMigrations_mod_bf.csv -d outputFolder 2>outamps    
+
+ 
+ 
+# # # copy Atlantis executable
+#  system(paste("sudo cp -u trunk/atlantis/atlantismain/atlantisMerged ~/ampsmodelvariants"), wait = TRUE)
+
+#this will create multiple folders each with all Atlantis run files
+
+#to copy file but not subdirectories
+#mkdir /nfsdata/hemampscalibration/Atlantis_mv1_base_2024_15yr_ppreytest
+#cp /home/atlantis/atlantispssalmon/Atlantis_mv1_base_2024_73d_ppreytest/* /nfsdata/hemampscalibration/Atlantis_mv1_base_2024_15yr_ppreytest
+
+# mkdir /nfsdata/hemampscalibration/Atlantis_mv1_oldprey_2024_15yr_ppreytest
+# cp /home/atlantis/psatlantismodel/Atlantis_mv1_base_2024_5yrs_V2/* /nfsdata/hemampscalibration/Atlantis_mv1_oldprey_2024_15yr_ppreytest
+
+ 
+ # mkdir /nfsdata/hemampscalibration/Atlantis_mv1_base_2024_15yr_habitattest
+ # cp /home/atlantis/psatlantismodel/Atlantis_mv1_base_2024_5yrs_V2/* /nfsdata/hemampscalibration/Atlantis_mv1_base_2024_15yr_habitattest
+ 
+# copy whole subdirectories
+# mkdir /home/atlantis/atlantispssalmon/trunk_6708_mod6704
+# cp /home/atlantis/atlantispssalmon/trunk_6708 /home/atlantis/atlantispssalmon/trunk_6708_mod6704
+
+   #move directories
+#  #mv /home/atlantis/atlantispssalmon/Run_mv1_v6704_5yrs_salmonnoresidents_21 /nfsdata/ampscalibration/
+#  
+sh.file <- "amps_cal.sh" #original sh file
+
+#folder.paths <- here::here(paste0("Run_mv1_v6702_10yrs_",161:176))
+
+#folder.paths <- c(here::here("Run_flagtemp_mov1_rep1"),
+#                  here::here("Run_flagtemp_mov1_rep0"), 
+#                  here::here("Run_flagtemp_mov0_rep0"),
+#                  here::here("Run_flagtemp_mov0_rep1"))
+#
+folder.paths <- paste0("/nfsdata/hemampscalibration/",c("Atlantis_mv1_base_2024_30yr_ppreytest"))
+
+
+folder.length <- 1:length(folder.paths)
+
+#run multiple Atlantis simulations on local machine cores
+
+NumberOfCluster <- detectCores()  #- 1
+
+# Initiate cluster
+cl <- makeCluster(NumberOfCluster, outfile="cluster_log.txt")
+registerDoSNOW(cl)
+
+# Run this for loop for one call of model from each cluster, assuming cluster is already initiated. 
+atlantis.scenarios <- foreach(this.index=folder.length, .verbose = TRUE) %dopar% {
+  
+  
+  # give write read permission to whole amps_runs folder
+ system("sudo chmod -R a+rwx ~/", wait = TRUE)
+  
+ 
+   this.folder <- folder.paths[this.index]
+ 
+  # run Atlantis scenario
+# system(paste("cd ", this.folder,"; flip -uv *; chmod +x ", sh.file,"; sh ./", sh.file, sep=""), wait = TRUE)
+system(paste("cd ", this.folder,"; sudo flip -uv *; sudo chmod +x ", sh.file,"; sudo sh ./", sh.file, sep=""), wait = TRUE)
+  #sudo flip -uv *; sudo chmod +x amps_cal.sh; sudo sh ./amps_cal.sh
+ 
+}
+
+
+stopCluster(cl)
+
+#system("az vm deallocate --name summit03 --no-wait --resource-group testingvms")
+
+#file.remove(list.files(path = "~/ampsmodelvariants/Atlantis_B299/outputFolder", pattern = "*.pdf", full.names = TRUE))
+

@@ -1,0 +1,179 @@
+#' Code to manage and run Atlantis simulations using parallel processing and doAzure
+#'  
+#' @author Hem Nalini Morzaria Luna
+#' @date June 2017, updated March 2019
+#' # https://github.com/Azure/doAzureParallel
+
+
+# set locale to avoid multibyte errors
+Sys.setlocale("LC_CTYPE", "en_US.UTF-8")
+# https://www.r-bloggers.com/web-scraping-and-invalid-multibyte-string/
+
+#' # https://github.com/Azure/doAzureParallel
+#wget http://www.omegahat.net/XMLSchema/XMLSchema_0.7-0.tar.gz
+#wget http://www.omegahat.net/SSOAP/SSOAP_0.9-0.tar.gz
+#install.packages("~/XMLSchema_0.7-0.tar.gz", repos = NULL, type = "source")
+#install.packages("~/SSOAP_0.9-0.tar.gz", repos = NULL, type = "source")
+
+# List of packages for session
+.packages = c("devtools", "dtplyr","stringi","data.table","tidyverse","stringr","R.utils",
+              "magrittr","future","parallel","doSNOW","XMLSchema", "SSOAP", "here")
+
+# Install CRAN packages (if not already installed)
+.inst <- .packages %in% installed.packages()
+if(length(.packages[!.inst]) > 0) install.packages(.packages[!.inst])
+
+# Load packages into session 
+lapply(.packages, require, character.only=TRUE)
+
+#-------
+# NOTES, not needed 
+#give write read permission to whole amps_runs folder
+#system("sudo chmod -R a+rwx ~/amps_runs", wait = TRUE)
+#system("sudo apt-get update; sudo apt-get upgrade -y", wait = TRUE)
+#system("sudo apt-get install subversion build-essential subversion flip autoconf libnetcdf-dev libxml2-dev libproj-dev -y", wait = TRUE)
+
+#------------------
+# THIS BLOCK IS JUST NOTES --
+# To pack a CDF using Ncgen. Must be in the directory that holds the CDF.
+# This example is for a scenario forcing tracer file: 
+#system("ncgen -o AMPS_Herring_Cherry_Nums_herring_scenarioV3.nc AMPS_Herring_Cherry_Nums_herring_scenarioV3.cdf")
+#system("ncgen -o AMPS_Porpoise_Nums_scenario.nc AMPS_Porpoise_Nums_scenario.cdf")
+# UNPACK: system("ncdump AMPS_Porpoise_Nums_scenario.nc > AMPS_Porpoise_Nums_scenario.cdf")
+#     END OF NOTES 
+#----------------------
+
+
+#---------------------
+# Get code from CSIRO SVN, if need to change version use co -5468 for example
+# trunk code: You need to be in Home directory. 
+#system("svn co https://svnserv.csiro.au/svn/ext/atlantis/Atlantis/trunk --username isaac.kaplan --password XXXX --quiet", wait = TRUE)
+
+# OR trunk with version 6599 as example
+# 
+#system("svn co https://svnserv.csiro.au/svn/ext/atlantis/Atlantis/trunk -r 6599 --username isaac.kaplan --password XXXX --quiet", wait = TRUE)
+
+
+
+#----------------------------
+# Rebuild recompile via MAKE: 
+# NEEDS To be in HOME directory, above the TRUNK subdirectory 
+
+# for trunk: 
+# system("cd trunk/atlantis; aclocal; autoheader; autoconf; automake -a; ./configure; sudo make CFLAGS='-DACCEPT_USE_OF_DEPRECATED_PROJ_API_H -Wno-misleading-indentation -Wno-format -Wno-implicit-fallthrough'; sudo make -d install; cd atlantismain", wait = TRUE)
+
+# COPY atlantisMerged executable to each run folder. 
+#or modify this: system(paste("sudo cp -u trunk/atlantis/atlantismain/atlantisMerged ~/calcurrenttestruns"), wait = TRUE)
+
+sh.file <- "RunAtlantis.sh" #original sh file
+
+#folder.paths <- paste(savepath,"_0",no.folders,sep="")
+
+
+
+#------------------------
+#RUN HERE
+# FROM DIRECTORY /calcurrenttestruns
+
+no.folders <- 1  # 1:2
+folder.length <- 1:length(no.folders)
+folder.paths <- here(paste0("example_0",no.folders))
+
+system("sudo chmod -R a+rwx ~/trunk", wait = TRUE)
+
+#run multiple Atlantis simulations on local machine cores
+
+NumberOfCluster <- detectCores() # - 1
+
+# Initiate cluster
+cl <- makeCluster(NumberOfCluster)
+registerDoSNOW(cl)
+
+# Run this for loop for one call of model from each cluster, assuming cluster is already initiated. 
+atlantis.scenarios <- foreach(this.index=folder.length, .verbose = TRUE) %dopar% {
+  
+  # List of packages for session
+  .packages = c("stringi","data.table","tidyverse","stringr","R.utils","ncdf4")
+  
+  # Install CRAN packages (if not already installed)
+  .inst <- .packages %in% installed.packages()
+  if(length(.packages[!.inst]) > 0) install.packages(.packages[!.inst])
+  
+  # Load packages into session 
+  lapply(.packages, require, character.only=TRUE)
+  
+  this.folder <- folder.paths[this.index]
+  setwd(this.folder)
+  
+  # run Atlantis scenario
+  system(paste("sudo flip -uv *; sudo chmod +x ", sh.file,"; sudo sh ./", sh.file, sep=""), wait = TRUE)
+  
+  done <- as.data.frame("done")
+}
+
+
+
+#stopCluster(cl)
+
+
+
+#--------------
+#rm(list = ls()) # clear memory
+#setwd("/Users/ful083/AtlantisRepository/AtlantisTrunk/example/")
+
+#----------------
+#  CODE BELOW IS FOR REACTIVE ATLANTIS -- OUTPUT VISUALIZATION 
+#     
+# https://github.com/Atlantis-Ecosystem-Model/ReactiveAtlantis
+#  Javier Porobic, CSIRO. 
+#----------
+ # Notes: # RUN from directory /TRUNK
+ # Example below assumes you have two Atlantis run directories (ok if one is a copy of another):
+# /home/atlantis/trunk/example_01/
+# /home/atlantis/trunk/example_02/
+#---------------
+
+
+# install packages
+install.packages('devtools')   ## you need to do this step just once
+# running
+library("devtools")
+install_github('Atlantis-Ecosystem-Model/ReactiveAtlantis', force=TRUE, dependencies=TRUE)
+library("ReactiveAtlantis")
+
+library("proj4")
+
+####### Compare outputs and Biomass visualization #######
+
+# RUNNING from direcotry /TRUNK
+
+nc.current  <- '/home/atlantis/atlantispssalmon/Atlantis_mv_1_6681_5yr_fprintfsp_rectype4_out1dy/outputFolder/outputSETAS.nc'
+nc.old      <- '/home/atlantis/atlantispssalmon/Atlantis_mv_1_6681_5yr_fprintfsp_rectype4_out1dy/outputFolder/outputSETAS.nc'
+grp.csv     <- '/home/atlantis/atlantispssalmon/Atlantis_mv_1_6681_5yr_fprintfsp_rectype4_out1dy/SETasGroupsDem.csv'
+bgm.file    <- '/home/atlantis/atlantispssalmon/Atlantis_mv_1_6681_5yr_fprintfsp_rectype4_out1dy/PugetSound_89b_NAD83.bgm'
+cum.depths  <- c(0,20,50,100,250,700,2000) ## This should be the cummulative depth of your model
+## individual file
+compare(nc.current, nc.out.old = NULL, grp.csv, bgm.file, cum.depths)
+
+####### Predation analysis from the Atlantis output #######
+biom        <- '/home/atlantis/atlantispssalmon/Atlantis_mv_1_6681_5yr_fprintfsp_rectype4_out1dy/outputFolder/AMPS_OUTBiomIndx.txt'
+diet.file   <- '/home/atlantis/atlantispssalmon/Atlantis_mv_1_6681_5yr_fprintfsp_rectype4_out1dy/outputFolder/AMPS_OUTDietCheck.txt'
+bio.age     <- '/home/atlantis/atlantispssalmon/Atlantis_mv_1_6681_5yr_fprintfsp_rectype4_out1dy/outputFolder/AMPS_OUTBiomIndx.txt' ## optional file. just if you want to check the predation by age
+grp.csv     <- '/home/atlantis/atlantispssalmon/Atlantis_mv_1_6681_5yr_fprintfsp_rectype4_out1dy/PugetSoundAtlantisFunctionalGroups_salmon_rectype4.csv'
+## Predation by Age
+predation(biom, grp.csv, diet.file, bio.age)
+
+####### Exploring predator-prey interactions from the initial conditions #######
+nc.initial  <- '/home/atlantis/trunk/example_02/INIT_VMPA_Jan2015.nc'
+grp.csv     <- '/home/atlantis/trunk/example_02/SETasGroupsDem.csv'
+prm.file    <- '/home/atlantis/trunk/example_02/VMPA_setas_biol_fishing_Trunk.prm'
+bgm.file    <- '/home/atlantis/trunk/example_02/VMPA_setas.bgm'
+cum.depths  <- c(0,20,50,100,250,700,2000) ## This should be the cummulative depth of your model
+feeding.mat(prm.file, grp.csv, nc.initial, bgm.file, cum.depths)
+
+####### Atlantis food web and trophic level composition #######
+grp.csv     <- '/home/atlantis/trunk/example_02/SETasGroupsDem.csv'
+prm.file    <- '/home/atlantis/trunk/example_02/VMPA_setas_biol_fishing_Trunk.prm'
+diet.file   <- '/home/atlantis/trunk/example_02/outputFolder/outputSETASDietCheck.txt'
+food.web(diet.file, grp.csv)
+

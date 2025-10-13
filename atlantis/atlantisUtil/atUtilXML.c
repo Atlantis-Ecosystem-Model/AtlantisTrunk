@@ -1217,9 +1217,13 @@ int Util_XML_Get_Value_Double(char *fileName, int type, int localecotest, int is
 	if (verbose > 2)
 		printf("value = %e\n", value);
 	Check_Value(valueName, value, entry_type, valueName);
+	
+	printf("In atUtilXML printing ecosystem parameters");
+	
 	if (localecotest > 2)
 		printf("Ecosystem parameter: %s = %f\n", valueName, value);
-
+	printf("In atUtilXML printing ecosystem parameters");
+	
 	*returnValue = value;
 	return TRUE;
 }

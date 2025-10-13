@@ -1,0 +1,282 @@
+############################################
+# filename: PugetSound_run.prm
+# 
+#  August 2024: Hem Nalini Morzaria Luna. 
+#  Puget Sound , Washington State, USA  run file. 
+#############################################
+# Run parameters
+verbose       0		# Detailed logged output. 18 is everything. 5 is also useful
+
+flagecon_on        0   # Flag showing whether want economics loaded and submodel run (1) or not (0)
+flag_fisheries_on  0   # Flag showing whether want fisheries loaded and submodel run (1) or not (0)
+flag_migration_on  1   # Flag showing whether migration submodel run (1) or not (0)
+flag_skip_biol     0   # Flag showing whether want biological model run (0) or not (1 - only used when debugging fisheries)
+flag_skip_phys     0   # Flag showing whether want physics model run (0) or not (1 - only used when debugging fisheries)
+flag_multiyr_migs  1   # Flag indicating whether multi year migrations are active (1) or not (0)
+flag_want_all_KMIG 1   # Flag indicating whether want to load entire KMIG array even if not supposed to start outside model (important for multi year migrators)
+external_populations 1 # Flag indicating have groups using the external population model
+flag_sanity_check 1 # Flag to correct for bug that occasionally goes off for groups who’s recruitment or gestation periods is roughly the same length as the time between reproduction(spawning events). To replicate old code set it to 0.
+flagpassivetracer 0 # passive tracer tracking
+flag_old_embryo_init 0
+flag_replicate_old_calendar 0
+flag_use_deltaH 0
+store_aggregate_yoy 1
+store_mig_array 1
+flagIsPolar 0
+flagenviro_warn 0
+K_num_basket 1
+flag_mig_in_bioindx 1
+flag_replicated_old_PPmort 1 
+
+debug_it	0
+checkbox      999        # Give detailed logged output for this box
+checkstart    0  day   # Start detailed logged output after this date
+checkstop     50574 day    # Stop detailed logged output after this date 
+fishtest      0        # Count up total population for each vertebrate after each main subroutine: 0=no, 1=yes
+flaggape      0        # Periodically list prey vs gape statistics (tuning diagnostic)
+flagchecksize 0        # Periodically list relative size (tuning diagnostic)
+flagagecheck  0        # Periodically list age structure per cohort (tuning diagnostic)
+flagdietcheck 0        # Periodically list realised diet matchups (tuning diagnostic)
+checkNH       0        # Give detailed logged output for NH in checkbox
+checkDL       0        # Give detailed logged output for DL in checkbox
+checkDR       0        # Give detailed logged output for DR in checkbox
+checkbiom     0        # Give detailed logged output for biomasses in checkbox
+which_fleet   33       # ID number of fleet to track (if don't want to track anything set to 33 (for other fleets see list below)
+which_check   80       # ID number of group to track (if don't want to track anything set to 80 (for other groups see list below)
+habitat_check 0
+move_check    90       # ID number of group where tracking movements  (if don't want to track anything set it to 67, for other groups see list below)
+fishmove      1        # Set to 0 to turn vertebrate movement off for debugging purposes
+debug         18       # 0=debuging off, 1=debug fishing, 2=debug discards, 3=debug histfishing,
+                       # 4=debug assessments, 5=debug mpas, 6=debug effort, 7=debug econ effort, 8=debug econ, 9= debug quota, 
+                       # 10= aging, 11=debug recruitment, 12= debug_spawning, 13=debug migration, 14=debug movement, 
+                       # 15=debug stocks, 16=debug biomass calcs, 17=debug feeding, 18=debug everything, 
+                       # 20=print the biology process function parameters, 21= print the biology process function parameter (prey),
+                       # 23= debug deposition, 24= debug mortality scalar
+
+
+
+title      Puget Sound Atlantis Model
+dt         	12 hour     # 12 hour time step
+tstop      	365 day    # Stop time after the given period  18255   30yr:  10960   25 yr: 9125   20yr: 7300  15 yr: 5500  10yr:3700  5yr:  1850  3yr: 1100  101yr-- 37000 Test run: 18255
+toutstart  	0 day       # Output start time
+toutinc    	10 day       # Write output with this periodicity
+toutfinc   	10 day     # Write fisheries output with this periodicity
+tburnday   0 day
+external_box 0
+flagAllowLand 0      # Flag added 05/26/2015 to determine if any boxes are treated as land (1) or not (0)
+
+check_dups 0    # 1 to check for duplicates in your prm files. Turning this on will make file read in very very slow. Only turn on every once in a while and turn off once the duplicates have been removed.
+
+tsumout     1 	day      # Write stock state summary with this periodicity
+flagannual_Mest 1      # Whether to write out estimates of mortality per predator annually (1) or not (0)
+fishout    	0           # Switch to turn fisheries output on = 1, off = 0
+flagreusefile 	2        # Switch to show want to append output file no = 0, yes = 1, replace = 2
+flag_age_output 0   #Flag showing whether want Marie's seagrass model used
+
+# Parameters defining the numbers of certain types of groups (needed to  parameter arrays in the
+# initialisation section of the model, best left untouched for now) 
+K_num_tot_sp    79      # 73 for puget sound including detritus.  total number of biological groups in the model
+K_num_stocks_per_sp 1  # maximum number of stocks per group in the model
+K_num_bed_types  3     # maximum number of seabed types (currently only reef, soft and flat) 3
+K_num_cover_types 7   # maximum number of habitat types                                     9
+K_num_detritus   3     # Total number of detritus groups in the model (labile and refractory; water column and sediments) 
+
+# Parameters defining the numbers of certain types of fisheries 
+# (needed to  parameter arrays in the initialisation section of the model,
+# best left untouched for now) 
+K_num_fisheries   59   # Maximum number of fisheries
+K_num_ports       3   # Maxiumum number of ports in the model area 
+K_max_num_zoning  1    # Maximum number of spatial zonings used in the model
+K_num_reg         2    # Maximum number of management zonings used in the model
+K_num_markets     2    # Maxiumum number of markets in the model area 
+K_num_catchqueue  7    # Length (in days) of list of catches used in running average to give recent CPUE for effort model 8
+
+# Location parameters
+flaghemisphere    1    # Flag for hemisphere model is in (0 = southern; 1 = northern)
+flagIsEstuary     0   # Flag to indicate if the model is estuary. If true a sediment tracer is required in the initial conditions input file. 
+
+# Parameters for rescalingin inital vertebrate densities - only for use in emergencies,
+# should really update the cdf file instead
+
+flagscaleinit     0  # Flag to indicate whether scaling initial vertebrate densities (1=yes, 0=no)
+
+# Multiplicative scalr for vertebrate initial densities (as read-in from cdf file).   48 vertebrates for puget sound. 
+init_scalar       79
+1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0	1.0 1.0
+
+trackAtomicRatio 0
+track_rugosity_arag 0  # flag indicating that rugosity and aragonite saturation to be tracked - needed for corals
+track_pH           0  # flag indicating that pH to be tracked
+trackWind          0  # flag indicating that wind to be tracked
+flag_use_deltaH     0   # Flag to use dH for calculation of acidification
+mirror_invalid      0   # Flag indicating whether want the model to estimate source destinations of hydrodynamics if have invalide feed data (1) or not (0)
+track_contaminants  1   # Whether tracking contaminants or not
+flagpassivetracer   0   # Flag indicating whether a passive tracer is needed for tracking tranpsorts or not (1 = yes, 0 = no)
+flag_sanity_check   1   # flag to check for the large vertebrate reproduction bug
+flag_contam_sanity_check 0   # flag to turn on checking of contaminant fluxes
+
+# Contaminant information (only used when track_contaminants set to 1)
+num_contaminants  1
+
+contaminant_names 1
+PCB118
+
+contaminant_units 1
+gPCB/m^3
+
+#flagPHmortcase 2   # 0 is no mortality due to pH, 1 is sigmoidal, 2 is hockeystick McElhany Busch method.
+
+# See the wiki entry on this, if set to 1 it forces code to recreate (buggy) behavior of old Atlantis versions: https://confluence.csiro.au/pages/viewpage.action?pageId=43155525
+flag_replicated_old 0
+
+flag_pollutant_impacts 0
+
+################################################
+# List of group numbers for use with which_check
+# Group ID number
+
+#   Functional   Groups
+#   Atlantis-PS-code   Atlantis-PS-names
+#   BB   Benthic   bacteria
+#   PB   Pelagic   bacteria
+#   PL   Large   phytoplankton
+#   PS   Small   phytoplankton
+#   MA   Macroalgae
+#   SG   Seagrass
+#   ZS   Microzooplankton
+#   ZM   Mesozooplankton
+#   ZL   Large   zooplankton
+#   ZG   Gelatinous   zooplankton
+#   AUR   Aurelia
+#   SQX   Squid
+#   BMD   Deep   macro-zoobenthos
+#   BD   Deposit   feeders
+#   BG   Benthic   grazers
+#   BMS   Octopi
+#   DUN   Dungeness   crab
+#   BML   Crabs
+#   PWN   Shrimp
+#   BFF   Benthic   filter   feeder
+#   BIV   Bivalves
+#   GEC   Geoducks
+#   BC   Carnivorous   infauna
+#   HEP   Pacific   Herring   Puget   Sound
+#   HEC   Pacific   Herring   Cherry   Point
+#   FPS   Small   Planktivorous   Fish
+#   POP   Perch
+#   CHY   Chinook   Hatch   Yearling
+#   CHS   Chinook   Hatch   Subyearling
+#   CSY   Chinook   Skagit   Yearling
+#   CSS   Chinook   Skagit   Subyearling
+#   CSN   Chinook   Snohomish   Subyearling
+#   CDS   Chinook   Duwamish   Subyearling
+#   CNY   Chinook   Nisqually   Yearling
+#   CNS   Chinook   Nisqually   Subyearling
+#   CHC   Chinook   Hood   Canal   Subyearling
+#   CYE   Chinook   other   Yearling
+#   CKS   Chinook   other   Subyearling
+#   CRH	Chinook resident Hood canal
+#   CRC	Chinook resident North Puget Sound
+#   CRW	Chinook resident central south Puget Sound
+#   COR	Coho resident Puget Sound wide
+#   CDR	Coho resident Deep South Yearling
+#   COH   Coho   Hatch   Yearling
+#   COS   Coho   Skagit   Yearling
+#   COD   Coho   Deep   South   Yearling
+#   COY   Coho   other   Yearling
+#   CMS   Chum   Hatch   Subyearling
+#   CMF   Chum   Fall   Subyearling
+#   CMH   Chum   Hood   Canal   summer   run   Subyearling
+#   PIS   Pink   Salmon   Subyearling
+#   SAL   Other   salmonids
+#   SAF   Strait   of   Georgia   salmonids
+#   FMM   Hake_Large   gadoids
+#   FVS   Large   demersal   predators
+#   ROC   Demersal   rockfish
+#   MRO   Midwater   rockfish
+#   DVR   Demersal   vulnerable   rockfish
+#   MVR   Midwater   vulnerable   rockfish
+#   SMD   Small   demersal   fish
+#   FDF   Small-mouthed   Flatfish
+#   HAP   Piscivorous   flatfish
+#   DOG   Spiny   dogfish
+#   SBL   Sixgill   Shark
+#   SSK   Skates
+#   RAT   Ratfish
+#   SB   Seabirds   (piscivorous)
+#   SP   Seabirds   (mainly   non-piscivorous)
+#   BE   Raptors
+#   HSL   Harbor   seals
+#   CSL   California   sea   lions
+#   PIN   Steller   sea   lions
+#   PHR   Harbor   porpoise
+#   ROR   Resident   Orca
+#   TOR   Transient   Orca
+#   HUW   Humpback   whales
+#   DL   Labile   detritus
+#   DR   Refractory   detritus
+#   DC   Carrion
+#
+#
+################################################
+# List of fisheries for use with which_check
+# Fishery ID number
+#	cancom
+#	cancomsal
+#	cansaltrib
+#	cansalrec
+#	canrec
+#	cantrib
+#	BIVrec
+#	diving
+#	divingtrib
+#	DUNrec
+#	fishpot
+#	fishpottrib
+#	GECrec
+#	handline
+#	handlinetrib
+#	HEpseine
+#	HEpseinetrib
+#	hookline
+#	hooklinetrib
+#	jig
+#	jigtribal
+#	net
+#	nettribal
+#	BMSpot
+#	BMSpottrib
+#	other
+#	othertrib
+#	otherrec
+#	otherrectrib
+#	salothernet
+#	salothernettrib
+#	salbseine
+#	salbseinetrib
+#	saldipnet
+#	saldipnettrib
+#	saldriftnet
+#	saldriftnettrib
+#	salgillnet
+#	salgillnettrib
+#	salhand
+#	salhandtrib
+#	salotherg
+#	salothergtrib
+#	salpseine
+#	salpseinetrib
+#	salrec
+#	salreefnet
+#	salreefnettrib
+#	saltrawl
+#	saltroll
+#	saltrolltrib
+#	seine
+#	seinetrib
+#	shellfishpot
+#	shellfishpottrib
+#	sportfishing
+#	PWNrec
+#	trawl
+#	trawltrib

@@ -1,0 +1,59 @@
+#
+#Atlantis2 Updated to Version 6719M
+#
+#
+#
+#Atlantis path https://ful083@svnserv.csiro.au/svn/atlantis/Atlantis/trunk/atlantis Relative ^/Atlantis/trunk/atlantis
+#
+#
+#
+#Atlantis SVN Last Change Date 2024-11-07 14:07:40 -0800 (Thu, 07 Nov 2024)
+
+# Log file for run of Atlantis - only ecological errors and important events are recorded here #
+# Key to indices used in Atlantis, which may appear in logged errors here:
+atlantisMerged -i AMPS_2024.nc 0 -o AMPS_OUT.nc -r PugetSound_run.prm -f PugetSound_force.prm -p PugetSound_physics.prm -b AMPSbioparam_mv1_2024_V12.prm -h AMPS_atharvest_2024_calib.prm -e VMPA_setas_economics.prm -s PugetSoundAtlantisFunctionalGroups_2024_V1.csv -q PugetSound_fisheries.csv -m PugetMigrations_mod_bf.csv -d outputFolder
+Loaded BB with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded PB with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded PL with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded PS with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded MA with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded SG with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded ZS with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded ZM with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded ZL with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded ZG with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded AUR with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded SQX with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded BMD with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded BD with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded BG with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded BMS with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded DUN with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded BML with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded PWN with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded BFF with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded BIV with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded GEC with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded BC with numCohorts: 1, numGeneTypes: 1, numStages: 1, numSpawns: 1
+Loaded HEP with numCohorts: 7, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded HEC with numCohorts: 6, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded FPS with numCohorts: 8, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded POP with numCohorts: 8, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CHY with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CHS with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CSY with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CSS with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CSN with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CDS with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CNY with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CNS with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CHC with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CYE with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CKS with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CRH with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CRW with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded CRC with numCohorts: 5, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded COH with numCohorts: 3, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded COS with numCohorts: 3, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded COD with numCohorts: 3, numGeneTypes: 1, numStages: 2, numSpawns: 1
+Loaded COY with numCohorts: 3, numGeneTypes: 1, numSt

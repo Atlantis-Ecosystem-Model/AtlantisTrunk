@@ -69,22 +69,21 @@ void Free_Contaminants(MSEBoxModel *bm) {
         free(bm->contaminantStructure[cIndex]->gained);
         free4d(bm->contaminantStructure[cIndex]->sp_point);
         
-        free(bm->contaminantStructure[cIndex]->sp_GrowthThresh);
-        free(bm->contaminantStructure[cIndex]->sp_ReprodThresh);
+        free1d(bm->contaminantStructure[cIndex]->sp_GrowthThresh);
+        free1d(bm->contaminantStructure[cIndex]->sp_ReprodThresh);
         free2d(bm->contaminantStructure[cIndex]->gainedGlobal);
         free(bm->contaminantStructure[cIndex]->sp_maxConcentration);
 
         free(bm->contaminantStructure[cIndex]->gained);
         free4d(bm->contaminantStructure[cIndex]->sp_point);
 
-        free(bm->contaminantStructure[cIndex]->sp_GrowthThresh);
         free(bm->contaminantStructure[cIndex]->sp_GrowthEffect);
         free1d(bm->contaminantStructure[cIndex]->sp_MoveEffect);
         free(bm->contaminantStructure[cIndex]->sp_ReprodEffect);
         free(bm->contaminantStructure[cIndex]->sp_ContamScalar);
         free(bm->contaminantStructure[cIndex]->sp_maternal_transfer);
         free(bm->contaminantStructure[cIndex]->sp_suckling_transfer);
-        
+        printf("About to free bm->instantDoseMortality\n");
         free(bm->contaminantStructure[cIndex]->sp_instantDoseMortality);
         free4d(bm->contaminantStructure[cIndex]->sp_maxDoseToDate);
         free(bm->contaminantStructure[cIndex]->sp_maxLethalConc);
@@ -153,7 +152,8 @@ void Allocate_Contaiminants(MSEBoxModel *bm) {
 		bm->contaminantStructure[cIndex]->sp_point = Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, max_chrt, bm->K_num_tot_sp, 0.0);
 
 		bm->contaminantStructure[cIndex]->sp_GrowthThresh = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-        bm->contaminantStructure[cIndex]->sp_GrowthEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+		bm->contaminantStructure[cIndex]->sp_ReprodThresh = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+    bm->contaminantStructure[cIndex]->sp_GrowthEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
 
         bm->contaminantStructure[cIndex]->sp_instantDoseMortality = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0);
 		bm->contaminantStructure[cIndex]->sp_maxDoseToDate = Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, max_chrt, bm->K_num_tot_sp, 0.0);
@@ -1435,9 +1435,13 @@ void Get_ContamReproductionEffects(MSEBoxModel *bm, double cGroupLevel, int spec
     }
     break;
   case InVitro_model_r:  // Reprod effects as of InVitro
+  //  printf("Going into Invitro Model");
+    
     if (cGroupLevel > bm->contaminantStructure[cIndex]->sp_ReprodThresh[species]) {
       step1 = 1.0 + pow((cGroupLevel / bm->contaminantStructure[cIndex]->sp_EC50_r[species]), bm->contaminantStructure[cIndex]->sp_ECslope_r[species]);
       FunctGroupArray[species].C_reprod_corr[cohort] *= 1.0 / step1; // As of Laender et al 2008
+ //     printf("C_reprod_corr: %e\n", FunctGroupArray[species].C_reprod_corr[cohort]);
+      //
     }
     break;
   case Salmon_logistic_model_r: // Repro effects defined using a logistic (as defined for salmon work)

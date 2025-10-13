@@ -3763,10 +3763,10 @@ static void Read_Contaminant_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr 
                 bm->contaminantStructure[cIndex]->sp_TimeToLD50[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
 				sprintf(varStr, "%s_%s_Cx", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				bm->contaminantStructure[cIndex]->sp_Cx[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 0, attributeGroupNode, no_checking, varStr);
+				bm->contaminantStructure[cIndex]->sp_Cx[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
 				sprintf(varStr, "%s_%s_Cy", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				bm->contaminantStructure[cIndex]->sp_Cy[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 0, attributeGroupNode, no_checking, varStr);
+				bm->contaminantStructure[cIndex]->sp_Cy[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
                 sprintf(varStr, "%s_%s_spL", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_L[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
@@ -3803,7 +3803,7 @@ static void Read_Contaminant_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr 
                 bm->contaminantStructure[cIndex]->sp_ReprodThresh[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
                 sprintf(varStr, "%s_%s_GrowthEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				bm->contaminantStructure[cIndex]->sp_GrowthEffect[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
+			          bm->contaminantStructure[cIndex]->sp_GrowthEffect[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
                 sprintf(varStr, "%s_%s_MoveEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_MoveEffect[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);

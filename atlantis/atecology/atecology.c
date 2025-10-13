@@ -2425,7 +2425,12 @@ void Epibenthic_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, 
 	 and pollution have degraded the base available habitat for biogenic habitat
 	 constituents such as the macrophytes and filter feeders.
 	 **/
+	
+	//printf("Degradation scalar");
+	
 	for (kij = 0; kij < bm->K_num_bed_types; kij++) {
+	  
+
 		if (Box_degradedi[bm->current_box] && bm->flagdegrade) {
 			BED_scale[kij] = Util_Get_Accumulative_Change_Scale(bm, BEDchange_max_num, BEDchange[kij]);
 			
