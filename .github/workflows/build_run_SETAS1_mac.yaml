@@ -42,12 +42,13 @@ jobs:
           
           # 2. Cleanup: Delete any previous/default Colima profile and configuration
           colima delete --force || true
-          rm -rf ~/.colima
           
           # 3. Start the Colima VM (re-attempting with a clean slate)
           echo "Starting Colima..."
-          colima start
+          # Try setting minimal resources and forcing a specific Arch (x86_64 is often more stable)
+          colima start --cpu 2 --memory 4 --arch x86_64 --runtime docker
           
+
           # 4. Verify the installation
           echo "Docker is ready!"
           docker info
