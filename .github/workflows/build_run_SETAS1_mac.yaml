@@ -32,7 +32,12 @@ jobs:
 
       - name: OS
         run: |
-          uname
+          OS := $(shell uname)
+          echo $(OS)
+          ifeq ($(OS),Darwin)
+           echo "MAC OS"
+          endif
+
         shell: bash
 
 
