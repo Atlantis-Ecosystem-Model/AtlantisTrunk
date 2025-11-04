@@ -1,4 +1,5 @@
-# Workflow to build atlantis
+# Workflow to build atlantis and run on a mac
+# Only difference is a conditional statement in the PreRules.am file
 name: build_run_SETAS1_mac
 
 on:
@@ -29,6 +30,10 @@ jobs:
           echo $MY_BRANCH
         shell: bash
 
+      - name: OS
+        run: |
+          uname
+        shell: bash
 
 
       - name: Set up R
@@ -36,6 +41,10 @@ jobs:
         with:
           r-version: '4.2.0'
 
+      - name: Install OS dependencies
+        run: |
+        
+        shell: bash
 
       - name: Compile and Run Atlantis in Ubuntu 18.04 using Docker
         run: |
