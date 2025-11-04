@@ -40,6 +40,7 @@ jobs:
           # 1. Install Docker CLI and Colima (a container runtime) via Homebrew
           brew install docker colima
           brew install qemu
+          brew install lima-additional-guestagents
           
           # 2. Cleanup: Delete any previous/default Colima profile and configuration
           colima delete --force || true
