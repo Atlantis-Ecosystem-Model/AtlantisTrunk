@@ -26,3 +26,5 @@ Trunk2025.xcworkspace/xcuserdata/ful083.xcuserdatad/UserInterfaceState.xcusersta
 # user files
 .Rproj*
 *.Rproj
+.Rproj.user
+.Rhistory
