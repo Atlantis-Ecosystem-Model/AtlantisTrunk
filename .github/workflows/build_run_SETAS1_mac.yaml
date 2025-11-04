@@ -39,6 +39,7 @@ jobs:
         run: |
           # 1. Install Docker CLI and Colima (a container runtime) via Homebrew
           brew install docker colima
+          brew install qemu
           
           # 2. Cleanup: Delete any previous/default Colima profile and configuration
           colima delete --force || true
