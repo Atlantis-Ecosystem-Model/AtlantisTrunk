@@ -7,7 +7,7 @@ INCLUDES = $(shell pkg-config --cflags libxml-2.0) \
 	-I. -I$(top_srcdir)/atlantismain
 
 # Find OS. Results, Linux, Darwin (Mac)
-OS := $(shell uname)
+OS = $(shell uname)
 
 # -I$(top_srcdir)/atlink/include  -I$(top_srcdir)/atCLAMLink/include
 
@@ -113,13 +113,11 @@ AM_CFLAGS += -D RASSESS_LINK_ENABLED
 # R_HOME = $(shell R RHOME)
 
 # on Ubuntu Linux
-ifeq ($(OS),Linux)
+if ($(OS),Linux)
   R_HOME = /usr/lib/R
   R_BASE = /usr/lib/R
-endif
-
+else if ($(OS),Darwin)
 # on OS Mac. Darwin is the Os kernel
-ifeq ($(OS),Darwin)
   R_BASE = /Library/Frameworks/R.framework/Resources
   R_HOME = /Library/Frameworks/R.framework/Resources
   AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
