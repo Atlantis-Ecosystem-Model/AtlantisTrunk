@@ -6,9 +6,6 @@ INCLUDES = $(shell pkg-config --cflags libxml-2.0) \
 	-I$(top_srcdir)/sjwlib/include  -I$(top_srcdir)/ConvertAtlantis/include -I$(top_srcdir)/atSS3Link/include \
 	-I. -I$(top_srcdir)/atlantismain
 
-# Find OS. Results, Linux, Darwin (Mac)
-OS = $(shell uname)
-
 # -I$(top_srcdir)/atlink/include  -I$(top_srcdir)/atCLAMLink/include
 
 # Comment out first option and uncomment second option for for OPT if on Apple M1 chips 
@@ -111,15 +108,12 @@ AM_CFLAGS += -D RASSESS_LINK_ENABLED
 # Ensure the R_HOME environment variable is set appropriately
 #
 # R_HOME = $(shell R RHOME)
-
 # on Ubuntu Linux
-#if ($(OS),Linux)
-R_HOME = /usr/lib/R
-R_BASE = /usr/lib/R
-#else if ($(OS),Darwin)
-# on OS Mac. Darwin is the Os kernel
-#  R_BASE = /Library/Frameworks/R.framework/Resources
-#  R_HOME = /Library/Frameworks/R.framework/Resources
-#  AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
-#  LIBS += -L$(R_BASE)/lib -lR
-#endif
+# R_HOME = /usr/lib/R
+# R_BASE = /usr/lib/R
+# on OS X
+R_BASE = /Library/Frameworks/R.framework/Resources
+R_HOME = /Library/Frameworks/R.framework/Resources
+AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
+LIBS += -L$(R_BASE)/lib -lR
+endif
