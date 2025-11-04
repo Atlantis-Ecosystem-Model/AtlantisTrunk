@@ -36,18 +36,14 @@ jobs:
           r-version: '4.2.0'
 
 
-      - name: Compile Atlantis in Ubuntu 18.04 using Docker
+      - name: Compile and Run Atlantis in Ubuntu 18.04 using Docker
         run: |
           docker run --rm -v $(pwd):/workspace -w /workspace ubuntu:18.04 bash -c "
           TZ=America/New_York &&
           ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &&
           apt-get update && 
           apt-get install  -yq build-essential autoconf libnetcdf-dev libxml2-dev libproj-dev subversion valgrind dos2unix gawk nano r-base &&
-          cd atlantis && aclocal && autoheader && autoconf && automake -a && ./configure --enable-rassesslink && make && make install
-        shell: bash
-        
-       - name: Run Atlantis in Ubuntu 18.04 using Docker
-        run: |
+          cd atlantis && aclocal && autoheader && autoconf && automake -a && ./configure --enable-rassesslink && make && make install &&
           echo 'Now run the model!' &&
           cd ../example &&
           atlantisMerged -i INIT_VMPA_Jan2015.nc 0 -o outputSETAS.nc -r VMPA_setas_run_fishing_F_Trunk.prm -f VMPA_setas_force_fish_Trunk.prm -p VMPA_setas_physics.prm -b VMPA_setas_biol_fishing_Trunk.prm -m SETas_Migrations.csv -h VMPA_setas_harvest_F_Trunk.prm  -s SETasGroupsDem.csv -q SETasFisheries.csv -d testFolder > out.txt 
