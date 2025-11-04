@@ -113,13 +113,13 @@ AM_CFLAGS += -D RASSESS_LINK_ENABLED
 # R_HOME = $(shell R RHOME)
 
 # on Ubuntu Linux
-if ($(OS),Linux)
-  R_HOME = /usr/lib/R
-  R_BASE = /usr/lib/R
-else if ($(OS),Darwin)
+#if ($(OS),Linux)
+R_HOME = /usr/lib/R
+R_BASE = /usr/lib/R
+#else if ($(OS),Darwin)
 # on OS Mac. Darwin is the Os kernel
-  R_BASE = /Library/Frameworks/R.framework/Resources
-  R_HOME = /Library/Frameworks/R.framework/Resources
-  AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
-  LIBS += -L$(R_BASE)/lib -lR
-endif
+#  R_BASE = /Library/Frameworks/R.framework/Resources
+#  R_HOME = /Library/Frameworks/R.framework/Resources
+#  AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
+#  LIBS += -L$(R_BASE)/lib -lR
+#endif
