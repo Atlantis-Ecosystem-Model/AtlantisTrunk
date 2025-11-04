@@ -40,14 +40,16 @@ jobs:
           # 1. Install Docker CLI and Colima (a container runtime) via Homebrew
           brew install docker colima
           
-          # 2. Start the Colima VM (this launches a Linux VM to run the Docker daemon)
-          # 'colima start' automatically configures the DOCKER_HOST env var
+          # 2. Cleanup: Delete any previous/default Colima profile and configuration
+          colima delete --force || true
+          rm -rf ~/.colima
+          
+          # 3. Start the Colima VM (re-attempting with a clean slate)
           echo "Starting Colima..."
           colima start
           
-          # 3. Verify the installation
+          # 4. Verify the installation
           echo "Docker is ready!"
-          docker version
           docker info
         
         shell: bash
