@@ -9,8 +9,8 @@ test_setas_model <- function() {
   lines <- readLines("example/out.txt")
   print(lines)
   print(length(lines))
-  ll <- length(lines)
-  print(lines[(ll - 10):ll])
+  # ll <- length(lines)
+  # print(lines[(ll - 10):ll])
   # find line with missing parameter error
   error_line <- grepl("Could not find parameter", lines)
   if (any(TRUE %in% error_line)) {
