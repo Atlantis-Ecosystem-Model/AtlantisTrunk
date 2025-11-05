@@ -7,6 +7,7 @@ test_setas_model <- function() {
   # check the console output for error messages to manually fail the workflow
   # read in the out.txt file
   lines <- readLines("example/out.txt")
+  print(lines)
   print(length(lines))
   ll <- length(lines)
   print(lines[(ll - 10):ll])
