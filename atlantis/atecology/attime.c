@@ -206,8 +206,9 @@ void Time_OYr(MSEBoxModel *bm, double thisday) {
 		DaysInQ = 91;
 	else
 		DaysInQ = 92;
-	bm->HowFar = DayInQuarter / DaysInQ;
-	if (QuarterOfYear < 3)
+    bm->HowFar = ((double)(DayInQuarter)) / ((double)(DaysInQ));
+
+  if (QuarterOfYear < 3)
 		NextQuarterOfYear = QuarterOfYear + 1;
 	else
 		NextQuarterOfYear = 0;
@@ -492,7 +493,7 @@ static void Calculate_Move_Date_Index(MSEBoxModel *bm){
             orig_index = FunctGroupArray[sp].moveEntryIndex;
             
 			/* find the length of each period */
-			delta = 364.0 / FunctGroupArray[sp].numMoveEntries;
+            delta = 364.0 / ((double)(FunctGroupArray[sp].numMoveEntries));
 
 			/* now find the index of the current season. */
 			index = floor(bm->TofY / delta);

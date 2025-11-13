@@ -1689,6 +1689,7 @@ typedef enum {
 	//flaglocalrecruit_id,
 	flagbearlive_id,
 	flagmother_id,
+    flag_contam_distrib_id,
 	E1orig_id,
 	E2orig_id,
 	E3orig_id,
@@ -3968,9 +3969,9 @@ typedef struct {
     double *sp_B_r;
     
     double *sp_GrowthThresh;  /* Threshold tissue level where get growth effects */
-    double *sp_ReprodThresh;  /* Threshold tissue level where get reprod effects */
     double *sp_GrowthEffect;  /* Effect size */
     double *sp_MoveEffect;  /* Effect size on movement */
+    double *sp_ReprodThresh;  /* Threshold tissue level where get reprod effects */
     double *sp_ReprodEffect;  /* Effect size on reproduction (on number of settlers) */
     double *sp_ContamScalar;  /* Generic scalar to represent contaminant effects */
     double *sp_maternal_transfer; /* Maternal transfer rate during conception and recruitment */
@@ -4830,6 +4831,7 @@ typedef struct {
     int flag_contam_fisheries_mgmt;
     int flag_contam_halflife_spbased;
     int flag_contamMaternalTransfer;
+    int flag_contam_distrib;
     int contam_fishery_closure_day;
     int contam_fishery_closure_period;
     int contam_fishery_closure_option;
@@ -5174,6 +5176,8 @@ typedef struct {
 	double ***RecCatch; /**< Recreational catch statistics */
 	double **targetspbiom; /**< Biomass map to condition fisheries effort allocation
 	 and targeting of trips */
+    
+    double **CumDisplaceEffort; /** Cumualtive displaced effort - for reporting purposes */
     
     double ***selectivity;    /** Constant selectivity per cohort or stage for each group (for the invertebrates it is identical to the entries above for constant selectivity regardless of size.*/
 

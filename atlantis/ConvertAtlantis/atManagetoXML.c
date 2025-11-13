@@ -1166,7 +1166,7 @@ void ContaminantFisheryXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr 
 
     for(cIndex = 0; cIndex < bm->num_contaminants; cIndex++){
         sprintf(varStr, "%s_fishery_thresh_level", bm->contaminantStructure[cIndex]->contaminant_name);
-        sprintf(longStr, "Concentration of ontaminant %s where fishery closed", bm->contaminantStructure[cIndex]->contaminant_name);
+        sprintf(longStr, "Concentration of contaminant %s where fishery closed", bm->contaminantStructure[cIndex]->contaminant_name);
         Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
     }
 

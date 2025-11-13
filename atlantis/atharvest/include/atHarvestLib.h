@@ -75,6 +75,7 @@ void Update_Harvest_Index_Values(MSEBoxModel *bm, FILE *llogfp);
 void Harvest_Report_Fisheries_Stats(MSEBoxModel *bm, FILE *llogfp);
 void Harvest_Refresh_Fishing_Stats(MSEBoxModel *bm);
 void Harvest_Report_Annual_Stats(MSEBoxModel *bm, FILE *llogfp);
+void Harvest_Report_Monthly_Stats(MSEBoxModel *bm, FILE *llogfp);
 
 /* Needed in Annual Management for Ecosytem Cap calculations too */
 double Get_Fishery_Group_Change_Scale(MSEBoxModel *bm, int nf, int sp, int paramID, int numChangeParamID, double ***changeArray);

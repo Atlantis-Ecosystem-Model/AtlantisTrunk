@@ -43,11 +43,13 @@ FILE *anncpffp;
 FILE *anndpffp;
 FILE *anndiscardfp;
 FILE *anneffortfp;
+FILE *displaceEffortfp;
 
 static void writeAnnCatch(FILE *fid, FILE *fid2, FILE *fid3, MSEBoxModel *bm, FILE *llogfp);
 static void writeAnnCatchPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
 static void writeAnnDiscardPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
 static void writeAnnEffort(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
+static void writeDisplaceEffort(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
 
 static FILE * initAnnCatchFile(MSEBoxModel *bm);
 static FILE * initAnnCatchPerFisheryFile(MSEBoxModel *bm);
@@ -55,6 +57,7 @@ static FILE * initAnnDiscardPerFisheryFile(MSEBoxModel *bm);
 static FILE * initAnnDiscardFile(MSEBoxModel *bm);
 static FILE * initAnnEffortFile(MSEBoxModel *bm);
 static FILE * initAnnRecCatchFile(MSEBoxModel *bm);
+static FILE * initDisplacedEffortFile(MSEBoxModel *bm);
 
 /*******************************************************************************************
  Routines to report the aggregate fisheries statistics to date - done on an annual basis,
@@ -90,6 +93,21 @@ void Harvest_Report_Annual_Stats(MSEBoxModel *bm, FILE *llogfp) {
 	return;
 }
 
+void Harvest_Report_Monthly_Stats(MSEBoxModel *bm, FILE *llogfp) {
+    
+    if (!bm->flagdisplace) {
+        return;  // Nothing to report
+    }
+    
+    if (!displaceEffortfp)
+        displaceEffortfp = initDisplacedEffortFile(bm);
+    
+    /* Write output */
+    writeDisplaceEffort(displaceEffortfp, bm, llogfp);
+    
+    return;
+}
+
 void Open_Harvest_Output_Files(MSEBoxModel *bm) {
 
 	anncatchfp = initAnnCatchFile(bm);
@@ -98,6 +116,10 @@ void Open_Harvest_Output_Files(MSEBoxModel *bm) {
 	anncpffp = initAnnCatchPerFisheryFile(bm);
 	anndpffp = initAnnDiscardPerFisheryFile(bm);
 	anneffortfp = initAnnEffortFile(bm);
+    
+    if (bm->flagdisplace) {
+        displaceEffortfp = initDisplacedEffortFile(bm);
+    }
 }
 
 void Close_Harvest_Output_Files(MSEBoxModel *bm) {
@@ -108,6 +130,10 @@ void Close_Harvest_Output_Files(MSEBoxModel *bm) {
 	Util_Close_Output_File(anndpffp);
 	Util_Close_Output_File(anndiscardfp);
 	Util_Close_Output_File(anneffortfp);
+    
+    if (bm->flagdisplace) {
+        Util_Close_Output_File(displaceEffortfp);
+    }
 }
 
 /******************************************************************************************
@@ -353,6 +379,36 @@ FILE * initAnnTACFile(MSEBoxModel *bm) {
 }
 
 /**
+ *
+ * \brief Routine to initialise displaced effort information file
+ */
+FILE * initDisplacedEffortFile(MSEBoxModel *bm) {
+    FILE *fid;
+    char fname[STRLEN];
+    int nf;
+
+    /** Create filename **/
+    sprintf(fname, "%sDisplaceEffort.txt", bm->startfname);
+    printf("Creating %s\n", fname);
+
+    /** Create file **/
+    if ((fid = Util_fopen(bm, fname, "w")) == NULL)
+        quit("initDisplacedEffortFile: Can't open %s\n", fname);
+
+    /** Column definitions **/
+    fprintf(fid, "Time Box");
+
+    /* Fisheries name */
+    for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+        fprintf(fid, " %s", FisheryArray[nf].fisheryCode);
+    }
+    fprintf(fid, "\n");
+
+    /* Return file pointer */
+    return (fid);
+}
+
+/**
  * \brief File writing routines
  *
  */
@@ -498,3 +554,23 @@ void writeAnnEffort(FILE *fid, MSEBoxModel *bm, FILE *llogfp) {
 	return;
 }
 
+void writeDisplaceEffort(FILE *fid, MSEBoxModel *bm, FILE *llogfp) {
+    int nf, b;
+    double toteffort = 0;
+
+    if (verbose > 1)
+        printf( "Write total effort information\n");
+
+    /* Write time */
+    for (b = 0; b < bm->nbox; b++) {
+        fprintf(fid, "%e %d", bm->dayt, b);
+        
+        /* Write effort values */
+        for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+            fprintf(fid, " %f", bm->CumDisplaceEffort[b][nf]);
+        }
+        fprintf(fid, "\n");
+    }
+
+    return;
+}

@@ -83,7 +83,7 @@ double k_proprecfish;
  * are carried out in Annual_Fisheries_Mgmt()
  */
 void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
-	double EFF_scale1 = 0.0, EFF_scale2 = 0.0, EFF_scale3 = 0.0, EFF_scale4, FCpressure, orig_FCpressure, fish_infringe, FCdisplaced, prop_pop_fish = 0.0, localcell_vol, FC_likeREEF, FC_likeFLAT, FC_likeSOFT, FC_dempel, reef_area, flat_area, soft_area, otherFC_likeREEF, otherFC_likeFLAT, totconflict, otherFC_likeSOFT, otherFC_dempel, dempel_match, K_GearConflict, conflict_contrib, active_scale, step1_cpue, totcatch, dummy, mpa_scale, mpa_infringe;
+	double EFF_scale1 = 0.0, EFF_scale2 = 0.0, EFF_scale3 = 0.0, EFF_scale4, FCpressure, orig_FCpressure, fish_infringe, FCdisplaced, prop_pop_fish = 0.0, localcell_vol, FC_likeREEF, FC_likeFLAT, FC_likeSOFT, FC_dempel, reef_area, flat_area, soft_area, otherFC_likeREEF, otherFC_likeFLAT, totconflict, otherFC_likeSOFT, otherFC_dempel, dempel_match, K_GearConflict, conflict_contrib, active_scale, step1_cpue, totcatch, dummy, mpa_scale, mpa_infringe, F_displaced, F_rescale;
 	int ij, k, sp, nf, flagspeffortmodel, fishery_id, flagmanage, end_trigger_tripped, new_fish_loc = 0, nstock, flagfcmpa,
     crunch_id;
     //int do_debug_nf;
@@ -131,9 +131,23 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
                  }
                  */
                 
+                
             }
             scale_effort[nf] = 0;
             bm->totCPUE[nf] = 0;
+        }
+    }
+    
+    // If displaceing effort need to clean up the record keeping
+    if (bm->flagdisplace) {
+        for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+            for (ij = 0; ij < ncells; ij++) {
+                if(bm->newmonth && bm->flagday) {
+                    bm->CumDisplaceEffort[ij][nf] = 0.0;
+                } else {
+                    bm->CumDisplaceEffort[ij][nf] += bm->Effort[ij][nf];
+                }
+            }
         }
     }
     
@@ -222,6 +236,23 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
         if (bm->dayt != bm->predayt) {
             for (fishery_id = 0; fishery_id < bm->K_num_fisheries; fishery_id++) {
                 Check_For_Active_MPA(bm, fishery_id);
+                
+                if (bm->flagdisplace) {
+                    for (ij = 0; ij < bm->nbox; ij++) {
+                        orig_FCpressure = 1.0;
+                        Effort_Displacement(bm, fishery_id, ij, orig_FCpressure, &FCpressure, &FCdisplaced, &new_fish_loc, llogfp);
+                        if (FCdisplaced < 0.0)
+                            FCdisplaced = 0.0;
+                        
+                        /* Find the proportion retained and displaced */
+                        F_rescale = 1.0 - (FCdisplaced / orig_FCpressure);
+                        F_displaced = FCdisplaced / orig_FCpressure;
+                        
+                        /* Updating scalars - overload via the use of effort array */
+                        bm->Effort[ij][fishery_id] *= F_rescale; /* this is so that accumulate additional fishing mortakity pressure due to displaced effort */
+                        bm->Effort[new_fish_loc][fishery_id] += F_displaced;
+                    }
+                }
             }
         }
         return;

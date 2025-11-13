@@ -2549,9 +2549,8 @@ void Free_Migration(MSEBoxModel *bm) {
             if(bm->track_contaminants) {
                 free3d(MIGRATION[sp].RecruitContam);
                 free3d(MIGRATION[sp].contam);
+                free2d(MIGRATION[sp].contam_return);
             }
-
-
         }
 	}
 

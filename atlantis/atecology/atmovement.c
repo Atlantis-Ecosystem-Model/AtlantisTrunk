@@ -855,7 +855,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 	int maxij = bm->K_num_stocks_per_sp;
 	int overall_checkday = (int) (floor(bm->dayt));
     int this_flag_recruit, is_maternal_raised = 0;
-	double clear, E1_sp, spSpeed, this_HowFar, vertdistrib, mignum, mignum_actual, spawnmove = 1.0, totmig, midpoint, FSMG_grow, migtime, oldden, totdenom = 0, maxstock, min_spawntemp_sp, max_spawntemp_sp, temp_effect, finalmig, avgsn, avgrn, dynsn, dynrn, min_O2_sp, current_enviro, min_spawnsalt_sp, max_spawnsalt_sp, salt_effect, o2_effect, contract_sp, oldsn, oldrn, this_tot_biom, pH_scale, orig_newden, check_day, stagger_scalar, noise_effect, light_effect, K_salt_const_sp, K_o2_const_sp, numScalar_final, growth_period, den_diff, start_n, end_n;
+	double clear, E1_sp, spSpeed, this_HowFar, vertdistrib, mignum, mignum_actual, spawnmove, totmig, midpoint, FSMG_grow, migtime, oldden, totdenom = 0, maxstock, min_spawntemp_sp, max_spawntemp_sp, temp_effect, finalmig, avgsn, avgrn, dynsn, dynrn, min_O2_sp, current_enviro, min_spawnsalt_sp, max_spawnsalt_sp, salt_effect, o2_effect, contract_sp, oldsn, oldrn, this_tot_biom, pH_scale, orig_newden, check_day, stagger_scalar, noise_effect, light_effect, K_salt_const_sp, K_o2_const_sp, numScalar_final, growth_period, den_diff, start_n, end_n;
     double numScalar, K_temp_const_sp = 0.0;
     // double step1, step2;  OLD WAY OF DOING AGE - DEPRECATE
     double ReturnPeriod;
@@ -1142,6 +1142,10 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                        **/
                         
                         mignum = MIGRATION[sp].DEN[n][qid] * migtime2;
+                        if(bm->track_contaminants){
+                            ContaminantMigrationIn(bm, sp, n, qid, MIGRATION[sp].DEN[n][qid], mignum_actual);
+                        }
+                                                
                         
                         if(!mignum)
                             continue;
@@ -1215,11 +1219,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                             VERTinfo[sp][n][RN_id] = (oldrn * oldden + stepRN) / (totden[sp][n] + small_num);
                         }
                         
-                        if(bm->track_contaminants){
-                            ContaminantMigrationIn(bm, sp, n, qid, oldden, mignum_actual);
-                        }
-                        
-						/* Reset Migration matrix if all have returned or this migration period is over */  
+                        /* Reset Migration matrix if all have returned or this migration period is over */
 						if (MIGRATION[sp].DEN[n][qid] < 0.0) {
 							if (bm->flagavgmig) {
                                 MIGRATION[sp].SN[n][qid] = 0.0;
@@ -1304,7 +1304,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                 VERTinfo[sp][n][RN_id] = (oldrn * totden[sp][n] + stepRN) / (totden[sp][n] + yoy_den + small_num);
                                 
                                 if(bm->track_contaminants){
-                                    ContaminantDirectRectuitMigrants(bm, sp, n, qid, totden[sp][n], yoy_den);
+                                    ContaminantDirectRectuitMigrants(bm, sp, n, qid);
                                 }
 
 
@@ -1748,6 +1748,9 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 							*/
 
                             switch (sp_ddepend_move) {
+                            
+                            spawnmove = 1.0;
+                              
 								case weight_ddepend:
 								case switch_ddepend:
 								case only_ddepend:
@@ -2798,6 +2801,10 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                             this_tot_biom += totden[sp][n] * newden[sp][n][k][ij] * (bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn]);
                             bm->boxes[ij].tr[k][den] = totden[sp][n] * newden[sp][n][k][ij];
                             totden_check[sp][n] += totden[sp][n] * newden[sp][n][k][ij];
+                            
+                            if(bm->track_contaminants){
+                                Apply_Contam_Return(bm, sp, n, k, ij, newden[sp][n][k][ij], totden[sp][n]);
+                            }
 
                             if((bm->boxes[ij].tr[k][den] < 0) || (!_finite(bm->boxes[ij].tr[k][den]))){
                                 printf("%e %s-%d movement box%d-%d den: %.20e, totden: %.20e, newden: %.20e\n", bm->dayt,

@@ -1392,9 +1392,6 @@
       <FileRef
          location = "group:configure_mac">
       </FileRef>
-      <FileRef
-         location = "group:configure~">
-      </FileRef>
       <Group
          location = "group:ConvertAtlantis"
          name = "ConvertAtlantis">

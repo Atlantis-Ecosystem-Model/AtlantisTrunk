@@ -82,9 +82,13 @@ double Util_XML_Read_Value(char *fileName, int type, int localecotest, int isReq
 	if (verbose > 2)
 		printf("value = %e\n", value);
 	Check_Value(valueName, value, entry_type, valueName);
+	
+	printf("In atUtil printing ecosystem parameters");
+	
 	if (localecotest > 2)
 		printf("Ecosystem parameter: %s = %f\n", valueName, value);
-
+	printf("In atUtil localecotest2 printing ecosystem parameters");
+	
 	return value;
 }
 

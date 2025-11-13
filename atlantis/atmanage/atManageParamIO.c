@@ -1180,7 +1180,7 @@ void readContaminantFisheryXML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootn
 
     for(cIndex = 0; cIndex < bm->num_contaminants; cIndex++){
         sprintf(varStr, "%s_fishery_thresh_level", bm->contaminantStructure[cIndex]->contaminant_name);
-        bm->contaminantStructure[cIndex]->fishery_thresh_level = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, varStr);
+        bm->contaminantStructure[cIndex]->fishery_thresh_level = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, varStr);
     }
 }
 

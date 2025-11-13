@@ -533,6 +533,9 @@ void Build_EPI_NameList(MSEBoxModel *bm) {
         // Instead of using FunctGroupArray[fgIndex].diagTol use 0 as need to allow for spill shocks to occur
 		for(contamIndex = 0; contamIndex < bm->num_contaminants; contamIndex++){
 			for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
+                
+                fprintf(bm->logFile, "Doing %s with habitatType: %d\n", FunctGroupArray[fgIndex].name, FunctGroupArray[fgIndex].habitatType);
+                
 				if (FunctGroupArray[fgIndex].speciesParams[flag_id] == TRUE && FunctGroupArray[fgIndex].habitatType == EPIFAUNA) {
 					if (FunctGroupArray[fgIndex].numCohorts > 1) {
 
@@ -541,12 +544,19 @@ void Build_EPI_NameList(MSEBoxModel *bm) {
 							Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].contaminantTracers[cohort][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);
                             sprintf(str, "%s%d_Prop_%s", FunctGroupArray[fgIndex].name, cohort + 1, bm->contaminantStructure[contamIndex]->contaminant_name);
                             Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].contamPropTracers[cohort][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);
+                            
+                            fprintf(bm->logFile, "Added %s%d_Prop_%s with index %d\n", FunctGroupArray[fgIndex].name, cohort + 1, bm->contaminantStructure[contamIndex]->contaminant_name, index);
+                            //printf("Added %s_Prop_%s with index %d\n", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name, index);
+
 						}
 					} else {
 						sprintf(str, "%s_%s", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name);
 						Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].contaminantTracers[0][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);
                         sprintf(str, "%s_Prop_%s", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name);
-                        Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].contamPropTracers[0][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);  
+                        Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].contamPropTracers[0][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);
+                        
+                        fprintf(bm->logFile, "Added %s_Prop_%s with index %d\n", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name, index);
+                        //printf("Added %s_Prop_%s with index %d\n", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name, index);
 					}
 				}
 			}

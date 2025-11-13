@@ -483,6 +483,7 @@ typedef struct{
     
     double ***RecruitContam;
     double ***contam;
+    double **contam_return;
     
     double **MigYOY;
     double **MigYOY_SN;

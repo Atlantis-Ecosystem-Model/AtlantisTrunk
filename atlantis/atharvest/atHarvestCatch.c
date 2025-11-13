@@ -204,7 +204,7 @@ double Get_Aquaculture_Harvest(MSEBoxModel *bm, int sp, int chrt, int stage, int
 double Get_Fishing_Mortality(MSEBoxModel *bm, int sp, int chrt, int stage, int nf, double Biom, double li, int do_debug, FILE *llogfp) {
 
 	double mFC, mFC_scale, mpa_scale, mpa_infringe, SPtoFC, sel, quota;
-	double gear_change_scale = 0;
+	double gear_change_scale = 0, Displace_rescale = 1.0;
 	int mFC_start_age, mFC_end_age, flagfcmpa, sel_curve;
 	int basechrt = chrt / FunctGroupArray[sp].numGeneTypes;
 
@@ -279,9 +279,14 @@ double Get_Fishing_Mortality(MSEBoxModel *bm, int sp, int chrt, int stage, int n
             mFC = 0.0;
     }
     
-
+    Displace_rescale = 1.0;
+    if (bm->flagdisplace) {
+       // Pulling in effort displacement that is calculated previously - this uses the overloaded Effort array (even though effort not active)
+        Displace_rescale = bm->Effort[bm->current_box][nf];
+    }
+    
 	/* Apply fishing mortality */
-	SPtoFC = mFC * mpa_scale * mFC_scale * Biom * sel;
+	SPtoFC = mFC * mpa_scale * mFC_scale * Displace_rescale * Biom * sel;
 
 	if(do_debug){
 		fprintf(llogfp,"Time: %e, %d-%d %s-%d %s SPtoFC orig: %e (with mFC: %e mFC-param: %e, mFCscal_prm: %e, and Biom: %e, mpa_scale:%e, mFC_scale: %e, sel: %e)\n",

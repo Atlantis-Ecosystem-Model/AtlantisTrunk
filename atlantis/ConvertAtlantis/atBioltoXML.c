@@ -3539,6 +3539,7 @@ void createContaminantsXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr 
     bm->flag_contam_halflife_spbased = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "flag_contam_halflife_spbased");
     
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_contamMaternalTransfer", "Whether maternal transfer included", "", XML_TYPE_FLOAT,"0");
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_contam_distrib", "Whether contaminants track an average or a distreibution", "", XML_TYPE_FLOAT,"0");
 
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "biopools_dodge_contam", "Flag to turn on whetehr biomass pool groups can dodge contaminants..", "", XML_TYPE_BOOLEAN,"0");
     

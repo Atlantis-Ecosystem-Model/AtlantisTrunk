@@ -13,13 +13,17 @@ int Degrade_Contaminants(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_
 int Calculate_Contaminants_Flux(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitatType);
 int Calculate_Species_Contaminant_Effects(MSEBoxModel *bm, int box, int clayer, double dtsz, HABITAT_TYPES habitatType);
 
+void Calculate_Contaminant_Q10_Corrections(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitat);
+void Change_Contaminant_Levels(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitat, double dtsz, int offset);
 void Contaminant_Record_Death(MSEBoxModel *bm, int sp, int cohort, double amount);
 void Contaminant_Write_Contact_Record(MSEBoxModel *bm);
 void Contaminant_Close_Contact_Record(MSEBoxModel *bm);
-void Change_Contaminant_Levels(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitat, double dtsz, int offset);
 void Contaminant_Update_ContactMort_Record(MSEBoxModel *bm, int sp, int cohort);
-void Calculate_Contaminant_Q10_Corrections(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitat);
+void ContaminantMigrationIn(MSEBoxModel *bm, int sp, int cohort, int mid, double tot_num_mig, double num_returning);
+void ContaminantMigrationOut(MSEBoxModel *bm, int sp, int cohort, int mid, double oldden, double num_leaving);
+void ContaminantDirectRectuitMigrants(MSEBoxModel *bm, int sp, int cohort, int mid);
 
+void Apply_Contam_Return(MSEBoxModel *bm, int sp, int cohort, int k, int ij, double new_num, double tot_den);
 void Age_Contaminants_Store(MSEBoxModel *bm, int sp, int cohort, int nextcid, double dennow, double this_p_ageup);
 void Age_Contaminants_Update(MSEBoxModel *bm, int sp, int cohort, double denup, double dennow, double nextden, int ij, int k);
 void Age_MigrantContaminants_Update(MSEBoxModel *bm, int sp, int nextcid, int cohort, int mid, double oldden, double num_aging) ;
@@ -37,9 +41,7 @@ int Gain_Contaminants(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYP
 
 double Calculate_Contaminant_Repro_Scalar(MSEBoxModel *bm, int species);
 double Avoid_Contaminants(MSEBoxModel *bm, int groupIndex, int cohort, int box, int layer);
-double ContaminantMigrationIn(MSEBoxModel *bm, int sp, int n, int mid, double oldden, double num_returning);
-double ContaminantMigrationOut(MSEBoxModel *bm, int sp, int cohort, int mid, double oldden, double num_leaving);
-double ContaminantDirectRectuitMigrants(MSEBoxModel *bm, int sp, int n, int mid, double oldden, double num_returning);
+
 
 void Get_ContamMoveEffects(MSEBoxModel *bm, int species, int cohort, int box, int layer);
 void Move_Vert_Contaminated(MSEBoxModel *bm, int sp, int cohort, double ****currentden);
