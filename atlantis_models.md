@@ -1,7 +1,7 @@
 # Atlantis Models
 
 | Model Name | Region | Country | Contacts | GitHub URL |
-|:---:|:---:|:---:|:---:|
+|:---:|:---:|:---:|:---:|:---:|
 |NEUS| Northeast USA| USA |[Andy Beet](https://github.com/andybeet), [Joe Caracappa](https://github.com/jcaracappa1)| https://github.com/NEFSC/READ-EDAB-neusAtlantis |
 |NoBa|Nordic and Barents Seas| Norway| [Cecilie Hansen](https://github.com/cecilieha) | NA|
 ||Gulf of Mexico| USA | [Cameron Ainsworth]() | NA|
