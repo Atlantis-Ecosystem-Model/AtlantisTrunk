@@ -212,6 +212,20 @@ AC_CHECK_FUNCS([floor localtime_r memset pow regcomp sqrt strcasecmp strchr strd
 
 AM_CONDITIONAL(GCC_GE_730, test `gcc -dumpversion | gawk '{print $1>=7?"1":"0"}'` = 1)
 
+# identify the OS and the chip
+# This macro sets several shell variables, most importantly $host_os,
+# which contains a canonical name for the OS (e.g., linux-gnu, darwin, freebsd).
+AC_CANONICAL_HOST
+# Define a conditional flag for Linux
+AM_CONDITIONAL([OS_LINUX], [case "$host_os" in *linux*) true ;; *) false ;; esac])
+
+# Define a conditional flag for macOS (Darwin)
+AM_CONDITIONAL([OS_MACOS], [case "$host_os" in *darwin*) true ;; *) false ;; esac])
+
+# Define a conditional flag for FreeBSD
+AM_CONDITIONAL([OS_FREEBSD], [case "$host_os" in *freebsd*) true ;; *) false ;; esac])
+
+
 
 AC_CONFIG_FILES([Makefile
              ConvertAtlantis/Makefile
