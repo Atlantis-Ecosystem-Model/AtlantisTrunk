@@ -4,18 +4,18 @@
 |:-------------:|:-------------:|:-------------:|:-------------:|:-------------:|
 | NEUS | Northeast USA | USA | [Andy Beet](https://github.com/andybeet), [Joe Caracappa](https://github.com/jcaracappa1) | <https://github.com/NEFSC/READ-EDAB-neusAtlantis> |
 | NoBa | Nordic and Barents Seas | Norway | [Cecilie Hansen](https://github.com/cecilieha) | NA |
-|  | Gulf of Mexico | USA | [Cameron Ainsworth]() | NA |
-|  | Southern Gulf of Mexico | USA | [Cameron Ainsworth]() | NA |
-|  | California Current | USA | [Isaac Kaplan]() | NA |
+|  | Gulf of Mexico | USA | [Cameron Ainsworth](https://github.com/camainsworth) | NA |
+|  | Southern Gulf of Mexico | USA | [Cameron Ainsworth](https://github.com/camainsworth) | NA |
+|  | California Current | USA | [Isaac Kaplan](https://github.com/ickaplan) | NA |
 | CAM | Chesapeake Bay | USA | [Tom Ihde](https://github.com/TomIhde) | NA |
 | Icelantis | Iceland | Iceland | [Jacob Kasper](https://github.com/jacobkasper) | <https://github.com/jacobkasper/Icelantis> |
-|  | South Australia | Australia | [Beth Fulton]() | NA |
-|  | Salish Sea | Canada | [Raisha Lovindeer]() | NA |
+|  | South Australia | Australia | [Beth Fulton](https://github.com/eafulton) | NA |
+|  | Salish Sea | Canada | [Raisha Lovindeer](https://github.com/raishalovindeer) | NA |
 |  | Puget Sound | USA | [Nalini Morzaria-Luna](https://github.com/hmorzaria) | NA |
-|  | Southern Benguela | South Affrica |  | NA |
+|  | Southern Benguela | South Africa |  | NA |
 |  | Tasman and Golden Bays | New Zealand |  | NA |
 |  | Korean Peninsula | South Korea | [Junggil Seo]() | NA |
-|  | Chatham Rise | New Zealand | [Vidette McGregor]()  | NA |
+|  | Chatham Rise | New Zealand | [Vidette McGregor](https://github.com/mcgregorv)  | NA |
 
 # Atlantis Models not currently maintained
 
