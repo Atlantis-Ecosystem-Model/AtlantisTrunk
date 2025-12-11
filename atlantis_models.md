@@ -5,6 +5,7 @@
 | NEUS | Northeast USA | USA | [Andy Beet](https://github.com/andybeet), [Joe Caracappa](https://github.com/jcaracappa1) | <https://github.com/NEFSC/READ-EDAB-neusAtlantis> |
 | NoBa | Nordic and Barents Seas | Norway | [Cecilie Hansen](https://github.com/cecilieha) | NA |
 |  | Gulf of Mexico | USA | [Cameron Ainsworth]() | NA |
+|  | Southern Gulf of Mexico | USA | [Cameron Ainsworth]() | NA |
 |  | California Current | USA | [Isaac Kaplan]() | NA |
 | CAM | Chesapeake Bay | USA | [Tom Ihde](https://github.com/TomIhde) | NA |
 | Icelantis | Iceland | Iceland | [Jacob Kasper](https://github.com/jacobkasper) | <https://github.com/jacobkasper/Icelantis> |
@@ -13,6 +14,8 @@
 |  | Puget Sound | USA | [Nalini Morzaria-Luna](https://github.com/hmorzaria) | NA |
 |  | Southern Benguela | South Affrica |  | NA |
 |  | Tasman and Golden Bays | New Zealand |  | NA |
+|  | Korean Peninsula | South Korea | [Junggil Seo]() | NA |
+|  | Chatham Rise | New Zealand | [Vidette McGregor]()  | NA |
 
 # Atlantis Models not currently maintained
 
