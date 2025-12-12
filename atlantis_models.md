@@ -16,7 +16,7 @@
 |  | Tasman and Golden Bays | New Zealand |  | NA |
 |  | Korean Peninsula | South Korea | [Junggil Seo]() | NA |
 |  | Chatham Rise | New Zealand | [Vidette McGregor](https://github.com/mcgregorv)  | NA |
-|  | Gulf of Alaska | USA | [Alberto Rovellini](https://github.com/somros)  | NA |
+|  | Gulf of Alaska | USA | [Alberto Rovellini](https://github.com/somros)  | <https://github.com/somros/AtlantisGOA_Base> |
 
 
 # Atlantis Models not currently maintained
