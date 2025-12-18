@@ -1541,18 +1541,30 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 
 								/* Calculate potential growth as an index of habitat suitability */
 								clear = Calculate_Species_Clearance_Rate(bm, llogfp, sp, n, ij, preyamt);
-
+								
+								//fprintf(llogfp, "JMK clear debug sp=%d ij=%d n=%d clear=%g E1_sp=%g\n", sp, ij, n, clear, E1_sp);
+   
                                 if ((int) (FunctGroupArray[sp].speciesParams[flag_id]) && (int) (FunctGroupArray[sp].speciesParams[active_id]) &&
                                 		( bm->boxes[ij].botz <= (-1.0 * FunctGroupArray[sp].speciesParams[mindepth_id]) &&
                                 		 bm->boxes[ij].botz >= (-1.0 * FunctGroupArray[sp].speciesParams[maxdepth_id]) &&
-                                        ((-1.0 * bm->boxes[bm->current_box].botz) <= FunctGroupArray[sp].speciesParams[maxtotdepth_id]))) {
+                                        ((-1.0 * bm->boxes[ij].botz) <= FunctGroupArray[sp].speciesParams[maxtotdepth_id]))) { /* JMK bug alert changed current_box */
                                 //if ((int) (FunctGroupArray[sp].speciesParams[flag_id]) && (int) (FunctGroupArray[sp].speciesParams[active_id]) &&
                                 //    (current_depth <= (-1.0 * FunctGroupArray[sp].speciesParams[mindepth_id]) &&
                                 //     current_depth >= (-1.0 * FunctGroupArray[sp].speciesParams[maxdepth_id]))) {
 
 									roc[ij][n] = E1_sp * clear;
+									//fprintf(llogfp, "JMK roc SET sp=%d ij=%d n=%d roc=%g (E1_sp=%g * clear=%g)\n", sp, ij, n, roc[ij][n], E1_sp, clear);
+
 								} else {
 									roc[ij][n] = 0.0;
+								/**	fprintf(llogfp, "JMK roc ZERO sp=%d ij=%d n=%d - depth check failed: botz=%g mindepth=%g maxdepth=%g current_box=%d current_botz=%g maxtotdepth=%g\n", 
+									sp, ij, n, 
+									bm->boxes[ij].botz, 
+									FunctGroupArray[sp].speciesParams[mindepth_id],
+									FunctGroupArray[sp].speciesParams[maxdepth_id],
+									bm->current_box,
+									bm->boxes[bm->current_box].botz,
+									FunctGroupArray[sp].speciesParams[maxtotdepth_id]);**/
 								}
                                 
 
@@ -1561,15 +1573,22 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 									break;
 								case step_ddepend_id: /* Threshold breakpoint - base comparison vs average
 								 sized individual */
-									if (roc[ij][n] > (k_roc_food * VERTinfo[sp][n][SN_id]))
+									if (roc[ij][n] > (k_roc_food * VERTinfo[sp][n][SN_id])){
 										/* If good feed area will clump */
+									//	fprintf(llogfp,"JMK ROC_BEFORE 1 | ij=%d n=%d roc=%g roc_wgt=%g\n", ij, n, roc[ij][n], roc_wgt);
 										roc[ij][n] = roc[ij][n] * roc_wgt;
-									else
+									//	fprintf(llogfp, "JMK ROC_AFTER 1 | ij=%d n=%d roc=%g roc_wgt=%g\n", ij, n, roc[ij][n], roc_wgt);
+									} else {
 										/* If poor feed area will disperse */
+									//	fprintf(llogfp,"JMK ROC_BEFORE 2 | ij=%d n=%d roc=%g roc_wgt=%g\n", ij, n, roc[ij][n], roc_wgt);
 										roc[ij][n] = roc[ij][n] / roc_wgt;
+									//fprintf(llogfp, "JMK ROC_AFTER 2 | ij=%d n=%d roc=%g roc_wgt=%g\n", ij, n, roc[ij][n], roc_wgt);
+									}
 									break;
 								case decay_ddepend_id: /* Exponentially decaying effects */
+									//fprintf(llogfp,"JMK ROC_BEFORE 3 | ij=%d n=%d roc=%g roc_wgt=%g\n", ij, n, roc[ij][n], roc_wgt);
 									roc[ij][n] = exp(-1.0 / (roc[ij][n] + small_num));
+									//fprintf(llogfp, "JMK ROC_AFTER 3 | ij=%d n=%d roc=%g roc_wgt=%g\n", ij, n, roc[ij][n], roc_wgt);
 									break;
 								default:
 									quit("No such forage ideal distrib model defined - how did it get here in the vertebrate migration routine?\n");
@@ -1578,8 +1597,10 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 
 								/* Scale outcome based on own refuge_status of local habitat */
 								if (bm->flaghabdepend) {
+									//fprintf(llogfp,"JMK ROC_BEFORE 4 | ij=%d n=%d roc=%g roc_wgt=%g\n", ij, n, roc[ij][n], roc_wgt);
 									rocstage = FunctGroupArray[sp].cohort_stage[n];
 									roc[ij][n] *= bm->refuge_status[sp][ij][rocstage];
+									//fprintf(llogfp, "JMK ROC_AFTER 4 | ij=%d n=%d roc=%g roc_wgt=%g\n", ij, n, roc[ij][n], roc_wgt);
 								}
                                 
                                 if (roc[ij][n] < 0.0) {
@@ -1596,8 +1617,21 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                 }
 
 								/* Calculate total potential growth across entire area for each species */
+								//fprintf(llogfp,"JMK ROC_BEFORE 5 | ij=%d n=%d roc=%g roc_wgt=%g\n", ij, n, roc[ij][n], roc_wgt);
 								totroc[n] += roc[ij][n];
 
+								/* JMK DEBUG: Track roc and totroc after switch statement */
+								{
+									int which_check = 0;  // FCD = cod
+									int boxes_to_check[] = {7, 14, 20, 31};
+									int num_boxes_check = 4;
+									for (int b = 0; b < num_boxes_check; b++) {
+										if (sp == which_check && ij == boxes_to_check[b] && n >= 4) {
+											fprintf(stderr, "JMK DIAG_TOTROC Time: %e %s-%d box%d roc:%e totroc:%e\n",
+													bm->dayt, FunctGroupArray[sp].groupCode, n, ij, roc[ij][n], totroc[n]);
+										}
+									}
+								}
 								/**
                                  if(do_debug2 && (sp == bm->which_check)){
 									fprintf(llogfp,"Time: %e box%d %s-%d totroc: %.20e, roc: %.20e, flaghabdepend: %d, refuge_status[0]: %.20e, refuge_status[1]: %.20e, roc_wgt: %.20e, E1_sp: %.20e, clear: %.20e\n",
@@ -1738,7 +1772,20 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 							stage = FunctGroupArray[sp].cohort_stage[n];
 
 							/* Update stored vertdistrib value - so can condition catch timeseries if need be */
-							bm->boxes[ij].vert_vdistrib[sp][stage][k] = tempdistrib[stage][k];
+							/*fprintf(llogfp,
+										"JMK VERT_BEFORE | ij=%d sp=%d n=%d stage=%d k=%d "
+										"vert_vdistrib=%g tempdistrib=%g\n",
+										ij, sp, n, stage, k,
+										bm->boxes[ij].vert_vdistrib[sp][stage][k],
+										tempdistrib[k][stage]
+									);*/
+							bm->boxes[ij].vert_vdistrib[sp][stage][k] = tempdistrib[k][stage];
+							/*fprintf(llogfp,
+										"JMK VERT_AFTER  | ij=%d sp=%d n=%d stage=%d k=%d "
+										"vert_vdistrib=%g\n",
+										ij, sp, n, stage, k,
+										bm->boxes[ij].vert_vdistrib[sp][stage][k]
+													);*/
 
 							/*
 							if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
@@ -1749,17 +1796,16 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 
                             switch (sp_ddepend_move) {
                             
-							spawnmove = 1.0;
-                              
 								case weight_ddepend:
 								case switch_ddepend:
 								case only_ddepend:
-
+									spawnmove = 1.0;
+									
                                 /* If using weighted density dependent movement (weights slow movement but still drift
                                 as if ideal free distributed then determine ideal distribution */
                                 /* FIX -- may want to have depth based on roc too not just always at optimal,
                                 otherwise with conditions change may not see distribution changes */
-                                vertdistrib = tempdistrib[stage][k];
+                                vertdistrib = tempdistrib[k][stage];
 
                                 if(!stage) {
                                     thiscase1 = 1;
@@ -1779,10 +1825,13 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                     thiscase1 = 0;
                                 }
                                     
-
+								fprintf(llogfp, "JMK SPAWNMOVE_BEFORE sp=%d n=%d ij=%d k=%d spawnmove=%e this_HowFar=%e\n", 
+													sp, n, ij, k, spawnmove, this_HowFar);
                                 /* Find other migration pressure */
                                 if (thiscase1 || (sp_ddepend_move != switch_ddepend)) {
-        							spawnmove = this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][stage] - FunctGroupArray[sp].distrib[ij][qrt][stage]) + FunctGroupArray[sp].distrib[ij][qrt][stage];
+        							spawnmove = this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][stage] - 
+																	FunctGroupArray[sp].distrib[ij][qrt][stage]) + 
+																	FunctGroupArray[sp].distrib[ij][qrt][stage];
                                 } else if (thiscase2){
                                     /* If case where use perscribed spawning movement in spawning season and juvenile
                                      * or not spawning and using case where use forage only in non-spawning period,
@@ -1791,7 +1840,8 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                      */
                                     spawnmove = 1.0;
                                 }
-                                    
+								fprintf(llogfp, "JMK SPAWNMOVE_AFTER sp=%d n=%d ij=%d k=%d spawnmove=%e thiscase1=%d thiscase2=%d\n",
+										sp, n, ij, k, spawnmove, thiscase1, thiscase2);                                    
                             
 
                                 /* Find feeding migration pressure.
@@ -1799,22 +1849,31 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                 until mature have the juveniles stay with mother via
                                 basing their allocation on that of the older age group(s) */
 
+								if( (flagmother > 0) && (n < age_mat) ){
+									newden[sp][n][k][ij] = spawnmove * roc[ij][age_mat] / (totroc[age_mat] + small_num);
+									if(!totroc[age_mat]) {
+										newden[sp][n][k][ij] = currentden[sp][n][k][ij];
+									}
+								} else {
+									//fprintf(llogfp, "JMK NEWDEN_BEFORE sp=%d n=%d ij=%d k=%d newden=%e roc=%e totroc=%e spawnmove=%e currentden=%e\n",
+									//		sp, n, ij, k, newden[sp][n][k][ij], roc[ij][n], totroc[n], spawnmove, currentden[sp][n][k][ij]);
+									
+									newden[sp][n][k][ij] = spawnmove * roc[ij][n] / (totroc[n] + small_num);
+									
+									//fprintf(llogfp, "JMK NEWDEN_AFTER_CALC sp=%d n=%d ij=%d k=%d newden=%e\n",
+									//		sp, n, ij, k, newden[sp][n][k][ij]);
+									
+									if(!totroc[n]) {
+									//	fprintf(llogfp, "JMK NEWDEN_TOTROC_ZERO sp=%d n=%d ij=%d k=%d resetting to currentden=%e\n",
+									//			sp, n, ij, k, currentden[sp][n][k][ij]);
+										newden[sp][n][k][ij] = currentden[sp][n][k][ij];
+									}
+									
+									//fprintf(llogfp, "JMK NEWDEN_FINAL sp=%d n=%d ij=%d k=%d newden=%e\n",
+									//		sp, n, ij, k, newden[sp][n][k][ij]);
+								}
 
-                                if( (flagmother > 0) && (n < age_mat) ){
-                                    newden[sp][n][k][ij] = spawnmove * roc[ij][age_mat] / (totroc[age_mat] + small_num);
-                                    if(!totroc[age_mat]) {
-                                        newden[sp][n][k][ij] = currentden[sp][n][k][ij];
-                                    }
-                                } else {
-                                    newden[sp][n][k][ij] = spawnmove * roc[ij][n] / (totroc[n] + small_num);
-                                    if(!totroc[n]) {
-                                        newden[sp][n][k][ij] = currentden[sp][n][k][ij];
-                                    }
-                                }
-                                    
-                                
-                                    
-                                orig_newden = newden[sp][n][k][ij];
+								orig_newden = newden[sp][n][k][ij];
 
                                 if(bm->track_contaminants) {
                                     spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
@@ -1824,11 +1883,95 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                     
                                 // This needs to be a minimum (so never goes negative), but we need to multiply with vertdistrib AFTER this
                                 // step so that distinguish horizontal and vertical movement limitations
-                                newden[sp][n][k][ij] = min(1.0,(spSpeed * dt / bm->box_width[ij])) * (newden[sp][n][k][ij] - currentden[sp][n][k][ij])
-                                    + currentden[sp][n][k][ij]; /* JMK box_width[ij] */
-                                
+                                /* JMK DEBUG: Track newden through movement limiter and vertdistrib */
+								{
+									int which_check = 0;  // FCD = cod
+									int boxes_to_check[] = {14, 16, 17, 20, 23, 30, 31};
+									int ages_to_check[] = {2, 5, 8};
+									int num_boxes_check = 7;
+									int num_ages_check = 3;
+									int print_this = 0;
+									
+									for (int b = 0; b < num_boxes_check; b++) {
+										for (int a = 0; a < num_ages_check; a++) {
+											if (sp == which_check && ij == boxes_to_check[b] && n == ages_to_check[a]) {
+												print_this = 1;
+											}
+										}
+									}
+									
+									if (print_this) {
+										fprintf(llogfp, "JMK MOVE_BEFORE sp=%d n=%d ij=%d k=%d newden=%e currentden=%e spSpeed=%e dt=%e box_width=%e move_frac=%e\n",
+												sp, n, ij, k, newden[sp][n][k][ij], currentden[sp][n][k][ij], spSpeed, dt, bm->box_width[ij],
+												min(1.0,(spSpeed * dt / bm->box_width[ij])));
+									}
+								}
+
+								newden[sp][n][k][ij] = min(1.0,(spSpeed * dt / bm->box_width[ij])) * (newden[sp][n][k][ij] - currentden[sp][n][k][ij])
+									+ currentden[sp][n][k][ij]; /* JMK box_width[ij] */
+
+								/* JMK DEBUG: After movement limiter, before vertdistrib */
+								{
+									int which_check = 0;
+									int boxes_to_check[] = {14, 16, 17, 20, 23, 30, 31};
+									int ages_to_check[] = {2, 5, 8};
+									int num_boxes_check = 7;
+									int num_ages_check = 3;
+									int print_this = 0;
+									
+									for (int b = 0; b < num_boxes_check; b++) {
+										for (int a = 0; a < num_ages_check; a++) {
+											if (sp == which_check && ij == boxes_to_check[b] && n == ages_to_check[a]) {
+												print_this = 1;
+											}
+										}
+									}
+									
+									if (print_this) {
+										fprintf(llogfp, "JMK MOVE_AFTER sp=%d n=%d ij=%d k=%d newden=%e vertdistrib=%e\n",
+												sp, n, ij, k, newden[sp][n][k][ij], vertdistrib);
+									}
+								}
+
 								newden[sp][n][k][ij] *= vertdistrib;
-                                 
+
+								/* JMK DEBUG: After vertdistrib */
+								{
+									int which_check = 0;
+									int boxes_to_check[] = {14, 16, 17, 20, 23, 30, 31};
+									int ages_to_check[] = {2, 5, 8};
+									int num_boxes_check = 7;
+									int num_ages_check = 3;
+									int print_this = 0;
+									
+									for (int b = 0; b < num_boxes_check; b++) {
+										for (int a = 0; a < num_ages_check; a++) {
+											if (sp == which_check && ij == boxes_to_check[b] && n == ages_to_check[a]) {
+												print_this = 1;
+											}
+										}
+									}
+									
+									if (print_this) {
+										fprintf(llogfp, "JMK VERT_FINAL sp=%d n=%d ij=%d k=%d newden=%e\n",
+												sp, n, ij, k, newden[sp][n][k][ij]);
+									}
+								}
+								int which_check = 0;  // FCD = cod
+								int boxes_to_check[] = {14, 16, 17, 20, 23, 30, 31};
+								int num_boxes_check = 7;
+								for (int b = 0; b < num_boxes_check; b++) {
+									if (sp == which_check && ij == boxes_to_check[b] && n >= 4) {  // adults only (age >= age_mat)
+										fprintf(stderr, "JMK DIAG_NEWDEN Time: %e %s-%d box%d layer%d nz:%d\n",
+												bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, bm->boxes[ij].nz);
+										fprintf(stderr, "JMK   roc:%e totroc:%e roc/totroc:%e\n",
+												roc[ij][n], totroc[n], roc[ij][n]/(totroc[n]+small_num));
+										fprintf(stderr, "JMK   vertdistrib:%e spawnmove:%e orig_newden:%e\n",
+												vertdistrib, spawnmove, orig_newden);
+										fprintf(stderr, "JMK   currentden:%e newden_final:%e\n",
+												currentden[sp][n][k][ij], newden[sp][n][k][ij]);
+									}
+								}                                 
 								/*
                                 if(sp == bm->which_check) {
                                     fprintf(llogfp, "Time: %e %s-%d box %d-%d newden: %.20e ", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, newden[sp][n][k][ij]);
@@ -1883,7 +2026,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                         newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->box_width[ij])) * (newden[sp][n][k][ij] - currentden[sp][n][k][ij])
                                                 + currentden[sp][n][k][ij]; /*JMK */
                                         newden[sp][n][k][ij] *= vertdistrib;
-                                    }
+                                    }//JMK add fprintf to look at vertdistrib and calculation of newden check dt and spSpeed again
                                     
                                     /*
                                     fprintf(llogfp,"Time: %e %s-%d in %d-%d flagmother newden: %e spawnmove: %e vertdistrib: %e boxden: %e leftden: %e roc: %e totroc: %e, roc_wgt: %e k_roc_food: %e VERTinfo-SN: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k,  newden[sp][n][k][ij], spawnmove, vertdistrib, boxden[ij][n], leftden[sp][n], roc[ij][age_mat], totroc[age_mat], roc_wgt, k_roc_food, VERTinfo[sp][n][SN_id]);
@@ -2216,7 +2359,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 							} else {
 								newden[sp][n][k][ij] = newden[sp][n][k][ij] * bm->stock_struct_prop[sp][n][stock_id] / (init_stock_struct_prop[sp][n][stock_id]
 									+ small_num);
-							}
+							}//JMK add fprints here to check logic
 
 							if(newden[sp][n][k][ij]  < 0){
 								printf("newDen - %e, stock structure = %e, init stock sturcture = %e\n", newden[sp][n][k][ij], bm->stock_struct_prop[sp][n][stock_id], init_stock_struct_prop[sp][n][stock_id]);
@@ -2462,7 +2605,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 			for (ij = 0; ij < bm->nbox; ij++) {
 				if (bm->terrestrial_on == TRUE && bm->boxes[ij].type == LAND) {
 					if(FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
-
+//JMK add fprints 
 						for (n = 0; n < FunctGroupArray[sp].numGeneTypes; n++) {
 							/* Normalise localised recruitment if necessary */
 							if (bm->norm_larval_distrib && !updated_already && ((bearlive || sp_enviro_depend || (FunctGroupArray[sp].recruitType == at_parent_location))

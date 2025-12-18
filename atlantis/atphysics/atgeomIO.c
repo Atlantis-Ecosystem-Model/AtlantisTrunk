@@ -911,9 +911,9 @@ static void Compute_Box_Widths(MSEBoxModel *bm)
             /*fprintf(stderr, "   Vert %d: (%.6f, %.6f)\n", v, lp->p.x, lp->p.y);*/
         }
 
-        fprintf(stderr,
+        /*fprintf(stderr,
         "JMK   Box %d: Width-from-center (radius) = %.6f, diameter = %.6f (max at vertex %d)\n",
-        i, bm->box_width[i], 2.0 * bm->box_width[i], max_v);
+        i, bm->box_width[i], 2.0 * bm->box_width[i], max_v);*/
 		}
 }/* JMK geometry */
 
