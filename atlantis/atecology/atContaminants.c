@@ -45,7 +45,9 @@ void Free_Contaminants(MSEBoxModel *bm) {
 	for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
 
         free4d(bm->contaminantStructure[cIndex]->expose_time);
-
+	      free(bm->contaminantStructure[cIndex]->sp_avoid);
+	      free(bm->contaminantStructure[cIndex]->sp_K_avoid);
+	  
         free(bm->contaminantStructure[cIndex]->sp_uptake_rate);
         free(bm->contaminantStructure[cIndex]->sp_uptake_option);
         free(bm->contaminantStructure[cIndex]->sp_decay_half_life);
@@ -87,6 +89,13 @@ void Free_Contaminants(MSEBoxModel *bm) {
         free(bm->contaminantStructure[cIndex]->sp_TimeToLD50);
         free(bm->contaminantStructure[cIndex]->sp_Cx);
         free(bm->contaminantStructure[cIndex]->sp_Cy);
+        free(bm->contaminantStructure[cIndex]->sp_L);
+        free(bm->contaminantStructure[cIndex]->sp_A);
+        free(bm->contaminantStructure[cIndex]->sp_B);
+        free(bm->contaminantStructure[cIndex]->sp_L_r);
+        free(bm->contaminantStructure[cIndex]->sp_A_r);
+        free(bm->contaminantStructure[cIndex]->sp_B_r);
+        
 
         //free2d(bm->contaminantStructure[cIndex]->speciesMort);
 	}
@@ -109,66 +118,66 @@ void Allocate_Contaiminants(MSEBoxModel *bm) {
     int max_chrt = bm->K_num_max_genetypes * bm->K_num_max_cohort;
 
 	for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
-		bm->contaminantStructure[cIndex]->sp_uptake_rate = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_uptake_option = Util_Alloc_Init_1D_Int(bm->K_num_tot_sp, 0);
-		bm->contaminantStructure[cIndex]->sp_uptake = Util_Alloc_Init_3D_Double(bm->num_active_habitats, max_chrt, bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_transfer = Util_Alloc_Init_3D_Double(bm->num_active_habitats, max_chrt, bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_transfer_global = Util_Alloc_Init_4D_Double(bm->num_active_habitats, bm->num_active_habitats, max_chrt, bm->K_num_tot_sp, 0.0);
-
-        bm->contaminantStructure[cIndex]->expose_time =  Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, max_chrt, bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_amount_decayed = Util_Alloc_Init_2D_Double(max_chrt, bm->K_num_tot_sp, 0.0);
-        bm->contaminantStructure[cIndex]->sp_decay_half_life = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-
-        bm->contaminantStructure[cIndex]->sp_ContamScalar = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-
-        bm->contaminantStructure[cIndex]->sp_maternal_transfer = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-        bm->contaminantStructure[cIndex]->sp_suckling_transfer = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-
-        bm->contaminantStructure[cIndex]->sp_EC50 = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-        bm->contaminantStructure[cIndex]->sp_ECslope = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-        
-        bm->contaminantStructure[cIndex]->sp_EC50_r = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-        bm->contaminantStructure[cIndex]->sp_ECslope_r = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-
-        bm->contaminantStructure[cIndex]->interact_coefft = Util_Alloc_Init_1D_Double(bm->num_contaminants, 0.0);
-
-		bm->contaminantStructure[cIndex]->sp_LD50 = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_LD100 = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-        bm->contaminantStructure[cIndex]->sp_LDChronic = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-        bm->contaminantStructure[cIndex]->sp_LDslope = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-
-		bm->contaminantStructure[cIndex]->gained = Util_Alloc_Init_1D_Double(bm->num_active_habitats, 0.0);
-
-        bm->contaminantStructure[cIndex]->sp_maxConcentration = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-        bm->contaminantStructure[cIndex]->sp_maxChronicConc = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-        bm->contaminantStructure[cIndex]->sp_maxLethalConc = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-
-		bm->contaminantStructure[cIndex]->gainedGlobal = Util_Alloc_Init_2D_Double(bm->num_active_habitats, bm->num_active_habitats, 0.0);
-		bm->contaminantStructure[cIndex]->sp_point = Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, max_chrt, bm->K_num_tot_sp, 0.0);
-
-		bm->contaminantStructure[cIndex]->sp_GrowthThresh = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-    bm->contaminantStructure[cIndex]->sp_GrowthEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-    
-    bm->contaminantStructure[cIndex]->sp_ReprodThresh = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-
-    bm->contaminantStructure[cIndex]->sp_instantDoseMortality = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0);
-		bm->contaminantStructure[cIndex]->sp_maxDoseToDate = Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, max_chrt, bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_MoveEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-    bm->contaminantStructure[cIndex]->sp_ReprodEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-
-		bm->contaminantStructure[cIndex]->sp_TimeToLD50 = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_Cx = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_Cy = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_L = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_A = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_B = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_L_r = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_A_r = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-		bm->contaminantStructure[cIndex]->sp_B_r = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-
-    bm->contaminantStructure[cIndex]->sp_avoid = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-    bm->contaminantStructure[cIndex]->sp_K_avoid = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-
+	  bm->contaminantStructure[cIndex]->sp_uptake_rate = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_uptake_option = Util_Alloc_Init_1D_Int(bm->K_num_tot_sp, 0);
+	  bm->contaminantStructure[cIndex]->sp_uptake = Util_Alloc_Init_3D_Double(bm->num_active_habitats, max_chrt, bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_transfer = Util_Alloc_Init_3D_Double(bm->num_active_habitats, max_chrt, bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_transfer_global = Util_Alloc_Init_4D_Double(bm->num_active_habitats, bm->num_active_habitats, max_chrt, bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->expose_time =  Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, max_chrt, bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_amount_decayed = Util_Alloc_Init_2D_Double(max_chrt, bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_decay_half_life = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->sp_ContamScalar = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->sp_maternal_transfer = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_suckling_transfer = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->sp_EC50 = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_ECslope = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->sp_EC50_r = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_ECslope_r = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->interact_coefft = Util_Alloc_Init_1D_Double(bm->num_contaminants, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->sp_LD50 = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_LD100 = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_LDChronic = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_LDslope = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->gained = Util_Alloc_Init_1D_Double(bm->num_active_habitats, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->sp_maxConcentration = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_maxChronicConc = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_maxLethalConc = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->gainedGlobal = Util_Alloc_Init_2D_Double(bm->num_active_habitats, bm->num_active_habitats, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_point = Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, max_chrt, bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->sp_GrowthThresh = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_GrowthEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->sp_ReprodThresh = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_ReprodEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->sp_instantDoseMortality = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0);
+	  bm->contaminantStructure[cIndex]->sp_maxDoseToDate = Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, max_chrt, bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_MoveEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->sp_TimeToLD50 = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_Cx = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_Cy = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_L = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_A = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_B = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_L_r = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_A_r = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_B_r = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  
+	  bm->contaminantStructure[cIndex]->sp_avoid = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  bm->contaminantStructure[cIndex]->sp_K_avoid = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+	  
 		//bm->contaminantStructure[cIndex]->speciesMort = Util_Alloc_Init_2D_Double(3, bm->K_num_tot_sp, 0.0);
 
 	}
