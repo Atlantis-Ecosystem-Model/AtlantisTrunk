@@ -1091,6 +1091,7 @@ static void Read_Tolerance_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr pa
 	RelTol = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "RelTol");
 	Flux_tol = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "Flux_tol");
 	bm->min_pool = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "min_pool");
+	bm->min_pool_cont = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "min_pool");
 	bm->min_dens = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "min_dens");
 	bm->min_channel_depth = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "min_channel_depth");
 }
