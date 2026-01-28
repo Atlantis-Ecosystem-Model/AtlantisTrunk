@@ -53,7 +53,7 @@ jobs:
           "
         shell: bash
 
-      - name: print log
+      - name: print log file
         run: |
           cat example/testFolder/log.txt
         shell: bash
@@ -71,8 +71,3 @@ jobs:
           tests()
         shell: Rscript {0}
 
-      - name: Write out log file
-        run: |
-          cat example/testFolder/log.txt
-        shell: bash
-  
