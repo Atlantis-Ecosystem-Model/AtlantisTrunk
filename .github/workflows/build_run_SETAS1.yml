@@ -1,15 +1,15 @@
-# Workflow to build atlantis
-name: build_run_SETAS1
+# Workflow to build atlantis test
+name: build and run SETAS example 1
 
 on:
   push:
-    branches: [main, master, dev, workflow_attest]
+    branches: [main]
   pull_request:
-    branches: [main, master, dev]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  runAtlantis1:
+  SETAS1_Linux:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -25,9 +25,12 @@ jobs:
 
       - name: Store branch name as a variable
         run: |
-          echo "MY_BRANCH=$(git branch --show-current)" >> $GITHUB_ENV
-          echo $MY_BRANCH
+          MY_BRANCH=$(git branch --show-current)
+          echo "CURRENT_BRANCH = $MY_BRANCH" >> $GITHUB_ENV
+          echo "MY BRANCH: $MY_BRANCH"
+          echo "CURRENT_BRANCH: $GITHUB_ENV"
         shell: bash
+
 
 
       - name: Set up R
@@ -46,21 +49,30 @@ jobs:
           cd atlantis && aclocal && autoheader && autoconf && automake -a && ./configure --enable-rassesslink && make && make install &&
           echo 'Now run the model!' &&
           cd ../example &&
-          atlantisMerged -i INIT_VMPA_Jan2015.nc 0 -o outputSETAS.nc -r VMPA_setas_run_fishing_F_Trunk.prm -f VMPA_setas_force_fish_Trunk.prm -p VMPA_setas_physics.prm -b VMPA_setas_biol_fishing_Trunk.prm -m SETas_Migrations.csv -h VMPA_setas_harvest_F_Trunk.prm  -s SETasGroupsDem.csv -q SETasFisheries.csv -d testFolder > out.txt 
+          atlantisMerged -i INIT_VMPA_Jan2015.nc 0 -o outputSETAS.nc -r VMPA_setas_run_fishing_F_Trunk.prm -f VMPA_setas_force_fish_Trunk.prm -p VMPA_setas_physics.prm -b VMPA_setas_biol_fishing_Trunk.prm -m SETas_Migrations.csv -h VMPA_setas_harvest_F_Trunk.prm  -s SETasGroupsDem.csv -q SETasFisheries.csv -d testFolder 2>out.txt 
           "
         shell: bash
-        
+
+      - name: print log
+        run: |
+          cat example/testFolder/log.txt
+        shell: bash
+      
+      - name: print console
+        run: |
+          cat example/out.txt
+        shell: bash
+
       - name: Parse and Validate
       # read in log file and check for "Atlantis Done" + other related tests to
       # check why Atlantis may have failed
         run: |
-          source("data-raw/test_setas_model.R")
-          test_setas_model()
+          source("data-raw/tests.r")
+          tests()
         shell: Rscript {0}
 
-      # - name: Write out log file
-      #   run: |
-      #     cat example/testFolder/log.txt
-      #   shell: bash
+      - name: Write out log file
+        run: |
+          cat example/testFolder/log.txt
+        shell: bash
   
-          
