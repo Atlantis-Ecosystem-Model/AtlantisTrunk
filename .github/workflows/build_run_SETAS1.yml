@@ -3,7 +3,7 @@ name: build and run SETAS example 1
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev, workflow_attest]
   pull_request:
     branches: [main]
   workflow_dispatch:
