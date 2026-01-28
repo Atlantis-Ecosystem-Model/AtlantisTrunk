@@ -1,0 +1,75 @@
+name: Bug report
+description: Use this template to report bugs
+title: "[Bug Report]: "
+labels: "bug"
+assignees: "eafulton"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks a lot for taking the time to fill out this bug report.
+        Please use the fields below to describe the bug.
+        We will need this information to reproduce and fix any issues. Thanks
+
+        We are also happy to accept contributions from our users. So if you have a solution to the
+        bug consider contributing. For more details see [here](https://github.com/andybeet/testatlantis/blob/main/CONTRIBUTING.md).
+  - type: textarea
+    id: codeversion
+    attributes:
+      label: Atlantis version and Model name
+      description: What is the name of your model? Which version of atlantis are you using?
+    validations:
+      required: true 
+  - type: textarea
+    id: bugdesc
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is and when it occurs. 
+    validations:
+      required: true
+  - type: textarea
+    id: errdesc
+    attributes:
+      label: Error Message
+      description: If the bug is related to an issue compiling or running the model, please copy/paste the exact error message or supply a screenshot.
+    validations:
+      required: true
+  - type: textarea
+    id: valgrind
+    attributes:
+      label: Valgrind output
+      description: Please provide the output from valgrind if the model is crashing.
+      value: |
+       <!---  run: "valgrind  -s --tool=memcheck --log-file=valgrind%p.log --track-origins=yes --leak-check=full --track-fds=yes --show-reachable=yes -i" followed by the command you usually use to run your model from the *.sh file --->
+    validations:
+      required: true
+  - type: checkboxes
+    id: issues
+    attributes:
+      label: Is this a duplicate issue?
+      description: Have you searched the [issues](https://github.com//Atlantis-Ecosystem-Model/AtlantisTrunk/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug) to ensure this is not a duplicate?
+      options:
+        - label: I have searched the existing data.
+          required: true
+  - type: textarea
+    id: reprex
+    attributes:
+      label: Provide the code and files used to run your model?
+      description: Please provide the code and files used to run the model. It will be quicker for us to diagnose the issue if your model is available on GitHub. Please provide a link to your repository
+    validations:
+      required: true
+  - type: textarea
+    id: expect
+    attributes:
+      label: Your set up (OS, RAM etc.)
+      description: Please describe the system you are running the model on
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional content
+      description: Add additional context
+    validations:
+      required: false
+
