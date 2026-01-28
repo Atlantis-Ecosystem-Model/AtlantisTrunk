@@ -54,15 +54,15 @@ tests <- function() {
 
   # find line with poorly defined geometry
   ## NEED TO LOOK INTO THIS. FALSELY REPORTS FAILED RUN
-  error_line <- grepl("skipToKeyEnd:", lines)
-  if (any(TRUE %in% error_line)) {
-    # if any line contains the error then fail the workflow
-    error_message <- lines[error_line]
-    message(
-      "Atlantis failed to run due to issues with box faces and other errors"
-    )
-    #    stop(error_message)
-  }
+  # error_line <- grepl("skipToKeyEnd:", lines)
+  # if (any(TRUE %in% error_line)) {
+  #   # if any line contains the error then fail the workflow
+  #   error_message <- lines[error_line]
+  #   message(
+  #     "Atlantis failed to run due to issues with box faces and other errors"
+  #   )
+  #   #    stop(error_message)
+  # }
   # find line with group.csv issues
   error_line <- grepl("Set_Tracer_Index", lines)
   if (any(TRUE %in% error_line)) {
