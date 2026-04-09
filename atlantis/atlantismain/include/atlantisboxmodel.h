@@ -1027,6 +1027,7 @@ typedef enum {
 	mEff_max_id,
 	mEff_a_id,
 	flagmpa_id,
+	flagMFCdisplace_id,
     mpascale_cap_id,
 	max_mpa_sequence_id,
 	infringe_id,
