@@ -121,9 +121,9 @@ void WriteSSFiles(MSEBoxModel *bm, int species, int year, FILE *llogfp){
 	char controlFileName[STRLEN];
     //char SSFileName[STRLEN];
 
-	sprintf(dataFileName, "%sDatFile.dat", FunctGroupArray[species].groupCode);
-	sprintf(controlFileName, "%sControlFile.ctl", FunctGroupArray[species].groupCode);
-    //sprintf(SSFileName, "%s.ss", FunctGroupArray[species].groupCode);
+	snprintf(dataFileName, sizeof(dataFileName), "%sDatFile.dat", FunctGroupArray[species].groupCode);
+	snprintf(controlFileName, sizeof(controlFileName), "%sControlFile.ctl", FunctGroupArray[species].groupCode);
+    //snprintf(SSFileName, sizeof(SSFileName), "%s.ss", FunctGroupArray[species].groupCode);
 
 	/* First rm all the contents of the folder */
 	result = chdir(folderName);
@@ -175,7 +175,7 @@ static FILE * Init_Hist_File(MSEBoxModel *bm) {
 	int sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sHist.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sHist.txt", bm->startfname);
 
 	/** Create file **/
 	if ( (fid=Util_fopen(bm, fname, "w")) == NULL )

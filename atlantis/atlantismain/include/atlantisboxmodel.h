@@ -245,7 +245,7 @@
  Added additional species params to store the indices of each group (allow for adult and juv values for age structured groups)
  in the linear mortality scaling time series input file.
  Also added the new tslinearMort TimeSeries structure to the MSWBoxModel structure to store the new time series data and the function definitions
- readLinearMortalityTimeSeries to read in the time series data and Setup_Linear_Mortality_Indicies to link each group to the variables in the
+ readLinearMortalityTimeSeries to read in the time series data and Setup_Linear_Mortality_Indices to link each group to the variables in the
  read in time series file.
 
  19-10-2010 Bec Gorton
@@ -392,8 +392,10 @@ typedef enum {
 	EPIFAUNA,
 	LAND_BASED,
 	ICE_BASED,
-    MIXED
+    MIXED,
+    nTotHabTypes
 } HABITAT_TYPES;
+#define nHabTypes 3
 
 #define nlevel_id (ICE_BASED + 1)
 #define growth_id (ICE_BASED + 1)  /* growth_id and death_id are used with WC, SED and EPIFAUNA in MaxFluxCheck */
@@ -461,6 +463,7 @@ typedef enum {
 typedef enum {
 	p_id = 0,
 	c_id,
+    //n_id,   //Not using this one explicitly, overloading num_atomic_id instead
 	num_atomic_id
 }ATOMIC_ELEMENTS;
 
@@ -1027,6 +1030,7 @@ typedef enum {
 	mEff_max_id,
 	mEff_a_id,
 	flagmpa_id,
+    flagMFCdisplace_id,
     mpascale_cap_id,
 	max_mpa_sequence_id,
 	infringe_id,
@@ -1196,7 +1200,11 @@ typedef enum {
 #define finalM2_id 5
 #define finalF_id 6
 #define endNum_id 7
-#define K_num_mort_counter 8
+#define ongoingIndust_id 8
+#define finalIndust_id 9
+#define ongoingStress_id 10
+#define finalStress_id 11
+#define K_num_mort_counter 12
 
 /* age specific predation mortality tracking */
 #define ongoing_id 1
@@ -1689,7 +1697,8 @@ typedef enum {
 	//flaglocalrecruit_id,
 	flagbearlive_id,
 	flagmother_id,
-    flag_contam_distrib_id,
+    //flag_contam_distrib_id,  // Moved to a general param or the entire model
+    suckler_contam_today_id,   // WTo track those born "today' so don't hit them with contaminants during buirth and suckling
 	E1orig_id,
 	E2orig_id,
 	E3orig_id,
@@ -1986,7 +1995,7 @@ typedef enum {
 	mum_scale_id,
 	FSPB_scale_id,
 	//E_scale_id,	/* not yet implemented */
-	num_scaling_indicies
+	num_scaling_indices
 } SCALING_INDICES;
 
 /* Macrophyte indices */
@@ -3336,10 +3345,134 @@ typedef struct {
 	 * future applications */
 /*@}*/
 
-	double surface_light; /* The light land surface. */
+	double surface_light; /* The light land surface. */    
+    double cropping_value;
+    double ag_suit;
+    double ag_yield;
+    double use_impact;
+    double forest_value;
+    double tourism_visits;
+    double local_enviro;
+    double tourism_infrastructure;
+    double nonrenewable_resources;
+    double reserve_demand;
+    double days_operating;
+    double service_capital;
+    double aquacult_cover;
+    double forest_cover;
+    double wetland_cover;
+    double crop_cover;
+    double port_cover;
+    double beach_cover;
+    double plantation_cover;
+    double urban_cover;
+    double tot_mangrove_cover;
+    double fishing_effort;
+    double foregone_effort;
+    double foregone_logging;
+    double coastal_protection;
+    double pop_gradient;
+    double avg_annual_rain;
+    double temp;
+    double npp;
+    double npp_multiplier;
+    double flow;
+    double flow_rate;
+    double env_degrade;
+    double water_value;
+    double rain_value;
+    double ecoservices_value;
+    double blue_econ;
+    double bluebiom_C;
+    double forest_C;
+    double soil_C;
+    double plantation_C;
+    double harvestable_forest;
+    double ecosystem_state;
+    double ag_suit_npp;
+    double soil_prod;
+    double ag_soil_suit;
+    double slope;
+    double forest_use_age;
+    double pen_use_age;
+    double tourism_effort;
+    double init_nonrenewable_resources;
+    double reserve;
+    double prop_undiscovered;
+    double harvestable_resources;
+    double blueC_value;
+    double forestC_value;
+    double total_C;
+    double biodiversity;
+    double foregone_indust;
+    double ship_mix;
+    double orig_flow;
+    double orig_cover;
+
+    double distance_to_sea;
+    double distance_to_land;
+    double distance_to_ramp;
+    double road_accessibility;
+    double sed_flow;
+    double day_reclaim;
+
+    int entry_point;
+    int transition_done;
+    int new_city;
+    int river_mouth;
+    int water_shed;
+    int urban;
+    int coastal;
+    int road;
+    int ramp;
+    int restore_num;
+    int num_pens;
+    int num_forestry;
+    int num_farms;
+    int num_city_influence;
+    int num_mine_present;
+    int num_service_present;
+    int num_tourism_present;
+    int num_wetlands;
+    int num_beach;
+    int aquacult_present;
+    int city_id;
+    int watershed_id;
+    int ramp_id;
+    int is_crop;
+    int city_edgepatch;
+    int is_vacant;
+    int forest_state;
+    int zoning_index;
+    int capacity_index;
+    int rain_index;
+    int succession_counter;
+    int max_beds_hit;
+    int tourism_state;
+    int hvyindust_days_op;
+    int hvyindust_period_closed;
+    int near_miss;
+    int num_collision;
+    int oil_op_id;
+    int reforest;
+    
+    double *indust_profit;
+    double *indust_prod;
+    double *damage_rate;
+    double *infrastruct;
+    double *demand;
+    double *atm_emissions;
+    double *solid_waste;
+    double *liquid_waste;
+    double *noise;
+    
+    int *num_indust_sites;
+    int *ship_transits;
+    int *influencing_cities;
+    int *new_ship_num;
+    int *ship_num;
 
 } LandModel;
-
 
 /*******************************************************************//**
 	Parameters associated with tracking C:P:N ratios in functional groups.
@@ -3404,6 +3537,8 @@ typedef struct {
 	int nz; /**< number of water column layers */
 	int numlayers; /**< number of water column layers for print out */
 	int ntr; /**< number of tracers */
+
+    double decay_scalar;
 
 	/**@name
 	 * These values don't change during a run, and are read
@@ -3479,11 +3614,13 @@ typedef struct {
 	double erosion_rate; /**< Erosion rate (m s-1) */
 	double swr; /**< Short-wave radiation input */
 	double stress; /**< Bottom stress input*/
-	double reef; /**< Percent rocky bottom */
+    double init_stress; /**< Initial bottom stress input - before shipping impacts */
+    double reef; /**< Percent rocky bottom */
 	double soft; /**< Percent soft sediments */
 	double flat; /**< Percent flat sediments */
 	double canyon; /**< Percentage area made up by canyons */
 	double eddy; /**< Strength of eddy in the box */
+    double coastal; /**< Percent of box that makes up coastal stip */
     double base_rugosity; /**< Base rugosity - value read in which covers geology not reefs, which is then calculated dynamically */
     double vmix_scale; /**< Scalar for vertical mixing - if its being set dynamically through time */
     
@@ -3523,6 +3660,35 @@ typedef struct {
 	double land_habitat_qual;	/**< quality of land as habitat for terrestrial species
 									TODO: this may need to be a vector across terrestrial habitat types in the future */
 	/*@}*/
+    
+    /**@name
+     * Arrays for simple industries representations - e.g. shipping and dredging
+     */
+    /*@*{*/
+    int channel_type;
+    int ship_route;
+    int dredge_path;
+    double orig_smother_mort;
+    double smother_mort;
+    double smother_start;
+    
+    int catastrophic_location;  /**< Flag to indicate the box was a recent site of a castrophic event - storm, flood, dredge etc, allows for short term relaxztion of flux tolerances */
+    double catastrophic_date;   /**< Day in the run when the most recent catastrophic even occurred */
+    
+    double temp_offset;         /**< offset from ST to air temperature */
+    double mean_npp;            /**< Mean net primary production across all land boxes */
+    /*@}*/
+
+    
+    /**@name
+     * Arrays for terrestrial components like soil
+     */
+    /*@{*/
+    double *soil_layer_dz;
+    double *soil_rootmass;
+    double soil_tot_nut;
+    double soil_tot_OM;
+    /*@}*/
 
 	/*@}*/
 	/**@name
@@ -3998,8 +4164,19 @@ typedef struct {
     double ****sp_point; // point in the population hypercube - per cohort per box per layer
     
     //double **speciesMort;
-
+    
+    /* Frequency distribution so can reallocate contaminated fish - not doing this as need to store distribution per box and that is all way too complicated and SLOW even doing proportional transfers */
+    //double ***ContamFreqDistrib;  /* A distribution per species per age class - [sp][age][x] where x has contam level as 0 entry and count of fish at that level as entry 1 */
+    //int *ContamBinSize; /* Number of bins in the array being used */
+    
+    /* Migrant contaminant transfer - will keep a distribution for this */
+    int max_num_bins;
+    
 }ContaminantStructure;
+
+/* Options in the frequency distribution array */
+#define contam_level_in_bin 0
+#define num_contam_fish 1
 
 /* List of contaminant model options */
 #define no_contam_interact 0
@@ -4022,6 +4199,7 @@ typedef struct {
 #define no_industry_model 0
 #define simple_industry_model 1
 #define dyn_industry_model 2
+
 
 /*******************************************************************//**
  The Box Model structure
@@ -4133,7 +4311,8 @@ typedef struct {
 
 	int top_layer; /* top layer of first box */
 	int last_box; /* index of last box that is a non-boundary box */
-	double maxwcbotz; /* depth at which water column becomes open lower boundary  (if not hit bottom yet) */
+    int maintain_sedlayer; /* Switch indicating whether the sediment layer is maintained between bounds or not - only used if sednz = 1 */
+    double maxwcbotz; /* depth at which water column becomes open lower boundary  (if not hit bottom yet) */
 	double maxseddz; /* Max thickness for any sediment layer */
 	double minseddz; /* Min thickness for any sediment layer */
 	double max_erosion;/* Max erosion thickness per timestep */
@@ -4174,6 +4353,14 @@ typedef struct {
 	double atmospheric_CO2;  /* Ambient atmospheric concentration of CO2 */
 	double atmospheric_P;   /* Ambient atmospheric concentration of P - dust as at least one source */
 	double atmospheric_Si;   /* Ambient atmospheric concentration of silica - dust as source */
+    double BGC_bound_scalar; /* Scalar to bound nutrients to the levels seen in BGC model of same location */
+
+    int include_outgas; /* Flag to allow for outgasing of saturted gases */
+    double outgas_prop; /* Proportion of saturation when out gasing begins */
+    double outgas_NH;  /* Outgas rate of NH3 */
+    double outgas_NO;  /* Outgas rate of NO3 */
+    double outgas_O2;  /* Outgas rate of O2 */
+    double outgas_CO2;  /* Outgas rate of CO2 */
     
 	double a_wc; /* Water column diffusion scheme */
 	double a_sed; /* Sediment diffusion scheme */
@@ -4231,9 +4418,11 @@ typedef struct {
 	double temp_const_D; /**< Exponent in second step of nonlinear temperature */
 	double **eddy_seasonal; /**< Eddy arrays */
 
+    int dynamic_stress; /**< Flag whether dynamically updating stress due to environmental conditions and shipping activity etc */
 	int supplied_stress; /**< Flag showing whether stress values must be read from
 	 time series file or supplied in initial conditions netcdf file */
 	double min_channel_depth; /**< Minimum channel depth when still counted as flowing vs dry (as tidally emptied) */
+    double stress_silt_thresh; /**< Threshold stress level below which silt deposition is possible (so erosion stops) */
 
 	/**@name
 	 * Run Time variables
@@ -4340,11 +4529,11 @@ typedef struct {
 	/*@{*/
 	int ice_on; /**< If ice components activated */
 	int terrestrial_on; /**< If terrestrial components allowed */
-    
     int flag_pollutant_impacts; /**< Whether looking at noise and light pollution */
-
 	int num_active_habitats;	/**<If we have ice and/or land then this will be increased past the normal EPIFAUNA value */
 
+    int flag_reclaim_land; /**< Whether reclaim land option on or not */
+    double reclaim_land_dz;  /* Height of reclaimed land */
 
 	/**@name
 	 * Tracer info and data storage
@@ -4381,6 +4570,51 @@ typedef struct {
 	EpiInfo *landinfo; /**< array of land variable info */
 	double **landtr; /**< land values */
 	/*@}*/
+
+    /**@name
+      * Human industry related parameters
+      */
+     /*@{*/
+     
+     int flagindustry_on;          /**< flag indicating whether industries on or not */
+     int K_max_num_occupations;    /**< Maximum number of occupations being considered dynamically in the model */
+     int K_max_num_hitclass;       /**< Maximum number of hit classes for vessels being used dynamically in the model */
+     int K_num_oil_companies;      /**< Number of oil companies explicitly modelled */
+     int flag_prorata_jobs;        /**< Flag indicating whether prorata jobs or read them in per settlement */
+     
+     char **IndustryParamNAME;     /**< Array of industry parameter names */
+     
+     double **Inter_Box_distance;  /**< Distance between boxes for calculating human interactions etc */
+     double mean_npp;
+     double num_land_boxes;
+     double humandt;               /* Time step for landuse and industry model */
+     
+     int flag_simple_climate;         /**< Flag showing whether using simple climate for land use model */
+     int K_max_num_ethnic_groups;     /**< Number of human ethnic or racial groups */
+     int K_max_num_human_ages;        /**< Number of human age groups */
+     int K_max_active_cities;         /**< Number of active cities */
+     int K_num_vessel_sizes;          /**< Number of vessel sizes */
+     int K_max_num_vessel_changes;    /**< Maximum number of changes of shipping/vessel related parameters - painted scenarios */
+     int K_num_animal_hitsizes;       /**< Number of animal size bins for purposes of collisons */
+     int K_num_land_zone_types;       /**< Number of zoning types for land zoning */
+     int K_num_cap_types;             /**< Number of capacity types for land zoning */
+     int K_num_suit_slopes;           /**< Number of suitability slope types */
+     int K_num_suit_rain_class;       /**< Number of suitability rain classes */
+     int K_num_suit_elev_levels;      /**< Number of suitability elevation levels */
+     
+     int land_memory_period;          /**< Land industries memory length */
+     int last_land_box;               /**< id of the box that is the last land box to execute */
+     int flag_land_rnd_type;
+     int flag_explict_forest;         /**< Flag indicating whether explict functional group for forest (1) or whether need implicit landscape forest model (0) */
+     int forest_guild_id;
+     int mangrove_guild_id;
+     
+     TimeSeries *terrestrialts;
+     TimeSeries *export_ts_file;
+     TimeSeries *indust_imports;
+     TimeSeries *spill;  /**< Time series of spills - for spill scenario */
+     
+     int *industry_id;  /**< IDs of industries as listed in the import time series file */
 
 
 	/**@name
@@ -4501,7 +4735,8 @@ typedef struct {
 	 * Temperature and salinity model data input structure
 	 */
 	/*@{*/
-	int use_tempfiles; /**< Flag to indicate whether using temperature forcing files */
+    int use_stressfiles; /**< Flag to indicate whether using shear stress forcing files */
+    int use_tempfiles; /**< Flag to indicate whether using temperature forcing files */
 	int use_saltfiles; /**< Flag to indicate whether using salinity forcing files */
 	int use_pHfiles; /**< Flag to indicate whether using salinity forcing files */
     int use_VertMixfiles; /**< Flag to indicate whether using vertical mixing forcing files */
@@ -4553,7 +4788,35 @@ typedef struct {
 	/*@}*/
 
 
-	 /**@name
+    /**@name
+     * Shipping and Industry time series
+     */
+    /*@{*/
+    TimeSeries *ships;
+    int *ship_id;
+    int ships_rewind;
+    int **ts_channel_ids;
+    double *ship_mixing_rate;
+    double *vessel_size;
+    int *num_per_channel_type;
+    double strike_mort_scalar;
+    
+    TimeSeries *dredge;
+    int dredge_rewind;
+    int dredge_id;
+    int dredge_period;
+    int dredge_started;
+    int dredge_dt;
+    double dredge_rate;
+    double dredge_area;
+    double dredge_fines_mass;
+    double dredge_fines_psize;
+    double entrained_psize;
+    
+    double smother_coefft;
+    double smother_thresh;
+    
+    /**@name
 	 * Time series and parameters to do with atmospheric pCO2
 	 */
 	/*@{*/
@@ -4672,6 +4935,8 @@ typedef struct {
 	int containsTurf;		/* TRUE if the model contains at least one turf group */
 	int containsMCPYr;      /* TRUE if the model contains at least one group with multiple cohorts per year */
 	int flagWCVert;			/* TRUE if the model only contains AGE_STRUCTURED groups in habitat WC */
+
+    int containsShipping; /**< Flag indicating whetehr or not the model contains shipping explicitly or not */
 
 	/* - for overall total "stock size" output record keeping purposes */
 	/*@}*/
@@ -4836,6 +5101,9 @@ typedef struct {
     int contam_fishery_closure_period;
     int contam_fishery_closure_option;
     
+    //int max_contam_bins; /* For tracking contaminan redistribution */
+    //int flag_contam_distrib_model; /* 0 if simple, 1 if tracks a distribution - TODO: Was too complicated and slow. removed and rethink */
+    
     double contam_sig_uptake_const;
     double contam_tau;
     
@@ -4843,6 +5111,11 @@ typedef struct {
     ContaminantStructure **contaminantStructure;
 
 	double X_CN; /**< C:N ratio for use in Redfield or conversion AFDW to wet weight (typically 5.7) */
+    double X_SiN; /**< Si:N ratio for use in Redfield for Si */
+    double X_ON; /**< O:N ratio for use in O transfer */
+    double X_CHLN; /**< Chl:N ratio for use in translation to Chl */
+    double X_FeN; /**< Si:MicroNutrient ratio for use in Redfield for Micronutrients */
+
     double k_wetdry;
 	double li_a_invert;
 	double li_b_invert;
@@ -4855,7 +5128,15 @@ typedef struct {
 	//double **SP_prms;		/* Array of species specific parameters */
 	int num_active_funcGroups;
 
-	double ***stock_struct_prop; /**< Array of proportional stock structure (here so fisheries code can
+    /**@name
+     * Catastrophic event parameters and flags
+     */
+    /*@{*/
+    
+    double catastrophic_duration;      /**< Max length ignoring flux tolerances for post catastrophic event */
+    int flag_catastrophe;       /**< Flag indicating catastrophes in action */
+    
+    double ***stock_struct_prop; /**< Array of proportional stock structure (here so fisheries code can
 	 access for use in setting regional TACs */
 	double **pFLEET; /**< Array of catch (as diet item) availability */
 
@@ -5443,6 +5724,7 @@ typedef struct {
 	int EconLimDemand; /**< Whether to limit trading based on potential effort levels vs days left in month (yes = 1, no = 0) */
 	int reset_month_val; /**< Flag to indicate whether or not to reset monthly values - need to do this after indicators calculated */
 	int econweekly; /**< Whether finest economically driven effort allocation is weekly or otherwise */
+    int MonthlyProfitUpdate; /**< Whether want monthly profit updates in the economics code (or annual) */
 	int quota_trading; /**< Whether quota trading in effect in the economic model */
 	int K_num_markets; /**< Number of markets in the model */
 	int hist_only; /**< Flag indicating whether historic spatial effort used or whether dynamically updated */
@@ -5686,12 +5968,13 @@ typedef struct {
 extern double **dvol, ***dtr;
 extern double **CatchSum;
 extern double ****mFCchange;
+extern double track_warn;
 
 extern int it_count, waterboundary;
-
 extern int verbose;
 extern int fishtest;
 extern int noudunits;
+extern int lots_warn;
 
 /*********************************************************************
  Prototypes

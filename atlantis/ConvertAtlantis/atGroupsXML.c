@@ -257,6 +257,12 @@ void Convert_Groups_To_XML(MSEBoxModel *bm, char *fileName, char *outputFileName
                 Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "isExternal", "", "", varStr);
             }
             
+            /* Mark if the group is a collision risk */
+            if(bm->flagindustry_on) {
+                varStr = strtok(NULL, seps);
+                Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "isCollisionRisk", "", "", varStr);
+            }
+            
             /* IsLandActive */
             if(bm->terrestrial_on){
                 varStr = strtok(NULL, seps);

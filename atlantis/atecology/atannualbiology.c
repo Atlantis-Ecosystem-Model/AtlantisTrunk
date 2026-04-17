@@ -498,7 +498,7 @@ static void Init_Spawning(MSEBoxModel *bm, FILE *llogfp, int do_debug, int sp) {
                 // Create the inserted countback cases
                 if (countback_spawn) {
                     temp_val_start = EMBRYO[sp].Spawn_Now[cohort][qid];
-                    start_i = -1;
+                    start_i = 0;
                     // Start by finding the insertion point
                     for(i = 0; i < FunctGroupArray[sp].numSpawns; i++){
                         if(temp_val_start > EMBRYO[sp].Spawn_Now[cohort][i]) {
@@ -682,7 +682,7 @@ static void Init_Spawning(MSEBoxModel *bm, FILE *llogfp, int do_debug, int sp) {
                 stage = FunctGroupArray[sp].cohort_stage[basecohort];
  
                 if (AgeClassSize_sp >= 1.0) {
-                    EMBRYO[sp].Age_Now[cohort][aid] = EMBRYO[sp].StartDay[cohort][qid] - 1;
+                    EMBRYO[sp].Age_Now[cohort][aid] = EMBRYO[sp].StartDay[cohort][lid] - 1;
 
                     /*
                     if (do_debug && (bm->which_check == sp)){
@@ -713,7 +713,7 @@ static void Init_Spawning(MSEBoxModel *bm, FILE *llogfp, int do_debug, int sp) {
                 /* Check dates sensible */
                 if(old_check){
                     Pad_The_Demography_Queues(bm, sp, cohort, nspawn, qid, lid, aid, llogfp);  // Not needed as do the whole queue at once now
-                    CheckDates(bm, sp, cohort, ngene, aid, lid, qid, nspawn, do_debug, (yr_scalar * 365.0), bm->logFile); // Not needed as do the whole queue at once now
+                    CheckDates(bm, sp, cohort, ngene, aid, lid, qid, nspawn, do_debug, (yr_scalar * 365.0), llogfp); // Not needed as do the whole queue at once now
                 }
                 PrintDates(bm, sp, cohort, ngene, aid, lid, qid, nspawn, do_debug, (yr_scalar * 365.0), llogfp);
                 CheckSpawnDates(bm, sp, cohort, lid, qid);
@@ -1084,7 +1084,7 @@ static double Get_Init_Embryos(MSEBoxModel *bm, int species, int ngene, int stoc
         DEN = initVERTinfo[species][cohort][DEN_id];
 
         IndSpawn = Ecology_Age_Structured_Spawn(species, KSPA_sp, FSP_sp, RSprop_sp, SN, RN, FunctGroupArray[species].scaled_FSPB[cohort], FunctGroupArray[species].X_RS[cohort], bm->flag_repcostSpawn, bm->logFile);
-        thisSSB += (RN + SN) * DEN * FunctGroupArray[species].scaled_FSPB[cohort];
+        thisSSB = (RN + SN) * DEN * FunctGroupArray[species].scaled_FSPB[cohort];   // This was originally incorrectly += likely only an issue for first round of spawning ?
         bm->tot_SSB[species] += thisSSB;
         EMBRYO[species].TotSpawn[ngene] += (FunctGroupArray[species].scaled_FSPB[cohort] * IndSpawn * DEN);
         

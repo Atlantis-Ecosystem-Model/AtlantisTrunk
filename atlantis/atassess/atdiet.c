@@ -524,7 +524,7 @@ void Setup_Avail_Food(MSEBoxModel *bm, int b, FILE *ofp) {
 
 static void Multinomial(MSEBoxModel *bm, int n, double **p, int **count, int m, int numStages) {
 
-	int i, bin, j;
+	int i, bin, j, checkdone = 0;
 	double u, lower, upper;
 
 
@@ -535,6 +535,7 @@ static void Multinomial(MSEBoxModel *bm, int n, double **p, int **count, int m, 
 
 		lower = upper = 0.0;
 
+        checkdone = 0;
 		for(bin = 0 ; bin < m; bin++ ){
 			for (j = 0; j < numStages; j++) {
 
@@ -545,8 +546,12 @@ static void Multinomial(MSEBoxModel *bm, int n, double **p, int **count, int m, 
 
 				if ((lower <= u) && (u < upper)){
 					count[bin][j]++;
+                    checkdone = 1;
 					break;
 				}
+                if (checkdone) {
+                    break;
+                }
 			}
 		}
 	}

@@ -81,7 +81,7 @@ void init_forceMoveEntries(MSEBoxModel *bm, FILE *fp) {
             for (i = 0; i < bm->K_num_tot_sp; i++) {
                 for (stage = 0; stage < FunctGroupArray[i].numStages; stage++) {
                     stageID = stage;
-                    sprintf(checkname, "%s_stage_%d", FunctGroupArray[i].groupCode, stageID);
+                    snprintf(checkname, sizeof(checkname), "%s_stage_%d", FunctGroupArray[i].groupCode, stageID);
                     if(strcmp(checkname, bm->forceMoveEntryInput[tracerIndex].variableName) == 0){
                         bm->forceMoveEntryInput[tracerIndex].tracerID = i;
                         bm->forceMoveEntryInput[tracerIndex].stageID = stage;
@@ -90,10 +90,10 @@ void init_forceMoveEntries(MSEBoxModel *bm, FILE *fp) {
                 }
             }
 
-            sprintf(key, "%s_File.name", bm->forceMoveEntryInput[tracerIndex].variableName);
+            snprintf(key, sizeof(key), "%s_File.name", bm->forceMoveEntryInput[tracerIndex].variableName);
             readkeyprm_s(fp, key, bm->forceMoveEntryInput[tracerIndex].fname[0]);
             
-            sprintf(key, "%s_tstart", bm->forceMoveEntryInput[tracerIndex].variableName);
+            snprintf(key, sizeof(key), "%s_tstart", bm->forceMoveEntryInput[tracerIndex].variableName);
             readkeyprm_d(fp, key, &bm->forceMoveEntryInput[tracerIndex].movetstart);
             
             bm->forceMoveEntryInput[tracerIndex].rewind = 0;
@@ -154,7 +154,7 @@ void open_move_prop(MSEBoxModel *bm, PhyPropertyData *propInput) {
         quit("open_move_prop: not enough dimensions in %s - should have time and box dimensions (2D)\n", propInput->fname[propInput->curFile]);
     }
     if (nvars < 2)
-        quit("open_move: not enough variables in %s - needs a time entry and a distribution entry\n", propInput->fname[propInput->curFile]);
+        quit("open_move_prop: not enough variables in %s - needs a time entry and a distribution entry\n", propInput->fname[propInput->curFile]);
 
     /* Check dimensions are as expected */
     if ((propInput->t_did = ncdimid(propInput->fid, "t")) == -1)
@@ -223,7 +223,7 @@ void open_move_prop(MSEBoxModel *bm, PhyPropertyData *propInput) {
     /* Get the missing value */
     status = ncattinq(propInput->fid, propInput->prop_vid, "missing_value", &daty, &len);
     if (nctypelen(daty) != sizeof(doubleINPUT)){
-        quit("open_phyprop: %s missing_value attribute wrong type\n", propInput->variableName);
+        quit("open_move_prop: %s missing_value attribute wrong type\n", propInput->variableName);
     }
     if (status >= 0){
         /* go ahead and grab the value */
@@ -236,7 +236,7 @@ void open_move_prop(MSEBoxModel *bm, PhyPropertyData *propInput) {
 
     status = ncattinq(propInput->fid, propInput->prop_vid, "valid_max", &daty, &len);
     if (nctypelen(daty) != sizeof(doubleINPUT)){
-        quit("open_phyprop: %s valid_max attribute wrong type\n", propInput->variableName);
+        quit("open_move_prop: %s valid_max attribute wrong type\n", propInput->variableName);
     }
     if (status >= 0){
         /* go ahead and grab the value */
@@ -246,7 +246,7 @@ void open_move_prop(MSEBoxModel *bm, PhyPropertyData *propInput) {
 
     status = ncattinq(propInput->fid, propInput->prop_vid, "valid_min", &daty, &len);
     if (nctypelen(daty) != sizeof(doubleINPUT)){
-        quit("open_phyprop: %s valid_min attribute wrong type\n", propInput->variableName);
+        quit("open_move_prop: %s valid_min attribute wrong type\n", propInput->variableName);
     }
     if (status >= 0){
         /* go ahead and grab the value */
@@ -433,7 +433,7 @@ void Init_full_move_array(MSEBoxModel *bm, PhyPropertyData *propInput, int trace
             new_value = bm->forceMoveEntryInput[tracerIndex].dataBuffer[b][0]; // Take the entry for next time period from the file
 
             if (!_finite(new_value)) {
-                quit("%s in box %d is not finite for the second period\n", bm->forceMoveEntryInput[tracerIndex].variableName, b,  new_value);
+                quit("%s in box %d is not finite for the second period\n", bm->forceMoveEntryInput[tracerIndex].variableName, b);
             }
 
             fprintf(bm->logFile, "Time: %e Doing b %d speciesIndex: %d next_qrt: %d stageIndex: %d new_value: %e\n", bm->dayt, b, speciesIndex, next_qrt, stageIndex, new_value);

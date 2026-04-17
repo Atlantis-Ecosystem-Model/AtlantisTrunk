@@ -150,7 +150,7 @@ FILE * initAnnCatchFile(MSEBoxModel *bm) {
 	int sp, flag_sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sCatch.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sCatch.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
 	/** Create file **/
@@ -193,7 +193,7 @@ FILE * initAnnRecCatchFile(MSEBoxModel *bm) {
 	int sp, flag_sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sRecCatch.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sRecCatch.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
 	/** Create file **/
@@ -226,7 +226,7 @@ FILE * initAnnDiscardFile(MSEBoxModel *bm) {
 	int sp, flag_sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sDiscard.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sDiscard.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
 	/** Create file **/
@@ -259,7 +259,7 @@ FILE * initAnnCatchPerFisheryFile(MSEBoxModel *bm) {
 	int sp, flag_sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sCatchPerFishery.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sCatchPerFishery.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
 	/** Create file **/
@@ -291,7 +291,7 @@ FILE * initAnnDiscardPerFisheryFile(MSEBoxModel *bm)
 	int sp, flag_sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sDiscardPerFishery.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sDiscardPerFishery.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
 	/** Create file **/
@@ -325,7 +325,7 @@ FILE * initAnnEffortFile(MSEBoxModel *bm) {
 	int nf;
 
 	/** Create filename **/
-	sprintf(fname, "%sEffort.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sEffort.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
 	/** Create file **/
@@ -354,7 +354,7 @@ FILE * initAnnTACFile(MSEBoxModel *bm) {
 	int sp, flag_sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sTAC.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sTAC.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
 	/** Create file **/
@@ -388,7 +388,7 @@ FILE * initDisplacedEffortFile(MSEBoxModel *bm) {
     int nf;
 
     /** Create filename **/
-    sprintf(fname, "%sDisplaceEffort.txt", bm->startfname);
+    snprintf(fname, sizeof(fname),"%sDisplaceEffort.txt", bm->startfname);
     printf("Creating %s\n", fname);
 
     /** Create file **/

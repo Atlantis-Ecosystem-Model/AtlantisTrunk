@@ -320,7 +320,7 @@ double Read_SS3_Par_File(MSEBoxModel *bm, int sp, int year, char *folderName) {
         return ans;
     }
     
-    sprintf(str, "MGparm[%d]", maxConvergCritIndex);
+    snprintf(str, sizeof(str), "MGparm[%d]", maxConvergCritIndex);
     
 	/* Find line that starts with 'MGparm[16]' - as that marks the convergence result */
 	while (fgets(buf, buflen, fid) != NULL) {
@@ -356,7 +356,7 @@ void Create_Starter_File(MSEBoxModel *bm, char *dirName, int groupIndex, int ver
 	FILE *fid;
     char fileName[STRLEN];
     
-	sprintf(fileName, "%s/%sstarter.ss", dirName, FOLDER_SEP);
+	snprintf(fileName, sizeof(fileName), "%s/%sstarter.ss", dirName, FOLDER_SEP);
 
 	printf("fileName = %s\n", fileName);
 
@@ -420,7 +420,7 @@ void Create_Starter_File_Orig(MSEBoxModel *bm, char *dirName, int groupIndex, ch
 
     FILE *fid;
 
-    sprintf(fileName, "%s/%sstarter.ss", dirName, FOLDER_SEP);
+    snprintf(fileName, sizeof(fileName), "%s/%sstarter.ss", dirName, FOLDER_SEP);
 
     printf("fileName = %s\n", fileName);
 
@@ -480,7 +480,7 @@ void Write_Forecast_File(MSEBoxModel *bm, char *dirName, int maxyr, int groupInd
     int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[groupIndex][NumRegions_id]);
     int sumregion = Nregions;  // sum over regions
 
-	sprintf(fileName, "%s%sforecast.ss", dirName, FOLDER_SEP);
+	snprintf(fileName, sizeof(fileName), "%s%sforecast.ss", dirName, FOLDER_SEP);
 
 	printf("fileName = %s\n", fileName);
 
@@ -618,7 +618,7 @@ void Write_SS_Data_File(MSEBoxModel *bm, char *dirName, char *fileName, int maxy
 
 	//sscanf(bm->t_units, "seconds since %d-%s", &startYear, str);
 
-	sprintf(str, "%s%s%s", dirName, FOLDER_SEP, fileName);
+	snprintf(str, sizeof(str), "%s%s%s", dirName, FOLDER_SEP, fileName);
 
 	if ((fid = fopen(str, "w")) == NULL)
 		quit("Write_SS_Data_File: Can't open %s\n", str);
@@ -1139,7 +1139,7 @@ void WriteSS330Files(MSEBoxModel *bm, int sp, int maxyr, char *baseFolder, char 
     int versionID = 0;
     
     // SS dat file
-    sprintf(outputFileName, "%s/%s%s.dat", baseFolder, FunctGroupArray[sp].groupCode, fileName);
+    snprintf(outputFileName, sizeof(outputFileName), "%s/%s%s.dat", baseFolder, FunctGroupArray[sp].groupCode, fileName);
     if ((fiddat = fopen(outputFileName, "w")) == NULL) {
         quit("Error opening dat file for  %s\n", FunctGroupArray[sp].groupCode);
     }
@@ -1148,7 +1148,7 @@ void WriteSS330Files(MSEBoxModel *bm, int sp, int maxyr, char *baseFolder, char 
     fclose(fiddat);
 
     // SS control file
-    sprintf(outputFileName, "%s/%s%s.ctl", baseFolder,FunctGroupArray[sp].groupCode, fileName);
+    snprintf(outputFileName, sizeof(outputFileName), "%s/%s%s.ctl", baseFolder,FunctGroupArray[sp].groupCode, fileName);
     if ((fidctl = fopen(outputFileName, "w")) == NULL) {
         quit("Error opening ctl control file for  %s\n", FunctGroupArray[sp].groupCode);
     }
@@ -1156,7 +1156,7 @@ void WriteSS330Files(MSEBoxModel *bm, int sp, int maxyr, char *baseFolder, char 
     fclose(fidctl);
 
     //  SS forecast file
-    sprintf(outputFileName, "%s/forecast.ss", baseFolder);
+    snprintf(outputFileName, sizeof(outputFileName), "%s/forecast.ss", baseFolder);
 
     if ((fidss = fopen(outputFileName, "w")) == NULL) {
         quit("Error opening forecast file for  %s\n", FunctGroupArray[sp].groupCode);
@@ -2406,7 +2406,7 @@ void Write_SS_Control_File(MSEBoxModel *bm, char *dirName, char *fileName, int m
 
 	recruit_sp = (int) (FunctGroupArray[groupIndex].speciesParams[flagrecruit_id]);
 
-	sprintf(str, "%s%s%s", dirName, FOLDER_SEP, fileName);
+	snprintf(str, sizeof(str), "%s%s%s", dirName, FOLDER_SEP, fileName);
 
 	printf("fileName = %s\n", str);
 
@@ -2980,6 +2980,7 @@ void Write_SS_Data_File_Orig(MSEBoxModel *bm, char *dirName, char *fileName, int
     double cpcv, disccv;
     char *emptySex;
     double Nsex_samp = 1;
+    int emptySexSize;
 
     if (bm->RBCestimation.RBCspeciesArray[groupIndex].CurrentYear == (bm->RBCestimation.RBCspeciesParam[groupIndex][HistYrMax_id] - 1))
         HistYrMin = (int)bm->RBCestimation.RBCspeciesParam[groupIndex][HistYrMin_id];
@@ -2996,7 +2997,7 @@ void Write_SS_Data_File_Orig(MSEBoxModel *bm, char *dirName, char *fileName, int
 
     //sscanf(bm->t_units, "seconds since %d-%s", &startYear, str);
 
-    sprintf(str, "%s%s%s", dirName, FOLDER_SEP, fileName);
+    snprintf(str, sizeof(str), "%s%s%s", dirName, FOLDER_SEP, fileName);
 
     if ((fid = fopen(str, "w")) == NULL)
         quit("Write_SS_Data_File_Orig: Can't open %s\n", str);
@@ -3023,17 +3024,17 @@ void Write_SS_Data_File_Orig(MSEBoxModel *bm, char *dirName, char *fileName, int
     strcpy(line3, "");
 
     for (fleetIndex = 0; fleetIndex < bm->RBCestimation.RBCspeciesParam[groupIndex][NumFisheries_id]; fleetIndex++) {
-        sprintf(tempStr, "FISHERY%d", fleetIndex + 1);
+        snprintf(tempStr, sizeof(tempStr), "FISHERY%d", fleetIndex + 1);
         strcat(line1, tempStr);
-        //sprintf(line1, "%sFISHERY%d", line1, fleetIndex + 1);
+        //snprintf(line1, sizeof(line1), "%sFISHERY%d", line1, fleetIndex + 1);
         strcat(line2, "0.5 ");
-        //sprintf(line2, "%s0.5 ", line2);
+        //snprintf(line2, sizeof(line2), "%s0.5 ", line2);
         strcat(line3, "1 ");
 
-        //sprintf(line3, "%s1 ", line3);
+        //snprintf(line3, sizeof(line3), "%s1 ", line3);
 
         if (fleetIndex < (bm->RBCestimation.RBCspeciesParam[groupIndex][NumFisheries_id] - 1)){
-            //sprintf(line1, "%s%%", line1);
+            //snprintf(line1, sizeof(line1), "%s%%", line1);
             strcat(line1, "%%");
         }
     }
@@ -3046,8 +3047,8 @@ void Write_SS_Data_File_Orig(MSEBoxModel *bm, char *dirName, char *fileName, int
     strcpy(line2, "");
 
     for (fleetIndex = 0; fleetIndex < bm->RBCestimation.RBCspeciesParam[groupIndex][NumFisheries_id]; fleetIndex++) {
-        //sprintf(line1, "%s 1", line1);
-        //sprintf(line2, "%s 1", line2);
+        //snprintf(line1, sizeof(line1), "%s 1", line1);
+        //snprintf(line2, sizeof(line2), "%s 1", line2);
         strcat(line1, " 1");
         strcat(line2, " 1");
     }
@@ -3058,7 +3059,7 @@ void Write_SS_Data_File_Orig(MSEBoxModel *bm, char *dirName, char *fileName, int
     fprintf(fid, "%d #_Nages\n", AccumAge);
     
     for (fleetIndex = 0; fleetIndex < bm->RBCestimation.RBCspeciesParam[groupIndex][NumFisheries_id]; fleetIndex++) {
-        sprintf(line1, "0 ");
+        snprintf(line1, sizeof(line1), "0 ");
     }
     fprintf(fid, "#_init_equil_catch_for_each_fishery\n");
 
@@ -3179,14 +3180,15 @@ void Write_SS_Data_File_Orig(MSEBoxModel *bm, char *dirName, char *fileName, int
     fprintf(fid, "0 #_N_meanbodywt_obs\n");
     fprintf(fid, "30 #_DF_for_meanbodywt_T-distribution_like\n");
 
-    emptySex = (char *) malloc(sizeof(char) * 2 * (size_t) bm->RBCestimation.RBCspeciesParam[groupIndex][Nlen_id]);
+    emptySexSize = sizeof(char) * 2 * (size_t) bm->RBCestimation.RBCspeciesParam[groupIndex][Nlen_id];
+    emptySex = (char *) malloc(emptySexSize);
     //strcpy(emptySex, "");
 
     for (index = 0; index < (int) bm->RBCestimation.RBCspeciesParam[groupIndex][Nlen_id]; index++) {
         if (index == 0){
-            sprintf(emptySex, "0");
+            snprintf(emptySex, emptySexSize, "0");
         } else {
-            //sprintf(emptySex, "%s 0", emptySex);
+            //snprintf(emptySex, emptySexSize, "%s 0", emptySex);
             strcat(emptySex, " 0");
         }
     }
@@ -3292,14 +3294,16 @@ void Write_SS_Data_File_Orig(MSEBoxModel *bm, char *dirName, char *fileName, int
     fprintf(fid, "\n");
 
     free(emptySex);
-    emptySex = (char *) malloc(sizeof(char) * 2 * (size_t) bm->RBCestimation.RBCspeciesParam[groupIndex][MaxAge_id]);
+    
+    emptySexSize = sizeof(char) * 2 * (size_t) bm->RBCestimation.RBCspeciesParam[groupIndex][MaxAge_id];
+    emptySex = (char *) malloc(emptySexSize);
     strcpy(emptySex, "");
 
     for (index = 0; index < (int) bm->RBCestimation.RBCspeciesParam[groupIndex][MaxAge_id]; index++) {
         if (index == 0){
-            sprintf(emptySex, "0");
+            snprintf(emptySex, emptySexSize, "0");
         } else {
-            //sprintf(emptySex, "%s 0", emptySex);
+            //snprintf(emptySex, emptySexSize, "%s 0", emptySex);
             strcat(emptySex, " 0");
 
         }
@@ -3463,7 +3467,7 @@ void Write_SS_Control_File_Orig(MSEBoxModel *bm, char *dirName, char *fileName, 
 
     recruit_sp = (int) (FunctGroupArray[groupIndex].speciesParams[flagrecruit_id]);
 
-    sprintf(str, "%s%s%s", dirName, FOLDER_SEP, fileName);
+    snprintf(str, sizeof(str), "%s%s%s", dirName, FOLDER_SEP, fileName);
 
     printf("fileName = %s\n", str);
 

@@ -53,7 +53,7 @@ void Init_Migration(MSEBoxModel *bm, FILE *llogfp, int do_debug, int sp) {
     //int matage;
     //int last_return = -1;
     int nagemat = (int)(FunctGroupArray[sp].speciesParams[age_mat_id]);
-    int dummmy_return = (int)(bm->tstop / 86400.0);
+    int dummy_return = (int)(bm->tstop / 86400.0);
     int Highest_date;
     
     if ( verbose > 0 )
@@ -104,7 +104,7 @@ void Init_Migration(MSEBoxModel *bm, FILE *llogfp, int do_debug, int sp) {
                 
                 
                 // Now check each case
-                if ((sp_Migrate_Time_orig && sp_Migrate_Time) > sp_Migrate_Return_chk) {
+                if ((sp_Migrate_Time_orig > sp_Migrate_Return_chk) && (sp_Migrate_Time > sp_Migrate_Return_chk)) {
                     
                     /* This is case where the second entry happens before first entry
                      1.               |-----|
@@ -395,14 +395,15 @@ void Init_Migration(MSEBoxModel *bm, FILE *llogfp, int do_debug, int sp) {
                         }
                         MIGRATION[sp].Return_Now[this_currentID] = time_return;
 
-                        if (start_with_return){
+                        if (start_with_return) {
                             MIGRATION[sp].Leave_Now[this_currentID] = MIGRATION[sp].Leave_Now[this_currentID] - 365;
                             MIGRATION[sp].Return_Now[this_currentID] = MIGRATION[sp].Return_Now[this_currentID] - 365;
                             
                         }
 
-                        if (MIGRATION[sp].Return_Now[this_currentID] > max_Return_Now )
+                        if (MIGRATION[sp].Return_Now[this_currentID] > max_Return_Now ) {
                             max_Return_Now = MIGRATION[sp].Return_Now[this_currentID];
+                        }
                         
                         if ( MIGRATION[sp].Leave_Now[this_currentID] > MIGRATION[sp].Return_Now[this_currentID]) {  // Sanity check so come back
                             MIGRATION[sp].Return_Now[this_currentID] += (365 * this_YearsAway);
@@ -435,7 +436,7 @@ void Init_Migration(MSEBoxModel *bm, FILE *llogfp, int do_debug, int sp) {
         
         /* Final checks */
         if(MIGRATION[sp].Return_Now[counter] > (MAXINT - 1)) {
-            MIGRATION[sp].Return_Now[counter] = dummmy_return + 1;  // Needed for purposes of record keeping, never executed
+            MIGRATION[sp].Return_Now[counter] = dummy_return + 1;  // Needed for purposes of record keeping, never executed
         
             if( MIGRATION[sp].Return_Now[counter] < max_Return_Now) {
                 MIGRATION[sp].Return_Now[counter] = max_Return_Now + 1;  // Needed for purposes of record keeping, never executed
@@ -580,20 +581,23 @@ void Check_Migration(MSEBoxModel *bm){
             }
             
             if (FunctGroupArray[sp].multiyr_mig){
-                max_years = MAXINT;
+                max_years = -MAXINT;
                 for(qid = 0; qid < num_mig; qid++){
                     if (MIGRATION[sp].IsAnnualMigration_Prm[stage][qid] < 1){
-                        if (max_years < MIGRATION[sp].MaxYearsAway_Prm[stage][qid])
+                        if (MIGRATION[sp].MaxYearsAway_Prm[stage][qid] > max_years) {
                             max_years = MIGRATION[sp].MaxYearsAway_Prm[stage][qid];
+                        }
                     } else {
                         max_years = 1;
                     }
                 }
+                if (max_years < MAXINT) {
+                    max_years = 1;
+                }
                 num_away *= max_years;
                 
-                
                 // Check if needed due to aging in multiyear migration
-                num_cohorts_away = ceil(b + max_years / FunctGroupArray[sp].ageClassSize);
+                num_cohorts_away = ceil(b + (max_years / FunctGroupArray[sp].ageClassSize));
                 if (num_cohorts_away > FunctGroupArray[sp].numCohortsXnumGenes) {
                     num_cohorts_away = FunctGroupArray[sp].numCohortsXnumGenes;
                 }

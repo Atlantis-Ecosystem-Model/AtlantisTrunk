@@ -29,7 +29,7 @@
  **/
 
 /*
- * brief\ Day to day ice algal production
+ * brief\ Day to day land primary production
  *
  */
 void Land_PrimaryProduction(MSEBoxModel *bm) {
@@ -39,7 +39,7 @@ void Land_PrimaryProduction(MSEBoxModel *bm) {
 }
 
 /*
- * brief\ Ice related habitat state
+ * brief\ Land related habitat state
  *
  */
 void Land_HabitatState(MSEBoxModel *bm) {
@@ -73,17 +73,22 @@ void Ecology_Land_Biology_Process(MSEBoxModel *bm, Box *pBox) {
 	/* Set current box */
 	bm->current_box = pBox->n;
     
-    // Initialise diet data content - if required
+    /* Initialise diet data content - if required
     if (bm->flagdietcheck) {
         ReInitDietData(bm, pBox->n);
     }
 
-	Copy_WC_Tracers(bm, boxLayerInfo->localWCTracers, boxLayerInfo->localWCFlux, bm->logFile);
+     */
+	/* Fill in relevant routines - match ice and water ecology style code approach */
 
-	Vertebrate_Reproduction(bm, 0, maxdeep, totaldeep, 1, boxLayerInfo->localWCTracers, bm->logFile);
+	//Copy_WC_Tracers(bm, boxLayerInfo->localWCTracers, boxLayerInfo->localWCFlux, bm->logFile);
 
-	/* Transfer all the temporary values back to their final locations */
-	for (k = 0; k < numwcvar; k++)
-		newwctr[bm->current_box][0][k] = boxLayerInfo->localWCTracers[k]; /* To WC */
+	//Vertebrate_Reproduction(bm, 0, maxdeep, totaldeep, 1, boxLayerInfo->localWCTracers, bm->logFile);
+
+	/* Transfer all the temporary values back to their final locations *
+	for (k = 0; k < numwcvar; k++) {
+		newwctr[bm->current_box][0][k] = boxLayerInfo->localWCTracers[k];
+	}
+*/
 
 }

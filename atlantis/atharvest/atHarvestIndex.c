@@ -71,20 +71,22 @@ double Harvest_Get_Harvest_Index(MSEBoxModel *bm, int nf, int index) {
  *	\brief This sets up names of fisheries performance indices
  */
 void Set_Harvest_Index_Names(MSEBoxModel *bm) {
-	sprintf(harvestindxNAME[avg_sze_id], "%s", "AvgCatchSize");
-	sprintf(harvestindxNAME[tot_land_id], "%s", "TotLanding");
-	sprintf(harvestindxNAME[tot_num_caught_id], "%s", "TotNumCaught");
-	sprintf(harvestindxNAME[tot_trash_id], "%s", "TotDiscards");
-	sprintf(harvestindxNAME[gearchange_id], "%s", "GearChange");
-	sprintf(harvestindxNAME[discardchange_id], "%s", "DiscardChange");
-	sprintf(harvestindxNAME[tepkill_id], "%s", "TEPkills");
-	sprintf(harvestindxNAME[habkill_id], "%s", "HabImpact");
-	sprintf(harvestindxNAME[tot_dayfishing_id], "%s", "TotEffort");
-	sprintf(harvestindxNAME[overallcpue_id], "%s", "TotCPUE");
-	sprintf(harvestindxNAME[sociallike_id], "%s", "SocialAccept");
-	sprintf(harvestindxNAME[realconflict_id], "%s", "GearConflict");
-	sprintf(harvestindxNAME[sp_comp_id], "%s", "SpComp_Evenness");
-	sprintf(harvestindxNAME[checkdone_id], "%s", "UpdateCheck");
+    int paramlen = 20;
+    
+	snprintf(harvestindxNAME[avg_sze_id], paramlen, "%s", "AvgCatchSize");
+	snprintf(harvestindxNAME[tot_land_id], paramlen, "%s", "TotLanding");
+	snprintf(harvestindxNAME[tot_num_caught_id], paramlen, "%s", "TotNumCaught");
+	snprintf(harvestindxNAME[tot_trash_id], paramlen, "%s", "TotDiscards");
+	snprintf(harvestindxNAME[gearchange_id], paramlen, "%s", "GearChange");
+	snprintf(harvestindxNAME[discardchange_id], paramlen, "%s", "DiscardChange");
+	snprintf(harvestindxNAME[tepkill_id], paramlen, "%s", "TEPkills");
+	snprintf(harvestindxNAME[habkill_id], paramlen, "%s", "HabImpact");
+	snprintf(harvestindxNAME[tot_dayfishing_id], paramlen, "%s", "TotEffort");
+	snprintf(harvestindxNAME[overallcpue_id], paramlen, "%s", "TotCPUE");
+	snprintf(harvestindxNAME[sociallike_id], paramlen, "%s", "SocialAccept");
+	snprintf(harvestindxNAME[realconflict_id], paramlen, "%s", "GearConflict");
+	snprintf(harvestindxNAME[sp_comp_id], paramlen, "%s", "SpComp_Evenness");
+	snprintf(harvestindxNAME[checkdone_id], paramlen, "%s", "UpdateCheck");
 
 	return;
 }
@@ -147,6 +149,21 @@ void Update_Harvest_Index_Values(MSEBoxModel *bm, FILE *llogfp) {
 				for (b = 0; b < bm->nbox; b++) {
 					/* Total discards */
 					harvestindx[nf][tot_trash_id] += bm->CumDiscards[sp][nf][b] * bm->X_CN * mg_2_tonne;
+                    
+                    /* Social acceptance contribution */
+                    if (is_cute) {
+                        if (FunctGroupArray[sp].isImpacted == TRUE)
+                            harvestindx[nf][tepkill_id] += bm->tepcoefft * bm->CumDiscards[sp][nf][b] * bm->X_CN * mg_2_tonne;
+                    }
+                    if (is_shark) {
+                        if (FunctGroupArray[sp].isImpacted == TRUE)
+                            harvestindx[nf][tepkill_id] += bm->sharkcoefft * bm->CumDiscards[sp][nf][b] * bm->X_CN * mg_2_tonne;
+                    }
+                    if (is_hab) {
+                        if (FunctGroupArray[sp].isImpacted == TRUE)
+                            harvestindx[nf][habkill_id] += bm->CumDiscards[sp][nf][b] * bm->X_CN * mg_2_tonne;
+                    }
+
 					for (ij = 0; ij < bm->boxes[b].nz; ij++) {
 						/* Total landings */
 						harvestindx[nf][tot_land_id] += bm->CumCatch[sp][nf][b][ij] * bm->X_CN * mg_2_tonne;
@@ -155,20 +172,14 @@ void Update_Harvest_Index_Values(MSEBoxModel *bm, FILE *llogfp) {
 						if (is_cute) {
 							if (FunctGroupArray[sp].isFished == TRUE)
 								harvestindx[nf][tepkill_id] += bm->tepcoefft * bm->CumCatch[sp][nf][b][ij] * bm->X_CN * mg_2_tonne;
-							if (FunctGroupArray[sp].isImpacted == TRUE)
-								harvestindx[nf][tepkill_id] += bm->tepcoefft * bm->CumDiscards[sp][nf][b] * bm->X_CN * mg_2_tonne;
 						}
 						if (is_shark) {
 							if (FunctGroupArray[sp].isFished == TRUE)
 								harvestindx[nf][tepkill_id] += bm->sharkcoefft * bm->CumCatch[sp][nf][b][ij] * bm->X_CN * mg_2_tonne;
-							if (FunctGroupArray[sp].isImpacted == TRUE)
-								harvestindx[nf][tepkill_id] += bm->sharkcoefft * bm->CumDiscards[sp][nf][b] * bm->X_CN * mg_2_tonne;
 						}
 						if (is_hab) {
 							if (FunctGroupArray[sp].isFished == TRUE)
 								harvestindx[nf][habkill_id] += bm->CumCatch[sp][nf][b][ij] * bm->X_CN * mg_2_tonne;
-							if (FunctGroupArray[sp].isImpacted == TRUE)
-								harvestindx[nf][habkill_id] += bm->CumDiscards[sp][nf][b] * bm->X_CN * mg_2_tonne;
 						}
 					}
 				}

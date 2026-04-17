@@ -42,7 +42,7 @@ double
 	FFDDR, FDR_DL, FDON_D, FDR_DC,
 	KST_fish, KST_shark, KST_bird, KST_mammal,
 	Ktmp_fish, Ktmp_shark, Ktmp_bird, Ktmp_mammal,
-	R_0_T15, R_D_T15, Dmax, X_ON, X_CN, X_CHLN, X_SiN, X_FeN,
+	R_0_T15, R_D_T15, Dmax, 
 	k_w_depth, k_w_cdepth, k_w_deep, k_w_shallow, k_PN, k_DON, k_DL, k_IS, K_TUR_DEP, k_SED,
 	K_addepth, K_conc, K_nit_T15, KI_avail, KIOP_min, KIOP_shift,
 	K_IRR, K_MAX_IRR, K_MAX_TUR, K_MIN_IRR, K_TUR,

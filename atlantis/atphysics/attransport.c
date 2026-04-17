@@ -59,7 +59,7 @@ void transportBM(MSEBoxModel *bm, double ***newwc, FILE *llogfp) {
 	int k, startk;
 	long d;
 	int n;
-	double k_transcale, k_transcale_final, exchange_amt, e;
+	double k_transcale, k_transcale_final, exchange_amt, e, orig_sink, orig_source;
 	double tleft = bm->dt;
 
 	if (verbose)
@@ -265,17 +265,29 @@ void transportBM(MSEBoxModel *bm, double ***newwc, FILE *llogfp) {
                                     if (bm->tinfo[n].partic && !bm->tinfo[n].passive) {
                                         /* Do nothng */
                                     } else {
+                                        orig_sink = dtr[bb][kk][n];
+                                        orig_source = dtr[b][startk][n];
+                                        
                                         dtr[bb][kk][n] += e * newwc[b][startk][n];
                                         dtr[b][startk][n] -= e * newwc[b][startk][n];
                                     }
 
-                                    /**
-                                    if((bb == bm->checkbox || b == bm->checkbox)) {
-                                        if (strcmp(bm->tinfo[n].name, "SED") == 0)
-                                            fprintf(bm->logFile, "Time: %e exchanging %e (of %e => %e) %s from box%d-%d to box%d-%d with flowvol %e\n",
-                                                bm->dayt, e*newwc[b][startk][n], newwc[b][startk][n]*bp->volume[startk], newwc[b][startk][n], bm->tinfo[n].name, b, startk, bb, kk, e);
+                                    /**/
+                                    //if((bb == bm->checkbox || b == bm->checkbox)) {
+                                    if ((!_finite(dtr[bb][kk][n])) || (!_finite(dtr[b][startk][n]))) {
+                                        printf("Hit a nan, telling you what went wrong\n");                                        
+                                        fflush(stdout);
+                                        fflush(stderr);
+                                        
+                                        if (strcmp(bm->tinfo[n].name, "salt") == 0)
+                                            fprintf(bm->logFile, "Time: %e dtr sink: %e, dtr source: %e, with orig_sink: %e and orig_source: %e - exchanging %e (e*newec) with source newwc %e source vol %e %s from box%d-%d to box%d-%d with e %e, k_transcale_final: %e, dt: %e, exchange_amt: %e, hd.dt: %e\n",
+                                                bm->dayt, dtr[bb][kk][n], dtr[b][startk][n], orig_sink, orig_source, e*newwc[b][startk][n], newwc[b][startk][n], bp->volume[startk], bm->tinfo[n].name, b, startk, bb, kk, e, k_transcale_final, dt, exchange_amt, bm->hd.dt);
+                                        fflush(bm->logFile);
+                                        quit("Time: %e dtr sink: %e, dtr source: %e, with orig_sink: %e and orig_source: %e - exchanging %e (e*newec) with source newwc %e source vol %e %s from box%d-%d to box%d-%d with e %e, k_transcale_final: %e, dt: %e, exchange_amt: %e, hd.dt: %e\n",
+                                             bm->dayt, dtr[bb][kk][n], dtr[b][startk][n], orig_sink, orig_source, e*newwc[b][startk][n], newwc[b][startk][n], bp->volume[startk], bm->tinfo[n].name, b, startk, bb, kk, e, k_transcale_final, dt, exchange_amt, bm->hd.dt);
+
                                     }
-                                    **/
+                                    /**/
 
                                 }
                                 /* Update source and sink counter */
@@ -345,6 +357,11 @@ void transportBM(MSEBoxModel *bm, double ***newwc, FILE *llogfp) {
 						if ((bm->do_availflag && !bm->tinfo[n].flagid) || (bm->tinfo[n].partic && !bm->tinfo[n].passive) || !bm->tinfo[n].can_be_moved || !bm->tinfo[n].isUsed){
 							can_be_moved = 0;
 						}
+                        
+                        if(bm->dayt > 1090.0 && (strcmp(bm->tinfo[n].name, "salt") == 0)){
+                            fprintf(llogfp,"Time %e transportBM box%d-%d for tracer %d (%s) - salinity %e starts %s starts %e\n", bm->dayt, b, k, n, bm->tinfo[n].name, newwc[23][1][Salinity_i], bm->tinfo[n].name, newwc[b][k][n]);
+                            fflush(llogfp);
+                        }
 
 						//if(strcmp(bm->tinfo[n].name, "Rugosity") == 0)
                         //    fprintf(bm->logFile, "Time %e %d-%d Rugosity starts %e ", bm->dayt, b, k, newwc[b][k][n]);
@@ -356,13 +373,12 @@ void transportBM(MSEBoxModel *bm, double ***newwc, FILE *llogfp) {
 
 							newwat = (newwc[b][k][n] * oldvol + dtr[b][k][n]) / newvol;
 							if (newwat < 0 && newwc[b][k][n] != bm->min_pool) {
-								//printf("transport: %s negative (was %.10g, now %.10g) at box %d layer %d\noldvol = %.10g, newvol = %.10g, dtr = %.10g\n",bm->tinfo[n].name,newwc[b][k][n],newwat,b,k,oldvol,newvol,dtr[b][k][n]);
-								warn("transport: %s negative (was %.10g, now %.10g so zeroing out) at box %d layer %d\noldvol = %.10g, newvol = %.10g, dtr = %.10g\n",
-										bm->tinfo[n].name, newwc[b][k][n], newwat, b, k, oldvol, newvol, dtr[b][k][n]);
-                                
-                                /*
-                                fprintf(llogfp, "transport: %s was %.10g, now %.10g at box %d layer %d oldvol = %.10g, newvol = %.10g, dtr = %.10g, dvol = %.10g\n", bm->tinfo[n].name, newwc[b][k][n], newwat, b, k, oldvol, newvol, dtr[b][k][n], dvol[b][k]);
-                                */
+								//warn("transport: time: %e %s negative (was %.10g, now %.10g so zeroing out) at box %d layer %d, oldvol = %.10g, newvol = %.10g, dtr = %.10g\n", bm->dayt, bm->tinfo[n].name, newwc[b][k][n], newwat, b, k, oldvol, newvol, dtr[b][k][n]);                                
+                                if(!lots_warn || (lots_warn && bm->newmonth)){
+                                    fprintf(llogfp, "transport: time: %e %s negative (was %.10g, now %.10g so zeroing out) at box %d layer %d, oldvol = %.10g, newvol = %.10g, dtr = %.10g\n", bm->dayt, bm->tinfo[n].name, newwc[b][k][n], newwat, b, k, oldvol, newvol, dtr[b][k][n]);
+                                }
+                                track_warn++;
+
                                 newwat = 0.0;
 							}
                             
@@ -377,14 +393,23 @@ void transportBM(MSEBoxModel *bm, double ***newwc, FILE *llogfp) {
                                 fprintf(bm->logFile, "transport: %s was %.10g, now %.10g at box %d layer %d\noldvol = %.10g, newvol = %.10g, dtr = %.10g (can_be_moved: %d)\n",
                                        bm->tinfo[n].name,newwc[b][k][n],newwat,b,k,oldvol,newvol,dtr[b][k][n], bm->tinfo[n].can_be_moved);
 							 **/
+                            
+                            if(bm->dayt > 1090.0 && (strcmp(bm->tinfo[n].name, "salt") == 0)){
+                                fprintf(llogfp,"Time %e transportBM box%d-%d for tracer %d (%s) - salinity now %e and %s was %.10g, now %.10g, oldvol = %.10g, newvol = %.10g, dtr = %.10g, dvol = %.10g\n", bm->dayt, b, k, n, bm->tinfo[n].name, newwc[23][1][Salinity_i], bm->tinfo[n].name, newwc[b][k][n], newwat, oldvol, newvol, dtr[b][k][n], dvol[b][k]);
+                                fflush(llogfp);
+                            }
 						} else{
 							newwat = newwc[b][k][n];
 						}
                         
-                        //if(strcmp(bm->tinfo[n].name, "Rugosity") == 0)
-                        //    fprintf(bm->logFile, "ends %e\n", newwc[b][k][n]);
+                        if (!_finite(newwat)) {
+                            fprintf(llogfp,"Time %e transportBM box%d-%d for tracer %d (%s) - was %.10g, now %.10g, oldvol = %.10g, newvol = %.10g, dtr = %.10g, dvol = %.10g\n", bm->dayt, b, k, n, bm->tinfo[n].name, newwc[b][k][n], newwat, oldvol, newvol, dtr[b][k][n], dvol[b][k]);
+                            fflush(llogfp);
+                            quit("NAN value for %s - was %.10g, now %.10g, oldvol = %.10g, newvol = %.10g, dtr = %.10g, dvol = %.10g\n", bm->tinfo[n].name, newwc[b][k][n], newwat, oldvol, newvol, dtr[b][k][n], dvol[b][k]);
+                        }
 
 						newwc[b][k][n] = newwat;
+                        
 					}
 				}
 				/* Store new volume and dz values */
@@ -392,7 +417,6 @@ void transportBM(MSEBoxModel *bm, double ***newwc, FILE *llogfp) {
 				bp->dz[k] = newvol / bp->area;
 
 				if (isnan(bp->dz[k])){
-
 					printf("bp->dz[k] = %e\n", bp->dz[k]);
 					quit("NAN value for dz in box %d, layer %d, newvol = %e, area = %e\n", bp->n, k, newvol, bp->area);
 				}

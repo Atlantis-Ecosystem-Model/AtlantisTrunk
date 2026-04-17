@@ -165,16 +165,14 @@ void Find_Evolution_Stats(MSEBoxModel *bm, int species, FILE *llogfp, int init_c
 				continue;  // As not active so don't do anything
 
 			for (cohort = 0; cohort < FunctGroupArray[species].numCohorts; cohort++) {
-                base_chrt = cohort / FunctGroupArray[species].numGeneTypes;
-                
-				if(DNA[species].trait_active[ntrait] < 1)
+                if(DNA[species].trait_active[ntrait] < 1)
 					continue;  // As not active so don't do anything
 
 				DNA[species].trait[ntrait][cohort][evol_mean_id] /= DNA[species].tot_num[cohort];
 				DNA[species].trait[ntrait][cohort][evol_theoretmean_id] /= ngene;
                 
-                fprintf(llogfp,"STATS %s Time: %e trait: %d base_chrt: %d cohort: %d evol_mean: %Le tot_num: %e theoret_mean: %Le\n",
-                        FunctGroupArray[species].groupCode, bm->dayt, ntrait, base_chrt, cohort, DNA[species].trait[ntrait][cohort][evol_mean_id],
+                fprintf(llogfp,"STATS %s Time: %e trait: %d cohort: %d evol_mean: %Le tot_num: %e theoret_mean: %Le\n",
+                        FunctGroupArray[species].groupCode, bm->dayt, ntrait, cohort, DNA[species].trait[ntrait][cohort][evol_mean_id],
                         DNA[species].tot_num[cohort], DNA[species].trait[ntrait][cohort][evol_theoretmean_id]);
 
 			}
@@ -307,7 +305,6 @@ void Find_Evolution_Shift(MSEBoxModel *bm, int species, FILE *llogfp) {
                 // Find spawn contribution - external to model domain
                 step3 = Ecology_Age_Structured_Spawn(species, KSPA_sp, FSP_sp, RSprop_sp, MIGRATION[species].SN[cohort][expect_id], MIGRATION[species].RN[cohort][expect_id], FunctGroupArray[species].scaled_FSPB[cohort], FunctGroupArray[species].X_RS[cohort], bm->flag_repcostSpawn, llogfp);
                 step2 += (FunctGroupArray[species].scaled_FSPB[cohort] * step3 * MIGRATION[species].DEN[cohort][expect_id]);
-                DNA[species].scaled_change[ntrait] += DNA[species].trait[ntrait][base_chrt][evol_relvaldiff_id] * step2;
                 
                 //spawn_abund += FunctGroupArray[species].scaled_FSPB[cohort] * (DNA[species].num[cohort] + MIGRATION[species].DEN[cohort][expect_id]);  // Use this if only basing relative weighting on number of reproducing adults
                 spawn_abund += step2;  // Use this if basing weighting on total spawn contributed
@@ -530,8 +527,8 @@ void Evolution_Curve(MSEBoxModel *bm, int species, int stock_id, int qid, int do
             EMBRYO[species].Larvae[stock_id][1][qid] = TotEmbryoes * 0.135;
             EMBRYO[species].Larvae[stock_id][2][qid] = TotEmbryoes * 0.34;
             EMBRYO[species].Larvae[stock_id][3][qid] = TotEmbryoes * 0.34;
-            EMBRYO[species].Larvae[stock_id][4][qid] = TotEmbryoes * 0.025;
-            EMBRYO[species].Larvae[stock_id][5][qid] = TotEmbryoes * 0.135;
+            EMBRYO[species].Larvae[stock_id][4][qid] = TotEmbryoes * 0.135;
+            EMBRYO[species].Larvae[stock_id][5][qid] = TotEmbryoes * 0.025;
             break;
         case 7:
             EMBRYO[species].Larvae[stock_id][0][qid] = TotEmbryoes * 0.005;
@@ -1146,7 +1143,7 @@ FILE * Init_Evol_File(MSEBoxModel *bm)
 	char fname[STRLEN];
 
 	/** Create filename **/
-	sprintf(fname, "%sEvolIndx.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sEvolIndx.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/

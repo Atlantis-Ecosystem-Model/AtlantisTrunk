@@ -123,7 +123,7 @@ void Init_Attribute_Array(MSEBoxModel *bm, FILE *ofp, int id) {
 			if (FunctGroupArray[sp].isVertebrate == TRUE) {
 				for (k = 0; k < bm->K_num_size; k++) {
 					for (j = 0; j < K_num_individ_char; j++) {
-						individVERTinfo[j][k][sp][b][id] = 0.0;
+						individVERTinfo[j][sp][k][b][id] = 0.0;
 					}
 				}
 				for (j = 0; j < 11; j++)
@@ -163,7 +163,7 @@ void Calculate_Attribute_Values(MSEBoxModel *bm, FILE *ofp) {
 				//if (FunctGroupArray[sp].speciesParams[isbird_id] > 1) {
 				if (FunctGroupArray[sp].groupType == BIRD) {
 					/* Seabirds and penguins */
-					oldbaby[sp][b][attrib_id] = stockinfo[sstocknums_id][sp][b][attrib_id] * individVERTinfo[istocknums_id][0][sp][b][attrib_id];
+					oldbaby[sp][b][attrib_id] = stockinfo[sstocknums_id][sp][b][attrib_id] * individVERTinfo[istocknums_id][sp][0][b][attrib_id];
 				}
 				if (FunctGroupArray[sp].groupType == MAMMAL) {
 					/* Mammals */
@@ -179,9 +179,9 @@ void Calculate_Attribute_Values(MSEBoxModel *bm, FILE *ofp) {
 					for (jj = 0; jj < matage; jj++) {
 						scalarsum = 0;
 						for (k = 0; k < bm->K_num_size; k++) {
-							newnums = stockinfo[sstocknums_id][sp][b][attrib_id] * individVERTinfo[istocknums_id][k][sp][b][attrib_id]
+							newnums = stockinfo[sstocknums_id][sp][b][attrib_id] * individVERTinfo[istocknums_id][sp][k][b][attrib_id]
 									* agelengthkey[k][jj][sp][b][attrib_id];
-							scalarsum += individVERTinfo[istocknums_id][k][sp][b][attrib_id] * agelengthkey[k][jj][sp][b][attrib_id];
+							scalarsum += individVERTinfo[istocknums_id][sp][k][b][attrib_id] * agelengthkey[k][jj][sp][b][attrib_id];
 							step1 += newnums;
 						}
 					}
@@ -380,25 +380,26 @@ void Charismatic_Attributes(MSEBoxModel *bm, FILE *ofp) {
 						/* Weights */
 						raw = biolVERTinfo[bstruct_id][sp][chrt][b] + biolVERTinfo[bres_id][sp][chrt][b];
 						rawW = raw;
-						individVERTinfo[iweight_id][lbin][sp][z][attrib_id] += raw;
+						individVERTinfo[iweight_id][sp][lbin][z][attrib_id] += raw;
 
 						/* Numbers in stock */
 						raw = biolVERTinfo[bstocknums_id][sp][chrt][b];
 						rawN = raw;
-						individVERTinfo[istocknums_id][lbin][sp][z][attrib_id] += raw;
-						if (chrt)
-							oldbaby[sp][z][attrib_id] += raw;
+						individVERTinfo[istocknums_id][sp][lbin][z][attrib_id] += raw;
+                        if (chrt < FunctGroupArray[sp].numGeneTypes) {
+                            oldbaby[sp][z][attrib_id] += raw;
+                        }
 
 						/* Numbers in catch*/
 						raw = biolVERTinfo[bcatchnums_id][sp][chrt][b];
-						individVERTinfo[icatchnums_id][0][sp][z][attrib_id] += raw;
+						individVERTinfo[icatchnums_id][sp][0][z][attrib_id] += raw;
 
 						/* Biomass */
-						individVERTinfo[ibiomass_id][lbin][sp][z][attrib_id] += rawW * rawN / (bm->boxes[b].area + TINY);
+						individVERTinfo[ibiomass_id][sp][lbin][z][attrib_id] += rawW * rawN / (bm->boxes[b].area + TINY);
 
 						/* Discards */
 						raw = biolVERTinfo[bdiscards_id][sp][chrt][b];
-						individVERTinfo[idiscards_id][lbin][sp][z][attrib_id] += raw;
+						individVERTinfo[idiscards_id][sp][lbin][z][attrib_id] += raw;
 
 					}
 				}
@@ -419,18 +420,18 @@ void Charismatic_Attributes(MSEBoxModel *bm, FILE *ofp) {
 			if(FunctGroupArray[sp].groupType == BIRD){
 				for (chrt = 0; chrt < 3; chrt++) {
 					/* Bird stock biomasses */
-					stockinfo[sbiomass_id][sp][z][attrib_id] += individVERTinfo[ibiomass_id][chrt][sp][z][attrib_id];
+					stockinfo[sbiomass_id][sp][z][attrib_id] += individVERTinfo[ibiomass_id][sp][chrt][z][attrib_id];
 
 					/* Bird stock numbers */
-					stockinfo[sstocknums_id][sp][z][attrib_id] += individVERTinfo[istocknums_id][chrt][sp][z][attrib_id];
+					stockinfo[sstocknums_id][sp][z][attrib_id] += individVERTinfo[istocknums_id][sp][chrt][z][attrib_id];
 
 					/* Bird catch numbers */
-					stockinfo[scatchnums_id][sp][z][attrib_id] += individVERTinfo[icatchnums_id][chrt][sp][z][attrib_id];
+					stockinfo[scatchnums_id][sp][z][attrib_id] += individVERTinfo[icatchnums_id][sp][chrt][z][attrib_id];
 				}
 				for (chrt = 0; chrt < 3; chrt++) {
 					/* Normalise individual bird numbers */
-					individVERTinfo[istocknums_id][chrt][sp][z][attrib_id] /= (stockinfo[sstocknums_id][sp][z][attrib_id] + TINY);
-					individVERTinfo[icatchnums_id][chrt][sp][z][attrib_id] /= (stockinfo[scatchnums_id][sp][z][attrib_id] + TINY);
+					individVERTinfo[istocknums_id][sp][chrt][z][attrib_id] /= (stockinfo[sstocknums_id][sp][z][attrib_id] + TINY);
+					individVERTinfo[icatchnums_id][sp][chrt][z][attrib_id] /= (stockinfo[scatchnums_id][sp][z][attrib_id] + TINY);
 				}
 			}
 		}
@@ -528,26 +529,26 @@ void Charismatic_Attributes(MSEBoxModel *bm, FILE *ofp) {
 				for (i = 0; i < bm->K_num_size; i++) {
 
 					/* Size distribution */
-					individVERTinfo[istocknums_id][i][sp][z][attrib_id] = sizebins[sizestocknums_id][indx][z][i][0][attrib_id]
+					individVERTinfo[istocknums_id][sp][i][z][attrib_id] = sizebins[sizestocknums_id][indx][z][i][0][attrib_id]
 							/ (totnums[totstocknums_id][indx][z] + TINY);
 
 					/* Average weight of individual in that size bin */
-					individVERTinfo[iweight_id][i][sp][z][attrib_id] = sizebins[sizeweight_id][indx][z][i][0][attrib_id] / (totnums[totstocknums_id][indx][z]
+					individVERTinfo[iweight_id][sp][i][z][attrib_id] = sizebins[sizeweight_id][indx][z][i][0][attrib_id] / (totnums[totstocknums_id][indx][z]
 							+ totnums[totcatchnums_id][indx][z] + totnums[totdiscardnums_id][indx][z] + TINY);
 
 					/* Biomass */
-					individVERTinfo[ibiomass_id][i][sp][z][attrib_id] = stockinfo[sstocknums_id][indx][z][attrib_id]
-							* individVERTinfo[istocknums_id][i][sp][z][attrib_id] * individVERTinfo[iweight_id][i][sp][z][attrib_id];
+					individVERTinfo[ibiomass_id][sp][i][z][attrib_id] = stockinfo[sstocknums_id][indx][z][attrib_id]
+							* individVERTinfo[istocknums_id][sp][i][z][attrib_id] * individVERTinfo[iweight_id][sp][i][z][attrib_id];
 
 					/* Stock biomass */
-					stockinfo[sbiomass_id][sp][z][attrib_id] += individVERTinfo[ibiomass_id][i][sp][z][attrib_id];
+					stockinfo[sbiomass_id][sp][z][attrib_id] += individVERTinfo[ibiomass_id][sp][i][z][attrib_id];
 
 					/* Size distribution of catch */
-					individVERTinfo[icatchnums_id][i][sp][z][attrib_id] = sizebins[sizecatchnums_id][indx][z][i][0][attrib_id]
+					individVERTinfo[icatchnums_id][sp][i][z][attrib_id] = sizebins[sizecatchnums_id][indx][z][i][0][attrib_id]
 							/ (totnums[totcatchnums_id][indx][z] + TINY);
 
 					/* Size distribution of discards */
-					individVERTinfo[idiscards_id][i][sp][z][attrib_id] = sizebins[sizediscardnums_id][indx][z][i][0][attrib_id]
+					individVERTinfo[idiscards_id][sp][i][z][attrib_id] = sizebins[sizediscardnums_id][indx][z][i][0][attrib_id]
 							/ (totnums[totdiscardnums_id][indx][z] + TINY);
 
 					/* Age-length keys */
@@ -731,36 +732,36 @@ void Fisheries_Attributes(MSEBoxModel *bm, FILE *ofp) {
 							 discarded fish to give an average weight of individual in that size bin,
 							 this value will be replaced by a fisheries independent one if it is collected */
 
-							individVERTinfo[iweight_id][i][sp][z][attrib_id] = sizebins[sizeweight_id][sp][z][i][1][attrib_id]
+							individVERTinfo[iweight_id][sp][i][z][attrib_id] = sizebins[sizeweight_id][sp][z][i][1][attrib_id]
 									/ (sizebins[sizecatchnums_id][sp][z][i][1][attrib_id] + sizebins[sizediscardnums_id][sp][z][i][1][attrib_id] + TINY);
 
 							/* Size distribution of catch */
-							individVERTinfo[icatchnums_id][i][sp][z][attrib_id] = sizebins[sizecatchnums_id][sp][z][i][1][attrib_id]
+							individVERTinfo[icatchnums_id][sp][i][z][attrib_id] = sizebins[sizecatchnums_id][sp][z][i][1][attrib_id]
 									/ (totnums[totcatchnums_id][sp][z] + TINY);
 
 							/* Size distribution of discards */
-							individVERTinfo[idiscards_id][i][sp][z][attrib_id] = sizebins[sizediscardnums_id][sp][z][i][1][attrib_id]
+							individVERTinfo[idiscards_id][sp][i][z][attrib_id] = sizebins[sizediscardnums_id][sp][z][i][1][attrib_id]
 									/ (totnums[totdiscardnums_id][sp][z] + TINY);
 						} else {
 							/* Store mammal mammal info */
 							/* Total number of mammals caught */
 							stockinfo[scatchnums_id][sp][z][attrib_id] += stockinfo[stotcatch_id][sp][z][attrib_id]
-									* individVERTinfo[icatchnums_id][i][sp][z][attrib_id] / (individVERTinfo[iweight_id][i][sp][z][attrib_id] + TINY);
+									* individVERTinfo[icatchnums_id][sp][i][z][attrib_id] / (individVERTinfo[iweight_id][sp][i][z][attrib_id] + TINY);
 
 							/* Total number of mammals in discards */
 							stockinfo[sdiscardnums_id][sp][z][attrib_id] += stockinfo[sdiscards_id][sp][z][attrib_id]
-									* individVERTinfo[idiscards_id][i][sp][z][attrib_id] / (individVERTinfo[iweight_id][i][sp][z][attrib_id] + TINY);
+									* individVERTinfo[idiscards_id][sp][i][z][attrib_id] / (individVERTinfo[iweight_id][sp][i][z][attrib_id] + TINY);
 						}
 					}
 				} else {
 					for (i = 0; i < 3; i++) {
 						/* Total number of seabirds caught */
 						stockinfo[scatchnums_id][sp][z][attrib_id] += stockinfo[stotcatch_id][sp][z][attrib_id]
-								* individVERTinfo[icatchnums_id][i][sp][z][attrib_id] / (individVERTinfo[iweight_id][i][sp][z][attrib_id] + TINY);
+								* individVERTinfo[icatchnums_id][sp][i][z][attrib_id] / (individVERTinfo[iweight_id][sp][i][z][attrib_id] + TINY);
 
 						/* Total number of seabirds in discards */
 						stockinfo[sdiscardnums_id][sp][z][attrib_id] += stockinfo[sdiscards_id][sp][z][attrib_id]
-								* individVERTinfo[idiscards_id][i][sp][z][attrib_id] / (individVERTinfo[iweight_id][i][sp][z][attrib_id] + TINY);
+								* individVERTinfo[idiscards_id][sp][i][z][attrib_id] / (individVERTinfo[iweight_id][sp][i][z][attrib_id] + TINY);
 					}
 				}
 			}
@@ -890,25 +891,25 @@ void Fish_Attributes(MSEBoxModel *bm, FILE *ofp) {
 
 					for (i = 0; i < bm->K_num_size; i++) {
 						/* Catchability */
-						individVERTinfo[iq_id][i][sp][z][attrib_id] = sizebins[sizeselectnums_id][sp][z][i][0][attrib_id] / (nsq[sp][z][i][attrib_id] + TINY);
+						individVERTinfo[iq_id][sp][i][z][attrib_id] = sizebins[sizeselectnums_id][sp][z][i][0][attrib_id] / (nsq[sp][z][i][attrib_id] + TINY);
 
 						/* Size distribution of stock */
-						individVERTinfo[istocknums_id][i][sp][z][attrib_id] = sizebins[sizestocknums_id][sp][z][i][0][attrib_id];
+						individVERTinfo[istocknums_id][sp][i][z][attrib_id] = sizebins[sizestocknums_id][sp][z][i][0][attrib_id];
 
 						/* Average weight of individual in that size bin */
 						step1 = sizebins[sizeweight_id][sp][z][i][0][attrib_id] / (sizebins[sizestocknums_id][sp][z][i][0][attrib_id] + TINY);
 						if (step1 > 0)
-							individVERTinfo[iweight_id][i][sp][z][attrib_id] = step1;
+							individVERTinfo[iweight_id][sp][i][z][attrib_id] = step1;
 
 
 						/* Numbers in the catch */
 						stockinfo[scatchnums_id][sp][z][attrib_id] += stockinfo[stotcatch_id][sp][z][attrib_id]
-								* individVERTinfo[icatchnums_id][sp][i][z][attrib_id] / (individVERTinfo[iweight_id][i][sp][z][attrib_id] + TINY);
+								* individVERTinfo[icatchnums_id][sp][i][z][attrib_id] / (individVERTinfo[iweight_id][sp][i][z][attrib_id] + TINY);
 
 
 						/* Numbers in the discards */
 						stockinfo[sdiscardnums_id][sp][z][attrib_id] += stockinfo[sdiscards_id][sp][z][attrib_id]
-								* individVERTinfo[idiscards_id][i][sp][z][attrib_id] / (individVERTinfo[iweight_id][i][sp][z][attrib_id] + TINY);
+								* individVERTinfo[idiscards_id][sp][i][z][attrib_id] / (individVERTinfo[iweight_id][sp][i][z][attrib_id] + TINY);
 						/* Age-length keys */
 						sum = 0.0;
 						for (j = 0; j < bm->K_max_agekey; j++) {
@@ -920,22 +921,22 @@ void Fish_Attributes(MSEBoxModel *bm, FILE *ofp) {
 							agelengthkey[i][j][sp][z][attrib_id] /= (sum + TINY);
 
 						/* Total numbers */
-						totnums[totstocknums_id][sp][z] += individVERTinfo[istocknums_id][i][sp][z][attrib_id];
+						totnums[totstocknums_id][sp][z] += individVERTinfo[istocknums_id][sp][i][z][attrib_id];
 					}
 
 					/* Rescale size distribution so it sums to one */
 					for (i = 0; i < bm->K_num_size; i++) {
-						individVERTinfo[istocknums_id][i][sp][z][attrib_id] = individVERTinfo[istocknums_id][i][sp][z][attrib_id]
+						individVERTinfo[istocknums_id][sp][i][z][attrib_id] = individVERTinfo[istocknums_id][sp][i][z][attrib_id]
 								/ (totnums[totstocknums_id][sp][z] + TINY);
 
 						/* Do stuff that was dependent on rescaled size distribution */
 						/* Biomass per size bin - corrected for selectivity */
-						individVERTinfo[ibiomass_id][i][sp][z][attrib_id] = stockinfo[sbiomass_id][sp][z][attrib_id]
-								* individVERTinfo[iweight_id][i][sp][z][attrib_id];
+						individVERTinfo[ibiomass_id][sp][i][z][attrib_id] = stockinfo[sbiomass_id][sp][z][attrib_id]
+								* individVERTinfo[iweight_id][sp][i][z][attrib_id];
 
 						/* Numbers in the stock */
 						stockinfo[sstocknums_id][sp][z][attrib_id] += stockinfo[sbiomass_id][sp][z][attrib_id]
-								* individVERTinfo[istocknums_id][i][sp][z][attrib_id] / (individVERTinfo[iweight_id][i][sp][z][attrib_id] + TINY);
+								* individVERTinfo[istocknums_id][sp][i][z][attrib_id] / (individVERTinfo[iweight_id][sp][i][z][attrib_id] + TINY);
 					}
 				}
 			}
@@ -963,10 +964,10 @@ void Fish_Attributes(MSEBoxModel *bm, FILE *ofp) {
 
 						for (chrt = 0; chrt < matage; chrt++) {
 							for (i = 0; i < bm->K_num_size; i++) {
-								contrib1 = individVERTinfo[istocknums_id][i][sp][z][attrib_id] * agelengthkey[i][chrt][sp][z][attrib_id];
+								contrib1 = individVERTinfo[istocknums_id][sp][i][z][attrib_id] * agelengthkey[i][chrt][sp][z][attrib_id];
 								raw1 += contrib1;
 
-								contrib2 = individVERTinfo[icatchnums_id][i][sp][z][attrib_id] * agelengthkey[i][chrt][sp][z][attrib_id];
+								contrib2 = individVERTinfo[icatchnums_id][sp][i][z][attrib_id] * agelengthkey[i][chrt][sp][z][attrib_id];
 								raw2 += contrib2;
 							}
 						}

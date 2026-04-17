@@ -72,7 +72,7 @@ FILE * Init_RAssess_File(MSEBoxModel *bm, int species) {
     char fname[STRLEN];
 
     /** Create filename **/
-    sprintf(fname,"%s_%s",FunctGroupArray[species].groupCode, bm->RAssessRinName);
+    snprintf(fname, sizeof(fname), "%s_%s", FunctGroupArray[species].groupCode, bm->RAssessRinName);
     printf("Init_RAssess_File: Creating %s\n",fname);
     
     /* Create file */
@@ -256,7 +256,7 @@ void Read_RAssess_output(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
     }
 
     /** Create filename - was _Rassess.out**/
-    sprintf(outname,"%s_%s",FunctGroupArray[species].groupCode, bm->RAssessRoutName);
+    snprintf(outname, sizeof(outname), "%s_%s", FunctGroupArray[species].groupCode, bm->RAssessRoutName);
     
     if ((fp = Open_Input_File(bm->destFolder,outname, "rt")) == NULL) {
         quit("Cannot open R generated output file %s\n", outname);
@@ -316,12 +316,12 @@ void Run_RAssess(MSEBoxModel *bm, int species, FILE *RAssessfp) {
     
     if (bm->RAssessRuseScript) {
         // Using a system call
-        sprintf(R_ScriptName,"Rscript %s_%s",FunctGroupArray[species].groupCode, bm->RAssessRscriptName[idR]);
+        snprintf(R_ScriptName, sizeof(R_ScriptName), "Rscript %s_%s", FunctGroupArray[species].groupCode, bm->RAssessRscriptName[idR]);
         system(R_ScriptName);
     } else {
         // Using embedded R call
-        sprintf(inScriptName,"%s_%s",FunctGroupArray[species].groupCode, bm->RAssessRscriptName[0]);
-        sprintf(outScriptName,"%s_%s",FunctGroupArray[species].groupCode, bm->RAssessRoutName);
+        snprintf(inScriptName, sizeof(inScriptName), "%s_%s", FunctGroupArray[species].groupCode, bm->RAssessRscriptName[0]);
+        snprintf(outScriptName, sizeof(outScriptName), "%s_%s", FunctGroupArray[species].groupCode, bm->RAssessRoutName);
         
         SEXP infile = PROTECT(allocVector(STRSXP, 1));
         SET_STRING_ELT(infile, 0, mkChar(inScriptName));

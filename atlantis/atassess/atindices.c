@@ -269,8 +269,8 @@ void Calc_Max_Size(MSEBoxModel *bm, int z, int id) {
 			} else {
 				maxwgt = 1;
 				for (j = 0; j < bm->K_num_size; j++) {
-					prop = individVERTinfo[icatchnums_id][j][i][z][id];
-					wgt = individVERTinfo[iweight_id][j][i][z][id];
+					prop = individVERTinfo[icatchnums_id][i][j][z][id];
+					wgt = individVERTinfo[iweight_id][i][j][z][id];
 
 					if (prop > 0)
 						maxwgt = wgt;
@@ -286,7 +286,7 @@ void Calc_Max_Size(MSEBoxModel *bm, int z, int id) {
 	for (i = 0; i < bm->K_num_tot_sp; i++) { // Targeted invertebrates only
 		if (FunctGroupArray[i].isVertebrate == FALSE && FunctGroupArray[i].isFished == TRUE && FunctGroupArray[i].isEpiFauna == FALSE
 				&& FunctGroupArray[i].isInfauna == FALSE) {
-			maxlngth = +(invstockinfo[fcatch_id][i][z][id] / (zonearea[z] + TINY)) * FunctGroupArray[i].speciesParams[max_length_id] / (totcatch + TINY);
+			maxlngth += (invstockinfo[fcatch_id][i][z][id] / (zonearea[z] + TINY)) * FunctGroupArray[i].speciesParams[max_length_id] / (totcatch + TINY);
 		}
 	}
 
@@ -331,7 +331,7 @@ void Calc_Size_Mature_And_Condn(MSEBoxModel *bm, int z, int id, FILE *ofp) {
 
 				for (k = 0; k < bm->K_num_size; k++) {
 					/* Size mature */
-					wgt = individVERTinfo[iweight_id][k][indx][z][id];
+					wgt = individVERTinfo[iweight_id][indx][k][z][id];
 					coefft = agelengthkey[k][j][indx][z][id];
 					lngth = Get_Length(bm, wgt, indx);
 
@@ -341,18 +341,18 @@ void Calc_Size_Mature_And_Condn(MSEBoxModel *bm, int z, int id, FILE *ofp) {
 						step2 = 0.0;
 
 					/* Condition factor */
-					stepA += individVERTinfo[icondn_id][k][indx][z][id] * individVERTinfo[istocknums_id][k][indx][z][id];
+					stepA += individVERTinfo[icondn_id][indx][k][z][id] * individVERTinfo[istocknums_id][indx][k][z][id];
 				}
 			} else {
 				for (k = 0; k < 3; k++) {
 					/* Size mature */
-					wgt = individVERTinfo[iweight_id][k][indx][z][id];
+					wgt = individVERTinfo[iweight_id][indx][k][z][id];
 					lngth = Get_Length(bm, wgt, indx);
 
 
 					step2 += lngth;
 					/* Condition factor */
-					stepA += individVERTinfo[icondn_id][k][indx][z][id] * individVERTinfo[istocknums_id][k][indx][z][id];
+					stepA += individVERTinfo[icondn_id][indx][k][z][id] * individVERTinfo[istocknums_id][indx][k][z][id];
 				}
 			}
 
@@ -404,8 +404,8 @@ void Calc_Size_Mature_And_Condn(MSEBoxModel *bm, int z, int id, FILE *ofp) {
  * pelbin[34][type] = birds 1000g+
  *
  * with
- * pelbin[bin][0] = biomass
- * pelbin[bin][1] = numbers
+ * pelbin[bin][0] = biomass (bioindex_id)
+ * pelbin[bin][1] = numbers (abundindex_id)
  *
  * and
  * sedbin[0] = Bacteria
@@ -447,31 +447,31 @@ void Calc_Size_Spectra(MSEBoxModel *bm, int z, int id) {
 				break;
 
 			case PL_BACT:
-				pelbin[0][0][z] += samplebiom[sp][z][id];
-				pelbin[0][1][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
+				pelbin[0][bioindex_id][z] += samplebiom[sp][z][id];
+				pelbin[0][abundindex_id][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
 				break;
 			case LG_PHY:
 			case DINOFLAG:
 			case SM_PHY:
-				pelbin[1][0][z] += samplebiom[sp][z][id];
-				pelbin[1][1][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
+				pelbin[1][bioindex_id][z] += samplebiom[sp][z][id];
+				pelbin[1][abundindex_id][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
 				break;
 
 			case SM_ZOO:
-				pelbin[2][0][z] += samplebiom[sp][z][id];
-				pelbin[2][1][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
+				pelbin[2][bioindex_id][z] += samplebiom[sp][z][id];
+				pelbin[2][abundindex_id][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
 				break;
 			case MED_ZOO:
-				pelbin[4][0][z] += samplebiom[sp][z][id];
-				pelbin[4][1][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
+				pelbin[4][bioindex_id][z] += samplebiom[sp][z][id];
+				pelbin[4][abundindex_id][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
 
-//				pelbin[3][0][z] += samplebiom[sp][z][id];
-//				pelbin[3][1][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
+//				pelbin[3][bioindex_id][z] += samplebiom[sp][z][id];
+//				pelbin[3][abundindex_id][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
 
 				break;
 			case LG_ZOO:
-				pelbin[3][0][z] += samplebiom[sp][z][id];
-				pelbin[3][1][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
+				pelbin[3][bioindex_id][z] += samplebiom[sp][z][id];
+				pelbin[3][abundindex_id][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
 				break;
 			case CEP:
 				for (j = 5; j < 7; j++) {
@@ -479,13 +479,13 @@ void Calc_Size_Spectra(MSEBoxModel *bm, int z, int id) {
 						prop_bin = 0.3;
 					else
 						prop_bin = 0.7;
-					pelbin[j][0][z] += prop_bin * samplebiom[sp][z][id];
-					pelbin[j][1][z] += prop_bin * samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
+					pelbin[j][bioindex_id][z] += prop_bin * samplebiom[sp][z][id];
+					pelbin[j][abundindex_id][z] += prop_bin * samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
 				}
 				break;
 			case PWN:
-				pelbin[5][0][z] += samplebiom[sp][z][id];
-				pelbin[5][1][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
+				pelbin[5][bioindex_id][z] += samplebiom[sp][z][id];
+				pelbin[5][abundindex_id][z] += samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
 				break;
 
 				/* Bentic groups */
@@ -495,8 +495,7 @@ void Calc_Size_Spectra(MSEBoxModel *bm, int z, int id) {
 			case SM_INF:
 			case MICROPHTYBENTHOS:
 				sedbin[1][z] += samplebiom[sp][z][id];
-				break;
-				break;
+                break;
 			case LG_INF:
 			case SED_EP_FF:
 			case SED_EP_OTHER:
@@ -536,7 +535,7 @@ void Calc_Size_Spectra(MSEBoxModel *bm, int z, int id) {
 			if(FunctGroupArray[sp].groupType == BIRD){
 				/* Birds */
 				for (sizeclass = 0; sizeclass < 3; sizeclass++) {
-					wgt = individVERTinfo[iweight_id][sizeclass][sp][z][id] * mg_2_g * bm->X_CN;
+					wgt = individVERTinfo[iweight_id][sp][sizeclass][z][id] * mg_2_g * bm->X_CN;
 					if (wgt < 200.0) {
 						bin = 0;
 					} else if (wgt < 500.0) {
@@ -546,8 +545,8 @@ void Calc_Size_Spectra(MSEBoxModel *bm, int z, int id) {
 					} else {
 						bin = 3;
 					}
-					pelbin[pelbinbird + bin][0][z] += individVERTinfo[ibiomass_id][sizeclass][sp][z][id];
-					pelbin[pelbinbird + bin][1][z] += individVERTinfo[istocknums_id][sizeclass][sp][z][id] * stockinfo[sstocknums_id][sp][z][id];
+					pelbin[pelbinbird + bin][bioindex_id][z] += individVERTinfo[ibiomass_id][sp][sizeclass][z][id];
+					pelbin[pelbinbird + bin][abundindex_id][z] += individVERTinfo[istocknums_id][sp][sizeclass][z][id] * stockinfo[sstocknums_id][sp][z][id];
 				}
 			} else {
 				/* All other vertebrates */
@@ -583,8 +582,8 @@ void Calc_Size_Spectra(MSEBoxModel *bm, int z, int id) {
 							bincount = nextbin + k;
 							if (bincount > pelbinbird - 1)
 								bincount = pelbinbird - 1;
-							pelbin[bincount][0][z] += prop_bin * individVERTinfo[ibiomass_id][sizeclass][sp][z][id];
-							pelbin[bincount][1][z] += prop_bin * individVERTinfo[istocknums_id][sizeclass][sp][z][id] * stockinfo[sstocknums_id][sp][z][id];
+							pelbin[bincount][bioindex_id][z] += prop_bin * individVERTinfo[ibiomass_id][sp][sizeclass][z][id];
+							pelbin[bincount][abundindex_id][z] += prop_bin * individVERTinfo[istocknums_id][sp][sizeclass][z][id] * stockinfo[sstocknums_id][sp][z][id];
 						}
 					}
 				} else {
@@ -614,8 +613,8 @@ void Calc_Size_Spectra(MSEBoxModel *bm, int z, int id) {
 							bincount = nextbin + k;
 							if (bincount > pelbinbird - 1)
 								bincount = pelbinbird - 1;
-							pelbin[bincount][0][z] += prop_bin * individVERTinfo[ibiomass_id][sizeclass][sp][z][id];
-							pelbin[bincount][1][z] += prop_bin * individVERTinfo[istocknums_id][sizeclass][sp][z][id] * stockinfo[sstocknums_id][sp][z][id];
+							pelbin[bincount][bioindex_id][z] += prop_bin * individVERTinfo[ibiomass_id][sp][sizeclass][z][id];
+							pelbin[bincount][abundindex_id][z] += prop_bin * individVERTinfo[istocknums_id][sp][sizeclass][z][id] * stockinfo[sstocknums_id][sp][z][id];
 						}
 					}
 
@@ -628,8 +627,8 @@ void Calc_Size_Spectra(MSEBoxModel *bm, int z, int id) {
 							nbinleft = nbin - k;
 							break;
 						}
-						pelbin[bincount][0][z] += prop_bin * individVERTinfo[ibiomass_id][sizeclasstransit][sp][z][id];
-						pelbin[bincount][1][z] += prop_bin * individVERTinfo[istocknums_id][sizeclasstransit][sp][z][id] * stockinfo[sstocknums_id][sp][z][id];
+						pelbin[bincount][bioindex_id][z] += prop_bin * individVERTinfo[ibiomass_id][sp][sizeclasstransit][z][id];
+						pelbin[bincount][abundindex_id][z] += prop_bin * individVERTinfo[istocknums_id][sp][sizeclasstransit][z][id] * stockinfo[sstocknums_id][sp][z][id];
 					}
 					biK_num_sizeleft = numbin * nbinleft / (nbin + TINY);
 					binsze = biK_num_sizeleft / 5;
@@ -644,8 +643,8 @@ void Calc_Size_Spectra(MSEBoxModel *bm, int z, int id) {
 						bincount = startbinbig + k;
 						if (startbinbig > pelbinbird - 1)
 							bincount = pelbinbird - 1;
-						pelbin[bincount][0][z] += prop_bin * individVERTinfo[ibiomass_id][sizeclasstransit][sp][z][id];
-						pelbin[bincount][1][z] += prop_bin * individVERTinfo[istocknums_id][sizeclasstransit][sp][z][id] * stockinfo[sstocknums_id][sp][z][id];
+						pelbin[bincount][bioindex_id][z] += prop_bin * individVERTinfo[ibiomass_id][sp][sizeclasstransit][z][id];
+						pelbin[bincount][abundindex_id][z] += prop_bin * individVERTinfo[istocknums_id][sp][sizeclasstransit][z][id] * stockinfo[sstocknums_id][sp][z][id];
 					}
 					startbinbig = bincount;
 
@@ -656,8 +655,8 @@ void Calc_Size_Spectra(MSEBoxModel *bm, int z, int id) {
 							bincount = nextbin + k;
 							if (bincount > pelbinbird - 1)
 								bincount = pelbinbird - 1;
-							pelbin[bincount][0][z] += prop_binB * individVERTinfo[ibiomass_id][sizeclass][sp][z][id];
-							pelbin[bincount][1][z] += prop_binB * individVERTinfo[istocknums_id][sizeclass][sp][z][id] * stockinfo[sstocknums_id][sp][z][id];
+							pelbin[bincount][bioindex_id][z] += prop_binB * individVERTinfo[ibiomass_id][sp][sizeclass][z][id];
+							pelbin[bincount][abundindex_id][z] += prop_binB * individVERTinfo[istocknums_id][sp][sizeclass][z][id] * stockinfo[sstocknums_id][sp][z][id];
 
 						}
 					}
@@ -813,11 +812,9 @@ static void sort_global_values_big(MSEBoxModel *bm, int index, int z, int typeIn
 		if (FunctGroupArray[sp].isVertebrate == TRUE || FunctGroupArray[sp].isMacroFauna == TRUE) {
 			rank = 0;
 			for (chrt = 0; chrt < bm->K_num_tot_sp; chrt++) {
-				if (FunctGroupArray[chrt].isMacroFauna == TRUE) {
-					if (globalnums[sp][index][typeIndex] > globalnums[chrt][index][typeIndex])
-						rank++;
-
-				}
+                if (globalnums[sp][index][typeIndex] > globalnums[chrt][index][typeIndex]) {
+                    rank++;
+                }
 			}
 			numsort[sp] = counter - 1 - rank;
 		}
@@ -881,8 +878,9 @@ void Calc_ABC(MSEBoxModel *bm, int z, int id) {
 
 	/* Repeat without microfauna */
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-		for (chrt = 0; chrt < FunctGroupArray[sp].numStages; chrt++)
-			nums[chrt][sp] = 0;
+        for (chrt = 0; chrt < FunctGroupArray[sp].numStages; chrt++) {
+            nums[sp][chrt] = 0;
+        }
 	}
 
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
@@ -905,26 +903,26 @@ void Calc_ABC(MSEBoxModel *bm, int z, int id) {
 	}
 
 	/* First for numbers */
-	sort_values_big(bm, 0, z);
+	sort_values_big(bm, abundindex_id, z);
 
 	/* Now for biomass */
-	sort_values_big(bm, 1, z);
+	sort_values_big(bm, bioindex_id, z);
 
 	/* For bay as a whole */
 	if (z == (bm->nfzones - 1)) {
 
 		/* First for numbers */
-		sort_global_values(bm, 0, bm->nfzones, 0);
+		sort_global_values(bm, abundindex_id, bm->nfzones, 0);
 
 		/* Then biomass */
-		sort_global_values(bm, 1, bm->nfzones, 0);
+		sort_global_values(bm, bioindex_id, bm->nfzones, 0);
 
 		/* Wihout microfauna sort into descending order */
 		/* First for numbers */
-		sort_global_values_big(bm, 0, bm->nfzones, 1);
+		sort_global_values_big(bm, abundindex_id, bm->nfzones, 1);
 
 		/* Then biomass */
-		sort_global_values_big(bm, 1, bm->nfzones, 1);
+		sort_global_values_big(bm, bioindex_id, bm->nfzones, 1);
 
 	}
 
@@ -990,7 +988,7 @@ void Calc_Reprod_Success(MSEBoxModel *bm, int z, int id, FILE *ofp) {
 					step1 = oldbaby[sp][z][id];
 				} else {
 					if(FunctGroupArray[sp].groupType == BIRD){
-						step1 = stockinfo[sstocknums_id][sp][z][id] * individVERTinfo[istocknums_id][0][sp][z][id];
+						step1 = stockinfo[sstocknums_id][sp][z][id] * individVERTinfo[istocknums_id][sp][0][z][id];
 						if (step1 == 0.0)
 							step1 = minpool;
 					} else {
@@ -1002,8 +1000,8 @@ void Calc_Reprod_Success(MSEBoxModel *bm, int z, int id, FILE *ofp) {
 						for (jj = 0; jj < matage; jj++) {
 							scalarsum = 0;
 							for (k = 0; k < bm->K_num_size; k++) {
-								newnums = stockinfo[sstocknums_id][sp][z][id] * individVERTinfo[istocknums_id][k][sp][z][id] * agelengthkey[k][jj][sp][z][id];
-								scalarsum += individVERTinfo[istocknums_id][k][sp][z][id] * agelengthkey[k][jj][sp][z][id];
+								newnums = stockinfo[sstocknums_id][sp][z][id] * individVERTinfo[istocknums_id][sp][k][z][id] * agelengthkey[k][sp][jj][z][id];
+								scalarsum += individVERTinfo[istocknums_id][sp][k][z][id] * agelengthkey[k][jj][sp][z][id];
 								step1 += newnums;
 							}
 						}
@@ -1013,7 +1011,7 @@ void Calc_Reprod_Success(MSEBoxModel *bm, int z, int id, FILE *ofp) {
 				}
 				/* Determine older groups (e.g. fledglings) */
 				if(FunctGroupArray[sp].groupType == BIRD){
-					step2 = stockinfo[sstocknums_id][sp][z][id] * individVERTinfo[istocknums_id][1][sp][z][id];
+					step2 = stockinfo[sstocknums_id][sp][z][id] * individVERTinfo[istocknums_id][sp][1][z][id];
 					step3 = step2;
 				} else {
 					step2 = 0.0;
@@ -1021,14 +1019,14 @@ void Calc_Reprod_Success(MSEBoxModel *bm, int z, int id, FILE *ofp) {
 					if (chrt > bm->K_max_agekey)
 						chrt = bm->K_max_agekey;
 					for (k = 0; k < bm->K_num_size; k++) {
-						newnums = stockinfo[sstocknums_id][sp][z][id] * individVERTinfo[istocknums_id][k][sp][z][id] * agelengthkey[k][chrt][sp][z][id];
+						newnums = stockinfo[sstocknums_id][sp][z][id] * individVERTinfo[istocknums_id][sp][k][z][id] * agelengthkey[k][chrt][sp][z][id];
 						step2 += newnums;
 					}
 
 					step3 = 0.0;
 					chrt = 2;
 					for (k = 0; k < bm->K_num_size; k++) {
-						newnums = stockinfo[sstocknums_id][sp][z][id] * individVERTinfo[istocknums_id][k][sp][z][id] * agelengthkey[k][chrt][sp][z][id];
+						newnums = stockinfo[sstocknums_id][sp][z][id] * individVERTinfo[istocknums_id][sp][k][z][id] * agelengthkey[k][chrt][sp][z][id];
 						step3 += newnums;
 					}
 				}
@@ -1381,7 +1379,7 @@ void Calc_Avgtl(MSEBoxModel *bm, double ***tl, int id, FILE *ofp) {
 
 		avgtl[0][z] += catches * samplearea[bb] / (totcatch + TINY);
 		avgtl[0][bm->nfzones] += catches * totalarea[bb] / (totcatch + TINY);
-		avgtl[0][bm->nfzones + 1] += totcatchAST * samplearea[bb] / (totcatch + TINY);
+		avgtl[0][bm->nfzones + 1] += totcatchA * samplearea[bb] / (totcatch + TINY);
 		avgtl[2][z] += catchesST * samplearea[bb] / (totcatch + TINY);
 		avgtl[2][bm->nfzones] += catchesST * totalarea[bb] / (totcatch + TINY);
 		avgtl[2][bm->nfzones + 1] += totcatchAST * samplearea[bb] / (totcatch + TINY);
@@ -1505,10 +1503,12 @@ void Calc_Trophic_Spectra(MSEBoxModel *bm, double ***tl, int id) {
 
 						/* Zone specific and total, static trophic level through time */
 						tlindx = (int) (floor((tl[a][sp][stage] - 1.0) / 0.5));
-						if (tlindx < 0)
-							tlindx = 0;
-						if (tlindx >= bm->K_num_trophbin)
-							tlindx = bm->K_num_trophbin - 1;
+                        if (tlindx < 0) {
+                            tlindx = 0;
+                        }
+                        if (tlindx >= bm->K_num_trophbin) {
+                            tlindx = bm->K_num_trophbin - 1;
+                        }
 						trophspect[tlindx][1][z] += stockinfo[stotcatch_id][sp][z][id] * sample;
 						trophspect[tlindx][1][bm->nfzones] += stockinfo[stotcatch_id][sp][z][id] * sample * samplearea[bb];
 

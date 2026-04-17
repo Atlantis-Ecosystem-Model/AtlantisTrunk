@@ -68,6 +68,8 @@
 
 /* Prototypes */
 double fw_area_input(MSEBoxModel *bm, TimeSeries *ts, int id, double scale, double ***newwattr);
+double Get_PSS_Scalar(MSEBoxModel *bm, int s, int variableIndex);
+
 FILE *initInputsFile(MSEBoxModel *bm);
 void writeInputs(FILE *fp, MSEBoxModel *bm, double *inp);
 void readSolar(MSEBoxModel *bm, char *tunit);
@@ -91,10 +93,11 @@ void sourceSink(MSEBoxModel *bm, double ***newwattr, FILE *llogfp)
 	//static FILE *inpfp = NULL;
 	//static double *totinp;
 
-    if (bm->ts_on_hydro_time)
+    if (bm->ts_on_hydro_time) {
         ask_t = bm->hd.t;
-    else
+    } else {
         ask_t = bm->t;
+    }
 
     if (verbose)
 		fprintf(stderr, "Entering sourceSink\n");
@@ -106,8 +109,9 @@ void sourceSink(MSEBoxModel *bm, double ***newwattr, FILE *llogfp)
 	}
 
 	/* Set total inputs to zero */
-	for (i = 0; i < bm->ntracer; i++)
-		bm->atPhysicsModule->totinp[i] = 0;
+    for (i = 0; i < bm->ntracer; i++) {
+        bm->atPhysicsModule->totinp[i] = 0;
+    }
 
     /* Loop over point source/sinks */
 	for (s = 0; s < bm->npss; s++) {
@@ -127,10 +131,11 @@ void sourceSink(MSEBoxModel *bm, double ***newwattr, FILE *llogfp)
 			double wvol = bm->dt * val;
 
 			/* FIX - How to adjust volumes if not in surface layer */
-			if (k != bp->nz - 1)
-				quit("ERROR: The box model does not yet handle point source/sinks\n"
-					"containing water correctly unless they are located in the\n"
-					"surface layer. %s is located in box %d layer k=%d\n", pss->name, b, k);
+            if (k != bp->nz - 1) {
+                quit("ERROR: The box model does not yet handle point source/sinks\n"
+                     "containing water correctly unless they are located in the\n"
+                     "surface layer. %s is located in box %d layer k=%d\n", pss->name, b, k);
+            }
 
 			if (wvol > 0.0) {
 				int n; //TODO: Change variable name...
@@ -139,21 +144,31 @@ void sourceSink(MSEBoxModel *bm, double ***newwattr, FILE *llogfp)
 				 * in the point source/sink time series to add
 				 * mass of tracer.
 				 */
+                variableIndex = -1;
 				for (i = 0; i < pss->ts.nv; i++) {
 					/* Get model tracer index */
 					int n = pss->vid[i];
 					/* Add mass if it is a valid index */
 					if (n >= 0 && bm->tinfo[n].inwc && n != bm->waterid) {
 						double mass = wvol * tsEvalR(&pss->ts, i, ask_t, pss->rewindid);
+                        
+                        variableIndex++;
+                        nut_scale = 1.0;
+                        
+                        if (bm->nutrientChange) {
+                            nut_scale = Get_PSS_Scalar(bm, s, variableIndex);
+                        }
+                        mass = mass * nut_scale;
+                        
 						bm->atPhysicsModule->totinp[n] += mass;
 						newwattr[b][k][n] += mass / vol;
 					}
 				}
 				/* Now loop over all model tracers to correct concentrations
-				 * due to change in volume
+				 * due to change in volume - but only if not an absolute value to start with
 				 */
 				for (n = 0; n < bm->ntracer; n++)
-					if (bm->tinfo[n].inwc && n != bm->waterid)
+					if (bm->tinfo[n].inwc && (n != bm->waterid))
 						newwattr[b][k][n] *= vol / (vol + wvol);
 			}
 			/* Adjust box volumes and dz. Note that if water is flowing
@@ -164,8 +179,9 @@ void sourceSink(MSEBoxModel *bm, double ***newwattr, FILE *llogfp)
 			bp->dz[k] = bp->volume[k] / bp->area;
 
 			/* Add water volume to total inputs */
-			if (bm->waterid >= 0)
-				bm->atPhysicsModule->totinp[bm->waterid] += wvol;
+            if (bm->waterid >= 0){
+                bm->atPhysicsModule->totinp[bm->waterid] += wvol;
+            }
 		} else {
 			/* No water associated with this source/sink */
 			variableIndex = -1;
@@ -177,17 +193,15 @@ void sourceSink(MSEBoxModel *bm, double ***newwattr, FILE *llogfp)
 				/* Add source/sink if it is a valid index */
 				if (n >= 0 && bm->tinfo[n].inwc && n != bm->waterid) {
 					double val = tsEvalR(&pss->ts, i, ask_t, pss->rewindid);
-
 					double mass = bm->dt * val;
 
 					variableIndex++;
 					nut_scale = 1.0;
 
 					if (bm->nutrientChange) {
+                        nut_scale = Get_PSS_Scalar(bm, s, variableIndex);
 						/* Loop over each possible change */
 						for (index = 0; index < bm->pss[s].numPssChanges; index++) {
-
-
 							if (bm->pss[s].pssChange[index][variableIndex] && (bm->t >= (bm->pss[s].pssStart[index][variableIndex] * 86400.0))) {
 								/* Must correct nutrient change period into seconds as that's what bm works in */
 								end_date = (bm->pss[s].pssPeriod[index][variableIndex] + bm->pss[s].pssStart[index][variableIndex]) * 86400.0;
@@ -212,12 +226,8 @@ void sourceSink(MSEBoxModel *bm, double ***newwattr, FILE *llogfp)
 					}
 					if (verbose > 1) {
 						if (nut_scale != 1.0) {
-							fprintf(
-									llogfp,
-									"sourceSink - time:%e box:%d, layer:%d sourcesink %s (%s) scaling factor = %e. Unscaled mass = %e, scaled mass = %e, scaledMass/vol = %e\n",
-									bm->t, b, k, bm->pss[s].name, bm->pss[s].ts.varname[i], nut_scale, mass, (mass * nut_scale), (mass * nut_scale) / vol);
+							fprintf(llogfp, "sourceSink - time:%e box:%d, layer:%d sourcesink %s (%s) scaling factor = %e. Unscaled mass = %e, scaled mass = %e, scaledMass/vol = %e\n", bm->t, b, k, bm->pss[s].name, bm->pss[s].ts.varname[i], nut_scale, mass, (mass * nut_scale), (mass * nut_scale) / vol);
 						}
-
 					}
 
 					/**
@@ -235,8 +245,8 @@ void sourceSink(MSEBoxModel *bm, double ***newwattr, FILE *llogfp)
 
 					newwattr[b][k][n] += mass / vol;
 
-				} //for
-			}
+				}
+ 			}
 		}
 	} //for
 
@@ -314,8 +324,7 @@ void sourceSink(MSEBoxModel *bm, double ***newwattr, FILE *llogfp)
  * brief\ Routine handing solar irradiance file form the foring file
  *
  */
-void solarIrradiance(MSEBoxModel *bm, double ***newwattr, FILE *llogfp) {
-    
+void solarIrradiance(MSEBoxModel *bm, double ***newwattr, FILE *llogfp) {    
 	double ask_t;
 
     if (bm->ts_on_hydro_time)
@@ -411,6 +420,13 @@ void freeSourceSink(MSEBoxModel *bm) {
 		free(bm->precip);
 	}
 
+    /*
+    if (bm->airtemp != NULL) {
+        tsFree(bm->airtemp);
+        free(bm->airtemp);
+    }
+    */
+    
 	if (bm->evap != NULL) {
 		tsFree(bm->evap);
 		free(bm->evap);
@@ -439,6 +455,16 @@ void freeSourceSink(MSEBoxModel *bm) {
 		tsFree(bm->tspCO2);
 		free(bm->tspCO2);
 	}
+    
+    if (bm->ships != NULL) {
+        tsFree(bm->ships);
+        free(bm->ships);
+    }
+
+    if (bm->dredge != NULL) {
+        tsFree(bm->dredge);
+        free(bm->dredge);
+    }
 
 	//	tsFree(bm->env_force);
 
@@ -461,6 +487,41 @@ void freeSourceSink(MSEBoxModel *bm) {
 	free(bm->pss);
 
 }
+
+
+/************************************************************************************************************************************
+ *
+ * \brief Routine to get nutrient scaling on source sinks
+ *
+ **************************************************************************************************************************************/
+double Get_PSS_Scalar(MSEBoxModel *bm, int s, int variableIndex) {
+    double nut_scale = 1.0;
+    int index;
+    double end_date;
+    
+    /* Loop over each possible change */
+    for (index = 0; index < bm->pss[s].numPssChanges; index++) {
+        if (bm->pss[s].pssChange[index][variableIndex] && (bm->t >= (bm->pss[s].pssStart[index][variableIndex] * 86400.0))) {
+            /* Must correct nutrient change period into seconds as that's what bm works in */
+            end_date = (bm->pss[s].pssPeriod[index][variableIndex] + bm->pss[s].pssStart[index][variableIndex]) * 86400.0;
+            
+            if ((strcasecmp(bm->pss[s].ts.varname[variableIndex], "Si") == 0) || (bm->pss[s].pssMult[index][variableIndex] == 1.0)) {
+                nut_scale = nut_scale * 1.0;
+            } else if (end_date < bm->t) {
+                if (bm->pulsechange) {
+                    nut_scale = nut_scale * 1.0;
+                } else {
+                    nut_scale = nut_scale * bm->pss[s].pssMult[index][variableIndex];
+                }
+            } else {
+                nut_scale = nut_scale * (bm->pss[s].pssMult[index][variableIndex] * ((bm->t - (bm->pss[s].pssStart[index][variableIndex] * 86400.0)) / (bm->pss[s].pssPeriod[index][variableIndex] * 86400.0)));
+            }
+        }
+    }
+    
+    return nut_scale;
+}
+
 /*******************************************************************//**
  Initialisation routines for sources/sinks
  *********************************************************************/
@@ -494,6 +555,19 @@ void sourcesink_init(MSEBoxModel *bm) {
 
 	/* Read area tracer inputs time series, model time units */
 	read_bm_ts(bm, "Tracer_area_inputs", &bm->tr_areainp, tunit, NULL, NULL, NULL, warn);
+
+    /* Read shipping information - if appropriate *
+    if (bm->flagindustry_on) {
+        Read_Shipping_TS(bm, "Shipping_Schedule", &bm->ships, bm->t_units, &bm->ships_rewind, warn);
+        
+        printf("Read dredge ts\n");
+        read_bm_ts_rewind(bm, "Dredge_Schedule", &bm->dredge, bm->t_units, "dredging", "g day-1", &bm->dredge_id, &bm->dredge_rewind, warn);
+        
+        // Read precipitation time series, hydrodynamic time units
+        read_bm_ts_rewind(bm, "Air_temperature", &bm->airtemp, tunit, "air_temperature", "celcius", &bm->airtemp_id, &bm->airtemp_rewind, warn);
+
+    }
+    */
 
 	/* Read short wave radiation input */
 	//read_bm_ts_rewind(bm, "Solar_radiation", &bm->swr, tunit, "swr", "W m-2", &bm->swr_id, &bm->swr_rewindid, warn);
@@ -545,6 +619,10 @@ void sourcesink_init(MSEBoxModel *bm) {
 			if (!(_finite(bm->boxes[b].swr))) {
 				quit("ERROR - sourceSink - box: %d, Invalid value calculated for solar radiation 3 - ask_t: %e x: %e y: %e swr_id: %d\n", b, ask_t, bm->boxes[b].inside.x, bm->boxes[b].inside.y, bm->swr_id);
 			}
+		}
+	} else {
+		if(bm->swrinput.nFiles > 0) {
+			swrForcingBM(bm, &(bm->swrinput));
 		}
 	}
 }
@@ -655,7 +733,7 @@ void read_bm_ts_rewind(MSEBoxModel *bm, char *key, TimeSeries **ts, char *t_unit
 		tsNewTimeUnits(*ts, t_units);
 
 	/* Read the rewind_id */
-	sprintf(keyid, "%s_rewind", key);
+	snprintf(keyid, sizeof(keyid), "%s_rewind", key);
 	readkeyprm_i(fp, keyid, rid);
 
 	/* Close parameter file */
@@ -709,3 +787,70 @@ void writeInputs(FILE *fp, MSEBoxModel *bm, double *inp) {
 	fprintf(fp, "\n");
 }
 
+
+/*****************************************************************************************************************//***
+ Routine to deal with read-in of stress data
+ 
+ Read the bottom stress data, hydrodynamic time units, from timeseries unless supplied
+ initial conditons file
+
+***//******************************************************************************************************************/
+/* Read the bottom stress data, hydrodynamic time units, from timeseries unless supplied
+ initial conditons file */
+
+void ReadStress(MSEBoxModel *bm, FILE *llogfp) {
+    FILE *fp;
+    int b;
+    double ask_t, step1;
+    
+    /* Open parameter file */
+    if ((fp = Open_Input_File(bm->inputFolder,bm->forceIfname, "r")) == NULL)
+        quit("read_force: Can't open %s%s\n", bm->inputFolder,bm->forceIfname);
+    
+    readkeyprm_i(fp, "use_stressfiles", &bm->use_stressfiles);
+    
+    if (!bm->supplied_stress && bm->use_stressfiles) {
+        
+        if (bm->resuspension) {
+            if(bm->ts_on_hydro_time)
+                read_bm_ts(bm, "BottomStress", &bm->stress, bm->hd.t_units, "nxsbs", "1", &bm->stress_id, quit);
+            else
+                read_bm_ts(bm, "BottomStress", &bm->stress, bm->t_units, "nxsbs", "1", &bm->stress_id, quit);
+        } else {
+            if(bm->ts_on_hydro_time)
+                read_bm_ts(bm, "BottomStress", &bm->stress, bm->hd.t_units, "nxsbs", "1", &bm->stress_id, warn);
+            else
+                read_bm_ts(bm, "BottomStress", &bm->stress, bm->t_units, "nxsbs", "1", &bm->stress_id, warn);
+        }
+    
+        for (b = 0; b < bm->nbox; b++) {
+            /* Store initial stress values if not already loaded */
+    
+            /* FIX - if not supplied in initial conditions file then
+             need to have it so that if stress file is there than
+             read in otherwise set to zero  i.e. need to base it on
+             outcome of above call. */
+        
+            if (bm->ts_on_hydro_time)
+                ask_t = bm->hd.t;
+            else
+                ask_t = bm->t;
+        
+            if (bm->resuspension)
+                bm->boxes[b].stress = tsEvalXY(bm->stress, bm->stress_id, ask_t, bm->boxes[b].inside.x, bm->boxes[b].inside.y);
+            else
+                bm->boxes[b].stress = 0.0;
+        }
+    } else {
+        /* Otherwise use a relationship with mud - from Mitchener and Torfs, 1996. Erosion of mud/sand mixtures. Coastal Engineering. V29. 1-25. */
+        for (b = 0; b < bm->nbox; b++) {
+            step1 = (1.0 - bm->boxes[b].soft) * 300.0;
+            bm->boxes[b].stress = 0.0012 * pow(step1, 1.2);
+        }
+    }
+    
+    /* Close parameter file */
+    fclose(fp);
+
+    return;
+}

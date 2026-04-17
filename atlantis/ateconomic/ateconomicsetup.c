@@ -111,7 +111,7 @@ int Read_FriendShip_Network(MSEBoxModel *bm, char *filePath);
  */
 void Economic_Init(MSEBoxModel *bm, FILE *llogfp) {
 	char convertedXMLFileName[STRLEN];
-	double this_catch = 0.0, this_effort, max_month_effort, down_time, tot_quota_owned, tot_TAC, loadDetFC;
+	double this_catch = 0.0, this_effort, max_month_effort, down_time, tot_quota_owned, tot_TAC, loadDetFC, avg_loadDetFC, dis_species_count;
 	double divnumhr = 1.0 / 24.0;
 	int b, nf, ns, porti, home_port, mth, sp, quitcheck, in_quota, flagspdiscard, chrt;
 	/*int trade_sp; */
@@ -133,7 +133,7 @@ void Economic_Init(MSEBoxModel *bm, FILE *llogfp) {
 	Pre_Load_Array_Alloc(bm);
 
 	/* Build the converted filename */
-	sprintf(convertedXMLFileName, "%s", bm->econprmIfname);
+	snprintf(convertedXMLFileName, sizeof(convertedXMLFileName), "%s", bm->econprmIfname);
 	*(strstr(convertedXMLFileName, ".prm")) = '\0';
 	strcat(convertedXMLFileName, ".xml");
 
@@ -257,9 +257,11 @@ void Economic_Init(MSEBoxModel *bm, FILE *llogfp) {
 			}
 		}
 
-		//for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) {
-		for(ns=0; ns<bm->K_max_num_subfleet; ns++){
+		for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) {
+		//for(ns=0; ns<bm->K_max_num_subfleet; ns++){ // Why would this need to occur beyond subfleets active in the fishery? everted to using subfleets for that fishery rather than max_num_subfleet
 			this_catch = 0.0;
+            avg_loadDetFC = 0.0;
+            dis_species_count = 0.0;
 			for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 				if (FunctGroupArray[sp].isFished == TRUE) {
 					/* Initialise subfleet targeting */
@@ -318,12 +320,13 @@ void Economic_Init(MSEBoxModel *bm, FILE *llogfp) {
 									bm->fisheryNAME[nf], ns, bm->spNAME[sp], mth, bm->BlackBook[nf][ns][sp][mth][bycatch_id], bm->BlackBook[nf][ns][sp][mth][hist_id], loadDetFC, bm->SP_prms[sp][spconcern_id]);
 							}
 							*/
-
-							for(b=0; b<bm->nbox; b++){
-								bm->SpatialDisPUE[nf][ns][mth][b] = bm->SpatialCPUE[nf][ns][mth][b] * (loadDetFC / (small_num + (1.0 - loadDetFC))) * FunctGroupArray[sp].speciesParams[sp_concern_id];
-							}
 						}
 
+                        /* Find average load to detritus - for discard calcualiton */
+                        avg_loadDetFC += (loadDetFC / (small_num + (1.0 - loadDetFC))) * FunctGroupArray[sp].speciesParams[sp_concern_id];
+                        if(FunctGroupArray[sp].speciesParams[sp_concern_id] > 0){
+                            dis_species_count += 1.0;
+                        }
 					} else
 						bm->QuotaAlloc[nf][ns][sp][cummonthbycatch_id] = 0;
 
@@ -336,6 +339,16 @@ void Economic_Init(MSEBoxModel *bm, FILE *llogfp) {
 			/* Give catch a starting values so can calculate a CPUE index for
 			 initial effort allocation
 			 */
+            
+            /* Get starting spatial discards */
+            if(dis_species_count > 0.0){
+                avg_loadDetFC /= dis_species_count;
+            } else {
+                avg_loadDetFC = 0.0;
+            }
+            for(b=0; b<bm->nbox; b++){
+                bm->SpatialDisPUE[nf][ns][mth][b] += bm->SpatialCPUE[nf][ns][mth][b] * avg_loadDetFC;
+            }
 
 		}
 	}
@@ -791,7 +804,7 @@ void InitialiseEconArrays(MSEBoxModel *bm) {
 		ex[i] = 0;
 	}
 
-	for (sp = 0; sp > bm->K_num_tot_sp; sp++) {
+	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		if (FunctGroupArray[sp].isFished == TRUE) {
 			maxTargetCatch[sp] = 0;
 			tempTarget[sp] = 0;
@@ -910,11 +923,6 @@ void Economic_Free(MSEBoxModel *bm) {
 	i_free2d(bm->Trades);
 	i_free3d(bm->EffortTrades);
 
-	//	Free_Econ_Time_Series(&bm->tsGDP);
-	/* Free the bm->tsGDP time series. Tried to call Free_Econ_Time_Series
-	 * but it dumped core so do it by hand.
-	 */
-	//tsFree(&bm->tsGDP->ts);
 	if (bm->tsGDP->ts.varname != NULL) {
 		int i;
 		for (i = 0; i < bm->tsGDP->ts.nv; ++i) {
@@ -1022,66 +1030,68 @@ void Post_Load_Array_Alloc(MSEBoxModel *bm) {
 }
 
 void Init_Econ_Indicator_Names(MSEBoxModel *bm) {
-	EconIndicatorInputNames = (char **) c_alloc2d(15, K_sub_fleet_params);
+    int paramLen = 15;
+	EconIndicatorInputNames = (char **) c_alloc2d(paramLen, K_sub_fleet_params);
 
-	sprintf(EconIndicatorInputNames[nboat_id], "%s", "nboat");
-	sprintf(EconIndicatorInputNames[boat_size_id], "%s", "boat_size");
-	sprintf(EconIndicatorInputNames[crew_size_id], "%s", "crewsize");
-	sprintf(EconIndicatorInputNames[home_port_id], "%s", "home_port");
-	sprintf(EconIndicatorInputNames[FCwgtscale_id], "%s", "FCwgtscale");
-	sprintf(EconIndicatorInputNames[max_trip_length_id], "%s", "triplength(days)");
-	sprintf(EconIndicatorInputNames[FishableLength_id], "%s", "FishableLength");
-	sprintf(EconIndicatorInputNames[down_time_id], "%s", "DownTime");
-	sprintf(EconIndicatorInputNames[choicebuffer_id], "%s", "choicebuffer");
-	sprintf(EconIndicatorInputNames[effortDiscount_id], "%s", "EffortDiscount");
-	sprintf(EconIndicatorInputNames[bycatchDiscount_id], "%s", "BycatchDiscount");
-	sprintf(EconIndicatorInputNames[var_cost_id], "%s", "varcost");
-	sprintf(EconIndicatorInputNames[supp_cost_id], "%s", "suppcost");
-	sprintf(EconIndicatorInputNames[switch_cost_id], "%s", "switchcost");
-	sprintf(EconIndicatorInputNames[newboat_cost_id], "%s", "newcost");
-	sprintf(EconIndicatorInputNames[tol_debt_id], "%s", "TolDebt");
-	sprintf(EconIndicatorInputNames[fuel_cost_id], "%s", "fuelcost");
-	sprintf(EconIndicatorInputNames[gear_cost_id], "%s", "gearcost");
-	sprintf(EconIndicatorInputNames[unload_cost_id], "%s", "unloadcost");
-	sprintf(EconIndicatorInputNames[fixed_cost_id], "%s", "fixedcost");
-	sprintf(EconIndicatorInputNames[capital_cost_id], "%s", "capitalcost");
-	sprintf(EconIndicatorInputNames[crewshare_id], "%s", "crewshare");
-	sprintf(EconIndicatorInputNames[mgmt_cost_id], "%s", "mgmtcost");
-	sprintf(EconIndicatorInputNames[flexweight_orig_id], "%s", "flexweight");
-	sprintf(EconIndicatorInputNames[resale_id], "%s", "resale");
-	sprintf(EconIndicatorInputNames[buyout_id], "%s", "buyout");
-	sprintf(EconIndicatorInputNames[propbuyback_id], "%s", "propbuyback");
-	sprintf(EconIndicatorInputNames[flag_econind_id], "%s", "flageconind");
-	sprintf(EconIndicatorInputNames[flag_indtype_id], "%s", "flagtypeind");
-	sprintf(EconIndicatorInputNames[betarev_id], "%s", "betarev");
-	sprintf(EconIndicatorInputNames[minprob_id], "%s", "minprob");
-	sprintf(EconIndicatorInputNames[down_time_id], "%s", "minDownTime");
-	sprintf(EconIndicatorInputNames[hold_capacity_id], "%s", "hold_capacity");
+	snprintf(EconIndicatorInputNames[nboat_id], paramLen, "%s", "nboat");
+	snprintf(EconIndicatorInputNames[boat_size_id], paramLen, "%s", "boat_size");
+	snprintf(EconIndicatorInputNames[crew_size_id], paramLen, "%s", "crewsize");
+	snprintf(EconIndicatorInputNames[home_port_id], paramLen, "%s", "home_port");
+	snprintf(EconIndicatorInputNames[FCwgtscale_id], paramLen, "%s", "FCwgtscale");
+	snprintf(EconIndicatorInputNames[max_trip_length_id], paramLen, "%s", "triplength(days)");
+	snprintf(EconIndicatorInputNames[FishableLength_id], paramLen, "%s", "FishableLength");
+	snprintf(EconIndicatorInputNames[down_time_id], paramLen, "%s", "DownTime");
+	snprintf(EconIndicatorInputNames[choicebuffer_id], paramLen, "%s", "choicebuffer");
+	snprintf(EconIndicatorInputNames[effortDiscount_id], paramLen, "%s", "EffortDiscount");
+	snprintf(EconIndicatorInputNames[bycatchDiscount_id], paramLen, "%s", "BycatchDiscount");
+	snprintf(EconIndicatorInputNames[var_cost_id], paramLen, "%s", "varcost");
+	snprintf(EconIndicatorInputNames[supp_cost_id], paramLen, "%s", "suppcost");
+	snprintf(EconIndicatorInputNames[switch_cost_id], paramLen, "%s", "switchcost");
+	snprintf(EconIndicatorInputNames[newboat_cost_id], paramLen, "%s", "newcost");
+	snprintf(EconIndicatorInputNames[tol_debt_id], paramLen, "%s", "TolDebt");
+	snprintf(EconIndicatorInputNames[fuel_cost_id], paramLen, "%s", "fuelcost");
+	snprintf(EconIndicatorInputNames[gear_cost_id], paramLen, "%s", "gearcost");
+	snprintf(EconIndicatorInputNames[unload_cost_id], paramLen, "%s", "unloadcost");
+	snprintf(EconIndicatorInputNames[fixed_cost_id], paramLen, "%s", "fixedcost");
+	snprintf(EconIndicatorInputNames[capital_cost_id], paramLen, "%s", "capitalcost");
+	snprintf(EconIndicatorInputNames[crewshare_id], paramLen, "%s", "crewshare");
+	snprintf(EconIndicatorInputNames[mgmt_cost_id], paramLen, "%s", "mgmtcost");
+	snprintf(EconIndicatorInputNames[flexweight_orig_id], paramLen, "%s", "flexweight");
+	snprintf(EconIndicatorInputNames[resale_id], paramLen, "%s", "resale");
+	snprintf(EconIndicatorInputNames[buyout_id], paramLen, "%s", "buyout");
+	snprintf(EconIndicatorInputNames[propbuyback_id], paramLen, "%s", "propbuyback");
+	snprintf(EconIndicatorInputNames[flag_econind_id], paramLen, "%s", "flageconind");
+	snprintf(EconIndicatorInputNames[flag_indtype_id], paramLen, "%s", "flagtypeind");
+	snprintf(EconIndicatorInputNames[betarev_id], paramLen, "%s", "betarev");
+	snprintf(EconIndicatorInputNames[minprob_id], paramLen, "%s", "minprob");
+	snprintf(EconIndicatorInputNames[down_time_id], paramLen, "%s", "minDownTime");
+	snprintf(EconIndicatorInputNames[hold_capacity_id], paramLen, "%s", "hold_capacity");
 
 }
 
 void Init_Entry_Names(MSEBoxModel *bm) {
-	entryInputNames = (char **) c_alloc2d(15, K_num_entry_indabc);
+    int paramLen = 15;
+	entryInputNames = (char **) c_alloc2d(paramLen, K_num_entry_indabc);
 
-	sprintf(entryInputNames[ecoefft_ind], "%s", "ecoefft");
-	sprintf(entryInputNames[escale_ind], "%s", "escale");
-	sprintf(entryInputNames[escaleB_ind], "%s", "escaleB");
-	sprintf(entryInputNames[ethresh_ind], "%s", "ethresh");
-	sprintf(entryInputNames[eindtype_ind], "%s", "eindtype");
+	snprintf(entryInputNames[ecoefft_ind], paramLen, "%s", "ecoefft");
+	snprintf(entryInputNames[escale_ind], paramLen, "%s", "escale");
+	snprintf(entryInputNames[escaleB_ind], paramLen, "%s", "escaleB");
+	snprintf(entryInputNames[ethresh_ind], paramLen, "%s", "ethresh");
+	snprintf(entryInputNames[eindtype_ind], paramLen, "%s", "eindtype");
 
-	econInputNames = (char **) c_alloc2d(15, K_econ_indicators);
+	econInputNames = (char **) c_alloc2d(paramLen, K_econ_indicators);
 
-	sprintf(econInputNames[igvp_id], "%s", "GVP");
-	sprintf(econInputNames[irevland_id], "%s", "RevLand");
-	sprintf(econInputNames[irevenue_id], "%s", "Revenue");
-	sprintf(econInputNames[icost_id], "%s", "Cost");
-	sprintf(econInputNames[icash_id], "%s", "Cash");
-	sprintf(econInputNames[iinvest_id], "%s", "Invest");
-	sprintf(econInputNames[icaputil_id], "%s", "CapUtil");
-	sprintf(econInputNames[ileaseQ_id], "%s", "LeaseQ");
-	sprintf(econInputNames[isaleQ_id], "%s", "SaleQ");
-	sprintf(econInputNames[iQtrade_id], "%s", "TradeQ");
-	sprintf(econInputNames[icostton_id], "%s", "CostTon");
+	snprintf(econInputNames[igvp_id], paramLen, "%s", "GVP");
+	snprintf(econInputNames[irevland_id], paramLen, "%s", "RevLand");
+	snprintf(econInputNames[irevenue_id], paramLen, "%s", "Revenue");
+	snprintf(econInputNames[icost_id], paramLen, "%s", "Cost");
+	snprintf(econInputNames[icash_id], paramLen, "%s", "Cash");
+	snprintf(econInputNames[iinvest_id], paramLen, "%s", "Invest");
+	snprintf(econInputNames[icaputil_id], paramLen, "%s", "CapUtil");
+	snprintf(econInputNames[ileaseQ_id], paramLen, "%s", "LeaseQ");
+	snprintf(econInputNames[isaleQ_id], paramLen, "%s", "SaleQ");
+	snprintf(econInputNames[iQtrade_id], paramLen, "%s", "TradeQ");
+	snprintf(econInputNames[icostton_id], paramLen, "%s", "CostTon");
 }
 
 
@@ -1092,92 +1102,94 @@ void Init_Entry_Names(MSEBoxModel *bm) {
  *
  */
 void Init_Econ_Index_Names(MSEBoxModel *bm) {
+    int paramLen = 20;
+    
 	/* Overall performance measures */
-	sprintf(bm->econindxNAME[fleetnum_id], "%s", "FleetSize");
-	sprintf(bm->econindxNAME[fleet_switch_id], "%s", "GearSwitching");
-	sprintf(bm->econindxNAME[avgboatsze_id], "%s", "AvgBoatSize");
-	sprintf(bm->econindxNAME[overallrent_id], "%s", "TotalRent");
-	sprintf(bm->econindxNAME[GrossVal_id], "%s", "GrossValue");
-	sprintf(bm->econindxNAME[GrossTax_id], "%s", "GrossTax");
-	sprintf(bm->econindxNAME[GrossDV_id], "%s", "GrossDV");
-	sprintf(bm->econindxNAME[SubfleetCash_id], "%s", "CashPerSubfleet");
-	sprintf(bm->econindxNAME[LeaseVal_id], "%s", "LeaseValue");
-	sprintf(bm->econindxNAME[InvestReturn_id], "%s", "InvestReturn");
-	sprintf(bm->econindxNAME[RevPerT_id], "%s", "RevenuePerTonne");
-	sprintf(bm->econindxNAME[TradeExtent_id], "%s", "TradeExtent");
-	sprintf(bm->econindxNAME[RevPerEffort_id], "%s", "RevenuePerEffort");
+	snprintf(bm->econindxNAME[fleetnum_id], paramLen, "%s", "FleetSize");
+	snprintf(bm->econindxNAME[fleet_switch_id], paramLen, "%s", "GearSwitching");
+	snprintf(bm->econindxNAME[avgboatsze_id], paramLen, "%s", "AvgBoatSize");
+	snprintf(bm->econindxNAME[overallrent_id], paramLen, "%s", "TotalRent");
+	snprintf(bm->econindxNAME[GrossVal_id], paramLen, "%s", "GrossValue");
+	snprintf(bm->econindxNAME[GrossTax_id], paramLen, "%s", "GrossTax");
+	snprintf(bm->econindxNAME[GrossDV_id], paramLen, "%s", "GrossDV");
+	snprintf(bm->econindxNAME[SubfleetCash_id], paramLen, "%s", "CashPerSubfleet");
+	snprintf(bm->econindxNAME[LeaseVal_id], paramLen, "%s", "LeaseValue");
+	snprintf(bm->econindxNAME[InvestReturn_id], paramLen, "%s", "InvestReturn");
+	snprintf(bm->econindxNAME[RevPerT_id], paramLen, "%s", "RevenuePerTonne");
+	snprintf(bm->econindxNAME[TradeExtent_id], paramLen, "%s", "TradeExtent");
+	snprintf(bm->econindxNAME[RevPerEffort_id], paramLen, "%s", "RevenuePerEffort");
 
 	/* Subfleet parameters and performance measures */
-	sprintf(bm->SUBFLEETeconindxNAME[crew_size_id], "%s", "CrewSize");
-	sprintf(bm->SUBFLEETeconindxNAME[capital_cost_id], "%s", "CapCost");
-	sprintf(bm->SUBFLEETeconindxNAME[max_trip_length_id], "%s", "TripLength");
-	sprintf(bm->SUBFLEETeconindxNAME[var_cost_id], "%s", "VarCost");
-	sprintf(bm->SUBFLEETeconindxNAME[boat_size_id], "%s", "BoatSize");
-	sprintf(bm->SUBFLEETeconindxNAME[home_port_id], "%s", "HomePort");
-	sprintf(bm->SUBFLEETeconindxNAME[nboat_id], "%s", "FleetSize");
-	sprintf(bm->SUBFLEETeconindxNAME[flag_econind_id], "%s", "EconInd");
-	sprintf(bm->SUBFLEETeconindxNAME[cpue_ind_id], "%s", "CPUEInd");
-	sprintf(bm->SUBFLEETeconindxNAME[yield_ind_id], "%s", "YieldInd");
-	sprintf(bm->SUBFLEETeconindxNAME[size_ind_id], "%s", "SizeInd");
-	sprintf(bm->SUBFLEETeconindxNAME[comp_ind_id], "%s", "CompInd");
-	sprintf(bm->SUBFLEETeconindxNAME[zone_ind_id], "%s", "ZoneInd");
-	sprintf(bm->SUBFLEETeconindxNAME[gear_ind_id], "%s", "GearInd");
-	sprintf(bm->SUBFLEETeconindxNAME[mgmt_cost_ind_id], "%s", "MgmtCost");
-	sprintf(bm->SUBFLEETeconindxNAME[res_cost_ind_id], "%s", "ResCost");
-	sprintf(bm->SUBFLEETeconindxNAME[discards_ind_id], "%s", "DiscrdInd");
-	sprintf(bm->SUBFLEETeconindxNAME[gvp_ind_id], "%s", "GVPInd");
-	sprintf(bm->SUBFLEETeconindxNAME[tax_ind_id], "%s", "TaxInd");
-	sprintf(bm->SUBFLEETeconindxNAME[dv_ind_id], "%s", "DVInd");
-	sprintf(bm->SUBFLEETeconindxNAME[AnnualExpectPI_id], "%s", "AnnualExpectedProfitInd");
-	sprintf(bm->SUBFLEETeconindxNAME[rev_land_ind_id], "%s", "RevLandInd");
-	sprintf(bm->SUBFLEETeconindxNAME[rev_effort_ind_id], "%s", "RevEffortInd");
-	sprintf(bm->SUBFLEETeconindxNAME[revenue_ind_id], "%s", "RevenueInd");
-	sprintf(bm->SUBFLEETeconindxNAME[minrev_ind_id], "%s", "MinRevInd");
-	sprintf(bm->SUBFLEETeconindxNAME[cost_ind_id], "%s", "CostInd");
-	sprintf(bm->SUBFLEETeconindxNAME[boat_cash_ind_id], "%s", "BoatCashInd");
-	sprintf(bm->SUBFLEETeconindxNAME[invest_return_ind_id], "%s", "InvestReturn");
-	sprintf(bm->SUBFLEETeconindxNAME[cap_util_ind_id], "%s", "CapUtil");
-	sprintf(bm->SUBFLEETeconindxNAME[leased_Q_val_ind_id], "%s", "QuotaLeaseVal");
-	sprintf(bm->SUBFLEETeconindxNAME[maxleased_Q_val_ind_id], "%s", "MaxQuotaLeaseVal");
-	sprintf(bm->SUBFLEETeconindxNAME[sale_Q_val_ind_id], "%s", "QuotaSaleVal");
-	sprintf(bm->SUBFLEETeconindxNAME[Q_trade_ind_id], "%s", "QuotaTradeInd");
-	sprintf(bm->SUBFLEETeconindxNAME[cost_ton_ind_id], "%s", "CostPTon");
-	sprintf(bm->SUBFLEETeconindxNAME[flag_indtype_id], "%s", "FlagIndType");
-	sprintf(bm->SUBFLEETeconindxNAME[Expectedeffort_id], "%s", "ExpectEffort");
-	sprintf(bm->SUBFLEETeconindxNAME[marg_rent_id], "%s", "MargRent");
-	sprintf(bm->SUBFLEETeconindxNAME[totPlanEffort_id], "%s", "PlanEffort");
-	sprintf(bm->SUBFLEETeconindxNAME[totPlanCatch_id], "%s", "PlanCatch");
-	sprintf(bm->SUBFLEETeconindxNAME[AnnualCatch_id], "%s", "AnnCatch");
-	sprintf(bm->SUBFLEETeconindxNAME[CurrentCatch_id], "%s", "CurrCatch");
-	sprintf(bm->SUBFLEETeconindxNAME[FishableLength_id], "%s", "FishableLength");
-	sprintf(bm->SUBFLEETeconindxNAME[effortDiscount_id], "%s", "effortDiscount");
-	sprintf(bm->SUBFLEETeconindxNAME[bycatchDiscount_id], "%s", "bycatchDiscount");
-	sprintf(bm->SUBFLEETeconindxNAME[CurrentEffort_id], "%s", "CurrEffort");
-	sprintf(bm->SUBFLEETeconindxNAME[AnnualEffort_id], "%s", "AnnEffort");
-	sprintf(bm->SUBFLEETeconindxNAME[AnnualUtility_id], "%s", "AnnUtil");
-	sprintf(bm->SUBFLEETeconindxNAME[ExpectCPUE_id], "%s", "ExpectCPUE");
-	sprintf(bm->SUBFLEETeconindxNAME[totcatch_saleprice_id], "%s", "totSalePrice");
-	sprintf(bm->SUBFLEETeconindxNAME[totQuota_id], "%s", "totQuota");
-	sprintf(bm->SUBFLEETeconindxNAME[ExpectedCatch_id], "%s", "ExpectCatch");
-	sprintf(bm->SUBFLEETeconindxNAME[OpUtility_id], "%s", "OpUtil");
-	sprintf(bm->SUBFLEETeconindxNAME[crewshare_id], "%s", "CrewShare");
-	sprintf(bm->SUBFLEETeconindxNAME[OldQuota_id], "%s", "OldQuota");
-	sprintf(bm->SUBFLEETeconindxNAME[flexweight_id], "%s", "FlexWgt");
-	sprintf(bm->SUBFLEETeconindxNAME[resale_id], "%s", "ResaleVal");
-	sprintf(bm->SUBFLEETeconindxNAME[switch_cost_id], "%s", "SwitchCost");
-	sprintf(bm->SUBFLEETeconindxNAME[fuel_cost_id], "%s", "FuelCost");
-	sprintf(bm->SUBFLEETeconindxNAME[gear_cost_id], "%s", "GearCost");
-	sprintf(bm->SUBFLEETeconindxNAME[unload_cost_id], "%s", "UnloadCost");
-	sprintf(bm->SUBFLEETeconindxNAME[fixed_cost_id], "%s", "FixedCost");
-	sprintf(bm->SUBFLEETeconindxNAME[buyout_id], "%s", "BuyoutVal");
-	sprintf(bm->SUBFLEETeconindxNAME[newboat_id], "%s", "NewBoats");
-	sprintf(bm->SUBFLEETeconindxNAME[switchboat_id], "%s", "Switching");
-	sprintf(bm->SUBFLEETeconindxNAME[newboat_cost_id], "%s", "NewBoatCost");
-	sprintf(bm->SUBFLEETeconindxNAME[lostboat_id], "%s", "LostBoats");
-	sprintf(bm->SUBFLEETeconindxNAME[down_time_id], "%s", "minDownTime");
-	sprintf(bm->SUBFLEETeconindxNAME[tot_cash_id], "%s", "YearlyIncome");
-	sprintf(bm->SUBFLEETeconindxNAME[tied_up_id], "%s", "NumTiedUp");
-	sprintf(bm->SUBFLEETeconindxNAME[mth_tiedup_id], "%s", "MonthsTiedUp");
+	snprintf(bm->SUBFLEETeconindxNAME[crew_size_id], paramLen, "%s", "CrewSize");
+	snprintf(bm->SUBFLEETeconindxNAME[capital_cost_id], paramLen, "%s", "CapCost");
+	snprintf(bm->SUBFLEETeconindxNAME[max_trip_length_id], paramLen, "%s", "TripLength");
+	snprintf(bm->SUBFLEETeconindxNAME[var_cost_id], paramLen, "%s", "VarCost");
+	snprintf(bm->SUBFLEETeconindxNAME[boat_size_id], paramLen, "%s", "BoatSize");
+	snprintf(bm->SUBFLEETeconindxNAME[home_port_id], paramLen, "%s", "HomePort");
+	snprintf(bm->SUBFLEETeconindxNAME[nboat_id], paramLen, "%s", "FleetSize");
+	snprintf(bm->SUBFLEETeconindxNAME[flag_econind_id], paramLen, "%s", "EconInd");
+	snprintf(bm->SUBFLEETeconindxNAME[cpue_ind_id], paramLen, "%s", "CPUEInd");
+	snprintf(bm->SUBFLEETeconindxNAME[yield_ind_id], paramLen, "%s", "YieldInd");
+	snprintf(bm->SUBFLEETeconindxNAME[size_ind_id], paramLen, "%s", "SizeInd");
+	snprintf(bm->SUBFLEETeconindxNAME[comp_ind_id], paramLen, "%s", "CompInd");
+	snprintf(bm->SUBFLEETeconindxNAME[zone_ind_id], paramLen, "%s", "ZoneInd");
+	snprintf(bm->SUBFLEETeconindxNAME[gear_ind_id], paramLen, "%s", "GearInd");
+	snprintf(bm->SUBFLEETeconindxNAME[mgmt_cost_ind_id], paramLen, "%s", "MgmtCost");
+	snprintf(bm->SUBFLEETeconindxNAME[res_cost_ind_id], paramLen, "%s", "ResCost");
+	snprintf(bm->SUBFLEETeconindxNAME[discards_ind_id], paramLen, "%s", "DiscrdInd");
+	snprintf(bm->SUBFLEETeconindxNAME[gvp_ind_id], paramLen, "%s", "GVPInd");
+	snprintf(bm->SUBFLEETeconindxNAME[tax_ind_id], paramLen, "%s", "TaxInd");
+	snprintf(bm->SUBFLEETeconindxNAME[dv_ind_id], paramLen, "%s", "DVInd");
+	snprintf(bm->SUBFLEETeconindxNAME[AnnualExpectPI_id], paramLen, "%s", "AnnualExpectedProfitInd");
+	snprintf(bm->SUBFLEETeconindxNAME[rev_land_ind_id], paramLen, "%s", "RevLandInd");
+	snprintf(bm->SUBFLEETeconindxNAME[rev_effort_ind_id], paramLen, "%s", "RevEffortInd");
+	snprintf(bm->SUBFLEETeconindxNAME[revenue_ind_id], paramLen, "%s", "RevenueInd");
+	snprintf(bm->SUBFLEETeconindxNAME[minrev_ind_id], paramLen, "%s", "MinRevInd");
+	snprintf(bm->SUBFLEETeconindxNAME[cost_ind_id], paramLen, "%s", "CostInd");
+	snprintf(bm->SUBFLEETeconindxNAME[boat_cash_ind_id], paramLen, "%s", "BoatCashInd");
+	snprintf(bm->SUBFLEETeconindxNAME[invest_return_ind_id], paramLen, "%s", "InvestReturn");
+	snprintf(bm->SUBFLEETeconindxNAME[cap_util_ind_id], paramLen, "%s", "CapUtil");
+	snprintf(bm->SUBFLEETeconindxNAME[leased_Q_val_ind_id], paramLen, "%s", "QuotaLeaseVal");
+	snprintf(bm->SUBFLEETeconindxNAME[maxleased_Q_val_ind_id], paramLen, "%s", "MaxQuotaLeaseVal");
+	snprintf(bm->SUBFLEETeconindxNAME[sale_Q_val_ind_id], paramLen, "%s", "QuotaSaleVal");
+	snprintf(bm->SUBFLEETeconindxNAME[Q_trade_ind_id], paramLen, "%s", "QuotaTradeInd");
+	snprintf(bm->SUBFLEETeconindxNAME[cost_ton_ind_id], paramLen, "%s", "CostPTon");
+	snprintf(bm->SUBFLEETeconindxNAME[flag_indtype_id], paramLen, "%s", "FlagIndType");
+	snprintf(bm->SUBFLEETeconindxNAME[Expectedeffort_id], paramLen, "%s", "ExpectEffort");
+	snprintf(bm->SUBFLEETeconindxNAME[marg_rent_id], paramLen, "%s", "MargRent");
+	snprintf(bm->SUBFLEETeconindxNAME[totPlanEffort_id], paramLen, "%s", "PlanEffort");
+	snprintf(bm->SUBFLEETeconindxNAME[totPlanCatch_id], paramLen, "%s", "PlanCatch");
+	snprintf(bm->SUBFLEETeconindxNAME[AnnualCatch_id], paramLen, "%s", "AnnCatch");
+	snprintf(bm->SUBFLEETeconindxNAME[CurrentCatch_id], paramLen, "%s", "CurrCatch");
+	snprintf(bm->SUBFLEETeconindxNAME[FishableLength_id], paramLen, "%s", "FishableLength");
+	snprintf(bm->SUBFLEETeconindxNAME[effortDiscount_id], paramLen, "%s", "effortDiscount");
+	snprintf(bm->SUBFLEETeconindxNAME[bycatchDiscount_id], paramLen, "%s", "bycatchDiscount");
+	snprintf(bm->SUBFLEETeconindxNAME[CurrentEffort_id], paramLen, "%s", "CurrEffort");
+	snprintf(bm->SUBFLEETeconindxNAME[AnnualEffort_id], paramLen, "%s", "AnnEffort");
+	snprintf(bm->SUBFLEETeconindxNAME[AnnualUtility_id], paramLen, "%s", "AnnUtil");
+	snprintf(bm->SUBFLEETeconindxNAME[ExpectCPUE_id], paramLen, "%s", "ExpectCPUE");
+	snprintf(bm->SUBFLEETeconindxNAME[totcatch_saleprice_id], paramLen, "%s", "totSalePrice");
+	snprintf(bm->SUBFLEETeconindxNAME[totQuota_id], paramLen, "%s", "totQuota");
+	snprintf(bm->SUBFLEETeconindxNAME[ExpectedCatch_id], paramLen, "%s", "ExpectCatch");
+	snprintf(bm->SUBFLEETeconindxNAME[OpUtility_id], paramLen, "%s", "OpUtil");
+	snprintf(bm->SUBFLEETeconindxNAME[crewshare_id], paramLen, "%s", "CrewShare");
+	snprintf(bm->SUBFLEETeconindxNAME[OldQuota_id], paramLen, "%s", "OldQuota");
+	snprintf(bm->SUBFLEETeconindxNAME[flexweight_id], paramLen, "%s", "FlexWgt");
+	snprintf(bm->SUBFLEETeconindxNAME[resale_id], paramLen, "%s", "ResaleVal");
+	snprintf(bm->SUBFLEETeconindxNAME[switch_cost_id], paramLen, "%s", "SwitchCost");
+	snprintf(bm->SUBFLEETeconindxNAME[fuel_cost_id], paramLen, "%s", "FuelCost");
+	snprintf(bm->SUBFLEETeconindxNAME[gear_cost_id], paramLen, "%s", "GearCost");
+	snprintf(bm->SUBFLEETeconindxNAME[unload_cost_id], paramLen, "%s", "UnloadCost");
+	snprintf(bm->SUBFLEETeconindxNAME[fixed_cost_id], paramLen, "%s", "FixedCost");
+	snprintf(bm->SUBFLEETeconindxNAME[buyout_id], paramLen, "%s", "BuyoutVal");
+	snprintf(bm->SUBFLEETeconindxNAME[newboat_id], paramLen, "%s", "NewBoats");
+	snprintf(bm->SUBFLEETeconindxNAME[switchboat_id], paramLen, "%s", "Switching");
+	snprintf(bm->SUBFLEETeconindxNAME[newboat_cost_id], paramLen, "%s", "NewBoatCost");
+	snprintf(bm->SUBFLEETeconindxNAME[lostboat_id], paramLen, "%s", "LostBoats");
+	snprintf(bm->SUBFLEETeconindxNAME[down_time_id], paramLen, "%s", "minDownTime");
+	snprintf(bm->SUBFLEETeconindxNAME[tot_cash_id], paramLen, "%s", "YearlyIncome");
+	snprintf(bm->SUBFLEETeconindxNAME[tied_up_id], paramLen, "%s", "NumTiedUp");
+	snprintf(bm->SUBFLEETeconindxNAME[mth_tiedup_id], paramLen, "%s", "MonthsTiedUp");
 
 	return;
 }
@@ -1189,8 +1201,10 @@ void Init_Econ_Index_Names(MSEBoxModel *bm) {
  *	This sets up names of port performance indices
  */
 void Init_Port_Index_Names(MSEBoxModel *bm) {
-	sprintf(bm->portindxNAME[portwgt_id], "%s", "PortActivity");
-	sprintf(bm->portindxNAME[portpop_id], "%s", "PortEffectivePop");
+    int paramLen = 20;
+    
+	snprintf(bm->portindxNAME[portwgt_id], paramLen, "%s", "PortActivity");
+	snprintf(bm->portindxNAME[portpop_id], paramLen, "%s", "PortEffectivePop");
 
 	return;
 }

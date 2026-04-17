@@ -277,7 +277,7 @@ double df_interp_linear(Datafile *df, Variable *v, int record, double coords[]) 
 		fprintf(stderr, "\n");
 #endif
 
-		/* Compute the fraction indices and integer indicies.
+		/* Compute the fraction indices and integer indices.
 		 * Trim at boundaries if necessary. */
 		for (i = 0; i < nd; ++i) {
 			dsize[i] = (int)df->dimensions[dimids[i]].size - 1;

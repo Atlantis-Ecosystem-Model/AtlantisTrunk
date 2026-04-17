@@ -214,10 +214,25 @@ void freeBMphysInfo(MSEBoxModel *bm) {
 		free1d(bm->boxes[n].sm.er);
 		free1d(bm->boxes[n].sm.dissol_kz);
 		free1d(bm->boxes[n].sm.partic_kz);
+        
 //		if(bm->ice_on){
 //			free1d(bm->boxes[n].ice.gridz);
 //		}
+        
+        if (bm->flagindustry_on == simple_industry_model) {
+            i_free1d(bm->boxes[n].land.ship_transits);
+            i_free1d(bm->boxes[n].land.new_ship_num);
+            i_free1d(bm->boxes[n].land.ship_num);
+        }
+
 	}
+    
+    if (bm->flagindustry_on == simple_industry_model) {
+        i_free1d(bm->ship_id);
+        free1d(bm->ship_mixing_rate);
+        free1d(bm->vessel_size);
+    }
+    
 }
 
 void writeBMphysInfo(int fid, MSEBoxModel *bm, int dtype) {
@@ -379,6 +394,12 @@ void writeBMphysInfo(int fid, MSEBoxModel *bm, int dtype) {
 		ncattput(fid, i, "bmtype", NC_CHAR, (int) strlen("phys") + 1, "phys");
 		ncattput(fid, i, "units", NC_CHAR, (int) strlen("1") + 1, "1");
 		ncattput(fid, i, "long_name", NC_CHAR, (int) strlen("Eddy strength") + 1, "Eddy strength");
+
+        /* Define the coastal strip variable */
+        i = ncvardef(fid, "coastal", dt, 2, dim);
+        ncattput(fid, i, "bmtype", NC_CHAR, (int) strlen("phys") + 1, "phys");
+        ncattput(fid, i, "units", NC_CHAR, (int) strlen("1") + 1, "1");
+        ncattput(fid, i, "long_name", NC_CHAR, (int) strlen("Percent coastal strip cover") + 1, "Percent coastal cover");
 
 	}
 }
@@ -615,8 +636,20 @@ void readBMphysData(int fid, int dump, MSEBoxModel *bm, FILE *llogfp) {
 	checkNetCDFData1D("readBMphysData", "eddy", fptmp,  bm->nbox);
 	for (b = 0; b < bm->nbox; b++)
 		bm->boxes[b].eddy = fptmp[b];
-
-	/* Read hydrodynamic sources if present */
+    
+    printf("About to read coastal\n");
+    
+    /* Percent coastal strip */
+    id = ncvarid(fid, "coastal");
+    if (id >= 0) {
+        ncvarread(fid, "coastal", sizeof(doubleINPUT), start, count, (void *) fptmp);
+        checkNetCDFData1D("readBMphysData", "coastal", fptmp,  bm->nbox);
+        for (b = 0; b < bm->nbox; b++) {
+            bm->boxes[b].coastal = fptmp[b];
+        }
+    }
+    
+    /* Read hydrodynamic sources if present */
 	id = ncvarid(fid, "hdsource");
 	if (id >= 0) {
 		ncvarread(fid, "hdsource", sizeof(doubleINPUT), start, count, (void *) array[0]);
@@ -818,53 +851,70 @@ void writeBMphysData(int fid, int dump, MSEBoxModel *bm, int dtype) {
 
 	if (!dtype) {
 		/* The following are only written for the general data set */
-		for (b = 0; b < bm->nbox; b++)
-			fptmp[b] = bm->boxes[b].sm.biodepth;
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].sm.biodepth;
+        }
 		ncvarput(fid, ncvarid(fid, "sedbiodepth"), start, count, fptmp);
 
-		for (b = 0; b < bm->nbox; b++)
-			fptmp[b] = bm->boxes[b].sm.detdepth;
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].sm.detdepth;
+        }
 		ncvarput(fid, ncvarid(fid, "seddetdepth"), start, count, fptmp);
 
-		for (b = 0; b < bm->nbox; b++)
-			fptmp[b] = bm->boxes[b].sm.oxdepth;
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].sm.oxdepth;
+        }
 		ncvarput(fid, ncvarid(fid, "sedoxdepth"), start, count, fptmp);
 
-		for (b = 0; b < bm->nbox; b++)
-			fptmp[b] = bm->boxes[b].sm.biodens;
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].sm.biodens;
+        }
 		ncvarput(fid, ncvarid(fid, "sedbiodens"), start, count, fptmp);
 
-		for (b = 0; b < bm->nbox; b++)
-			fptmp[b] = bm->boxes[b].sm.irrigenh;
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].sm.irrigenh;
+        }
 		ncvarput(fid, ncvarid(fid, "sedirrigenh"), start, count, fptmp);
 
-		for (b = 0; b < bm->nbox; b++)
-			fptmp[b] = bm->boxes[b].sm.turbenh;
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].sm.turbenh;
+        }
 		ncvarput(fid, ncvarid(fid, "sedturbenh"), start, count, fptmp);
 
-		for (b = 0; b < bm->nbox; b++)
-			fptmp[b] = bm->boxes[b].erosion_rate;
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].erosion_rate;
+        }
 		ncvarput(fid, ncvarid(fid, "erosion_rate"), start, count, fptmp);
 
-		for (b = 0; b < bm->nbox; b++)
-			fptmp[b] = bm->boxes[b].reef;
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].reef;
+        }
 		ncvarput(fid, ncvarid(fid, "reef"), start, count, fptmp);
 
-		for (b = 0; b < bm->nbox; b++)
-			fptmp[b] = bm->boxes[b].flat;
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].flat;
+        }
 		ncvarput(fid, ncvarid(fid, "flat"), start, count, fptmp);
 
-		for (b = 0; b < bm->nbox; b++)
-			fptmp[b] = bm->boxes[b].soft;
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].soft;
+        }
 		ncvarput(fid, ncvarid(fid, "soft"), start, count, fptmp);
 
-		for (b = 0; b < bm->nbox; b++)
-			fptmp[b] = bm->boxes[b].canyon;
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].canyon;
+        }
 		ncvarput(fid, ncvarid(fid, "canyon"), start, count, fptmp);
 
-		for (b = 0; b < bm->nbox; b++)
-			fptmp[b] = bm->boxes[b].eddy;
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].eddy;
+        }
 		ncvarput(fid, ncvarid(fid, "eddy"), start, count, fptmp);
+
+        for (b = 0; b < bm->nbox; b++){
+            fptmp[b] = bm->boxes[b].coastal;
+        }
+        ncvarput(fid, ncvarid(fid, "coastal"), start, count, fptmp);
 
 	}
 

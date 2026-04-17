@@ -3433,7 +3433,7 @@ static FILE * Init_tierRBC_File(MSEBoxModel *bm) {
     int Nfleets = bm->K_num_fisheries;
     
 	/** Create filename **/
-	sprintf(fname, "%sTierRBC.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sTierRBC.txt", bm->startfname);
     
     /** Create file **/
     if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
@@ -3463,7 +3463,7 @@ static FILE * Init_histCPUE_File(MSEBoxModel *bm) {
 	char fname[STRLEN];
     
 	/** Create filename **/
-	sprintf(fname, "%sHistCPUE.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sHistCPUE.txt", bm->startfname);
     
     /** Create file **/
     if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
@@ -3485,7 +3485,7 @@ static FILE * Init_tier5_File(MSEBoxModel *bm) {
 	char fname[STRLEN];
     
 	/** Create filename **/
-	sprintf(fname, "%sTier5.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sTier5.txt", bm->startfname);
     
     /** Create file **/
     if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
@@ -4148,7 +4148,7 @@ void RDynamicTier4Assessment(MSEBoxModel *bm, int species, int year, FILE *llogf
     int idR = 1;
 
     /* Create directory */
-    sprintf(dirname, "DynTier4_sim_%d_year_%d", bm->RBCestimation.sim, year);
+    snprintf(dirname, sizeof(dirname), "DynTier4_sim_%d_year_%d", bm->RBCestimation.sim, year);
     ret = mkdir(dirname, S_IRWXU);
 
     /* Change directory into the new directory */
@@ -4173,7 +4173,7 @@ void RDynamicTier4Assessment(MSEBoxModel *bm, int species, int year, FILE *llogf
     
     /* Commands to run the assessment */
     printf("Running runDynTier4.R\n");
-    sprintf(R_ScriptName,"Rscript %s", bm->RAssessRscriptName[idR]);
+    snprintf(R_ScriptName, sizeof(R_ScriptName), "Rscript %s", bm->RAssessRscriptName[idR]);
     system(R_ScriptName);
 
     setRBC(bm, species, year, llogfp);

@@ -160,7 +160,7 @@ void Schafer_Production_Assessment(MSEBoxModel *bm, int sp, int funkflag, int bo
 	CTData = Util_Alloc_Init_1D_Double(YrMax + 1, 0.0);
 	ITData = Util_Alloc_Init_1D_Double(YrMax + 1, 0.0);
 
-	//fprintf(ofp,"Doing %s with YrMax: %d, ROUNDGUARD: %e, dayt: %e, tassessstart: %e, bracket: %e\n", FunctGroupArray[sp].groupCode, YrMax, ROUNDGUARD, bm->dt, bm->tassessstart, ((bm->dt - bm->tassessstart)/365.0));
+	//fprintf(ofp,"Doing %s with YrMax: %d, ROUNDGUARD: %e, dayt: %e, tassessstart: %e, bracket: %e\n", FunctGroupArray[sp].groupCode, YrMax, ROUNDGUARD, bm->dayt, bm->tassessstart, ((bm->dt - bm->tassessstart)/365.0));
 
 	/* Number of dimensions in data arrays to be solved */
 	if ((int) (prm_sp)) {
@@ -169,7 +169,7 @@ void Schafer_Production_Assessment(MSEBoxModel *bm, int sp, int funkflag, int bo
 		Ndim = est_B0_id + 1;
 
 	/* Specifiy data type to use */
-	if ((FunctGroupArray[sp].groupType == BIRD) && (FunctGroupArray[sp].groupType == MAMMAL)) {
+	if ((FunctGroupArray[sp].groupType == BIRD) || (FunctGroupArray[sp].groupType == MAMMAL)) {
 		/* FIX - Current code only allows for survey data of birds and mammals, this may need to change if have whaling etc */
 		dataid = survey_id;
 	}
@@ -407,7 +407,7 @@ void VPA_Assessment(MSEBoxModel *bm, int sp, int funkflag, int bootstrap, double
 	int YrMax = (int) floor(ROUNDGUARD + ((bm->dayt - bm->tassessstart) / 365.0));
 
 	/* Specify data type to use */
-	if ((FunctGroupArray[sp].groupType == BIRD) && (FunctGroupArray[sp].groupType == MAMMAL)) {
+	if ((FunctGroupArray[sp].groupType == BIRD) || (FunctGroupArray[sp].groupType == MAMMAL)) {
 		/* FIX - Current code only allows for survey data of birds and mammals, this may need to change if have whaling etc */
 		dataid = survey_id;
 	}
@@ -676,7 +676,7 @@ void Assessment_mimic(MSEBoxModel *bm, int sp, int assess_flag_sp, int bootstrap
 		/* Get Biomass of young-of-year */
 		biom_yoy = 0;
 		for (i = 0; i < bm->K_num_size; i++) {
-			biom_yoy += individVERTinfo[ibiomass_id][i][sp][z][sample_id] * agelengthkey[i][0][sp][z][sample_id];
+			biom_yoy += individVERTinfo[ibiomass_id][sp][i][z][sample_id] * agelengthkey[i][0][sp][z][sample_id];
 		}
 		med_recruit += biom_yoy;
 		bot_recruit += (bot_pcnt / 100.0) * biom_yoy;
@@ -885,7 +885,7 @@ void Estimate_Other_AssessPrm(MSEBoxModel *bm, int sp, FILE *ofp) {
 		lngth = Get_Length(bm, wgt, sp);
 		Sort_Length_Weight(bm, 0, 1, sizestocknums_id, z, sp, nc_fishery, lngth, 0, wgt, cmaxsize, sample_id, &size_nc_start, ofp);
 		popratio = zoneVERTpopratio[sp][nc][nc_remain][z];
-		start_N += individVERTinfo[istocknums_id][size_nc][sp][z][sample_id] * stockinfo[sstocknums_id][sp][z][sample_id] * popratio;
+		start_N += individVERTinfo[istocknums_id][sp][size_nc_start][z][sample_id] * stockinfo[sstocknums_id][sp][z][sample_id] * popratio;
 
 		/* Find oldest fish - Iterate through the size classes if top one empty */
 		nc_remain_end = sp_AgeClassSize - 1;
@@ -901,10 +901,10 @@ void Estimate_Other_AssessPrm(MSEBoxModel *bm, int sp, FILE *ofp) {
 			lngth_end = Get_Length(bm, wgt_end, sp);
 			Sort_Length_Weight(bm, 0, 1, sizestocknums_id, z, sp, nc_fishery, lngth_end, 0, wgt_end, cmaxsize, sample_id, &size_nc_end, ofp);
 			popratio = zoneVERTpopratio[sp][nc_end][nc_remain_end][z];
-			end_N += individVERTinfo[istocknums_id][size_nc_end][sp][z][sample_id] * stockinfo[sstocknums_id][sp][z][sample_id] * popratio;
+			end_N += individVERTinfo[istocknums_id][sp][size_nc_end][z][sample_id] * stockinfo[sstocknums_id][sp][z][sample_id] * popratio;
 
-			if (end_N && (max_yrs_included < ((end_nc - va95) * sp_AgeClassSize))) {
-				max_yrs_included = (end_nc - va95) * sp_AgeClassSize;
+			if (end_N && (max_yrs_included < ((nc_end - va95) * sp_AgeClassSize))) {
+				max_yrs_included = (nc_end - va95) * sp_AgeClassSize;
 			}
 			nc_end--;
 
@@ -924,9 +924,9 @@ void Estimate_Other_AssessPrm(MSEBoxModel *bm, int sp, FILE *ofp) {
 				lngth = Get_Length(bm, wgt, sp);
 				Sort_Length_Weight(bm, 0, 1, sizestocknums_id, z, sp, nc_fishery, lngth, 0, wgt, cmaxsize, sample_id, &chrt_size, ofp);
 				if (thisai >= va95) {
-					catch_N += individVERTinfo[icatchnums_id][chrt_size][sp][z][sample_id] * stockinfo[scatchnums_id][sp][z][sample_id] * popratio;
+					catch_N += individVERTinfo[icatchnums_id][sp][chrt_size][z][sample_id] * stockinfo[scatchnums_id][sp][z][sample_id] * popratio;
 				}
-				this_N = individVERTinfo[icatchnums_id][chrt_size][sp][z][sample_id] * stockinfo[scatchnums_id][sp][z][sample_id] * popratio;
+				this_N = individVERTinfo[icatchnums_id][sp][chrt_size][z][sample_id] * stockinfo[scatchnums_id][sp][z][sample_id] * popratio;
 
 				if (this_N < minend_N) {
 					minnc = chrt;
@@ -972,7 +972,7 @@ void Estimate_Other_AssessPrm(MSEBoxModel *bm, int sp, FILE *ofp) {
 			for (z = 0; z < bm->nfzones; z++) {
 
 				/*if(sp == FPO_id){
-				 fprintf(ofp, "individVERTinfo[istocknums_id][maxnc][sp][z][sample_id] = %e\n",individVERTinfo[istocknums_id][maxnc][sp][z][sample_id]);
+				 fprintf(ofp, "individVERTinfo[istocknums_id][sp][maxnc][z][sample_id] = %e\n",individVERTinfo[istocknums_id][sp][maxnc][z][sample_id]);
 				 fprintf(ofp, "stockinfo[sstocknums_id][sp][z][sample_id] = %e\n",stockinfo[sstocknums_id][sp][z][sample_id]);
 				 fprintf(ofp, "popratio = %e\n", popratio);
 				 }
@@ -987,7 +987,7 @@ void Estimate_Other_AssessPrm(MSEBoxModel *bm, int sp, FILE *ofp) {
 				wgt = biolVERTinfo[bstruct_id][sp][maxnc][b] + biolVERTinfo[bres_id][sp][maxnc][b];
 				lngth = Get_Length(bm, wgt, sp);
 				Sort_Length_Weight(bm, 0, 1, sizestocknums_id, z, sp, nc_fishery, lngth, 0, wgt, cmaxsize, sample_id, &chrt_size, ofp);
-				start_N += individVERTinfo[istocknums_id][chrt_size][sp][z][sample_id] * stockinfo[sstocknums_id][sp][z][sample_id] * popratio;
+				start_N += individVERTinfo[istocknums_id][sp][chrt_size][z][sample_id] * stockinfo[sstocknums_id][sp][z][sample_id] * popratio;
 
 				if (minnc < nagemat)
 					stage = 0;
@@ -998,14 +998,13 @@ void Estimate_Other_AssessPrm(MSEBoxModel *bm, int sp, FILE *ofp) {
 				wgt = biolVERTinfo[bstruct_id][sp][minnc][b] + biolVERTinfo[bres_id][sp][minnc][b];
 				lngth = Get_Length(bm, wgt, sp);
 				Sort_Length_Weight(bm, 0, 1, sizestocknums_id, z, sp, nc_fishery, lngth, 0, wgt, cmaxsize, sample_id, &chrt_size, ofp);
-				end_N += individVERTinfo[istocknums_id][chrt_size][sp][z][sample_id] * stockinfo[sstocknums_id][sp][z][sample_id] * popratio;
+				end_N += individVERTinfo[istocknums_id][sp][chrt_size][z][sample_id] * stockinfo[sstocknums_id][sp][z][sample_id] * popratio;
 				catch_N = 0;
 				all_done = 0;
 				for (chrt = 0; chrt < FunctGroupArray[sp].numCohortsXnumGenes; chrt++) {
 					if (all_done) // Stop if already done oldest ageclass
 						break;
 					for (ai = 0; ai < sp_AgeClassSize; ai++) {
-						all_done = 0;
 						thisai = chrt * sp_AgeClassSize + ai;
 						if (thisai > oldest_age) { // Stop if already done oldest ageclass
 							all_done = 1;
@@ -1016,9 +1015,9 @@ void Estimate_Other_AssessPrm(MSEBoxModel *bm, int sp, FILE *ofp) {
 						lngth = Get_Length(bm, wgt, sp);
 						Sort_Length_Weight(bm, 0, 1, sizestocknums_id, z, sp, nc_fishery, lngth, 0, wgt, cmaxsize, sample_id, &chrt_size, ofp);
 						if (thisai >= testai) {
-							catch_N += individVERTinfo[icatchnums_id][chrt_size][sp][z][sample_id] * stockinfo[scatchnums_id][sp][z][sample_id] * popratio;
+							catch_N += individVERTinfo[icatchnums_id][sp][chrt_size][z][sample_id] * stockinfo[scatchnums_id][sp][z][sample_id] * popratio;
 						}
-						this_N = individVERTinfo[icatchnums_id][chrt_size][sp][z][sample_id] * stockinfo[scatchnums_id][sp][z][sample_id] * popratio;
+						this_N = individVERTinfo[icatchnums_id][sp][chrt_size][z][sample_id] * stockinfo[scatchnums_id][sp][z][sample_id] * popratio;
 					}
 				}
 			}
@@ -1052,13 +1051,13 @@ void Estimate_Other_AssessPrm(MSEBoxModel *bm, int sp, FILE *ofp) {
 				wgt = biolVERTinfo[bstruct_id][sp][nc][b] + biolVERTinfo[bres_id][sp][nc][b];
 				lngth = Get_Length(bm, wgt, sp);
 				Sort_Length_Weight(bm, 0, 1, sizestocknums_id, z, sp, nc_fishery, lngth, 0, wgt, cmaxsize, sample_id, &chrt_size, ofp);
-				calcB += individVERTinfo[istocknums_id][chrt_size][sp][z][sample_id] * stockinfo[sstocknums_id][sp][z][sample_id] * popratio;
-				calcC += individVERTinfo[icatchnums_id][chrt_size][sp][z][sample_id] * stockinfo[scatchnums_id][sp][z][sample_id] * popratio;
+				calcB += individVERTinfo[istocknums_id][sp][chrt_size][z][sample_id] * stockinfo[sstocknums_id][sp][z][sample_id] * popratio;
+				calcC += individVERTinfo[icatchnums_id][sp][chrt_size][z][sample_id] * stockinfo[scatchnums_id][sp][z][sample_id] * popratio;
 
 				fprintf( bm->logFile, "Time: %e %s b: %d, z: %d, chrt_size: %d, lngth: %e, wgt: %e (nc: %d, SN: %e, RN: %e), individVERTinfo: %e, stockinfo: %e, individCatch: %e, stockcatch: %e, popratio: %e, \n",
 						bm->dayt, FunctGroupArray[sp].groupCode, b, z, chrt_size, lngth, wgt, nc, biolVERTinfo[bstruct_id][sp][nc][b],
-						biolVERTinfo[bres_id][sp][nc][b], individVERTinfo[istocknums_id][chrt_size][sp][z][sample_id],
-						stockinfo[sstocknums_id][sp][z][sample_id], individVERTinfo[icatchnums_id][chrt_size][sp][z][sample_id],
+						biolVERTinfo[bres_id][sp][nc][b], individVERTinfo[istocknums_id][sp][chrt_size][z][sample_id],
+						stockinfo[sstocknums_id][sp][z][sample_id], individVERTinfo[icatchnums_id][sp][chrt_size][z][sample_id],
 						stockinfo[scatchnums_id][sp][z][sample_id], popratio);
 
 				//step1 = (mL + mQ * calcB) * calcB;
@@ -1545,7 +1544,7 @@ void Assess_Pseudo_Estimate_Prm(MSEBoxModel *bm, int sp, FILE *ofp) {
 				tbiom2 = 0;
 				for (na = nageclass - 1; na > 0; na--) {
 					V = 1.0 / (1.0 + exp(-log(19) * ((na - va50) / (va95 - va50 + small_num))));
-					num_nyr[na][est1_id] = num_nyr[na - 1][est2_id] * exp(-M - V * tempF); // Fished case
+					num_nyr[na][est1_id] = num_nyr[na - 1][est1_id] * exp(-M - V * tempF); // Fished case
 					num_nyr[na][est2_id] = num_nyr[na - 1][est2_id] * exp(-M - V * tempF2); // Fished case
 					nc = (int) (floor(na / dsp_AgeClassSize));
 					sp_SN = initVERTinfo[sp][nc][SN_id];

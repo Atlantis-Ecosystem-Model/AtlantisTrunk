@@ -122,7 +122,7 @@ typedef struct {
 	int isEpiFauna;
     int isBioTurbator;
 	int isPrimaryProducer;				/**< True if the group is a primary producer. (SM_PHY, LG_PHY, PHYTOBEN, MICROPHTYBENTHOS, DINOFLAG, SEAGRASS) */
-	int isMicroFauna;					/**< True if the group is a micro fauna. This is used in the assessment code when calculating indicies. (SM_PHY, LG_PHY, DINOFLAG, LG_ZOO, MED_ZOO, SM_ZOO, SM_INF) */
+	int isMicroFauna;					/**< True if the group is a micro fauna. This is used in the assessment code when calculating indices. (SM_PHY, LG_PHY, DINOFLAG, LG_ZOO, MED_ZOO, SM_ZOO, SM_INF) */
 	int isMacroFauna;					/**< True if the group is a macro fauna. Also used ine assessment code. (vertebrate, LG_INF, CEP, PWN, SED_EP_FF, SED_EP_OTHER, MOB_EP_OTHER) */
     int isBioEroder;                    /**< True if bio-eroding group */
 
@@ -138,6 +138,7 @@ typedef struct {
     int isLandActive;					/**< True if the group is allowed on land */
     int isSupplemented;                 /**< True if the group feeds on material outside the model domain */
     int isExternal;                     /**< True if the group uses external population model */
+    int isCollisionRisk;                /**< Whether vulnerable to vessel strike */
     int isComplexMigrator;              /**< Indicates whether has multiple complex migrations overlapping */
     
     int RAssessFileNum;                  /**< Counter for the RAssess filenumbering system - so don't need to create more files than needed */
@@ -481,10 +482,12 @@ typedef struct{
 	double **Box;
     int **ReprodAllowed;
     
+    /* Contaminant related */
     double ***RecruitContam;
     double ***contam;
     double **contam_return;
     
+    /* YOY related */
     double **MigYOY;
     double **MigYOY_SN;
     double **MigYOY_RN;

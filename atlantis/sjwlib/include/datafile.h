@@ -255,13 +255,13 @@ struct CoordinateMapping {
     int (*coords_to_indices)(	/* Function to convert from coords to indices */
 		Datafile * df,
 		CoordinateMapping *cm,
-		const int depindicies[],   /* Dependent indices */
+		const int depindices[],   /* Dependent indices */
 		const double coords[],	   /* Coordinate values */
-		double indices[]);	   /* Coordinate indicies */
+		double indices[]);	   /* Coordinate indices */
     int (*indices_to_coords)(	/* Function to convert from indices to coords */
 		Datafile * df,
 		CoordinateMapping *cm,
-		const int depindicies[], /* Dependent indices */
+		const int depindices[], /* Dependent indices */
 		const double indices[],
 		double coords[]);	   /* Coordinate values */
     void *special_data;		/* Special data which might be used by

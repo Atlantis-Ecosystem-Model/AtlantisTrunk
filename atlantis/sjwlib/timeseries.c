@@ -347,7 +347,7 @@ double tsEvalXYR(TimeSeries *ts, int id, double t, double x, double y, int rwind
 							Attribute *dx = dfGetGlobalAttribute(df, "dx");
 							Attribute *dy = dfGetGlobalAttribute(df, "dy");
 							Attribute *rot = dfGetGlobalAttribute(df, "rotation");
-							sprintf(analytic, "rectangular 0.0 0.0 %d %d %g %g %g %g %g", dim1size, dim2size, ATT_DOUBLE(x0,0), ATT_DOUBLE(y0,0),
+							snprintf(analytic, sizeof(analytic), "rectangular 0.0 0.0 %d %d %g %g %g %g %g", dim1size, dim2size, ATT_DOUBLE(x0,0), ATT_DOUBLE(y0,0),
 									ATT_DOUBLE(dx,0), ATT_DOUBLE(dy,0), ATT_DOUBLE(rot,0));
 						}
 
@@ -357,7 +357,7 @@ double tsEvalXYR(TimeSeries *ts, int id, double t, double x, double y, int rwind
 							Attribute *arc = dfGetGlobalAttribute(df, "arc");
 							Attribute *rmin = dfGetGlobalAttribute(df, "rmin");
 							Attribute *rot = dfGetGlobalAttribute(df, "rotation");
-							sprintf(analytic, "polar 0.0 0.0 %d %d %g %g %g %g %g", dim1size, dim2size, ATT_DOUBLE(x0,0), ATT_DOUBLE(y0,0),
+							snprintf(analytic, sizeof(analytic), "polar 0.0 0.0 %d %d %g %g %g %g %g", dim1size, dim2size, ATT_DOUBLE(x0,0), ATT_DOUBLE(y0,0),
 									ATT_DOUBLE(arc,0), ATT_DOUBLE(rmin,0), ATT_DOUBLE(rot,0));
 						}
 

@@ -59,7 +59,7 @@ void Calc_Network_Info(MSEBoxModel *bm, int z, int id) {
 	prodnetwk[0][0][z] = 0.0;
 	biomnetwk[0][0][z] = 0.0;
 	exportnetwk[0][0][z] = 0;
-	respnetwk[0][0][z] = 0;
+	respnetwk[0][0][z] = 0; // TODO: Fix - calculation of this currently not sensible
 	importnetwk[0][0][z] = 0.0;
 	mortnetwk[0][0][z] = 0.0;
 

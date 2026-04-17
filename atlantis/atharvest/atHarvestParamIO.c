@@ -51,10 +51,10 @@ void readAgeStructuredBiomassFisheryParamXML(MSEBoxModel *bm, char *fileName, xm
 
 	index = Util_XML_Get_Fishery_Param_Index(FisheryGroupParamsArray, numGroupFisheryParams, paramID);
 
-	sprintf(errorString, "%s/%s", nodeName, FisheryGroupParamsArray[index].tag);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, FisheryGroupParamsArray[index].tag);
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, FisheryGroupParamsArray[index].tag);
 	if (attributeGroup == NULL)
-		quit("readAgeStructuredGroupFisheryParamXML - %s attribute group not found.\n", errorString);
+		quit("readAgeStructuredBiomassFisheryParamXML - %s attribute group not found.\n", errorString);
 
 	if (verbose)
 		printf("Read fisheries groups parameters %s\n", FisheryGroupParamsArray[index].tag);
@@ -94,7 +94,7 @@ void readAgeStructuredGroupFisheryParamXML(MSEBoxModel *bm, char *fileName, xmlN
 
 	index = Util_XML_Get_Fishery_Param_Index(FisheryGroupParamsArray, numGroupFisheryParams, paramID);
 
-	sprintf(errorString, "%s/%s", nodeName, FisheryGroupParamsArray[index].tag);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, FisheryGroupParamsArray[index].tag);
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, FisheryGroupParamsArray[index].tag);
 	if (attributeGroup == NULL)
 		quit("readAgeStructuredGroupFisheryParamXML - %s attribute group not found.\n", errorString);
@@ -121,7 +121,7 @@ void readAgeStructuredGroupFisheryParamXML(MSEBoxModel *bm, char *fileName, xmlN
 	free(nodeName);
 }
 
-void readFisheryAgeDistrubutionXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *paramName, int checkType, double ***arrayPtr) {
+void readFisheryAgeDistributionXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *paramName, int checkType, double ***arrayPtr) {
 	int guild, fisheryIndex, cohort;
 	xmlNodePtr attributeGroup;
 	double *values = 0;
@@ -130,10 +130,10 @@ void readFisheryAgeDistrubutionXML(MSEBoxModel *bm, char *fileName, xmlNodePtr p
 
 	nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/%s", nodeName, paramName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramName);
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, paramName);
 	if (attributeGroup == NULL)
-		quit("readFisheryAgeDistrubutionXML - %s attribute group not found.\n", errorString);
+		quit("readFisheryAgeDistributionXML - %s attribute group not found.\n", errorString);
 
 	if (verbose)
 		printf("Read fisheries groups parameters %s\n", paramName);
@@ -185,7 +185,7 @@ void readGroupAgeGroupFisheryParamXML(MSEBoxModel *bm, char *fileName, xmlNodePt
 		if(FunctGroupArray[guild].isFished == TRUE){
 			if (FunctGroupArray[guild].groupAgeType == AGE_STRUCTURED || FunctGroupArray[guild].groupAgeType == AGE_STRUCTURED_BIOMASS) {
 
-				sprintf(errorString, "%s/%s", paramName, FunctGroupArray[guild].groupCode);
+				snprintf(errorString, sizeof(errorString), "%s/%s", paramName, FunctGroupArray[guild].groupCode);
 
 				speciesNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeGroup, FunctGroupArray[guild].groupCode);
 				if (speciesNode == NULL)
@@ -220,7 +220,7 @@ void readAgeGroupConstantDiscardingXML(MSEBoxModel *bm, char *fileName, xmlNodeP
 
 	nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/%s", nodeName, paramName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramName);
 
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, paramName);
 	if (attributeGroup == NULL)
@@ -282,7 +282,7 @@ void readImpactedGroupParamXML(MSEBoxModel *bm, char *fileName, xmlNodePtr paren
 
 	nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/%s",nodeName, paramName);
+	snprintf(errorString, sizeof(errorString), "%s/%s",nodeName, paramName);
 
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, paramName);
 	if (attributeGroup == NULL)
@@ -318,7 +318,7 @@ void readMPAXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *paramN
 	char *nodeName;
 
 	nodeName =  Util_Get_Node_Name(parent);
-	sprintf(errorString, "%s/%s", nodeName, paramName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramName);
 
 	if (strcmp(paramName, "CellMPAStatus") == 0)
 		isMPA = TRUE;
@@ -377,7 +377,7 @@ void readSelChangeXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *
 	char *nodeName;
 
 	nodeName =  Util_Get_Node_Name(parent);
-	sprintf(errorString, "%s/%s", nodeName, paramName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramName);
 
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, paramName);
 	if (attributeGroup == NULL)
@@ -411,7 +411,7 @@ void readDiscardChangeXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, ch
 	char *nodeName;
 
 	nodeName =  Util_Get_Node_Name(parent);
-	sprintf(errorString, "%s/%s", nodeName, paramName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramName);
 
 	if (paramID == start_id)
 		check = integer_check;
@@ -468,7 +468,7 @@ static void Read_QStock_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) 
         for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
             if (FunctGroupArray[guild].isVertebrate == TRUE) {
             
-                sprintf(errorString, "Fishing_Scenario_Flags/qStock/%s", FunctGroupArray[guild].groupCode);
+                snprintf(errorString, sizeof(errorString), "Fishing_Scenario_Flags/qStock/%s", FunctGroupArray[guild].groupCode);
                 specieNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeNode, FunctGroupArray[guild].groupCode);
                 if (specieNode == NULL)
                     quit("%s species attribute group not found.\n", errorString);
@@ -603,7 +603,7 @@ void readFisheryScenarioFlags(MSEBoxModel *bm, char *fileName, xmlNodePtr rootno
 
 	Util_XML_Read_Fishery_Param_Int(bm, fileName, attributeGroupNode, "FisheryTargetSpecies", binary_check, bm->FISHERYtarget, bm->K_num_tot_sp);
 
-	readFisheryAgeDistrubutionXML(bm, fileName, attributeGroupNode, "CatchAgeDistributions", proportion_check, bm->CatchTS_agedistrib);
+	readFisheryAgeDistributionXML(bm, fileName, attributeGroupNode, "CatchAgeDistributions", proportion_check, bm->CatchTS_agedistrib);
 
 	Util_XML_Get_Value_Double(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "highgrade_thresh", &bm->highgrade_thresh);
 	Util_XML_Read_Impacted_Group_Param(bm, fileName, attributeGroupNode, q_id);
@@ -765,7 +765,7 @@ void readFishingDiscardingXML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootno
 
 	Util_XML_Read_Fishery_Param(bm, fileName, groupingNode, maxsaleprice_id);
 
-	readFisheryAgeDistrubutionXML(bm, fileName, groupingNode, "DiscardAgeDistributions", proportion_check, bm->DiscardTS_agedistrib);
+	readFisheryAgeDistributionXML(bm, fileName, groupingNode, "DiscardAgeDistributions", proportion_check, bm->DiscardTS_agedistrib);
 	readImpactedGroupParamXML(bm, fileName, groupingNode, "ProportionDiscarding", no_checking, bm->FCcocatch);
 
 
@@ -845,7 +845,7 @@ void readFisheryChangeXML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) 
 	SELchange = Util_Alloc_Init_3D_Double(4, SEL_max_num_changes, bm->K_num_fisheries, 0.0);
     
     /* not sure about the grouping of these nodes */
-	selGroupNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Selectivity_Change");
+	//selGroupNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Selectivity_Change");
 
 	readSelChangeXML(bm, fileName, selGroupNode, "Start", start_id);
 	readSelChangeXML(bm, fileName, selGroupNode, "NewCurve", selcurvechange_id);
@@ -917,7 +917,7 @@ void readFisheryChangeXML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) 
 	mFC_max_num_changes = Manage_Get_Max_Species_Fishery_Param(bm, mFC_num_changes_id) + 1;
 	mFCchange = Util_Alloc_Init_4D_Double(3, mFC_max_num_changes, bm->K_num_fisheries, bm->K_num_tot_sp, 0.0);
 
-	selGroupNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Fishing_Mortality_Change");
+	//selGroupNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Fishing_Mortality_Change");
 	Util_XML_Read_Change_Fished_Groups(bm, fileName, selGroupNode, "mFCchange", mFC_num_changes_id, mFCchange);
 
 }

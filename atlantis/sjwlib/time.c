@@ -255,13 +255,13 @@ void ChangeTimeUnits(char *oepoch, char *nepoch, double *times, int n)
 
     /* Compute the scaling and offset (in julian seconds) for the old epoch. */
     ooffset = DateToJulian(oepoch)*86400.0;
-    sprintf(buf,"1 %s",oepoch);
+    snprintf(buf, sizeof(buf), "1 %s",oepoch);
     if(!strtosecs(buf,&oscale) )
         quit("ChangeTimeEpoch: Can't convert original epoch %s to seconds\n",buf);
 
     /* Compute the scaling and offset (in julian seconds) for the new epoch. */
     noffset = DateToJulian(nepoch)*86400.0;
-    sprintf(buf,"1 %s",nepoch);
+    snprintf(buf, sizeof(buf), "1 %s",nepoch);
     if(!strtosecs(buf,&nscale) )
         quit("ChangeTimeEpoch: Can't convert new epoch %s to seconds\n",buf);
 
@@ -306,7 +306,7 @@ char *TimeToDate(double t, char *u)
     todat(j,&y,&mo,&d,&h,&mi,&s);
 
     /* Store the resulting string */
-    sprintf(datestring,"%4d-%02d-%02d %02d:%02d:%02d",y,mo,d,h,mi,s);
+    snprintf(datestring, sizeof(datestring), "%4d-%02d-%02d %02d:%02d:%02d",y,mo,d,h,mi,s);
 
     return(datestring);
 }
@@ -337,7 +337,7 @@ double DateToTime(char *d, char *u)
     t = 86400.0*(j-e);
 
     /* Convert to required units */
-    sprintf(buf,"1 %s",u);
+    snprintf(buf, sizeof(buf), "1 %s",u);
     if( !strtosecs(buf,&mult) )
 	quit("DateToTime: Can't convert %s to seconds\n",buf);
     t /= mult;

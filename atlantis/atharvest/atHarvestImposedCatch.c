@@ -155,8 +155,8 @@ int Load_Imposed_Discards(MSEBoxModel *bm) {
 						if (strcmp(FunctGroupArray[sp].groupCode, this_ts->ts.varname[b]) == 0)
 							tsdiscardid[sp] = b;
 					}
-					if (tsdiscardid[sp] == -1)
-						quit("Did not find time series of discardes for %s - check discard ts files contain it\n", FunctGroupArray[sp].groupCode);
+					if (tsdiscardid[sp] < 0)
+						quit("Did not find time series of discards for %s - check discard ts files contain it\n", FunctGroupArray[sp].groupCode);
 				}
 			}
 
@@ -256,7 +256,7 @@ double Get_Loaded_FC(MSEBoxModel *bm, int guildcase, int nf, int chrt, int stage
 		active_scale = bm->dt / 86400.0;
     else {
         active_scale = 1.0;
-        if (bm->newmonth && ((bm->dt < 43200.0 ) || (bm->dt < 43200.0 )))
+        if (bm->newmonth && (bm->dt < 43200.0 ))
             warn("Imposing catch but dt %e doesn't match assumptions of 12-24 hours per timestep\n", bm->dt);
     }
 
@@ -290,27 +290,20 @@ double Get_Loaded_FC(MSEBoxModel *bm, int guildcase, int nf, int chrt, int stage
 
 		/* Load catch - assumed to be in mgs-1 */
 		tsEvaled = 0;
+        this_tsCatch = &tsCatch[boxkey_id];
+        ts_id = tscatchid[guildcase];
 		if (tsCatchtype == interpolate_id) {
-			for (i = 0; i < ntsCatch; i++) {
-				boxkey_id = bm->BoxKeyMap[i][catchkey_id];
-				this_tsCatch = &tsCatch[boxkey_id];
-				ts_id = tscatchid[guildcase];
-				tsEvaled += tsEval(&this_tsCatch->ts, ts_id, bm->t);
-			}
+			tsEvaled += tsEval(&this_tsCatch->ts, ts_id, bm->t);
 		} else {
-			for (i = 0; i < ntsCatch; i++) {
-				boxkey_id = bm->BoxKeyMap[i][catchkey_id];
-				this_tsCatch = &tsCatch[boxkey_id];
-				ts_id = tscatchid[guildcase];
-				tsEvaled += tsEvalEx(&this_tsCatch->ts, ts_id, bm->t);
-
-				/**
-				if (do_debug) {
-					fprintf(llogfp, "Time: %e, box%d, boxkey: %d, tsid: %d, tsEval: %e, guildcase= %s\n", bm->dayt, i, boxkey_id, ts_id, tsEvaled, FunctGroupArray[guildcase].groupCode);
-				}
-				**/
-			}
+			tsEvaled += tsEvalEx(&this_tsCatch->ts, ts_id, bm->t);
 		}
+            
+        /**
+        if (do_debug) {
+            fprintf(llogfp, "Time: %e, box%d, boxkey: %d, tsid: %d, tsEval: %e, guildcase= %s\n", bm->dayt, i, boxkey_id, ts_id, tsEvaled, FunctGroupArray[guildcase].groupCode);
+        }
+        **/
+
 		break;
 	default:
 		tsEvaled = 0.0;

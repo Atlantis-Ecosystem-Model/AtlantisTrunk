@@ -1115,7 +1115,7 @@ void Per_Sp_Frescale (MSEBoxModel *bm, FILE *llogfp, int sp) {
     double FrefH = FunctGroupArray[sp].speciesParams[FrefH_id];
     double FrefLim = FunctGroupArray[sp].speciesParams[FrefLim_id];
 
-    double Braw, Bcurr;
+    double Braw = 0.0, Bcurr;
 
     if(!do_assess) {  // Where do_assess set at atlantismain.c level as requires Assess_Resources() call in atasseess lib
         if (bm->flagSSBforHCR){
@@ -1873,6 +1873,8 @@ void Ecosystem_Cap_Frescale(MSEBoxModel *bm, FILE *llogfp) {
                                     calcM = FunctGroupArray[sp].speciesParams[assess_nat_mort_id];
                                     break;
                                 case Z_and_F_based:
+                                    this_start = 0.0;
+                                    this_end = 0.0;
                                     if (FunctGroupArray[sp].isVertebrate == TRUE) {
                                         this_Num = 0.0;
                                         for (k = 0; k < maxstock; k++) {

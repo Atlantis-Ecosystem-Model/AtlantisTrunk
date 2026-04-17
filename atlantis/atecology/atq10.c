@@ -67,7 +67,7 @@
 
 static void Scale_Cohort_Linear_Mortality(MSEBoxModel *bm, FILE *llogfp, int speciesIndex, int ageClass, int boxID) {
 	int mL_scale_index = -1;
-	double environScaler = 0.0, scalingFactor = 0.0, scaledmL, origmL;
+	double environScaler = 1.0, scalingFactor = 1.0, scaledmL, origmL;
 
 	mL_scale_index = (int)FunctGroupArray[speciesIndex].cohortSpeciesParams[ageClass][mL_scale_id];
     origmL = FunctGroupArray[speciesIndex].cohortSpeciesParams[ageClass][mL_id];
@@ -77,15 +77,13 @@ static void Scale_Cohort_Linear_Mortality(MSEBoxModel *bm, FILE *llogfp, int spe
 	/* Apply environmental forcing to this group */
 	if (mL_scale_index != -1) {
 		environScaler = tsEval(bm->tslinearMort, mL_scale_index, bm->t);
-        scaledmL = origmL * environScaler;
 	}
 
 	/* Now get the scaling factor to apply */
 	if (numMortChanges[speciesIndex][ageClass][boxID] > 0) {
 		scalingFactor = Util_Get_Accumulative_Change_Scale(bm, numMortChanges[speciesIndex][ageClass][boxID], LinearMortChange[speciesIndex][ageClass][boxID]);
-		scaledmL = origmL * scalingFactor;
-        
 	}
+    scaledmL = origmL * environScaler * scalingFactor;
     FunctGroupArray[speciesIndex].cohortSpeciesParams[ageClass][mL_id] = scaledmL;
 }
 
@@ -384,7 +382,7 @@ double Get_pHcorr(MSEBoxModel *bm, int sp, double current_ph, int cbox, int clay
         } else if (current_ph >= max_pH){
             ans = pH_const_B;
         } else {
-            ans = pH_const_A + current_ph * (pH_const_B - pH_const_A) / (max_pH - min_pH);
+            ans = pH_const_A + (current_ph - min_pH) * (pH_const_B - pH_const_A) / (max_pH - min_pH); // This was just current_ph but that was an error in the interpolation
         }
         break;
     case quadratic_pH_id:

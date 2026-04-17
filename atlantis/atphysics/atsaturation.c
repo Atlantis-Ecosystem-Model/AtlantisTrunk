@@ -35,12 +35,18 @@
 #include <sjwlib.h>
 #include <atlantisboxmodel.h>
 
+#define N_nut_tracer_check 2
+#define other_tracer_check 2
+
 /* Checking for saturation of oxygen and nitrogen in the model layers */
 
 void Saturation_Check(MSEBoxModel *bm, double ***newwc, double ***newsed) {
 	int b, n, k, do_break;
 	double DIN, NH = 0, NO = 0;
-
+    double rand_contrib = 0.9 + drandom(0.0, 0.2);
+    double DINbound = min(12500.0, 12500.0 * bm->BGC_bound_scalar * rand_contrib);
+    double SIbound = min(120000.0, 12500.0 * bm->BGC_bound_scalar * bm->X_SiN * rand_contrib);
+    
 	if (verbose)
 		fprintf(stderr, "Entering Saturation_Check\n");
 
@@ -64,8 +70,26 @@ void Saturation_Check(MSEBoxModel *bm, double ***newwc, double ***newsed) {
 						if (newsed[b][k][n] > 8000.0)
 							newsed[b][k][n] = 8000.0;
 					}
-					break;
-				}
+					do_break++;
+                } else if (strcmp(bm->tinfo[n].name, "Si") == 0) {
+                    for (k = 0; k < bp->nz; k++) {
+                        if (newwc[b][k][n] > SIbound)
+                            newwc[b][k][n] = SIbound;
+                        
+                        //fprintf(bm->logFile, "Time %e doing box%d-%d saturation check si now %e\n", bm->dayt, b, k, newwc[b][k][n]);
+
+                    }
+                    for (k = 0; k < sm->nz; k++) {
+                        if (newsed[b][k][n] > SIbound)
+                            newsed[b][k][n] = SIbound;
+                        
+                        //fprintf(bm->logFile, "Time %e doing box%d-%d saturation check sed si now %e\n", bm->dayt, b, k, newwc[b][k][n]);
+
+                    }
+                    do_break++;
+                }
+                
+                // TODO: Add C and P if used
 			}
 
 			/* Check Nutrients in the watercolumn */
@@ -74,7 +98,7 @@ void Saturation_Check(MSEBoxModel *bm, double ***newwc, double ***newsed) {
 				do_break = 0;
 				NH = 0;
 				NO = 0;
-				for (n = 0; n < bm->ntracer && do_break < 2; n++) {
+				for (n = 0; n < bm->ntracer && do_break < N_nut_tracer_check; n++) {
 					/* Find ammonium and nitrate */
 					if (strcmp(bm->tinfo[n].name, "NH3") == 0) {
 						NH = newwc[b][k][n];
@@ -86,17 +110,17 @@ void Saturation_Check(MSEBoxModel *bm, double ***newwc, double ***newsed) {
 				}
 				DIN = NH + NO;
 
-				if (DIN > 12500.0) {
+				if (DIN > DINbound) {
 					//					printf("day: %e, box: %d-%d start DIN: %e (NH: %e NO: %e)", bm->dayt, b, k, DIN, NH, NO);
 					do_break = 0;
-					for (n = 0; n < bm->ntracer && do_break < 2; n++) {
+					for (n = 0; n < bm->ntracer && do_break < N_nut_tracer_check; n++) {
 						/* Correct ammonium and nitrate */
 						if (strcmp(bm->tinfo[n].name, "NH3") == 0) {
-							newwc[b][k][n] = 12500.0 * NH / DIN;
+							newwc[b][k][n] = DINbound * NH / DIN;
 							NH = newwc[b][k][n];
 							do_break++;
 						} else if (strcmp(bm->tinfo[n].name, "NO3") == 0) {
-							newwc[b][k][n] = 12500.0 * NO / DIN;
+							newwc[b][k][n] = DINbound * NO / DIN;
 							NO = newwc[b][k][n];
 							do_break++;
 						}
@@ -112,7 +136,7 @@ void Saturation_Check(MSEBoxModel *bm, double ***newwc, double ***newsed) {
 				do_break = 0;
 				NH = 0;
 				NO = 0;
-				for (n = 0; n < bm->ntracer && do_break < 2; n++) {
+				for (n = 0; n < bm->ntracer && do_break < N_nut_tracer_check; n++) {
 					/* Find ammonium and nitrate */
 					if (strcmp(bm->tinfo[n].name, "NH3") == 0) {
 						NH = newsed[b][k][n];
@@ -124,15 +148,15 @@ void Saturation_Check(MSEBoxModel *bm, double ***newwc, double ***newsed) {
 				}
 				DIN = NH + NO;
 
-				if (DIN > 12500.0) {
+				if (DIN > DINbound) {
 					do_break = 0;
-					for (n = 0; n < bm->ntracer && do_break < 2; n++) {
+					for (n = 0; n < bm->ntracer && do_break < N_nut_tracer_check; n++) {
 						/* Correct ammonium and nitrate */
 						if (strcmp(bm->tinfo[n].name, "NH3") == 0) {
-							newsed[b][k][n] = 12500.0 * NH / DIN;
+							newsed[b][k][n] = DINbound * NH / DIN;
 							do_break++;
 						} else if (strcmp(bm->tinfo[n].name, "NO3") == 0) {
-							newsed[b][k][n] = 12500.0 * NO / DIN;
+							newsed[b][k][n] = DINbound * NO / DIN;
 							do_break++;
 						}
 					}

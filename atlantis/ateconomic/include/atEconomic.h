@@ -71,7 +71,6 @@ int Read_Economic_Parameters(MSEBoxModel *bm, char *filename);
 
 void Initialise_Subfleets(MSEBoxModel *bm, FILE *llogfp);
 void Read_Econ_Time_Series(char *folderPath, char *name, char *tsname, char *t_units, FisheryTimeSeries **ts);
-void Free_Econ_Time_Series(FisheryTimeSeries **ts);
 
 /* Economic model routines */
 void Allocate_Catch(MSEBoxModel *bm, FILE *llogfp);

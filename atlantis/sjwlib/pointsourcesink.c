@@ -124,16 +124,16 @@ int (*trI) (void *, char *)
 		p[i].model_data = model_data;
 
         /* Name */
-        sprintf(key,"pss%d.name",i);
+        snprintf(key, sizeof(key),"pss%d.name",i);
         readkeyprm_s(fp,key,p[i].name);
 
         /* Location */
-        sprintf(key,"pss%d.location",i);
+        snprintf(key, sizeof(key),"pss%d.location",i);
 		readkeyprm_s(fp,key,buf);
 		parse_location(folderPath, &p[i],buf);
 
         /* Data */
-        sprintf(key,"pss%d.data",i);
+        snprintf(key, sizeof(key),"pss%d.data",i);
 		readkeyprm_s(fp,key,buf);
 		/* Read in the data */
         tsRead(folderPath, buf,&p[i].ts);
@@ -141,7 +141,7 @@ int (*trI) (void *, char *)
 			tsPrintInfo(&p[i].ts,stderr);
 
 		/* Rewind flag */
-		sprintf(key, "pss%d.rewind", i);
+		snprintf(key, sizeof(key), "pss%d.rewind", i);
 		readkeyprm_i(fp,key,&p[i].rewindid);
 
 		/* Check data time units */

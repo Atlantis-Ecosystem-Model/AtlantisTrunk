@@ -132,8 +132,8 @@ void Apply_Annual_Fisheries_Mgmt(MSEBoxModel *bm, FILE *llogfp) {
 				/* Set the management stability management index */
 				Manage_Set_Manage_Index(bm, fishery_id, mgmtstability_id, 0);
 
-				if ((bm->TAC_trigger[fishery_id][target_day_id] > 0.0) && ((bm->dayt > (bm->TAC_trigger[fishery_id][target_day_id] + FC_period2)
-						|| (bm->TAC_trigger[fishery_id][triggered_scalar_id] != 1.0))))
+				if ((bm->TAC_trigger[fishery_id][target_day_id] > 0.0) && ((bm->dayt > (bm->TAC_trigger[fishery_id][target_day_id] + FC_period2))
+						|| (bm->TAC_trigger[fishery_id][triggered_scalar_id] != 1.0)))
 					bm->TAC_trigger[fishery_id][target_day_id] = 0.0;
 				if (bm->TAC_trigger[fishery_id][target_day_id] == 0.0)
 					bm->TAC_trigger[fishery_id][target_day_id] = bm->dayt;
@@ -194,7 +194,7 @@ void Apply_Annual_Fisheries_Mgmt(MSEBoxModel *bm, FILE *llogfp) {
 		if (bm->flagendangered) {
 			end_trigger_tripped = 0;
 			for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-				if (FunctGroupArray[sp].isImpacted == TRUE) {
+				if ((FunctGroupArray[sp].isImpacted == TRUE) || ((FunctGroupArray[sp].isImpacted == FALSE) && (FunctGroupArray[sp].speciesParams[assess_flag_id] < 0))){
 					if (FunctGroupArray[sp].speciesParams[sp_concern_id]) {
 						FC_thresh = bm->SP_FISHERYprms[sp][fishery_id][FC_thresh_id];
 						FC_high_thresh = bm->SP_FISHERYprms[sp][fishery_id][FC_high_thresh_id];
@@ -202,42 +202,39 @@ void Apply_Annual_Fisheries_Mgmt(MSEBoxModel *bm, FILE *llogfp) {
 						fishnowpop = bm->totfishpop[sp];
 
 						/* Using original simple adaptive management with perfect knowledge model */
-						if (((FunctGroupArray[sp].isImpacted == FALSE) && (FunctGroupArray[sp].speciesParams[assess_flag_id] < 0))
-								|| (FunctGroupArray[sp].isImpacted == TRUE)) {
-							if (fishnowpop < FC_thresh * startpop) {
-								end_trigger_tripped = 1;
-								fprintf(llogfp, "Time: %e, endangered species %s (impacted by fishery %s) is at critical population levels (%.2f)\n", bm->dayt,
-										FunctGroupArray[sp].groupCode, FisheryArray[fishery_id].fisheryCode, fishnowpop / startpop);
-								break;
-							} else if (fishnowpop < FC_high_thresh * startpop) {
-								high_end_trigger_tripped = 0;
-								break;
-							} else {
-								if (verbose > 1)
-									fprintf(
-											llogfp,
-											"Time: %e, endangered species %s population (impacted by fishery %s) is larger than upper reference level (%.2f)\n",
-											bm->dayt, FunctGroupArray[sp].groupCode, FisheryArray[fishery_id].fisheryCode, fishnowpop / startpop);
-							}
-							pseudo_survey_trip = 1;
-						} else {
-							/* Use assessment model output */
-							if (bm->TAC_trigger[fishery_id][triggered_scalar_id] < 1.0 && bm->TAC_trigger[fishery_id][endanger_is_trigger_id]) {
-								end_trigger_tripped = 1;
-								fprintf(
-										llogfp,
-										"Time: %e, endangered species %s (impacted by fishery %s) is at critical population levels so fishery effort impacted (%.2f)\n",
-										bm->dayt, FunctGroupArray[sp].groupCode, FisheryArray[fishery_id].fisheryCode, fishnowpop / startpop);
-								break;
-							} else if (bm->TAC_trigger[fishery_id][triggered_scalar_id] > 1.0 && bm->TAC_trigger[fishery_id][endanger_is_trigger_id]) {
-								if (verbose > 1)
-									fprintf(llogfp, "Time: %e, endangered species %s population (impacted by fishery %s) is not endangered any more (%.2f)\n",
-											bm->dayt, FunctGroupArray[sp].groupCode, FisheryArray[fishery_id].fisheryCode, fishnowpop / startpop);
-							} else {
-								high_end_trigger_tripped = 0;
-							}
-						}
-					}
+                        if (fishnowpop < FC_thresh * startpop) {
+                            end_trigger_tripped = 1;
+                            fprintf(llogfp, "Time: %e, endangered species %s (impacted by fishery %s) is at critical population levels (%.2f)\n", bm->dayt,
+                                    FunctGroupArray[sp].groupCode, FisheryArray[fishery_id].fisheryCode, fishnowpop / startpop);
+                            break;
+                        } else if (fishnowpop < FC_high_thresh * startpop) {
+                            high_end_trigger_tripped = 0;
+                            break;
+                        } else {
+                            if (verbose > 1)
+                                fprintf(
+                                        llogfp,
+                                        "Time: %e, endangered species %s population (impacted by fishery %s) is larger than upper reference level (%.2f)\n",
+                                        bm->dayt, FunctGroupArray[sp].groupCode, FisheryArray[fishery_id].fisheryCode, fishnowpop / startpop);
+                        }
+                        pseudo_survey_trip = 1;
+                    } else {
+                        /* Use assessment model output */
+                        if (bm->TAC_trigger[fishery_id][triggered_scalar_id] < 1.0 && bm->TAC_trigger[fishery_id][endanger_is_trigger_id]) {
+                            end_trigger_tripped = 1;
+                            fprintf(
+                                    llogfp,
+                                    "Time: %e, endangered species %s (impacted by fishery %s) is at critical population levels so fishery effort impacted (%.2f)\n",
+                                    bm->dayt, FunctGroupArray[sp].groupCode, FisheryArray[fishery_id].fisheryCode, fishnowpop / startpop);
+                            break;
+                        } else if (bm->TAC_trigger[fishery_id][triggered_scalar_id] > 1.0 && bm->TAC_trigger[fishery_id][endanger_is_trigger_id]) {
+                            if (verbose > 1)
+                                fprintf(llogfp, "Time: %e, endangered species %s population (impacted by fishery %s) is not endangered any more (%.2f)\n",
+                                        bm->dayt, FunctGroupArray[sp].groupCode, FisheryArray[fishery_id].fisheryCode, fishnowpop / startpop);
+                        } else {
+                            high_end_trigger_tripped = 0;
+                        }
+                    }
 				}
 			}
 			if (end_trigger_tripped) {
@@ -372,11 +369,10 @@ void Apply_Annual_Fisheries_Mgmt(MSEBoxModel *bm, FILE *llogfp) {
 		/* Set regional TAC - can't have regional TACs or stocks for invertebrates as yet
 		 FIX - allow multiple stocks and regional TACs for all groups
 		 */
-		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-			if (FunctGroupArray[sp].isVertebrate == TRUE) {
-				if (!bm->flagecon_on || bm->MultiPlanEffort) {
-
-					if (bm->manage_reg) {
+        if (!bm->flagecon_on || bm->MultiPlanEffort) {
+            if (bm->manage_reg) {
+                for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                    if (FunctGroupArray[sp].isVertebrate == TRUE) {
 						/* As not using stocks figure out relative biomass in each area so can put in relative proportion of TAC */
 						nstock = bm->K_num_active_reg;
 
@@ -501,12 +497,12 @@ void Apply_Annual_Fisheries_Mgmt(MSEBoxModel *bm, FILE *llogfp) {
 							}
 						}
 					}
-				} else {
-					/* Dan Holland's model currently assumes US system, which this caricatures */
-					Manage_Visit_Council(bm, llogfp);
 				}
 			}
-		}
+		} else {
+            /* Dan Holland's model currently assumes US system, which this caricatures */
+            Manage_Visit_Council(bm, llogfp);
+        }
 
 		/* Adjust seasonal closures if need be */
 		//flagseasonal = (int) (bm->FISHERYprms[fishery_id][flagseasonal_id]);

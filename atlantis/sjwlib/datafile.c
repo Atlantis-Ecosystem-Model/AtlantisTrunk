@@ -132,7 +132,7 @@ void dfRead(char *folderPath, char *name, Datafile *df) {
 	strcpy(df->name, name);
 
 
-	sprintf(tempFileName, "%s%s", folderPath, name);
+	snprintf(tempFileName, sizeof(tempFileName), "%s%s", folderPath, name);
 	/* Try to open the file */
 	if (nc_open(tempFileName, NC_NOWRITE, &fid) == NC_NOERR) {
 		/* It is a netCDF file! */
@@ -898,7 +898,7 @@ void dfPrintInfo(Datafile *df, FILE *fp, int level) {
 	fprintf(fp, "\n");
 }
 
-/** Get the data value for the specified record and indicies.
+/** Get the data value for the specified record and indices.
  *
  * @param df pointer to datafile structure.
  * @param v pointer to variable structure.
@@ -1185,7 +1185,7 @@ void df_ascii_read(FILE *fp, Datafile *df) {
 		df->variables[i].type = VT_DATA;
 
 		/* Variable name */
-		sprintf(key, "## COLUMN%d.name", i + 1);
+		snprintf(key, sizeof(key), "## COLUMN%d.name", i + 1);
 		readkeyprm_s(fp, key, line);
 		trim(line);
 		if ((df->variables[i].name = (char *) malloc(strlen(line) + 1)) == NULL)
@@ -1194,7 +1194,7 @@ void df_ascii_read(FILE *fp, Datafile *df) {
 		set_keyprm_errfn(warn);
 
 		/* Variable long name */
-		sprintf(key, "## COLUMN%d.long_name", i + 1);
+		snprintf(key, sizeof(key), "## COLUMN%d.long_name", i + 1);
 		readkeyprm_s(fp, key, line);
 		if ((df->variables[i].longname = (char *) malloc(strlen(line) + 1))
 				== NULL)
@@ -1202,7 +1202,7 @@ void df_ascii_read(FILE *fp, Datafile *df) {
 		strcpy(df->variables[i].longname, line);
 
 		/* Variable units */
-		sprintf(key, "## COLUMN%d.units", i + 1);
+		snprintf(key, sizeof(key), "## COLUMN%d.units", i + 1);
 		readkeyprm_s(fp, key, line);
 		if ((df->variables[i].units = (char *) malloc(strlen(line) + 1))
 				== NULL)
@@ -1211,11 +1211,11 @@ void df_ascii_read(FILE *fp, Datafile *df) {
 		strcpy(df->variables[i].units, line);
 
 		/* Missing values */
-		sprintf(key, "## COLUMN%d.missing_value", i + 1);
+		snprintf(key, sizeof(key), "## COLUMN%d.missing_value", i + 1);
 		readkeyprm_d(fp, key, &df->variables[i].missing);
 
 		/* Fill value values */
-		/*sprintf(key,"## COLUMN%d.fill_value",i+1);
+		/*snprintf(key, sizeof(key),"## COLUMN%d.fill_value",i+1);
 		 readkeyprm_d(fp,key,&df->variables[i].fillvalue);*/
 
 		set_keyprm_errfn(quit);
@@ -1726,14 +1726,14 @@ FILE *Open_Input_File(const char *inputFolder, const char *name, const char *mod
 	char fileName[BMSLEN];
 	//char newFileName[BMSLEN];
 
-	sprintf(fileName, "%s%s", inputFolder, name);
+	snprintf(fileName, sizeof(fileName), "%s%s", inputFolder, name);
 
 	if (strstr(fileName, ".nc") != NULL) {
 		return fopen(fileName, mode);
 
 	} else {
 
-		//if (Convert_File_Format(fileName, newFileName) < 0) {
+		//if (Convert_File_Format(fileName, newFileName, sizeof(newFileName)) < 0) {
 		//	quit("Cannot open Atlantis input file %s. \n", fileName);
 		//	return NULL;
 		//}

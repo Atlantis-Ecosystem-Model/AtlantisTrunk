@@ -74,7 +74,7 @@ void Harvest_Init(MSEBoxModel *bm, FILE *llogfp) {
 		quit("Harvest_Init. Fisheries model is turned on but no input file has been provided\n");
 	}
 	/* Build the converted filename */
-	sprintf(convertedXMLFileName, "%s", bm->fishprmIfname);
+	snprintf(convertedXMLFileName, sizeof(convertedXMLFileName), "%s", bm->fishprmIfname);
 	*(strstr(convertedXMLFileName, ".prm")) = '\0';
 	strcat(convertedXMLFileName, ".xml");
 
@@ -277,11 +277,11 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 		if (FunctGroupArray[fgIndex].isVertebrate == TRUE) {
 			for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
 
-				sprintf(name, "%s%d_Catch", FunctGroupArray[fgIndex].name, cohort + 1);
-				sprintf(longName, "Catch of age class %d %s", cohort + 1, FunctGroupArray[fgIndex].fullName);
+				snprintf(name, sizeof(name), "%s%d_Catch", FunctGroupArray[fgIndex].name, cohort + 1);
+				snprintf(longName, sizeof(longName), "Catch of age class %d %s", cohort + 1, FunctGroupArray[fgIndex].fullName);
 
 				if( FunctGroupArray[fgIndex].numGeneTypes > 1 )
-					sprintf(longName, "Catch of age class by gene type %d %s", cohort + 1, FunctGroupArray[fgIndex].fullName);
+					snprintf(longName, sizeof(longName), "Catch of age class by gene type %d %s", cohort + 1, FunctGroupArray[fgIndex].fullName);
 
 				Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Numbers", 0, 3, &FunctGroupArray[fgIndex].CatchTracers[cohort], 0, 2, 0);
 			}
@@ -293,11 +293,11 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 		if (FunctGroupArray[fgIndex].isVertebrate == TRUE) {
 			for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
 
-				sprintf(name, "%s%d_Discards", FunctGroupArray[fgIndex].name, cohort + 1);
-				sprintf(longName, "Discards of age class %d %s", cohort + 1, FunctGroupArray[fgIndex].fullName);
+				snprintf(name, sizeof(name), "%s%d_Discards", FunctGroupArray[fgIndex].name, cohort + 1);
+				snprintf(longName, sizeof(longName), "Discards of age class %d %s", cohort + 1, FunctGroupArray[fgIndex].fullName);
 
 				if( FunctGroupArray[fgIndex].numGeneTypes > 1 )
-					sprintf(longName, "Discards of age class by gene type %d %s", cohort + 1, FunctGroupArray[fgIndex].fullName);
+					snprintf(longName, sizeof(longName), "Discards of age class by gene type %d %s", cohort + 1, FunctGroupArray[fgIndex].fullName);
 
 				Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Numbers", 0, 3, &FunctGroupArray[fgIndex].DiscardTracers[cohort], 0, 2, 0);
 
@@ -313,8 +313,8 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 
 				if (FisherySpeciesCatchFlags[fgIndex][nf] == TRUE) {
 
-					sprintf(name, "%s_Catch_FC%d", FunctGroupArray[fgIndex].groupCode, nf + 1);
-					sprintf(longName, "Total catch of %s by fishery %d (%s)", FunctGroupArray[fgIndex].groupCode, nf + 1, FisheryArray[nf].fisheryCode);
+					snprintf(name, sizeof(name), "%s_Catch_FC%d", FunctGroupArray[fgIndex].groupCode, nf + 1);
+					snprintf(longName, sizeof(longName), "Total catch of %s by fishery %d (%s)", FunctGroupArray[fgIndex].groupCode, nf + 1, FisheryArray[nf].fisheryCode);
 
 					Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Tonnes", 0, 3, &FunctGroupArray[fgIndex].CaughtByFisheryTracers[nf], 0, 2, 0);
 				}
@@ -328,8 +328,8 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 
 				if (FisherySpeciesCatchFlags[fgIndex][nf] == TRUE) {
 
-					sprintf(name, "%s_Discard_FC%d", FunctGroupArray[fgIndex].groupCode, nf + 1);
-					sprintf(longName, "Total discards of %s by fishery %d (%s)", FunctGroupArray[fgIndex].groupCode, nf + 1, FisheryArray[nf].fisheryCode);
+					snprintf(name, sizeof(name), "%s_Discard_FC%d", FunctGroupArray[fgIndex].groupCode, nf + 1);
+					snprintf(longName, sizeof(longName), "Total discards of %s by fishery %d (%s)", FunctGroupArray[fgIndex].groupCode, nf + 1, FisheryArray[nf].fisheryCode);
 
 					Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Tonnes", 0, 3, &FunctGroupArray[fgIndex].DiscardedByFisheryTracers[nf], 0, 2, 0);
 				}
@@ -339,8 +339,8 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 	/* The total catch tracer */
 	for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
 		if (FunctGroupArray[fgIndex].isFished == TRUE) {
-			sprintf(name, "Tot_%s_Catch", FunctGroupArray[fgIndex].groupCode);
-			sprintf(longName, "Total catch of %s", FunctGroupArray[fgIndex].fullName);
+			snprintf(name, sizeof(name), "Tot_%s_Catch", FunctGroupArray[fgIndex].groupCode);
+			snprintf(longName, sizeof(longName), "Total catch of %s", FunctGroupArray[fgIndex].fullName);
 
 			Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Tonnes", 0, 1, &FunctGroupArray[fgIndex].totCatchTracer, 0, 2, 0);
 		}
@@ -348,8 +348,8 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 	/* The total REC catch tracer */
 	for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
 		if (FunctGroupArray[fgIndex].isImpacted == TRUE) {
-			sprintf(name, "Tot_%s_RecCatch", FunctGroupArray[fgIndex].groupCode);
-			sprintf(longName, "Total recreational catch of %s", FunctGroupArray[fgIndex].fullName);
+			snprintf(name, sizeof(name), "Tot_%s_RecCatch", FunctGroupArray[fgIndex].groupCode);
+			snprintf(longName, sizeof(longName), "Total recreational catch of %s", FunctGroupArray[fgIndex].fullName);
 
 			Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Tonnes", 0, 1, &FunctGroupArray[fgIndex].totRecCatchTracer, 0, 2, 0);
 		}
@@ -357,8 +357,8 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 	/* The total Discards catch tracer */
 	for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
 		if (FunctGroupArray[fgIndex].isImpacted == TRUE) {
-			sprintf(name, "Tot_%s_Discards", FunctGroupArray[fgIndex].groupCode);
-			sprintf(longName, "Total discards of %s", FunctGroupArray[fgIndex].fullName);
+			snprintf(name, sizeof(name), "Tot_%s_Discards", FunctGroupArray[fgIndex].groupCode);
+			snprintf(longName, sizeof(longName), "Total discards of %s", FunctGroupArray[fgIndex].fullName);
 
 			Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Tonnes", 0, 1, &FunctGroupArray[fgIndex].totDiscardsTracer, 0, 2, 0);
 		}
@@ -376,16 +376,16 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 	for (nf = 0; nf < bm->K_num_fisheries; nf++) {
 		if (FisheryArray[nf].isRec == TRUE) {
 			if(recCount > 1){
-				sprintf(name, "Tot_Effort_Recfish%d", FCindex + 1);
-				sprintf(longName, "Total effort of recreational fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
+				snprintf(name, sizeof(name), "Tot_Effort_Recfish%d", FCindex + 1);
+				snprintf(longName, sizeof(longName), "Total effort of recreational fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
 				FCindex++;
 			}else{
-				sprintf(name, "Tot_Effort_Recfish");
-				sprintf(longName, "Total effort of recreational fishery");
+				snprintf(name, sizeof(name), "Tot_Effort_Recfish");
+				snprintf(longName, sizeof(longName), "Total effort of recreational fishery");
 			}
 		} else {
-			sprintf(name, "Tot_Effort_FC%d", FCindex + 1);
-			sprintf(longName, "Total effort of fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
+			snprintf(name, sizeof(name), "Tot_Effort_FC%d", FCindex + 1);
+			snprintf(longName, sizeof(longName), "Total effort of fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
 			FCindex++;
 		}
 		Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Days", 0, 1, &FisheryArray[nf].totalEffortTracer, 0, 2, 0);
@@ -395,18 +395,18 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 	for (nf = 0; nf < bm->K_num_fisheries; nf++) {
 		if (FisheryArray[nf].isRec == TRUE) {
 			if(recCount > 1){
-				sprintf(name, "Avg_Catch_Sze_Recfish%d", FCindex + 1);
-				sprintf(longName, "Total effort of recreational fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
+				snprintf(name, sizeof(name), "Avg_Catch_Sze_Recfish%d", FCindex + 1);
+				snprintf(longName, sizeof(longName), "Total effort of recreational fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
 				FCindex++;
 			}else{
-				sprintf(name, "Avg_Catch_Sze_Recfish");
-				sprintf(longName, "Total effort of recreational fishery");
+				snprintf(name, sizeof(name), "Avg_Catch_Sze_Recfish");
+				snprintf(longName, sizeof(longName), "Total effort of recreational fishery");
 			}
 		} else {
-			sprintf(name, "Avg_Catch_Sze_FC%d", FCindex + 1);
+			snprintf(name, sizeof(name), "Avg_Catch_Sze_FC%d", FCindex + 1);
 
 			/* This should be different but is not!*/
-			sprintf(longName, "Total effort of fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
+			snprintf(longName, sizeof(longName), "Total effort of fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
 			FCindex++;
 		}
 		Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "mg N", 0, 1, &FisheryArray[nf].averageCatchSizeTracer, 0, 2, 0);
@@ -517,95 +517,96 @@ void Build_Fishery_Species_Linkage(MSEBoxModel *bm, FILE *llogfp) {
  */
 void Setup_Fishery_Param_Strings(MSEBoxModel *bm) {
 	int i;
+    int paramlen = 25;
 
 	for (i = 0; i < tot_fisheries_prms; i++) {
-		sprintf(bm->fisheryParamNAME[i], "%s", "");
+		snprintf(bm->fisheryParamNAME[i], paramlen, "%s", "");
 	}
 
-	sprintf(bm->fisheryParamNAME[flagdempelfishery_id], "%s", "_flagdempelfishery");
-	sprintf(bm->fisheryParamNAME[tStart_id], "%s", "_tStart");
-	sprintf(bm->fisheryParamNAME[tEnd_id], "%s", "_tEnd");
-	sprintf(bm->fisheryParamNAME[start_manage_id], "%s", "_start_manage");
-	sprintf(bm->fisheryParamNAME[end_manage_id], "%s", "_end_manage");
-	sprintf(bm->fisheryParamNAME[flageffortmodel_id], "%s", "_effortmodel");
-	sprintf(bm->fisheryParamNAME[flagexplore_id], "%s", "_explore");
-	sprintf(bm->fisheryParamNAME[flagdropEFF_id], "%s", "_effortdrop");
-	sprintf(bm->fisheryParamNAME[selcurve_id], "%s", "_selcurve");
-	sprintf(bm->fisheryParamNAME[flagmanage_id], "%s", "_flagmanage");
-	sprintf(bm->fisheryParamNAME[flagTACpartipcate_id], "%s", "flagTACparticipate_");
+	snprintf(bm->fisheryParamNAME[flagdempelfishery_id], paramlen, "%s", "_flagdempelfishery");
+	snprintf(bm->fisheryParamNAME[tStart_id], paramlen, "%s", "_tStart");
+	snprintf(bm->fisheryParamNAME[tEnd_id], paramlen, "%s", "_tEnd");
+	snprintf(bm->fisheryParamNAME[start_manage_id], paramlen, "%s", "_start_manage");
+	snprintf(bm->fisheryParamNAME[end_manage_id], paramlen, "%s", "_end_manage");
+	snprintf(bm->fisheryParamNAME[flageffortmodel_id], paramlen, "%s", "_effortmodel");
+	snprintf(bm->fisheryParamNAME[flagexplore_id], paramlen, "%s", "_explore");
+	snprintf(bm->fisheryParamNAME[flagdropEFF_id], paramlen, "%s", "_effortdrop");
+	snprintf(bm->fisheryParamNAME[selcurve_id], paramlen, "%s", "_selcurve");
+	snprintf(bm->fisheryParamNAME[flagmanage_id], paramlen, "%s", "_flagmanage");
+	snprintf(bm->fisheryParamNAME[flagTACpartipcate_id], paramlen, "%s", "flagTACparticipate_");
 
-	sprintf(bm->fisheryParamNAME[flagcap_id], "%s", "_flagcap");
-	sprintf(bm->fisheryParamNAME[flagcap_peak_id], "%s", "_flagcap_peak");
-	sprintf(bm->fisheryParamNAME[flaguseall_id], "%s", "_flaguseall");
+	snprintf(bm->fisheryParamNAME[flagcap_id], paramlen, "%s", "_flagcap");
+	snprintf(bm->fisheryParamNAME[flagcap_peak_id], paramlen, "%s", "_flagcap_peak");
+	snprintf(bm->fisheryParamNAME[flaguseall_id], paramlen, "%s", "_flaguseall");
 
-	sprintf(bm->fisheryParamNAME[flagseasonal_id], "%s", "_flagseasonal");
-    sprintf(bm->fisheryParamNAME[flag_framebased_id], "%s", "_flag_framebased");
-	sprintf(bm->fisheryParamNAME[flagmpa_id], "%s", "_flagmpa");
-	sprintf(bm->fisheryParamNAME[flagchangeSEL_id], "%s", "_changeSEL");
+	snprintf(bm->fisheryParamNAME[flagseasonal_id], paramlen, "%s", "_flagseasonal");
+    snprintf(bm->fisheryParamNAME[flag_framebased_id], paramlen, "%s", "_flag_framebased");
+	snprintf(bm->fisheryParamNAME[flagmpa_id], paramlen, "%s", "_flagmpa");
+	snprintf(bm->fisheryParamNAME[flagchangeSEL_id], paramlen, "%s", "_changeSEL");
 
-	sprintf(bm->fisheryParamNAME[flagchangeP_id], "%s", "_changeP");
-	sprintf(bm->fisheryParamNAME[flagchangeSWEPT_id], "%s", "_changeSWEPT");
-	sprintf(bm->fisheryParamNAME[flagchangeEFF_id], "%s", "_changeEFF");
-	sprintf(bm->fisheryParamNAME[flagchangeseason_id], "%s", "_changeseason");
-	sprintf(bm->fisheryParamNAME[TACchange_id], "%s", "_TACchange");
-	sprintf(bm->fisheryParamNAME[minFCdepth_id], "%s", "_mindepth");
-	sprintf(bm->fisheryParamNAME[maxFCdepth_id], "%s", "_maxdepth");
-	sprintf(bm->fisheryParamNAME[sel_b_id], "%s", "sel_b");
+	snprintf(bm->fisheryParamNAME[flagchangeP_id], paramlen, "%s", "_changeP");
+	snprintf(bm->fisheryParamNAME[flagchangeSWEPT_id], paramlen, "%s", "_changeSWEPT");
+	snprintf(bm->fisheryParamNAME[flagchangeEFF_id], paramlen, "%s", "_changeEFF");
+	snprintf(bm->fisheryParamNAME[flagchangeseason_id], paramlen, "%s", "_changeseason");
+	snprintf(bm->fisheryParamNAME[TACchange_id], paramlen, "%s", "_TACchange");
+	snprintf(bm->fisheryParamNAME[minFCdepth_id], paramlen, "%s", "_mindepth");
+	snprintf(bm->fisheryParamNAME[maxFCdepth_id], paramlen, "%s", "_maxdepth");
+	snprintf(bm->fisheryParamNAME[sel_b_id], paramlen, "%s", "sel_b");
 
-	sprintf(bm->fisheryParamNAME[sel_lsm_id], "%s", "sel_lsm");
-	sprintf(bm->fisheryParamNAME[sel_normsigma_id], "%s", "sel_normsigma");
-	sprintf(bm->fisheryParamNAME[sel_normlsm_id], "%s", "sel_normlsm");
-	sprintf(bm->fisheryParamNAME[sel_lognormlsm_id], "%s", "sel_lognormlsm");
-	sprintf(bm->fisheryParamNAME[sel_lognormsigma_id], "%s", "sel_lognormsigma");
-	sprintf(bm->fisheryParamNAME[sel_gammasigma_id], "%s", "sel_gammasigma");
-	sprintf(bm->fisheryParamNAME[sel_gammalsm_id], "%s", "sel_gammalsm");
-	sprintf(bm->fisheryParamNAME[sel_bisigma_id], "%s", "sel_bisigma");
-	sprintf(bm->fisheryParamNAME[sel_bisigma2_id], "%s", "sel_bisigma2");
-	sprintf(bm->fisheryParamNAME[sel_ampli_id], "%s", "sel_ampli");
+	snprintf(bm->fisheryParamNAME[sel_lsm_id], paramlen, "%s", "sel_lsm");
+	snprintf(bm->fisheryParamNAME[sel_normsigma_id], paramlen, "%s", "sel_normsigma");
+	snprintf(bm->fisheryParamNAME[sel_normlsm_id], paramlen, "%s", "sel_normlsm");
+	snprintf(bm->fisheryParamNAME[sel_lognormlsm_id], paramlen, "%s", "sel_lognormlsm");
+	snprintf(bm->fisheryParamNAME[sel_lognormsigma_id], paramlen, "%s", "sel_lognormsigma");
+	snprintf(bm->fisheryParamNAME[sel_gammasigma_id], paramlen, "%s", "sel_gammasigma");
+	snprintf(bm->fisheryParamNAME[sel_gammalsm_id], paramlen, "%s", "sel_gammalsm");
+	snprintf(bm->fisheryParamNAME[sel_bisigma_id], paramlen, "%s", "sel_bisigma");
+	snprintf(bm->fisheryParamNAME[sel_bisigma2_id], paramlen, "%s", "sel_bisigma2");
+	snprintf(bm->fisheryParamNAME[sel_ampli_id], paramlen, "%s", "sel_ampli");
 
-	sprintf(bm->fisheryParamNAME[sel_bilsm1_id], "%s", "sel_bilsm1");
-	sprintf(bm->fisheryParamNAME[sel_bilsm2_id], "%s", "sel_bilsm2");
-	sprintf(bm->fisheryParamNAME[swept_area_id], "%s", "_sweptarea");
-	sprintf(bm->fisheryParamNAME[maxsaleprice_id], "%s", "_maxsaleprice");
-	sprintf(bm->fisheryParamNAME[mEff_max_id], "%s", "_mEff_max");
-	sprintf(bm->fisheryParamNAME[mEff_a_id], "%s", "_mEff_a");
-	sprintf(bm->fisheryParamNAME[mEff_offset_id], "%s", "_mEff_offset");
-	sprintf(bm->fisheryParamNAME[mEff_testfish_id], "%s", "_mEff_testfish");
+	snprintf(bm->fisheryParamNAME[sel_bilsm1_id], paramlen, "%s", "sel_bilsm1");
+	snprintf(bm->fisheryParamNAME[sel_bilsm2_id], paramlen, "%s", "sel_bilsm2");
+	snprintf(bm->fisheryParamNAME[swept_area_id], paramlen, "%s", "_sweptarea");
+	snprintf(bm->fisheryParamNAME[maxsaleprice_id], paramlen, "%s", "_maxsaleprice");
+	snprintf(bm->fisheryParamNAME[mEff_max_id], paramlen, "%s", "_mEff_max");
+	snprintf(bm->fisheryParamNAME[mEff_a_id], paramlen, "%s", "_mEff_a");
+	snprintf(bm->fisheryParamNAME[mEff_offset_id], paramlen, "%s", "_mEff_offset");
+	snprintf(bm->fisheryParamNAME[mEff_testfish_id], paramlen, "%s", "_mEff_testfish");
 
-	sprintf(bm->fisheryParamNAME[mEff_thresh_id], "%s", "_mEff_thresh");
-	sprintf(bm->fisheryParamNAME[mEff_thresh_top_id], "%s", "_mEff_thresh_top");
-	sprintf(bm->fisheryParamNAME[mEff_shift_id], "%s", "_mEff_shift");
-	sprintf(bm->fisheryParamNAME[mFCscale_id], "%s", "_mFCscale");
-	sprintf(bm->fisheryParamNAME[EffortLevel_id], "%s", "_Effort");
-	sprintf(bm->fisheryParamNAME[CPUE_effort_thresh_id], "%s", "CPUEthresh");
-	sprintf(bm->fisheryParamNAME[CPUE_effort_scale_id], "%s", "CPUEscale");
-	sprintf(bm->fisheryParamNAME[cap_id], "%s", "_cap");
-	sprintf(bm->fisheryParamNAME[seasonopen_id], "%s", "_seasonopen");
-	sprintf(bm->fisheryParamNAME[seasonclose_id], "%s", "_seasonclose");
-	sprintf(bm->fisheryParamNAME[mFCpeak_id], "%s", "_mFCpeak");
+	snprintf(bm->fisheryParamNAME[mEff_thresh_id], paramlen, "%s", "_mEff_thresh");
+	snprintf(bm->fisheryParamNAME[mEff_thresh_top_id], paramlen, "%s", "_mEff_thresh_top");
+	snprintf(bm->fisheryParamNAME[mEff_shift_id], paramlen, "%s", "_mEff_shift");
+	snprintf(bm->fisheryParamNAME[mFCscale_id], paramlen, "%s", "_mFCscale");
+	snprintf(bm->fisheryParamNAME[EffortLevel_id], paramlen, "%s", "_Effort");
+	snprintf(bm->fisheryParamNAME[CPUE_effort_thresh_id], paramlen, "%s", "CPUEthresh");
+	snprintf(bm->fisheryParamNAME[CPUE_effort_scale_id], paramlen, "%s", "CPUEscale");
+	snprintf(bm->fisheryParamNAME[cap_id], paramlen, "%s", "_cap");
+	snprintf(bm->fisheryParamNAME[seasonopen_id], paramlen, "%s", "_seasonopen");
+	snprintf(bm->fisheryParamNAME[seasonclose_id], paramlen, "%s", "_seasonclose");
+	snprintf(bm->fisheryParamNAME[mFCpeak_id], paramlen, "%s", "_mFCpeak");
 
-	sprintf(bm->fisheryParamNAME[use_min_lever_id], "%s", "_use_min_lever");
-	sprintf(bm->fisheryParamNAME[landallTAC_sp_id], "%s", "_landallTAC_sp");
-	sprintf(bm->fisheryParamNAME[max_num_sp_id], "%s", "_max_num_sp");
-	sprintf(bm->fisheryParamNAME[infringe_id], "%s", "_infringe");
-	sprintf(bm->fisheryParamNAME[FC_restrict_id], "%s", "_FC_restrict");
-	sprintf(bm->fisheryParamNAME[FC_period_id], "%s", "_FC_period");
-	sprintf(bm->fisheryParamNAME[FC_period2_id], "%s", "_FC_period2");
+	snprintf(bm->fisheryParamNAME[use_min_lever_id], paramlen, "%s", "_use_min_lever");
+	snprintf(bm->fisheryParamNAME[landallTAC_sp_id], paramlen, "%s", "_landallTAC_sp");
+	snprintf(bm->fisheryParamNAME[max_num_sp_id], paramlen, "%s", "_max_num_sp");
+	snprintf(bm->fisheryParamNAME[infringe_id], paramlen, "%s", "_infringe");
+	snprintf(bm->fisheryParamNAME[FC_restrict_id], paramlen, "%s", "_FC_restrict");
+	snprintf(bm->fisheryParamNAME[FC_period_id], paramlen, "%s", "_FC_period");
+	snprintf(bm->fisheryParamNAME[FC_period2_id], paramlen, "%s", "_FC_period2");
 
-	sprintf(bm->fisheryParamNAME[FC_restrict_endangered_id], "%s", "_FC_restrict_endangered");
-	sprintf(bm->fisheryParamNAME[FC_endanger_period_id], "%s", "_FC_endanger_period");
-	sprintf(bm->fisheryParamNAME[EFF_num_changes_id], "%s", "_num_changes");
-	sprintf(bm->fisheryParamNAME[CAP_num_changes_id], "%s", "_cap_changes");
-	sprintf(bm->fisheryParamNAME[SEL_num_changes_id], "%s", "_sel_changes");
-	sprintf(bm->fisheryParamNAME[SWEPT_num_changes_id], "%s", "_swept_changes");
+	snprintf(bm->fisheryParamNAME[FC_restrict_endangered_id], paramlen, "%s", "_FC_restrict_endangered");
+	snprintf(bm->fisheryParamNAME[FC_endanger_period_id], paramlen, "%s", "_FC_endanger_period");
+	snprintf(bm->fisheryParamNAME[EFF_num_changes_id], paramlen, "%s", "_num_changes");
+	snprintf(bm->fisheryParamNAME[CAP_num_changes_id], paramlen, "%s", "_cap_changes");
+	snprintf(bm->fisheryParamNAME[SEL_num_changes_id], paramlen, "%s", "_sel_changes");
+	snprintf(bm->fisheryParamNAME[SWEPT_num_changes_id], paramlen, "%s", "_swept_changes");
 
-	sprintf(bm->fisheryParamNAME[P_num_changes_id], "%s", "_p_changes");
-	sprintf(bm->fisheryParamNAME[fisheriesflagactive_id], "%s", "flag");
-	sprintf(bm->fisheryParamNAME[flagDV_id], "%s", "_flagDV");
-	sprintf(bm->fisheryParamNAME[nsubfleets_id], "%s", "_nsubfleets");
-	sprintf(bm->fisheryParamNAME[nlicence_id], "%s", "_nlicence");
-	sprintf(bm->fisheryParamNAME[flagMultiSpEffort_id], "%s", "_flagMultiSpEffort");
-	sprintf(bm->fisheryParamNAME[buybackdate_id], "%s", "_buybackdate");
+	snprintf(bm->fisheryParamNAME[P_num_changes_id], paramlen, "%s", "_p_changes");
+	snprintf(bm->fisheryParamNAME[fisheriesflagactive_id], paramlen, "%s", "flag");
+	snprintf(bm->fisheryParamNAME[flagDV_id], paramlen, "%s", "_flagDV");
+	snprintf(bm->fisheryParamNAME[nsubfleets_id], paramlen, "%s", "_nsubfleets");
+	snprintf(bm->fisheryParamNAME[nlicence_id], paramlen, "%s", "_nlicence");
+	snprintf(bm->fisheryParamNAME[flagMultiSpEffort_id], paramlen, "%s", "_flagMultiSpEffort");
+	snprintf(bm->fisheryParamNAME[buybackdate_id], paramlen, "%s", "_buybackdate");
 
 }
 /**

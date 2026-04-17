@@ -157,7 +157,7 @@ void Scale_Group_Linear_Mortality(MSEBoxModel *bm, int speciesIndex, int cohort,
 	free5d(tempArrayPointer);
 
 	for(i = 0; i < ((int) numMortChanges[speciesIndex][cohort][box]); i++){
-		fprintf(llogfp, "LinearMortChange[speciesIndex][cohort][box][%d][start_id = %e\n", i, LinearMortChange[speciesIndex][cohort][box][i][start_id]);
+		fprintf(llogfp, "LinearMortChange[speciesIndex][cohort][box][%d][start_id] = %e\n", i, LinearMortChange[speciesIndex][cohort][box][i][start_id]);
 		fprintf(llogfp, "LinearMortChange[speciesIndex][cohort][box][%d][period_id] = %e\n", i, LinearMortChange[speciesIndex][cohort][box][i][period_id]);
 		fprintf(llogfp, "LinearMortChange[speciesIndex][cohort][box][%d][mult_id] = %e\n", i, LinearMortChange[speciesIndex][cohort][box][i][mult_id]);
 	}
@@ -186,7 +186,7 @@ void Scale_Habitat(MSEBoxModel *bm, char *name, int box, double start, double pe
 	} else if (strcmp(name, "SOFT") == 0) {
 		habitatIndex = soft_id;
 	} else {
-		quit("Scale_Habitat: Habitat %s is not recognised. Must be either REEF, FLAT or SOFT\n");
+		quit("Scale_Habitat: Habitat %s is not recognised. Must be either REEF, FLAT or SOFT\n", name);
 	}
 
 	/* Turn on habitat degradation in this box */
@@ -219,7 +219,7 @@ void Scale_Habitat(MSEBoxModel *bm, char *name, int box, double start, double pe
 	free3d(tempArrayPointer);
 
 	for(i = 0; i < BEDchange_max_num; i++){
-		fprintf(llogfp, "BEDchange[habitatIndex][%d][start_id = %e\n", i, BEDchange[habitatIndex][i][start_id]);
+		fprintf(llogfp, "BEDchange[habitatIndex][%d][start_id] = %e\n", i, BEDchange[habitatIndex][i][start_id]);
 		fprintf(llogfp, "BEDchange[habitatIndex][%d][period_id] = %e\n", i, BEDchange[habitatIndex][i][period_id]);
 		fprintf(llogfp, "BEDchange[habitatIndex][%d][mult_id] = %e\n", i, BEDchange[habitatIndex][i][mult_id]);
 	}
@@ -251,6 +251,9 @@ double Get_Biomass_Correction(MSEBoxModel *bm, int sp, HABITAT_TYPES habitatType
 			break;
         case MIXED:
             quit("How did we get here as should come through a primary habitat\n");
+            break;
+        default:
+            quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
             break;
 	}
 	return biomass_correction;
@@ -285,6 +288,9 @@ double *getTracerArray(BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitatType) 
 		break;
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
+        break;
+    default:
+        quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
         break;
 	}
 	return tracerArray;
@@ -381,13 +387,6 @@ double Ecology_Get_Recruitment_Scalar(MSEBoxModel *bm, int sp){
 	if (bm->use_external_scaling) {
 		if(bm->externalBiologyInput->Species_Cohort_Lookup[sp][0][RECRUITMENT_INDEX_ID] != -1){
 			scalar = Get_Group_Scalar(bm, bm->externalBiologyInput, bm->externalBiologyInput->Species_Cohort_Lookup[sp][0][RECRUITMENT_INDEX_ID], bm->current_box, bm->current_layer);
-
-			/*
-			if(bm->current_box == 1 && bm->current_layer == 0 && it_count == 1 && sp == 78)
-				fprintf(bm->logFile, "recruitment rate - time = %f, %s:%d, box %d:%d - scalar = %e,  it_count = %d\n",
-						bm->dayt, FunctGroupArray[sp].groupCode, cohort, bm->current_box, bm->current_layer, scalar, it_count);
-						*/
-
 		}
 	}
 	return scalar;

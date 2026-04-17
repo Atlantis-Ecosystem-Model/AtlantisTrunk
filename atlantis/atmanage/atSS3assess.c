@@ -54,7 +54,7 @@ int Create_Dir_SS3(MSEBoxModel *bm, int sp, int year, FILE *llogfp) {
     struct stat st = {0};
     
     /* Create directory */
-    sprintf(dirName, "%s_SS3_sim_%d_year_%d", FunctGroupArray[sp].groupCode, bm->RBCestimation.sim, year);
+    snprintf(dirName, sizeof(dirName), "%s_SS3_sim_%d_year_%d", FunctGroupArray[sp].groupCode, bm->RBCestimation.sim, year);
     
     if (stat(dirName, &st) == -1) {
         printf("Creating %s\n", dirName);
@@ -101,13 +101,13 @@ void SS330Assessment(MSEBoxModel *bm, int sp, int year, FILE *llogfp) {
     int ret = 0;
 
     printf("Starting SS330Assessment");
-    sprintf(dirName, "%s_SS3_sim_%d_year_%d", FunctGroupArray[sp].groupCode, bm->RBCestimation.sim, year);
+    snprintf(dirName, sizeof(dirName), "%s_SS3_sim_%d_year_%d", FunctGroupArray[sp].groupCode, bm->RBCestimation.sim, year);
     
     
     /* Create directory */
     ret = Create_Dir_SS3(bm, sp, year, llogfp);  // Failure to create handled within that routine
         
-    sprintf(fileName, "WriteSS330Files");
+    snprintf(fileName, sizeof(fileName), "WriteSS330Files");
     WriteSS330Files(bm, sp, year, dirName, fileName);
     
     Run_SS3(bm, dirName);  //TODO: Check this will really run SS3 or do I need to call a script?
@@ -184,7 +184,7 @@ void Run_SS3(MSEBoxModel *bm, char *run_dir) {
     }
 
     // build command string to pass to system
-    sprintf(ss3_cmd, "%s -nohess > mse.junk", ss3_abs);
+    snprintf(ss3_cmd, sizeof(ss3_cmd), "%s -nohess > mse.junk", ss3_abs);
 
     // change to rundir and execute the ss3 binary
     chdir(run_dir);
@@ -198,6 +198,6 @@ void Run_SS3(MSEBoxModel *bm, char *run_dir) {
     // go back to previous directory
     chdir(cwd);
     free(ss3_abs);
-    free(cwd);  // TODO: This correct or cause dump?
+    //free(cwd);  // TODO: This correct or cause dump?
 
 } // Run_SS3

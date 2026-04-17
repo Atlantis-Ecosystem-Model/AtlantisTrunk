@@ -81,7 +81,7 @@ void readEconIndicatorParamXML(MSEBoxModel *bm, char *fileName, xmlNodePtr paren
 
 	index = Util_XML_Get_Fishery_Param_Index(econIndicatorInputs, numEconIndicators, paramID);
 
-	sprintf(errorString, "%s/%s", nodeName, econIndicatorInputs[index].tag);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, econIndicatorInputs[index].tag);
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, econIndicatorInputs[index].tag);
 	if (attributeGroup == NULL)
 		quit("readEconIndicatorParamXML - %s attribute group not found.\n", errorString);
@@ -104,41 +104,6 @@ void readEconIndicatorParamXML(MSEBoxModel *bm, char *fileName, xmlNodePtr paren
 	free(nodeName);
 }
 
-//sprintf(EconIndicatorInputNames[nboat_id], "%s", "nboat");
-//	sprintf(EconIndicatorInputNames[boat_size_id], "%s", "boat_size");
-//	sprintf(EconIndicatorInputNames[crew_size_id], "%s", "crewsize");
-//	sprintf(EconIndicatorInputNames[home_port_id], "%s", "home_port");
-//	sprintf(EconIndicatorInputNames[FCwgtscale_id], "%s", "FCwgtscale");
-//	sprintf(EconIndicatorInputNames[max_trip_length_id], "%s", "triplength");
-//	sprintf(EconIndicatorInputNames[ShotLength_id], "%s", "ShotLength");
-//	sprintf(EconIndicatorInputNames[down_time_id], "%s", "DownTime");
-//	sprintf(EconIndicatorInputNames[choicebuffer_id], "%s", "choicebuffer");
-//	sprintf(EconIndicatorInputNames[effortDiscount_id], "%s", "EffortDiscount");
-//	sprintf(EconIndicatorInputNames[bycatchDiscount_id], "%s", "BycatchDiscount");
-//	sprintf(EconIndicatorInputNames[var_cost_id], "%s", "varcost");
-//	sprintf(EconIndicatorInputNames[supp_cost_id], "%s", "suppcost");
-//	sprintf(EconIndicatorInputNames[switch_cost_id], "%s", "switchcost");
-//	sprintf(EconIndicatorInputNames[newboat_cost_id], "%s", "newcost");
-//	sprintf(EconIndicatorInputNames[tol_debt_id], "%s", "TolDebt");
-//	sprintf(EconIndicatorInputNames[fuel_cost_id], "%s", "fuelcost");
-//	sprintf(EconIndicatorInputNames[gear_cost_id], "%s", "gearcost");
-//	sprintf(EconIndicatorInputNames[unload_cost_id], "%s", "unloadcost");
-//	sprintf(EconIndicatorInputNames[fixed_cost_id], "%s", "fixedcost");
-//	sprintf(EconIndicatorInputNames[capital_cost_id], "%s", "capitalcost");
-//	sprintf(EconIndicatorInputNames[crewshare_id], "%s", "crewshare");
-//	sprintf(EconIndicatorInputNames[mgmt_cost_id], "%s", "mgmtcost");
-//	sprintf(EconIndicatorInputNames[flexweight_orig_id], "%s", "flexweight");
-//	sprintf(EconIndicatorInputNames[resale_id], "%s", "resale");
-//	sprintf(EconIndicatorInputNames[buyout_id ], "%s", "buyout");
-//	sprintf(EconIndicatorInputNames[propbuyback_id], "%s", "propbuyback");
-//	sprintf(EconIndicatorInputNames[flag_econind_id], "%s", "flageconind");
-//	sprintf(EconIndicatorInputNames[flag_indtype_id], "%s", "flagtypeind");
-//	sprintf(EconIndicatorInputNames[betarev_id], "%s", "betarev");
-//	sprintf(EconIndicatorInputNames[minprob_id], "%s", "minprob");
-//	sprintf(EconIndicatorInputNames[down_time_id], "%s", "minDownTime");
-//	sprintf(EconIndicatorInputNames[hold_capacity_id], "%s", "hold_capacity");
-
-
 void Read_Economic_Flags(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 
 	xmlNodePtr groupingNode, childGroupingNode;
@@ -155,7 +120,8 @@ void Read_Economic_Flags(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 	bm->MultiPlanEffort = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, binary_check, "MultiPlanEffort");
 	bm->EconLimDemand = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, binary_check, "EconLimDemand");
 	bm->OrigEconCalc = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, binary_check, "OrigEconCalc");
-	bm->econweekly = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, binary_check, "econweekly");
+    bm->MonthlyProfitUpdate = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, binary_check, "MonthlyProfitUpdate");
+    bm->econweekly = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, binary_check, "econweekly");
 	bm->quota_trading = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, binary_check, "quota_trading");
 
 	bm->fish_withoutQ = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, binary_check, "fish_withoutQ");
@@ -268,7 +234,7 @@ static void Read_Market_Value(MSEBoxModel *bm, char *fileName, xmlNodePtr parent
 		quit("Market_Characteristics/Market_Intercept attribute group not found in input file %s.\n", fileName);
 
 	for (index = 0; index < bm->K_num_markets; index++) {
-		sprintf(str, "Market_%d", index);
+		snprintf(str, sizeof(str), "Market_%d", index);
 		if(Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, "Market_Characteristics/Market_Intercept", attributeNode, no_checking, str, &values, bm->K_num_tot_sp) == FALSE){
 			quit("Error: Unable to find parameter 'Market_Characteristics/Market_Intercept/%s' in input file %s\n", str, fileName);
 		}
@@ -291,9 +257,9 @@ static void Read_Monthly_Market_Value(MSEBoxModel *bm, char *fileName, xmlNodePt
 		quit("Read_Monthly_Market_Value: MonthlyMarket attribute group not found in input file %s.\n", fileName);
 
 	for (index = 0; index < bm->K_num_markets; index++) {
-		sprintf(str, "MarketCoefft%d", index + 1);
+		snprintf(str, sizeof(str), "MarketCoefft%d", index + 1);
 
-		sprintf(errorString, "Market_Characteristics/Market_Intercept/%s", str);
+		snprintf(errorString, sizeof(errorString), "Market_Characteristics/Market_Intercept/%s", str);
 		attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, groupingNode, str);
 		if (attributeNode == NULL)
 			quit("Market_Characteristics/Market_Intercept/%s attribute group not found.\n", str);
@@ -361,7 +327,7 @@ void Read_Quota_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 	bm->recon_buffer = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, no_checking, "recon_buffer");
 
 	subGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "LeaseValues");
-	if (groupingNode == NULL)
+	if (subGroupingNode == NULL)
 		quit("Read_Quota_XML: LeaseValues attribute group not found in input file %s.\n", fileName);
 
 	/* Newell et al lease price model coefficients */
@@ -379,7 +345,7 @@ void Read_Quota_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 	bm->minValue = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, subGroupingNode, no_checking, "minValue");
 
 	subGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "FleetSwitching");
-	if (groupingNode == NULL)
+	if (subGroupingNode == NULL)
 		quit("Read_Quota_XML: FleetSwitching attribute group not found in input file %s.\n", fileName);
 
 	/* Fleet switching and decomission parameters - from Thebaud et al 2006 and Guyader 2002 */
@@ -394,7 +360,7 @@ void Read_Quota_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 	bm->new_coefft = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, subGroupingNode, no_checking, "new_coefft");
 
 	subGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "BuyBack");
-	if (groupingNode == NULL)
+	if (subGroupingNode == NULL)
 		quit("Read_Quota_XML: BuyBack attribute group not found in input file %s.\n", fileName);
 
 	readEconIndicatorParamXML(bm, fileName, subGroupingNode, propbuyback_id);
@@ -402,7 +368,7 @@ void Read_Quota_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 	Util_XML_Read_Fishery_Param(bm, fileName, subGroupingNode, buybackdate_id);
 
 	subGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "QuotaPurchase");
-	if (groupingNode == NULL)
+	if (subGroupingNode == NULL)
 		quit("Read_Quota_XML: QuotaPurchase attribute group not found in input file %s.\n", fileName);
 
 	/* Quota purchase coefficents */
@@ -418,7 +384,7 @@ void Read_Quota_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 
 
 	subGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "FriendShip");
-	if (groupingNode == NULL)
+	if (subGroupingNode == NULL)
 		quit("Read_Quota_XML: FriendShip attribute group not found in input file %s.\n", fileName);
 
 	Util_XML_Get_Value_String(fileName, ATLANTIS_ATTRIBUTE, FALSE, subGroupingNode, "friendship_network_file", bm->friendship_file);
@@ -531,7 +497,6 @@ void Read_Subfleet_Characteristics_XML(MSEBoxModel *bm, char *fileName, xmlNodeP
 	readEconIndicatorParamXML(bm, fileName, subGroupingNode, fixed_cost_id);
 
 	readEconIndicatorParamXML(bm, fileName, subGroupingNode, capital_cost_id);
-	readEconIndicatorParamXML(bm, fileName, subGroupingNode, capital_cost_id);
 
 	debtNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, subGroupingNode, "GeneralDebt");
 	if (debtNode == NULL)
@@ -568,13 +533,13 @@ void Read_Own_Quota_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 
 		if (FunctGroupArray[sp].isFished == TRUE){
-			sprintf(errorString, "OwnQuota/%s", FunctGroupArray[sp].groupCode);
+			snprintf(errorString, sizeof(errorString), "OwnQuota/%s", FunctGroupArray[sp].groupCode);
 			attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, groupingNode, FunctGroupArray[sp].groupCode);
 			if (attributeNode == NULL)
 				quit("%s attribute group not found.\n", errorString);
 
 			for (index = 0; index < bm->K_max_num_subfleet; index++) {
-				sprintf(str, "sub%d", index + 1);
+				snprintf(str, sizeof(str), "sub%d", index + 1);
 				if(Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, errorString, attributeNode, no_checking, str, &values, bm->K_num_fisheries) == FALSE){
 					quit("Error: Unable to find parameter '%s/%s' in input file %s\n", errorString, str, fileName);
 				}
@@ -610,13 +575,13 @@ void Read_Black_Book_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 				quit("TemporalBlackBook/%s attribute group not found.\n", FunctGroupArray[sp].groupCode);
 
 			for (monthIndex = 0; monthIndex < 12; monthIndex++) {
-				sprintf(errorString, "TemporalBlackBook/%s/%s", FunctGroupArray[sp].groupCode, monthStrings[monthIndex]);
+				snprintf(errorString, sizeof(errorString), "TemporalBlackBook/%s/%s", FunctGroupArray[sp].groupCode, monthStrings[monthIndex]);
 				monthNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, attributeNode, monthStrings[monthIndex]);
 				if (monthNode == NULL)
 					quit("%s attribute group not found.\n", errorString);
 
 				for (index = 0; index < bm->K_max_num_subfleet; index++) {
-					sprintf(str, "sub%d", index + 1);
+					snprintf(str, sizeof(str), "sub%d", index + 1);
 					if(Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, errorString, monthNode, no_checking, str, &values, bm->K_num_fisheries) == FALSE){
 						quit("Error: Unable to find parameter '%s/%s' in input file %s\n", errorString, str, fileName);
 					}
@@ -634,25 +599,18 @@ void Read_Black_Book_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 		quit("Read_Black_Book_XML: TemporalBlackBook attribute group not found in input file %s.\n", fileName);
 
 	for (fisheryIndex = 0; fisheryIndex < bm->K_num_fisheries; fisheryIndex++) {
-
-		if (fisheryIndex == betarev_id || fisheryIndex == minprob_id) {
-			// If bm->MultiPlanEffort then these params shouldn't be loaded or present.
-			if (bm->MultiPlanEffort)
-				continue;
-
-		}
 		attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, subGroupingNode, FisheryArray[fisheryIndex].fisheryCode);
 		if (attributeNode == NULL)
 			quit("SpatialEffortBlackBook/%s attribute group not found.\n", FisheryArray[fisheryIndex].fisheryCode);
 
 		for (monthIndex = 0; monthIndex < 12; monthIndex++) {
-			sprintf(errorString, "SpatialEffortBlackBook/%s/%s", FisheryArray[fisheryIndex].fisheryCode, monthStrings[monthIndex]);
+			snprintf(errorString, sizeof(errorString), "SpatialEffortBlackBook/%s/%s", FisheryArray[fisheryIndex].fisheryCode, monthStrings[monthIndex]);
 			monthNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, attributeNode, monthStrings[monthIndex]);
 			if (monthNode == NULL)
 				quit("%s attribute group not found.\n", errorString);
 
 			for (index = 0; index < bm->K_max_num_subfleet; index++) {
-				sprintf(str, "sub%d", index + 1);
+				snprintf(str, sizeof(str), "sub%d", index + 1);
 				if(Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, errorString, monthNode, no_checking, str, &values, bm->nbox) == FALSE){
 					quit("Error: Unable to find parameter '%s/%s' in input file %s\n", errorString, str, fileName);
 				}
@@ -674,13 +632,13 @@ void Read_Black_Book_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 			quit("SpatialCPUEBlackBook/%s attribute group not found.\n", FisheryArray[fisheryIndex].fisheryCode);
 
 		for (monthIndex = 0; monthIndex < 12; monthIndex++) {
-			sprintf(errorString, "SpatialCPUEBlackBook/%s/%s", FisheryArray[fisheryIndex].fisheryCode, monthStrings[monthIndex]);
+			snprintf(errorString, sizeof(errorString), "SpatialCPUEBlackBook/%s/%s", FisheryArray[fisheryIndex].fisheryCode, monthStrings[monthIndex]);
 			monthNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, attributeNode, monthStrings[monthIndex]);
 			if (monthNode == NULL)
 				quit("%s attribute group not found.\n", errorString);
 
 			for (index = 0; index < bm->K_max_num_subfleet; index++) {
-				sprintf(str, "sub%d", index + 1);
+				snprintf(str, sizeof(str), "sub%d", index + 1);
 				if(Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, errorString, monthNode, no_checking, str, &values, bm->nbox) == FALSE){
 					quit("Error: Unable to find parameter '%s/%s' in input file %s\n", errorString, str, fileName);
 				}
@@ -734,9 +692,13 @@ void Read_Dan_Holland_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) 
 
 	free(values);
 
-	readEconIndicatorParamXML(bm, fileName, groupingNode, betarev_id);
-	readEconIndicatorParamXML(bm, fileName, groupingNode, minprob_id);
-
+    
+    // If bm->MultiPlanEffort then these params shouldn't be loaded or present.
+    if (!bm->MultiPlanEffort) {
+        readEconIndicatorParamXML(bm, fileName, groupingNode, betarev_id);
+        readEconIndicatorParamXML(bm, fileName, groupingNode, minprob_id);
+    }
+    
 	/* Read in the tow time values */
 	subGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, groupingNode, "TowTime");
 	if (subGroupingNode == NULL)

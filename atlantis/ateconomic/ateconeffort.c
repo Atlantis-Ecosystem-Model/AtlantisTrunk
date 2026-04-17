@@ -210,6 +210,9 @@ void Monthly_Effort_Schedule(MSEBoxModel *bm, FILE *llogfp) {
 					if (redo_needed) {
 						for (month = bm->MofY; month < 12; month++) {
 							totppi = 0; /* Total expected profit */
+                            if(bm->MonthlyProfitUpdate) {
+                                oldtotpi = 0; /* Update monthly, without this on it is only upating annually */
+                            }
 							ExpEffort = bm->EffortSchedule[nf][ns][month][expect_id];
 							for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 								if (FunctGroupArray[sp].isFished == TRUE) {
@@ -873,9 +876,8 @@ void Multi_Plan_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
  * \brief Dan Holland effort model - originally developed for the northern california current
  */
 void Holland_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
-	int nf, ij, ns, sp, do_debug_base, do_debug = 0, regid, trip_length, do_biTAC, mth, nss, use_history, need_to_init;
-	double cumcatch, toteffort, FCpressure, spbiom, q, tolerable_debt, TotCC, use_minprob, minprob, maxprob, totallowedcatch, totscore, max_hold, regTAC_scale,
-			totTAC, catchleft, totcatch, regcatch_nf, regcatch, diff_catch, max_quota_left, totmaxland, totland_overall, maxland, catch_here, hold_size;
+	int nf, ij, ns, sp, do_debug_base, do_debug = 0, regid, trip_length, do_biTAC, mth, nss, use_history, need_to_init, do_consoldation = 0;
+	double cumcatch, toteffort, FCpressure, spbiom, q, tolerable_debt, TotCC, use_minprob, minprob, maxprob, totallowedcatch, totscore, max_hold, regTAC_scale, totTAC, catchleft, totcatch, regcatch_nf, regcatch, diff_catch, max_quota_left, totmaxland, totland_overall, maxland, catch_here, hold_size;
 
 	if (((bm->debug == debug_econeffort) || (bm->debug == debug_effort)) && (bm->dayt > bm->checkstart)) {
 		do_debug_base = 1;
@@ -907,7 +909,7 @@ void Holland_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
 						 */
 					}
 					/* Get total current TAC - leave in kg as tot_cumcatch is in kg here */
-                    if(!FunctGroupArray[sp].isTAC || (bm->TACamt[sp][nf][now_id] < no_quota)) {
+                    if(FunctGroupArray[sp].isTAC && (bm->TACamt[sp][nf][now_id] < no_quota)) {
                         totTAC += regTAC_scale * bm->TACamt[sp][nf][now_id];
                     }
 
@@ -971,491 +973,497 @@ void Holland_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
 			else
 				do_biTAC = 0; /* Use Dan holland version of ITQ */
 
-			for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) {
-				/* If no boats in the subfleet currently skip ahead */
-				if (!bm->SUBFLEET_ECONprms[nf][ns][nboat_id]) {
-					continue;
-				}
-
-				/* Initalise total monthly effort tracker */
-				if (bm->newmonth)
-					bm->EffortSchedule[nf][ns][bm->MofY][current_id] = 0;
-
-				/* Check time to update (check to make sure just happens once per day is done back
-				 in Economics()
-				 */
-				trip_length = (int) (bm->SUBFLEET_ECONprms[nf][ns][max_trip_length_id]);
-				if (trip_length == 0)
-					trip_length = 1;
-
-				if ((bm->TofY % trip_length) == 0) {
-
-					/* Initialise values to update */
-					tot_marg_rent[nf][ns] = 0;
-					toteffort = 0;
-					totscore = 0;
-					maxprob = 0;
-					minprob = MAXDOUBLE;
-
-					/* Check if new bimonthly period */
-					if (bm->BiM != bm->LastBiM) {
-
-						/* Reset prices */
-						for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-							if (FunctGroupArray[sp].isFished == TRUE) {
-								for (ij = 0; ij < bm->nbox; ij++) {
-									bm->ECONexprice[nf][ns][sp][ij][expect_id] = bm->ECONexprice[nf][ns][sp][ij][hist_id];
-								}
-								for (ij = 0; ij < bm->K_num_active_reg; ij++) {
-									totland[sp][ij] = 0;
-								}
-							}
-						}
-
-					}
-
-					/* Initialise quota_check */
-					for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-						if (FunctGroupArray[sp].isFished == TRUE) {
-							quota_check[sp] = 0;
-						}
-					}
-
-					for (ij = 0; ij < bm->nbox; ij++) {
-						/* More initialisation */
-						bm->Effort_hdistrib[ij][nf][today_effort] = 0;
-						bm->Effort_hdistrib[ij][nf][calc_effort] = 0;
-						bm->Effort_hdistrib[ij][nf][new_today_effort] = 0;
-						bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] = 0;
-						if (bm->boxes[ij].type != BOUNDARY) {
-							regid = bm->regID[ij];
-
-							/* In case where using ITQ look at whether exhausted quota or not. If exhausted
-							 set quota prices to an (arbitrary) high_price to prevent or deter fleets from
-							 sending effort to locations where a lot of that species has been traditionally caught.
-
-							 At present as Dan assumes quota allocated where needed then cover regional component
-							 of total quota holding in the quota allocation step not here.
-							 */
-							for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-								if (FunctGroupArray[sp].isFished == TRUE) {
-									if (!do_biTAC && !quota_check[sp]) {
-										cumcatch = bm->QuotaAlloc[nf][ns][sp][cumboatcatch_id];
-
-										/* Update how much quota has been leased */
-										if (cumcatch > bm->QuotaAlloc[nf][ns][sp][owned_id]) {
-											diff_catch = cumcatch - bm->QuotaAlloc[nf][ns][sp][owned_id];
-											if (diff_catch > bm->SP_FISHERYprms[sp][nf][catch_allowed])
-												bm->QuotaAlloc[nf][ns][sp][leased_id] += (bm->SP_FISHERYprms[sp][nf][catch_allowed] * bm->X_CN * mg_2_kg);
-											else
-												bm->QuotaAlloc[nf][ns][sp][leased_id] += diff_catch;
-										}
-
-										/* Store amount of total leased quota that was leased in the last round of calculations - since calculating lease prices */
-										if (bm->QuotaAlloc[nf][ns][sp][leased_id] > bm->QuotaAlloc[nf][ns][sp][oldleased_id]) {
-											bm->QuotaAlloc[nf][ns][sp][newleased_id] = bm->QuotaAlloc[nf][ns][sp][leased_id]
-													- bm->QuotaAlloc[nf][ns][sp][oldleased_id];
-										}
-
-										/* See if any quota remaining anywhere - if not set quotaprice to high_price so try to avoid it */
-										if (quota_left[sp][regid] == 0) {
-											bm->QuotaAlloc[nf][ns][sp][quotaprice_id] = bm->high_price;
-
-											//fprintf(llogfp,"Time: %e, %s-%d on %s quotaprice set to %e\n",
-											//	bm->dayt, FisheryArray[nf].fisheryCode, ns, FunctGroupArray[sp].groupCode, bm->QuotaAlloc[nf][ns][sp][quotaprice_id]);
-										}
-										quota_check[sp] = 1;
-
-										/*
-										 if((sp == FPO_id) && (ij == 1) && (!bm->newweek))
-										 fprintf(llogfp,"Time: %e, %s-%d on %s quotaleft %e, quotaprice: %e\n",
-										 bm->dayt, FisheryArray[nf].fisheryCode, ns, FunctGroupArray[sp].groupCode, quota_left[sp][regid], bm->QuotaAlloc[nf][ns][sp][quotaprice_id]);
-										 */
-									}
-
-									/* Determine prices for each functional group and fleet/subfleet. These are
-									 set to zero if the cumulative trip limit has been reached for that
-									 combination of fleet/subfleet and functional group.
-									 */
-									if (do_biTAC && ((bm->TotCumBiCatch[sp][nf] * bm->RegionalData[sp][regid][reg_catch_id])
-											> (bm->BiTAC_sp[bm->BiM][regid][sp][now_id] * kg_2_mg / bm->X_CN))) {
-										/* When using cumulative trip limits set expected price to zero to discourage further targetting */
-										bm->ECONexprice[nf][ns][sp][ij][expect_id] = 0.0;
-									} else {
-										/* When using ITQ get net price as market price - quota price for each species
-										 NB if just took quotaprice from expected price then that may happen muliple times in
-										 bimonth period (between resets) and would have compounding losses, which is not
-										 appropriate
-										 */
-										bm->ECONexprice[nf][ns][sp][ij][expect_id] = (bm->ECONexprice[nf][ns][sp][ij][hist_id]
-												- bm->QuotaAlloc[nf][ns][sp][quotaprice_id]);
-
-										//fprintf(llogfp,"Time: %e, %s for %s-%d box: %d, ECONexprice: %e, [quotaprice_id]: %e\n",
-										//	bm->dayt, FunctGroupArray[sp].groupCode, FisheryArray[nf].fisheryCode, ns, ij, bm->ECONexprice[nf][ns][sp][ij][expect_id], bm->QuotaAlloc[nf][ns][sp][quotaprice_id]);
-									}
-									/* Determine catch expectations as:
-
-									 CPUE_for_area * expected_total_tow_time
-
-									 with tow_time calculated as
-
-									 prop_day_fishing * trip_length
-
-									 For now, these are calculated using the true CPUE given the current state
-									 of the stock and the catchability coefficient(i.e., fleet has perfect information).
-									 It would be possible to add noise to this, or build an expectation based on
-									 previous catch history. In Dan Holland's opinion the latter is problematic because
-									 of holes in the data (specifically: what is the expectation for areas not fished
-									 during period used to model expectations?)
-
-									 */
-									spbiom = bm->targetspbiom[sp][ij] * bm->X_CN * mg_2_kg;
-									q = bm->SP_FISHERYprms[sp][nf][q_id];
-									/* Get expected catches - store in SpatialBlackBook as
-									 it will become the basis of the effort distribution
-
-									 Accumulate over species so not just set by the final
-									 species considered (which could zero it again).
-									 */
-									catch_here = spbiom * q * prop_tow_time[nf][ns][ij];
-									bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] += catch_here;
-									totland[sp][regid] += catch_here;
-
-									//fprintf(llogfp,"Time: %e, %s-%d mth: %d box: %d SpatialBlackBook: %e, catch_here: %e, spbiom: %e, q: %e, prop_tow_time: %e\n",
-									//	bm->dayt, FisheryArray[nf].fisheryCode, ns, bm->MofY, ij, bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id], catch_here, spbiom, q, prop_tow_time[nf][ns][ij]);
-								}
-							}
-						}
-					}
-
-					/* Get the maximum catch possible for the trip */
-					for (ij = 0; ij < bm->nbox; ij++) {
-						if (bm->boxes[ij].type != BOUNDARY) {
-							regid = bm->regID[ij];
-							totmaxland = 0;
-							totland_overall = 0;
-							for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-								if (FunctGroupArray[sp].isFished == TRUE) {
-									/* Used to be if(do_biTAC && (totland[sp][regid] > maxland)) */
-									if (do_biTAC) {
-										/* If using cumulative trip limits, expected landings can not exceed the difference
-										 between cumulative landings and the bimonthly trip limit.
-										 */
-										catchleft = (bm->BiTAC_sp[bm->BiM][regid][sp][now_id] * kg_2_mg / bm->X_CN) - (bm->TotCumBiCatch[sp][nf]
-												* bm->RegionalData[sp][regid][reg_catch_id]);
-										maxland = min(totland[sp][regid],catchleft);
-
-										//fprintf(llogfp, "Time: %e, %s regid: %d, maxland: %e, totland: %e, catchleft: %e, BiTAC: %e, CumBiCatch: %e, RegData: %e\n",
-										//	bm->dayt, FunctGroupArray[sp].groupCode, regid, maxland, totland[sp][regid], catchleft, (bm->BiTAC_sp[bm->BiM][regid][sp][now_id] * kg_2_mg / bm->X_CN), bm->TotCumBiCatch[sp][nf], bm->RegionalData[sp][regid][reg_catch_id]);
-
-									} else {
-										/* If using quotas the expected landings can't exceed the quota remaining */
-										if (bm->ITQ_think_ahead) {
-											/* With forethought spread the remaining quota through the year in proportion to
-											 the catch per month
-											 */
-											catchleft = 0;
-											for (mth = bm->MofY; mth < 12; mth++) {
-												catchleft += bm->BlackBook[nf][ns][sp][mth][expect_id];
-											}
-											maxland
-													= min(totland[sp][regid],(quota_left[sp][regid] * bm->BlackBook[nf][ns][sp][bm->MofY][expect_id] / (catchleft + small_num)));
-
-											/* Cap based on hold capacity - using full hold for every boat every day as maximum bound physically possible
-											 Converting from tonnes to kg as we go (totland etc has been calculated in kg).
-											 */
-											hold_size = bm->SUBFLEET_ECONprms[nf][ns][hold_capacity_id] * 1000.0;
-											max_hold = hold_size * bm->SUBFLEET_ECONprms[nf][ns][nboat_id] * 30.0;
-											maxland = min(maxland, max_hold);
-
-											//fprintf(llogfp,"Time: %e, %s regid: %d, maxland: %e, totland: %e, quota_left: %e, BlackBook: %e, catchleft: %e, max_hold: %e\n",
-											//	bm->dayt, FunctGroupArray[sp].groupCode, regid, maxland, totland[sp][regid], quota_left[sp][regid], bm->BlackBook[nf][ns][sp][bm->MofY][expect_id], catchleft, max_hold);
-
-										} else {
-											/* In the case with no forethought then the only check on catch is quota left */
-											maxland = min(totland[sp][regid],quota_left[sp][regid]);
-
-											/* Cap based on hold capacity - using full hold for every boat every day as maximum bound physically possible
-											 Converting from tonnes to kg as we go (totland etc has been calculated in kg).
-											 */
-											hold_size = bm->SUBFLEET_ECONprms[nf][ns][hold_capacity_id] * 1000.0;
-											max_hold = hold_size * bm->SUBFLEET_ECONprms[nf][ns][nboat_id] * 30.0;
-											maxland = min(maxland, max_hold);
-
-											/**
-											 if(sp == FVD_id){
-											 fprintf(llogfp,"Time: %e, %s regid: %d, maxland: %e, totland: %e, quota_left: %e, max_hold: %e\n",
-											 bm->dayt, FunctGroupArray[sp].groupCode, regid, maxland, totland[sp][regid], quota_left[sp][regid], max_hold);
-											 }
-											 **/
-										}
-									}
-									/* Cumulative maxland value (based on what is allowed catch from outstanding quotas for each species) */
-									totmaxland += maxland;
-									totland_overall += totland[sp][regid];
-								}
-							}
-
-							//fprintf(llogfp,"Time: %e box-%d %s-%d SpatialBlackBook[expect] starts: %e ", bm->dayt, ij, FisheryArray[nf].fisheryCode, ns, bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id]);
-
-							bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] = (bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] / (totland_overall
-									+ small_num)) * totmaxland;
-
-							//fprintf(llogfp,"ends: %e, totland: %e, totmaxland: %e\n", bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id], totland_overall, totmaxland);
-
-							/* Calculate expected revenue for all areas and subfleets by multiplying
-							 the expected catch by prices and summing over groups.
-							 Prices are zero if trip limits have been met.
-
-							 Stored the value in total marginal rent array here as effectively the same thing and
-							 plays the same role in the alternate economics model so rather than duplicate arrays used
-							 the old name here.
-
-							 To do the calculation on a per species basis we need to multiply spatial total catch by:
-							 species price * proportion of the total catch made up by the species
-							 */
-							tot_marg_rent[nf][ns] = 0;
-							for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-								if (FunctGroupArray[sp].isFished == TRUE) {
-									tot_marg_rent[nf][ns] += bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] * bm->ECONexprice[nf][ns][sp][ij][expect_id]
-											* (totland[sp][regid] / (totland_overall + small_num));
-
-									//fprintf(llogfp, "Time: %e, %s (%d) mth: %d, ij: %d, tot_marg_rent: %e, SpatialBlackBook: %e, ECONexprice: %e, totland[%s][%d]: %e, totland_overall: %e\n",
-									//	bm->dayt, FisheryArray[nf].fisheryCode, ns, bm->MofY, ij, tot_marg_rent[nf][ns], bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id], bm->ECONexprice[nf][ns][sp][ij][expect_id], FunctGroupArray[sp].groupCode, regid, totland[sp][regid], totland_overall);
-								}
-							}
-							/* Create net expected revenue for each choice by subtracting costs from total expected revenue
-							 Note that: Observer costs are included in fixed costs of trip and mgmt_cost_id is the % of
-							 revenue taken as recovered costs of management.
-							 */
-							tot_marg_rent[nf][ns] *= (1 - bm->SUBFLEET_ECONprms[nf][ns][mgmt_cost_id]);
-							tot_marg_rent[nf][ns] -= bm->SUBFLEET_ECONprms[nf][ns][fixed_cost_id];
-
-							//fprintf(llogfp, "Time: %e, %s (%d) mgmt_cost_correction: %e, fixed_cost: %e\n",
-							//	bm->dayt, FisheryArray[nf].fisheryCode, ns, (1 - bm->SUBFLEET_ECONprms[nf][ns][mgmt_cost_id]), bm->SUBFLEET_ECONprms[nf][ns][fixed_cost_id]);
-
-							/* Determine for each potential fishing choice whether the expected
-							 profits are high enough to justify the trip. Effort reset to zero for that
-							 box if returns (profit) not expected to be high enough.
-							 */
-							tolerable_debt = -1.0 * bm->SUBFLEET_ECONprms[nf][ns][tol_debt_id];
-							if (tot_marg_rent[nf][ns] < tolerable_debt) {
-								bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] = 0;
-								tot_marg_rent[nf][ns] = 0;
-							}
-							/* Calculate expected revenue per unit effort across areas for each fleet.
-							 Store the revenue map in the Effort_hdistrib as it is a draft effort
-							 allocation map.
-							 */
-							bm->Effort_hdistrib[ij][nf][new_today_effort] = tot_marg_rent[nf][ns] / (bm->SUBFLEET_ECONprms[nf][ns][max_trip_length_id]
-									+ small_num);
-							toteffort += bm->Effort_hdistrib[ij][nf][new_today_effort];
-						}
-					}
-
-					for (ij = 0; ij < bm->nbox; ij++) {
-						if (bm->boxes[ij].type != BOUNDARY) {
-
-							/* Normalise the effort distribution */
-							bm->Effort_hdistrib[ij][nf][new_today_effort] /= (toteffort + small_num);
-
-							/* Calculate a score for each area based on expected revenue and spatial closures */
-							bm->Effort_hdistrib[ij][nf][calc_effort] = bm->MPA[ij][nf] * exp(bm->SUBFLEET_ECONprms[nf][ns][betarev_id]
-									* bm->Effort_hdistrib[ij][nf][new_today_effort]);
-							totscore += bm->Effort_hdistrib[ij][nf][calc_effort];
-
-							//fprintf(llogfp,"Time: %e, %s-%d box-%d calceffort: %e, MPA: %e, exprev: %e, betarev: %e, newtodayeffort: %e\n",
-							//	bm->dayt, FisheryArray[nf].fisheryCode, ns, ij, bm->Effort_hdistrib[ij][nf][calc_effort], bm->MPA[ij][nf], exp(bm->SUBFLEET_ECONprms[nf][ns][betarev_id] * bm->Effort_hdistrib[ij][nf][new_today_effort]), bm->SUBFLEET_ECONprms[nf][ns][betarev_id], bm->Effort_hdistrib[ij][nf][new_today_effort]);
-						}
-					}
-
-					for (ij = 0; ij < bm->nbox; ij++) {
-						if (bm->boxes[ij].type != BOUNDARY) {
-							/* Calculates probabilities for each location by normalising scores stored in Effort_hdistrib */
-							bm->Effort_hdistrib[ij][nf][calc_effort] /= (totscore + small_num);
-
-							/* Find maximum and minimum realised probabilities */
-							if (maxprob < bm->Effort_hdistrib[ij][nf][calc_effort])
-								maxprob = bm->Effort_hdistrib[ij][nf][calc_effort];
-
-							if (minprob > bm->Effort_hdistrib[ij][nf][calc_effort])
-								minprob = bm->Effort_hdistrib[ij][nf][calc_effort];
-						}
-					}
-
-					/* To make sure at least one area is chosen, the threshold probability is set equal
-					 to the maximum realised probabilty score (if that is below the prespecified threshold)
-					 */
-
-					if (maxprob < bm->SUBFLEET_ECONprms[nf][ns][minprob_id])
-						use_minprob = maxprob;
-					else
-						use_minprob = bm->SUBFLEET_ECONprms[nf][ns][minprob_id];
-
-					//fprintf(llogfp, "%e %s-%d min: %e, max: %e, usemin: %e\n",
-					//	bm->dayt, FisheryArray[nf].fisheryCode, ns, maxprob, bm->SUBFLEET_ECONprms[nf][ns][minprob_id], use_minprob);
-
-					totscore = 0;
-					for (ij = 0; ij < bm->nbox; ij++) {
-						if (bm->boxes[ij].type != BOUNDARY) {
-							/* Eliminate choices with probabilties below minimum probabilty threshold.*/
-
-							//fprintf(llogfp, "%e %s-%d in %d calceffort: %e vs usemin: %e\n", bm->dayt, FisheryArray[nf].fisheryCode, ns, ij, bm->Effort_hdistrib[ij][nf][calc_effort], use_minprob);
-
-							if (use_minprob > bm->Effort_hdistrib[ij][nf][calc_effort]) {
-								bm->Effort_hdistrib[ij][nf][calc_effort] = 0;
-
-								//fprintf(llogfp, "%e %s-%d in %d newcalceffort = 0\n", bm->dayt, FisheryArray[nf].fisheryCode, ns, ij);
-
-							} else {
-								/* Calculate last draft of location choices bringing in expected profit,
-								 distribution of probabilitis vs minimum threshold and pattern of closed areas
-								 */
-								bm->Effort_hdistrib[ij][nf][calc_effort] *= bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] * bm->MPA[ij][nf];
-
-								//fprintf(llogfp, "%e %s-%d in %d newcalceffort: %e (expect: %e, MPA: %e)\n",
-								//	bm->dayt, FisheryArray[nf].fisheryCode, ns, ij, bm->Effort_hdistrib[ij][nf][calc_effort], bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id], bm->MPA[ij][nf]);
-							}
-							totscore += bm->Effort_hdistrib[ij][nf][calc_effort];
-						}
-					}
-
-					for (ij = 0; ij < bm->nbox; ij++) {
-						if (bm->boxes[ij].type != BOUNDARY) {
-
-							/* Renormalize so that available effort is spread across the remaining trips
-							 in proportion to choice scores that total 1 unless no areas are fished
-							 */
-							bm->Effort_hdistrib[ij][nf][calc_effort] /= (totscore + small_num);
-
-							/* Calculate applied effort as
-
-							 prop_fleet_in_area * fleet_size * prop_time_towing * prob_fleet_not_layover
-
-							 Note all calculations above lead to final proportional distribution, which is
-							 stored in bm->SpatialBlackBook[nf][ns][bm->MofY][ij][current_id]
-							 */
-							FCpressure = bm->Effort_hdistrib[ij][nf][calc_effort] * bm->SUBFLEET_ECONprms[nf][ns][nboat_id] * prop_tow_time[nf][ns][ij] * (1
-									- bm->SUBFLEET_ECONprms[nf][ns][down_time_id]);
-
-							bm->Effort_hdistrib[ij][nf][today_effort] += FCpressure;
-
-							/*
-							 if(nf == trapBMS_id)
-							 fprintf(llogfp, "Time: %e, %s box-%d, FCpressure: %e, today_effort: %e\n",
-							 bm->dayt, FisheryArray[nf].fisheryCode, ij, FCpressure, bm->Effort_hdistrib[ij][nf][today_effort]);
-							 */
-
-							bm->SpatialBlackBook[nf][ns][bm->MofY][ij][current_id] = FCpressure;
-
-							if (do_debug) {
-								fprintf(llogfp, "%e %s-%d final effort-%d: %e (calc_effort: %e, nboat: %e, prop_tow_time: %e, down_time: %e\n", bm->dayt,
-										FisheryArray[nf].fisheryCode, ns, ij, FCpressure, bm->Effort_hdistrib[ij][nf][calc_effort],
-										bm->SUBFLEET_ECONprms[nf][ns][nboat_id], prop_tow_time[nf][ns][ij], bm->SUBFLEET_ECONprms[nf][ns][down_time_id]);
-							}
-
-							/* Store realised final overall effort */
-							bm->EffortSchedule[nf][ns][bm->MofY][current_id] += FCpressure;
-						}
-					}
-
-					/* Consolidate allowed catch per fleet so can't land fish above limits */
-
-					if (do_biTAC) {
-						/* Consolidation such that don't exceed	bimonthly trip limit - will discard any over catch */
-						for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-							if (FunctGroupArray[sp].isFished == TRUE) {
-								for (regid = 0; regid < bm->K_num_active_reg; regid++) {
-									totallowedcatch
-											= max(0.0,((bm->BiTAC_sp[bm->BiM][regid][sp][now_id] * kg_2_mg / bm->X_CN) - (bm->TotCumBiCatch[sp][nf] * bm->RegionalData[sp][regid][reg_catch_id])));
-									bm->SP_FISHERYprms[sp][nf][catch_allowed] = totallowedcatch;
-
-									/* Check for individual trip limits */
-									if (bm->SP_FISHERYprms[sp][nf][catch_allowed] > bm->SP_FISHERYprms[sp][nf][trip_lim_id])
-										bm->SP_FISHERYprms[sp][nf][catch_allowed] = bm->SP_FISHERYprms[sp][nf][trip_lim_id];
-
-									if (do_debug) {
-										fprintf(llogfp, "Time: %e, reg: %d, %s on %s totallowedcatch: %e, BiTAC_sp: %e, TotCumBiCatch: %e, RegionalData: %e\n",
-												bm->dayt, regid, FisheryArray[nf].fisheryCode, FunctGroupArray[sp].groupCode, totallowedcatch,
-												(bm->BiTAC_sp[bm->BiM][regid][sp][now_id] * kg_2_mg / bm->X_CN), bm->TotCumBiCatch[sp][nf],
-												bm->RegionalData[sp][regid][reg_catch_id]);
-									}
-								}
-							}
-						}
-					} else {
-						/* Consolidate vs held quota */
-						for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-							if (FunctGroupArray[sp].isFished == TRUE) {
-								totcatch = 0;
-								use_history = 0;
-								for (regid = 0; regid < bm->K_num_active_reg; regid++) {
-									totcatch += tot_cumcatch[sp][regid];
-								}
-
-								if (!totcatch) {
-									/* No catch taken from any of the regions could be because its before statistics
-									 are stored for the year (i.e. early in first quarter) or there has been a
-									 closure previously. To reset the calculations try historical catch distribution
-									 instead.
-									 */
-									use_history = 1;
-									for (ij = 0; ij < bm->nbox; ij++) {
-										if (bm->boxes[ij].type != BOUNDARY) {
-											totcatch += bm->SpatialBlackBook[nf][ns][bm->MofY][ij][hist_id] * bm->BlackBook[nf][ns][sp][bm->MofY][hist_id];
-										}
-									}
-								}
-								for (regid = 0; regid < bm->K_num_active_reg; regid++) {
-									/* In each region find proportion of catch taken by the current fleet
-									 (summing across all its subfleets)
-									 */
-									regcatch_nf = 0;
-									if (use_history) {
-										/* If using historical data (as there has been a recent closure or because its before
-										 statistics for the new year have been stored
-										 */
-										for (ij = 0; ij < bm->nbox; ij++) {
-											if (bm->boxes[ij].type != BOUNDARY) {
-												if (bm->regID[ij] == regid) {
-													regcatch_nf += bm->SpatialBlackBook[nf][ns][bm->MofY][ij][hist_id]
-															* bm->BlackBook[nf][ns][sp][bm->MofY][hist_id];
-
-													if (do_debug) {
-														//if(sppid == FPO_id){
-														fprintf(llogfp,
-																"Time: %e, reg: %d (box: %d), %s-%d on %s in month %d regcatch: %e, SpatialBB: %e, BB: %e)\n",
-																bm->dayt, regid, ij, FisheryArray[nf].fisheryCode, ns, FunctGroupArray[sp].groupCode, bm->MofY,
-																regcatch_nf, bm->SpatialBlackBook[nf][ns][bm->MofY][ij][hist_id],
-																bm->BlackBook[nf][ns][sp][bm->MofY][hist_id]);
-													}
-												}
-											}
-										}
-									} else {
-										/* If past the start of the year and fishery open (so have had a chance to catch something) */
-										for (nss = 0; nss < bm->FISHERYprms[nf][nsubfleets_id]; nss++) {
-											regcatch_nf += RegCatch[nf][nss][regid][sp];
-										}
-									}
-									regcatch = regcatch_nf / (totcatch + small_num);
-
-									/* Distribute quota according to "relative need", based on proportion of catch they've taken - and convert from kg to mg */
-									max_quota_left = regcatch * quota_left[sp][regid] * (kg_2_mg / bm->X_CN);
-
-									/* Make sure the fishery can't take in more than its share of the remaining quota (in mg) */
-									bm->SP_FISHERYprms[sp][nf][catch_allowed] = max_quota_left;
-
-									if (do_debug) {
-										//if(sppid == FPO_id){
-										fprintf(
-												llogfp,
-												"Time: %e, reg: %d, %s on %s totallowedcatch: %e, max_quota_left: %e (regcatch: %e, quota_left: %e, use_history: %d)\n",
-												bm->dayt, regid, FisheryArray[nf].fisheryCode, FunctGroupArray[sp].groupCode,
-												bm->SP_FISHERYprms[sp][nf][catch_allowed], max_quota_left, regcatch, quota_left[sp][regid], use_history);
-									}
-								}
-							}
+            do_consoldation = 0;
+            for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) {
+                /* If no boats in the subfleet currently skip ahead */
+                if (!bm->SUBFLEET_ECONprms[nf][ns][nboat_id]) {
+                    continue;
+                }
+                
+                /* Initalise total monthly effort tracker */
+                if (bm->newmonth)
+                    bm->EffortSchedule[nf][ns][bm->MofY][current_id] = 0;
+                
+                /* Check time to update (check to make sure just happens once per day is done back
+                 in Economics()
+                 */
+                trip_length = (int) (bm->SUBFLEET_ECONprms[nf][ns][max_trip_length_id]);
+                if (trip_length == 0)
+                    trip_length = 1;
+                
+                if ((bm->TofY % trip_length) == 0) {
+                    
+                    /* Initialise values to update */
+                    tot_marg_rent[nf][ns] = 0;
+                    toteffort = 0;
+                    totscore = 0;
+                    maxprob = 0;
+                    minprob = MAXDOUBLE;
+                    
+                    /* Check if new bimonthly period */
+                    if (bm->BiM != bm->LastBiM) {
+                        
+                        /* Reset prices */
+                        for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                            if (FunctGroupArray[sp].isFished == TRUE) {
+                                for (ij = 0; ij < bm->nbox; ij++) {
+                                    bm->ECONexprice[nf][ns][sp][ij][expect_id] = bm->ECONexprice[nf][ns][sp][ij][hist_id];
+                                }
+                                for (ij = 0; ij < bm->K_num_active_reg; ij++) {
+                                    totland[sp][ij] = 0;
+                                }
+                            }
+                        }
+                        
+                    }
+                    
+                    /* Initialise quota_check */
+                    for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                        if (FunctGroupArray[sp].isFished == TRUE) {
+                            quota_check[sp] = 0;
+                        }
+                    }
+                    
+                    for (ij = 0; ij < bm->nbox; ij++) {
+                        /* More initialisation */
+                        bm->Effort_hdistrib[ij][nf][today_effort] = 0;
+                        bm->Effort_hdistrib[ij][nf][calc_effort] = 0;
+                        bm->Effort_hdistrib[ij][nf][new_today_effort] = 0;
+                        bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] = 0;
+                        if (bm->boxes[ij].type != BOUNDARY) {
+                            regid = bm->regID[ij];
+                            
+                            /* In case where using ITQ look at whether exhausted quota or not. If exhausted
+                             set quota prices to an (arbitrary) high_price to prevent or deter fleets from
+                             sending effort to locations where a lot of that species has been traditionally caught.
+                             
+                             At present as Dan assumes quota allocated where needed then cover regional component
+                             of total quota holding in the quota allocation step not here.
+                             */
+                            for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                                if (FunctGroupArray[sp].isFished == TRUE) {
+                                    if (!do_biTAC && !quota_check[sp]) {
+                                        cumcatch = bm->QuotaAlloc[nf][ns][sp][cumboatcatch_id];
+                                        
+                                        /* Update how much quota has been leased */
+                                        if (cumcatch > bm->QuotaAlloc[nf][ns][sp][owned_id]) {
+                                            diff_catch = cumcatch - bm->QuotaAlloc[nf][ns][sp][owned_id];
+                                            if (diff_catch > bm->SP_FISHERYprms[sp][nf][catch_allowed])
+                                                bm->QuotaAlloc[nf][ns][sp][leased_id] += (bm->SP_FISHERYprms[sp][nf][catch_allowed] * bm->X_CN * mg_2_kg);
+                                            else
+                                                bm->QuotaAlloc[nf][ns][sp][leased_id] += diff_catch;
+                                        }
+                                        
+                                        /* Store amount of total leased quota that was leased in the last round of calculations - since calculating lease prices */
+                                        if (bm->QuotaAlloc[nf][ns][sp][leased_id] > bm->QuotaAlloc[nf][ns][sp][oldleased_id]) {
+                                            bm->QuotaAlloc[nf][ns][sp][newleased_id] = bm->QuotaAlloc[nf][ns][sp][leased_id]
+                                            - bm->QuotaAlloc[nf][ns][sp][oldleased_id];
+                                        }
+                                        
+                                        /* See if any quota remaining anywhere - if not set quotaprice to high_price so try to avoid it */
+                                        if (quota_left[sp][regid] == 0) {
+                                            bm->QuotaAlloc[nf][ns][sp][quotaprice_id] = bm->high_price;
+                                            
+                                            //fprintf(llogfp,"Time: %e, %s-%d on %s quotaprice set to %e\n",
+                                            //	bm->dayt, FisheryArray[nf].fisheryCode, ns, FunctGroupArray[sp].groupCode, bm->QuotaAlloc[nf][ns][sp][quotaprice_id]);
+                                        }
+                                        quota_check[sp] = 1;
+                                        
+                                        /*
+                                         if((sp == FPO_id) && (ij == 1) && (!bm->newweek))
+                                         fprintf(llogfp,"Time: %e, %s-%d on %s quotaleft %e, quotaprice: %e\n",
+                                         bm->dayt, FisheryArray[nf].fisheryCode, ns, FunctGroupArray[sp].groupCode, quota_left[sp][regid], bm->QuotaAlloc[nf][ns][sp][quotaprice_id]);
+                                         */
+                                    }
+                                    
+                                    /* Determine prices for each functional group and fleet/subfleet. These are
+                                     set to zero if the cumulative trip limit has been reached for that
+                                     combination of fleet/subfleet and functional group.
+                                     */
+                                    if (do_biTAC && ((bm->TotCumBiCatch[sp][nf] * bm->RegionalData[sp][regid][reg_catch_id])
+                                                     > (bm->BiTAC_sp[bm->BiM][regid][sp][now_id] * kg_2_mg / bm->X_CN))) {
+                                        /* When using cumulative trip limits set expected price to zero to discourage further targetting */
+                                        bm->ECONexprice[nf][ns][sp][ij][expect_id] = 0.0;
+                                    } else {
+                                        /* When using ITQ get net price as market price - quota price for each species
+                                         NB if just took quotaprice from expected price then that may happen muliple times in
+                                         bimonth period (between resets) and would have compounding losses, which is not
+                                         appropriate
+                                         */
+                                        bm->ECONexprice[nf][ns][sp][ij][expect_id] = (bm->ECONexprice[nf][ns][sp][ij][hist_id]
+                                                                                      - bm->QuotaAlloc[nf][ns][sp][quotaprice_id]);
+                                        
+                                        //fprintf(llogfp,"Time: %e, %s for %s-%d box: %d, ECONexprice: %e, [quotaprice_id]: %e\n",
+                                        //	bm->dayt, FunctGroupArray[sp].groupCode, FisheryArray[nf].fisheryCode, ns, ij, bm->ECONexprice[nf][ns][sp][ij][expect_id], bm->QuotaAlloc[nf][ns][sp][quotaprice_id]);
+                                    }
+                                    /* Determine catch expectations as:
+                                     
+                                     CPUE_for_area * expected_total_tow_time
+                                     
+                                     with tow_time calculated as
+                                     
+                                     prop_day_fishing * trip_length
+                                     
+                                     For now, these are calculated using the true CPUE given the current state
+                                     of the stock and the catchability coefficient(i.e., fleet has perfect information).
+                                     It would be possible to add noise to this, or build an expectation based on
+                                     previous catch history. In Dan Holland's opinion the latter is problematic because
+                                     of holes in the data (specifically: what is the expectation for areas not fished
+                                     during period used to model expectations?)
+                                     
+                                     */
+                                    spbiom = bm->targetspbiom[sp][ij] * bm->X_CN * mg_2_kg;
+                                    q = bm->SP_FISHERYprms[sp][nf][q_id];
+                                    /* Get expected catches - store in SpatialBlackBook as
+                                     it will become the basis of the effort distribution
+                                     
+                                     Accumulate over species so not just set by the final
+                                     species considered (which could zero it again).
+                                     */
+                                    catch_here = spbiom * q * prop_tow_time[nf][ns][ij];
+                                    bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] += catch_here;
+                                    totland[sp][regid] += catch_here;
+                                    
+                                    //fprintf(llogfp,"Time: %e, %s-%d mth: %d box: %d SpatialBlackBook: %e, catch_here: %e, spbiom: %e, q: %e, prop_tow_time: %e\n",
+                                    //	bm->dayt, FisheryArray[nf].fisheryCode, ns, bm->MofY, ij, bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id], catch_here, spbiom, q, prop_tow_time[nf][ns][ij]);
+                                }
+                            }
+                        }
+                    }
+                    
+                    /* Get the maximum catch possible for the trip */
+                    for (ij = 0; ij < bm->nbox; ij++) {
+                        if (bm->boxes[ij].type != BOUNDARY) {
+                            regid = bm->regID[ij];
+                            totmaxland = 0;
+                            totland_overall = 0;
+                            for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                                if (FunctGroupArray[sp].isFished == TRUE) {
+                                    /* Used to be if(do_biTAC && (totland[sp][regid] > maxland)) */
+                                    if (do_biTAC) {
+                                        /* If using cumulative trip limits, expected landings can not exceed the difference
+                                         between cumulative landings and the bimonthly trip limit.
+                                         */
+                                        catchleft = (bm->BiTAC_sp[bm->BiM][regid][sp][now_id] * kg_2_mg / bm->X_CN) - (bm->TotCumBiCatch[sp][nf]
+                                                                                                                       * bm->RegionalData[sp][regid][reg_catch_id]);
+                                        maxland = min(totland[sp][regid],catchleft);
+                                        
+                                        //fprintf(llogfp, "Time: %e, %s regid: %d, maxland: %e, totland: %e, catchleft: %e, BiTAC: %e, CumBiCatch: %e, RegData: %e\n",
+                                        //	bm->dayt, FunctGroupArray[sp].groupCode, regid, maxland, totland[sp][regid], catchleft, (bm->BiTAC_sp[bm->BiM][regid][sp][now_id] * kg_2_mg / bm->X_CN), bm->TotCumBiCatch[sp][nf], bm->RegionalData[sp][regid][reg_catch_id]);
+                                        
+                                    } else {
+                                        /* If using quotas the expected landings can't exceed the quota remaining */
+                                        if (bm->ITQ_think_ahead) {
+                                            /* With forethought spread the remaining quota through the year in proportion to
+                                             the catch per month
+                                             */
+                                            catchleft = 0;
+                                            for (mth = bm->MofY; mth < 12; mth++) {
+                                                catchleft += bm->BlackBook[nf][ns][sp][mth][expect_id];
+                                            }
+                                            maxland
+                                            = min(totland[sp][regid],(quota_left[sp][regid] * bm->BlackBook[nf][ns][sp][bm->MofY][expect_id] / (catchleft + small_num)));
+                                            
+                                            /* Cap based on hold capacity - using full hold for every boat every day as maximum bound physically possible
+                                             Converting from tonnes to kg as we go (totland etc has been calculated in kg).
+                                             */
+                                            hold_size = bm->SUBFLEET_ECONprms[nf][ns][hold_capacity_id] * 1000.0;
+                                            max_hold = hold_size * bm->SUBFLEET_ECONprms[nf][ns][nboat_id] * 30.0;
+                                            maxland = min(maxland, max_hold);
+                                            
+                                            //fprintf(llogfp,"Time: %e, %s regid: %d, maxland: %e, totland: %e, quota_left: %e, BlackBook: %e, catchleft: %e, max_hold: %e\n",
+                                            //	bm->dayt, FunctGroupArray[sp].groupCode, regid, maxland, totland[sp][regid], quota_left[sp][regid], bm->BlackBook[nf][ns][sp][bm->MofY][expect_id], catchleft, max_hold);
+                                            
+                                        } else {
+                                            /* In the case with no forethought then the only check on catch is quota left */
+                                            maxland = min(totland[sp][regid],quota_left[sp][regid]);
+                                            
+                                            /* Cap based on hold capacity - using full hold for every boat every day as maximum bound physically possible
+                                             Converting from tonnes to kg as we go (totland etc has been calculated in kg).
+                                             */
+                                            hold_size = bm->SUBFLEET_ECONprms[nf][ns][hold_capacity_id] * 1000.0;
+                                            max_hold = hold_size * bm->SUBFLEET_ECONprms[nf][ns][nboat_id] * 30.0;
+                                            maxland = min(maxland, max_hold);
+                                            
+                                            /**
+                                             if(sp == FVD_id){
+                                             fprintf(llogfp,"Time: %e, %s regid: %d, maxland: %e, totland: %e, quota_left: %e, max_hold: %e\n",
+                                             bm->dayt, FunctGroupArray[sp].groupCode, regid, maxland, totland[sp][regid], quota_left[sp][regid], max_hold);
+                                             }
+                                             **/
+                                        }
+                                    }
+                                    /* Cumulative maxland value (based on what is allowed catch from outstanding quotas for each species) */
+                                    totmaxland += maxland;
+                                    totland_overall += totland[sp][regid];
+                                }
+                            }
+                            
+                            //fprintf(llogfp,"Time: %e box-%d %s-%d SpatialBlackBook[expect] starts: %e ", bm->dayt, ij, FisheryArray[nf].fisheryCode, ns, bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id]);
+                            
+                            bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] = (bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] / (totland_overall
+                                                                                                                                              + small_num)) * totmaxland;
+                            
+                            //fprintf(llogfp,"ends: %e, totland: %e, totmaxland: %e\n", bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id], totland_overall, totmaxland);
+                            
+                            /* Calculate expected revenue for all areas and subfleets by multiplying
+                             the expected catch by prices and summing over groups.
+                             Prices are zero if trip limits have been met.
+                             
+                             Stored the value in total marginal rent array here as effectively the same thing and
+                             plays the same role in the alternate economics model so rather than duplicate arrays used
+                             the old name here.
+                             
+                             To do the calculation on a per species basis we need to multiply spatial total catch by:
+                             species price * proportion of the total catch made up by the species
+                             */
+                            tot_marg_rent[nf][ns] = 0;
+                            for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                                if (FunctGroupArray[sp].isFished == TRUE) {
+                                    tot_marg_rent[nf][ns] += bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] * bm->ECONexprice[nf][ns][sp][ij][expect_id]
+                                    * (totland[sp][regid] / (totland_overall + small_num));
+                                    
+                                    //fprintf(llogfp, "Time: %e, %s (%d) mth: %d, ij: %d, tot_marg_rent: %e, SpatialBlackBook: %e, ECONexprice: %e, totland[%s][%d]: %e, totland_overall: %e\n",
+                                    //	bm->dayt, FisheryArray[nf].fisheryCode, ns, bm->MofY, ij, tot_marg_rent[nf][ns], bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id], bm->ECONexprice[nf][ns][sp][ij][expect_id], FunctGroupArray[sp].groupCode, regid, totland[sp][regid], totland_overall);
+                                }
+                            }
+                            /* Create net expected revenue for each choice by subtracting costs from total expected revenue
+                             Note that: Observer costs are included in fixed costs of trip and mgmt_cost_id is the % of
+                             revenue taken as recovered costs of management.
+                             */
+                            tot_marg_rent[nf][ns] *= (1 - bm->SUBFLEET_ECONprms[nf][ns][mgmt_cost_id]);
+                            tot_marg_rent[nf][ns] -= bm->SUBFLEET_ECONprms[nf][ns][fixed_cost_id];
+                            
+                            //fprintf(llogfp, "Time: %e, %s (%d) mgmt_cost_correction: %e, fixed_cost: %e\n",
+                            //	bm->dayt, FisheryArray[nf].fisheryCode, ns, (1 - bm->SUBFLEET_ECONprms[nf][ns][mgmt_cost_id]), bm->SUBFLEET_ECONprms[nf][ns][fixed_cost_id]);
+                            
+                            /* Determine for each potential fishing choice whether the expected
+                             profits are high enough to justify the trip. Effort reset to zero for that
+                             box if returns (profit) not expected to be high enough.
+                             */
+                            tolerable_debt = -1.0 * bm->SUBFLEET_ECONprms[nf][ns][tol_debt_id];
+                            if (tot_marg_rent[nf][ns] < tolerable_debt) {
+                                bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] = 0;
+                                tot_marg_rent[nf][ns] = 0;
+                            }
+                            /* Calculate expected revenue per unit effort across areas for each fleet.
+                             Store the revenue map in the Effort_hdistrib as it is a draft effort
+                             allocation map.
+                             */
+                            bm->Effort_hdistrib[ij][nf][new_today_effort] = tot_marg_rent[nf][ns] / (bm->SUBFLEET_ECONprms[nf][ns][max_trip_length_id]
+                                                                                                     + small_num);
+                            toteffort += bm->Effort_hdistrib[ij][nf][new_today_effort];
+                        }
+                    }
+                    
+                    for (ij = 0; ij < bm->nbox; ij++) {
+                        if (bm->boxes[ij].type != BOUNDARY) {
+                            
+                            /* Normalise the effort distribution */
+                            bm->Effort_hdistrib[ij][nf][new_today_effort] /= (toteffort + small_num);
+                            
+                            /* Calculate a score for each area based on expected revenue and spatial closures */
+                            bm->Effort_hdistrib[ij][nf][calc_effort] = bm->MPA[ij][nf] * exp(bm->SUBFLEET_ECONprms[nf][ns][betarev_id]
+                                                                                             * bm->Effort_hdistrib[ij][nf][new_today_effort]);
+                            totscore += bm->Effort_hdistrib[ij][nf][calc_effort];
+                            
+                            //fprintf(llogfp,"Time: %e, %s-%d box-%d calceffort: %e, MPA: %e, exprev: %e, betarev: %e, newtodayeffort: %e\n",
+                            //	bm->dayt, FisheryArray[nf].fisheryCode, ns, ij, bm->Effort_hdistrib[ij][nf][calc_effort], bm->MPA[ij][nf], exp(bm->SUBFLEET_ECONprms[nf][ns][betarev_id] * bm->Effort_hdistrib[ij][nf][new_today_effort]), bm->SUBFLEET_ECONprms[nf][ns][betarev_id], bm->Effort_hdistrib[ij][nf][new_today_effort]);
+                        }
+                    }
+                    
+                    for (ij = 0; ij < bm->nbox; ij++) {
+                        if (bm->boxes[ij].type != BOUNDARY) {
+                            /* Calculates probabilities for each location by normalising scores stored in Effort_hdistrib */
+                            bm->Effort_hdistrib[ij][nf][calc_effort] /= (totscore + small_num);
+                            
+                            /* Find maximum and minimum realised probabilities */
+                            if (maxprob < bm->Effort_hdistrib[ij][nf][calc_effort])
+                                maxprob = bm->Effort_hdistrib[ij][nf][calc_effort];
+                            
+                            if (minprob > bm->Effort_hdistrib[ij][nf][calc_effort])
+                                minprob = bm->Effort_hdistrib[ij][nf][calc_effort];
+                        }
+                    }
+                    
+                    /* To make sure at least one area is chosen, the threshold probability is set equal
+                     to the maximum realised probabilty score (if that is below the prespecified threshold)
+                     */
+                    
+                    if (maxprob < bm->SUBFLEET_ECONprms[nf][ns][minprob_id])
+                        use_minprob = maxprob;
+                    else
+                        use_minprob = bm->SUBFLEET_ECONprms[nf][ns][minprob_id];
+                    
+                    //fprintf(llogfp, "%e %s-%d min: %e, max: %e, usemin: %e\n",
+                    //	bm->dayt, FisheryArray[nf].fisheryCode, ns, maxprob, bm->SUBFLEET_ECONprms[nf][ns][minprob_id], use_minprob);
+                    
+                    totscore = 0;
+                    for (ij = 0; ij < bm->nbox; ij++) {
+                        if (bm->boxes[ij].type != BOUNDARY) {
+                            /* Eliminate choices with probabilties below minimum probabilty threshold.*/
+                            
+                            //fprintf(llogfp, "%e %s-%d in %d calceffort: %e vs usemin: %e\n", bm->dayt, FisheryArray[nf].fisheryCode, ns, ij, bm->Effort_hdistrib[ij][nf][calc_effort], use_minprob);
+                            
+                            if (use_minprob > bm->Effort_hdistrib[ij][nf][calc_effort]) {
+                                bm->Effort_hdistrib[ij][nf][calc_effort] = 0;
+                                
+                                //fprintf(llogfp, "%e %s-%d in %d newcalceffort = 0\n", bm->dayt, FisheryArray[nf].fisheryCode, ns, ij);
+                                
+                            } else {
+                                /* Calculate last draft of location choices bringing in expected profit,
+                                 distribution of probabilitis vs minimum threshold and pattern of closed areas
+                                 */
+                                bm->Effort_hdistrib[ij][nf][calc_effort] *= bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id] * bm->MPA[ij][nf];
+                                
+                                //fprintf(llogfp, "%e %s-%d in %d newcalceffort: %e (expect: %e, MPA: %e)\n",
+                                //	bm->dayt, FisheryArray[nf].fisheryCode, ns, ij, bm->Effort_hdistrib[ij][nf][calc_effort], bm->SpatialBlackBook[nf][ns][bm->MofY][ij][expect_id], bm->MPA[ij][nf]);
+                            }
+                            totscore += bm->Effort_hdistrib[ij][nf][calc_effort];
+                        }
+                    }
+                    
+                    for (ij = 0; ij < bm->nbox; ij++) {
+                        if (bm->boxes[ij].type != BOUNDARY) {
+                            
+                            /* Renormalize so that available effort is spread across the remaining trips
+                             in proportion to choice scores that total 1 unless no areas are fished
+                             */
+                            bm->Effort_hdistrib[ij][nf][calc_effort] /= (totscore + small_num);
+                            
+                            /* Calculate applied effort as
+                             
+                             prop_fleet_in_area * fleet_size * prop_time_towing * prob_fleet_not_layover
+                             
+                             Note all calculations above lead to final proportional distribution, which is
+                             stored in bm->SpatialBlackBook[nf][ns][bm->MofY][ij][current_id]
+                             */
+                            FCpressure = bm->Effort_hdistrib[ij][nf][calc_effort] * bm->SUBFLEET_ECONprms[nf][ns][nboat_id] * prop_tow_time[nf][ns][ij] * (1
+                                                                                                                                                           - bm->SUBFLEET_ECONprms[nf][ns][down_time_id]);
+                            
+                            bm->Effort_hdistrib[ij][nf][today_effort] += FCpressure;
+                            
+                            /*
+                             if(nf == trapBMS_id)
+                             fprintf(llogfp, "Time: %e, %s box-%d, FCpressure: %e, today_effort: %e\n",
+                             bm->dayt, FisheryArray[nf].fisheryCode, ij, FCpressure, bm->Effort_hdistrib[ij][nf][today_effort]);
+                             */
+                            
+                            bm->SpatialBlackBook[nf][ns][bm->MofY][ij][current_id] = FCpressure;
+                            
+                            if (do_debug) {
+                                fprintf(llogfp, "%e %s-%d final effort-%d: %e (calc_effort: %e, nboat: %e, prop_tow_time: %e, down_time: %e\n", bm->dayt,
+                                        FisheryArray[nf].fisheryCode, ns, ij, FCpressure, bm->Effort_hdistrib[ij][nf][calc_effort],
+                                        bm->SUBFLEET_ECONprms[nf][ns][nboat_id], prop_tow_time[nf][ns][ij], bm->SUBFLEET_ECONprms[nf][ns][down_time_id]);
+                            }
+                            
+                            /* Store realised final overall effort */
+                            bm->EffortSchedule[nf][ns][bm->MofY][current_id] += FCpressure;
+                        }
+                    }
+                    
+                    /* Consolidate allowed catch per fleet so can't land fish above limits */
+                    
+                    if (do_biTAC) {
+                        /* Consolidation such that don't exceed	bimonthly trip limit - will discard any over catch */
+                        for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                            if (FunctGroupArray[sp].isFished == TRUE) {
+                                for (regid = 0; regid < bm->K_num_active_reg; regid++) {
+                                    totallowedcatch
+                                    = max(0.0,((bm->BiTAC_sp[bm->BiM][regid][sp][now_id] * kg_2_mg / bm->X_CN) - (bm->TotCumBiCatch[sp][nf] * bm->RegionalData[sp][regid][reg_catch_id])));
+                                    bm->SP_FISHERYprms[sp][nf][catch_allowed] = totallowedcatch;
+                                    
+                                    /* Check for individual trip limits */
+                                    if (bm->SP_FISHERYprms[sp][nf][catch_allowed] > bm->SP_FISHERYprms[sp][nf][trip_lim_id])
+                                        bm->SP_FISHERYprms[sp][nf][catch_allowed] = bm->SP_FISHERYprms[sp][nf][trip_lim_id];
+                                    
+                                    if (do_debug) {
+                                        fprintf(llogfp, "Time: %e, reg: %d, %s on %s totallowedcatch: %e, BiTAC_sp: %e, TotCumBiCatch: %e, RegionalData: %e\n",
+                                                bm->dayt, regid, FisheryArray[nf].fisheryCode, FunctGroupArray[sp].groupCode, totallowedcatch,
+                                                (bm->BiTAC_sp[bm->BiM][regid][sp][now_id] * kg_2_mg / bm->X_CN), bm->TotCumBiCatch[sp][nf],
+                                                bm->RegionalData[sp][regid][reg_catch_id]);
+                                    }
+                                }
+                            }
+                        }
+                        do_consoldation = 0;
+                    } else {
+                        /* Consolidate vs held quota */
+                        do_consoldation = 1;
+                    }
+                }
+            }
+            if (do_consoldation) { // Consolidation used to be done within ns loop meaning only the final subfleet was setting it
+                for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                    if (FunctGroupArray[sp].isFished == TRUE) {
+                        totcatch = 0;
+                        use_history = 0;
+                        for (regid = 0; regid < bm->K_num_active_reg; regid++) {
+                            totcatch += tot_cumcatch[sp][regid];
+                        }
+
+                        if (!totcatch) {
+                            /* No catch taken from any of the regions could be because its before statistics
+                             are stored for the year (i.e. early in first quarter) or there has been a
+                             closure previously. To reset the calculations try historical catch distribution
+                             instead */
+                            use_history = 1;
+                            for (nss = 0; nss < bm->FISHERYprms[nf][nsubfleets_id]; nss++) {
+                                for (ij = 0; ij < bm->nbox; ij++) {
+                                    if (bm->boxes[ij].type != BOUNDARY) {
+                                        totcatch += bm->SpatialBlackBook[nf][nss][bm->MofY][ij][hist_id] * bm->BlackBook[nf][nss][sp][bm->MofY][hist_id];
+                                    }
+                                }
+                            }
+                        }
+                        for (regid = 0; regid < bm->K_num_active_reg; regid++) {
+                            /* In each region find proportion of catch taken by the current fleet
+                             (summing across all its subfleets)
+                             */
+                            regcatch_nf = 0;
+                            if (use_history) {
+                                /* If using historical data (as there has been a recent closure or because its before
+                                 statistics for the new year have been stored) */
+                                for (nss = 0; nss < bm->FISHERYprms[nf][nsubfleets_id]; nss++) {
+                                    for (ij = 0; ij < bm->nbox; ij++) {
+                                        if (bm->boxes[ij].type != BOUNDARY) {
+                                            if (bm->regID[ij] == regid) {
+                                                regcatch_nf += bm->SpatialBlackBook[nf][nss][bm->MofY][ij][hist_id] * bm->BlackBook[nf][nss][sp][bm->MofY][hist_id];
+                                                
+                                                if (do_debug) {
+                                                    //if(sppid == FPO_id){
+                                                    fprintf(llogfp,
+                                                            "Time: %e, reg: %d (box: %d), %s-%d on %s in month %d regcatch: %e, SpatialBB: %e, BB: %e)\n",
+                                                            bm->dayt, regid, ij, FisheryArray[nf].fisheryCode, ns, FunctGroupArray[sp].groupCode, bm->MofY,
+                                                            regcatch_nf, bm->SpatialBlackBook[nf][nss][bm->MofY][ij][hist_id],
+                                                            bm->BlackBook[nf][nss][sp][bm->MofY][hist_id]);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                /* If past the start of the year and fishery open (so have had a chance to catch something) */
+                                for (nss = 0; nss < bm->FISHERYprms[nf][nsubfleets_id]; nss++) {
+                                    regcatch_nf += RegCatch[nf][nss][regid][sp];
+                                }
+                            }
+                            regcatch = regcatch_nf / (totcatch + small_num);
+
+                            /* Distribute quota according to "relative need", based on proportion of catch they've taken - and convert from kg to mg */
+                            max_quota_left = regcatch * quota_left[sp][regid] * (kg_2_mg / bm->X_CN);
+
+                            /* Make sure the fishery can't take in more than its share of the remaining quota (in mg) */
+                            bm->SP_FISHERYprms[sp][nf][catch_allowed] = max_quota_left;
+
+                            if (do_debug) {
+                                //if(sppid == FPO_id){
+                                fprintf(
+                                        llogfp,
+                                        "Time: %e, reg: %d, %s on %s totallowedcatch: %e, max_quota_left: %e (regcatch: %e, quota_left: %e, use_history: %d)\n",
+                                        bm->dayt, regid, FisheryArray[nf].fisheryCode, FunctGroupArray[sp].groupCode,
+                                        bm->SP_FISHERYprms[sp][nf][catch_allowed], max_quota_left, regcatch, quota_left[sp][regid], use_history);
+                            }
 						}
 					}
 				}

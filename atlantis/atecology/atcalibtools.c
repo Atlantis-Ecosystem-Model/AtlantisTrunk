@@ -314,7 +314,7 @@ void Check_Gape(MSEBoxModel *bm, FILE *llogfp) {
 						for (ij = 0; ij < bm->nbox; ij++) {
 							if (bm->boxes[ij].type != BOUNDARY) {
 								for (k = 0; k < bm->boxes[ij].nz; k++) {
-									sp_abund += bm->boxes[ij].tr[k][den];
+									//sp_abund += bm->boxes[ij].tr[k][den];
 
 									/* Check minimum SN */
 									if (bm->boxes[ij].tr[k][sn] < sizeMinMax[min_SN_id])
@@ -392,8 +392,9 @@ void Check_Gape(MSEBoxModel *bm, FILE *llogfp) {
 							}
 						} else if ((n == FunctGroupArray[sp].numGeneTypes) && (totrec || totrecold)){
                             indx = EMBRYO[sp].next_spawn - 1;
-                            if(indx < 0)
+                            if(indx < 0) {
                                 indx = 0;
+                            }
                             
                             //printf("Last step Check_Gape W-%d-%d-b %s indx: %d\n", sp, n, FunctGroupArray[sp].groupCode, indx);
                             
@@ -422,9 +423,9 @@ void Check_Gape(MSEBoxModel *bm, FILE *llogfp) {
 						}
 
                         /* Size structure */
-						fprintf(llogfp, "%s-%d sn-%d %e, rn-%d %e, den-%d %e (SN: %e, RN: %e, DEN: %e vs initSN: %e, initRN: %e, initDEN: %e)\n",
-								FunctGroupArray[sp].groupCode, n, n, VERTinfo[sp][n][SN_id] / (initVERTinfo[sp][n][SN_id] + small_num), n,
-								VERTinfo[sp][n][RN_id] / (initVERTinfo[sp][n][RN_id] + small_num), n, VERTinfo[sp][n][DEN_id] / (initVERTinfo[sp][n][DEN_id]
+						fprintf(llogfp, "%s-%d sn/init_sn %e, rn/init_rn %e, den/init_den %e (SN: %e, RN: %e, DEN: %e vs initSN: %e, initRN: %e, initDEN: %e)\n",
+								FunctGroupArray[sp].groupCode, n, VERTinfo[sp][n][SN_id] / (initVERTinfo[sp][n][SN_id] + small_num),
+								VERTinfo[sp][n][RN_id] / (initVERTinfo[sp][n][RN_id] + small_num), VERTinfo[sp][n][DEN_id] / (initVERTinfo[sp][n][DEN_id]
 										+ small_num), VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id], VERTinfo[sp][n][DEN_id], initVERTinfo[sp][n][SN_id], initVERTinfo[sp][n][RN_id], initVERTinfo[sp][n][DEN_id]);
 					}
 
@@ -479,9 +480,9 @@ void Check_Gape(MSEBoxModel *bm, FILE *llogfp) {
 
 						//TODO: Check to see if i can change this to loop over the sp then cohorts instead.
 						for (preychrt = 0; preychrt < bm->K_num_max_cohort * bm->K_num_max_genetypes; preychrt++) { // Prey age groups
-							//sprintf(keywithin, " ");
-							//sprintf(keymore, " ");
-							//sprintf(keyless, " ");
+							//snprintf(keywithin, sizeof(keywithin), " ");
+							//snprintf(keymore, sizeof(keymore), " ");
+							//snprintf(keyless, sizeof(keyless)," ");
 							strcpy(keywithin, " ");
 							strcpy(keymore, " ");
 							strcpy(keyless, " ");
@@ -499,28 +500,28 @@ void Check_Gape(MSEBoxModel *bm, FILE *llogfp) {
 											if (VERTinfo[prey][preychrt][SN_id] <= FunctGroupArray[sp].speciesParams[KUP_id] * VERTinfo[sp][n][SN_id]) {
 												/* Less than upper gape */
 
-												//sprintf(key, "%s %s-%d", keywithin, FunctGroupArray[prey].groupCode, preychrt);
-												//sprintf(keywithin, "%s", key);
-												sprintf(key, " %s-%d", FunctGroupArray[prey].groupCode, preychrt);
+												//snprintf(key, sizeof(key), "%s %s-%d", keywithin, FunctGroupArray[prey].groupCode, preychrt);
+												//snprintf(keywithin,sizeof(keywithin), "%s", key);
+												snprintf(key, sizeof(key), " %s-%d", FunctGroupArray[prey].groupCode, preychrt);
 												strcat(keywithin, key);
 											} else {
 												/* Above upper gape */
 												if (VERTinfo[prey][preychrt][SN_id] > VERTinfo[sp][n][SN_id]) {
-													//sprintf(key, "%s %s-%d (>SN %e)", keymore, FunctGroupArray[prey].groupCode, preychrt,
+													//snprintf(key, sizeof(key), "%s %s-%d (>SN %e)", keymore, FunctGroupArray[prey].groupCode, preychrt,
 													//		VERTinfo[prey][preychrt][SN_id] / VERTinfo[sp][n][SN_id]);
-													//sprintf(keymore, "%s", key);
+													//snprintf(keymore, sizeof(keymore), "%s", key);
 
-													sprintf(key, " %s-%d (>SN %e)", FunctGroupArray[prey].groupCode, preychrt,
+													snprintf(key, sizeof(key), " %s-%d (>SN %e)", FunctGroupArray[prey].groupCode, preychrt,
 															VERTinfo[prey][preychrt][SN_id] / VERTinfo[sp][n][SN_id]);
 
 													strcat(keymore, key);
 
 												} else {
-													//sprintf(key, "%s %s-%d (%e)", keymore, FunctGroupArray[prey].groupCode, preychrt,
+													//snprintf(key, sizeof(key), "%s %s-%d (%e)", keymore, FunctGroupArray[prey].groupCode, preychrt,
 													//		VERTinfo[prey][preychrt][SN_id] / VERTinfo[sp][n][SN_id]);
-													//sprintf(keymore, "%s", key);
+													//snprintf(keymore, sizeof(keymore), "%s", key);
 
-													sprintf(key, " %s-%d (%e)", FunctGroupArray[prey].groupCode, preychrt,
+													snprintf(key, sizeof(key), " %s-%d (%e)", FunctGroupArray[prey].groupCode, preychrt,
 															VERTinfo[prey][preychrt][SN_id] / VERTinfo[sp][n][SN_id]);
 													strcat(keymore, key);
 
@@ -528,11 +529,11 @@ void Check_Gape(MSEBoxModel *bm, FILE *llogfp) {
 											}
 										} else {
 											/* Less than lower gape */
-											//sprintf(key, "%s %s-%d (%e)", keyless, FunctGroupArray[prey].groupCode, preychrt, VERTinfo[prey][preychrt][SN_id]
+											//snprintf(key, sizeof(key), "%s %s-%d (%e)", keyless, FunctGroupArray[prey].groupCode, preychrt, VERTinfo[prey][preychrt][SN_id]
 											//		/ VERTinfo[sp][n][SN_id]);
-											//sprintf(keyless, "%s", key);
+											//snprintf(keyless, sizeof(keyless), "%s", key);
 
-											sprintf(key, " %s-%d (%e)", FunctGroupArray[prey].groupCode, preychrt, VERTinfo[prey][preychrt][SN_id]
+											snprintf(key, sizeof(key), " %s-%d (%e)", FunctGroupArray[prey].groupCode, preychrt, VERTinfo[prey][preychrt][SN_id]
 													/ VERTinfo[sp][n][SN_id]);
 											strcat(keyless, key);
 
@@ -578,10 +579,10 @@ void Check_Gape(MSEBoxModel *bm, FILE *llogfp) {
 
 void Ecology_Check_VertAbund(MSEBoxModel *bm, double ***valtr, FILE *llogfp, int instance) {
     int ij, k, n, den;
-    double totden = 0.0;
+    //double totden = 0.0;
     int sp = bm->which_check;
     
-    sp = 23;
+    //sp = 23;
 
     for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
         totdenCheck[n][0] = 0.0;

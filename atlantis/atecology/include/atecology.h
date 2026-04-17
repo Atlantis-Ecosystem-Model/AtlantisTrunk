@@ -173,7 +173,7 @@ extern int Tchange_max_num, Schange_max_num, PHchange_max_num, BEDchange_max_num
 extern double Fben_den, FDL_wc, MB_wc, FDL_benth, FDL_fish, FDL_SG_roots, FDL_SG_leaves, FDL_top, p_linePIN, p_netPIN, p_trawlPIN, p_mtrawlPIN, p_lineWHT, p_BBfish, p_BBben, p_PBwc, p_PBben, p_IBice,
 		recover_span, recover_trigger, recover_subseq, lognorm_mu, p_lineWHS, lognorm_sigma, roc_wgt, Kthresh1, Kthresh2, KHTD, KHTI,
 		Kthreshm, r_DL_T15, r_DR_T15, r_DON_T15, r_DSi_T15, r_DC_T15, FFDDR, FDR_DL, FDON_D, FDR_DC, KST_fish, KST_shark, KST_bird, KST_mammal, Ktmp_fish,
-		Ktmp_shark, Ktmp_bird, Ktmp_mammal, R_0_T15, R_D_T15, Dmax, X_ON, X_CN, X_CHLN, X_SiN, X_FeN, k_w_depth, k_w_cdepth, k_w_deep, k_w_shallow, k_PN,
+		Ktmp_shark, Ktmp_bird, Ktmp_mammal, R_0_T15, R_D_T15, Dmax, k_w_depth, k_w_cdepth, k_w_deep, k_w_shallow, k_PN,
 		k_DON, k_DL, k_IS, K_TUR_DEP, k_SED, K_addepth, K_conc, K_nit_T15, KI_avail, KIOP_min, KIOP_shift, K_IRR, K_MAX_IRR, K_MAX_TUR, K_MIN_IRR,
 		K_TUR, Q10, RelTol, rec_sigma, rec_m, Flux_tol, k_migslow, XPB_DL, XPB_DR, XBB_DL, XBB_DR, k_PB, k_BB, FPB_DR, FPB_DON, FBB_DR, FBB_DON, p_NH_anad,
 		k_roc_food, k_refDL, k_refDR, k_refsDL,
@@ -433,9 +433,9 @@ void Free_Imposed_Recruits(MSEBoxModel *bm);
 double Get_Recruit_Size_Forcing(MSEBoxModel *bm, int species, int do_debug, FILE *llogfp);
 double Get_Imposed_MultRecruits(MSEBoxModel *bm, int guildcase, int do_debug, int boxkey_id, FILE *llogfp);
 
-void 	Setup_Linear_Mortality_Indicies(MSEBoxModel *bm) ;
-void 	Setup_Size_Change_Indicies(MSEBoxModel *bm) ;
-void 	Setup_Change_Indicies(MSEBoxModel *bm, TimeSeries *ts, int index);
+void 	Setup_Linear_Mortality_Indices(MSEBoxModel *bm) ;
+void 	Setup_Size_Change_Indices(MSEBoxModel *bm) ;
+void 	Setup_Change_Indices(MSEBoxModel *bm, TimeSeries *ts, int index);
 double  Get_Biomass_Correction(MSEBoxModel *bm, int sp, HABITAT_TYPES habitatType);
 void 	Check_Layer_Initial_Biomass(MSEBoxModel *bm);
 

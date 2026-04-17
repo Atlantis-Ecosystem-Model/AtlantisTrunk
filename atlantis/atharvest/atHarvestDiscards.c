@@ -142,7 +142,7 @@ double Get_Discards(MSEBoxModel *bm, int guildcase, int chrt, int stage, int nf,
 
 		/**
 		if((do_debug || do_debug_dis) && bm->newweek){
-			fprintf(llogfp, "Time: %e, %d-%d %s-%d %s loatDetFC initial: %e (with FFCDR: %e, discard_scale: %e)\n", bm->dayt, bm->current_box,
+			fprintf(llogfp, "Time: %e, %d-%d %s-%d %s loadDetFC initial: %e (with FFCDR: %e, discard_scale: %e)\n", bm->dayt, bm->current_box,
 					bm->current_layer, FunctGroupArray[guildcase].groupCode, basechrt, FisheryArray[nf].fisheryCode, loadDetFC, FFCDR[guildcase][nf][chrt], discard_scale3);
 		}
 		**/
@@ -167,7 +167,7 @@ double Get_Discards(MSEBoxModel *bm, int guildcase, int chrt, int stage, int nf,
 			/* Load size of discards to impose - currently assume one dump for all
 			 fisheries,	FIX - will need to allow for this to be fishery specific
 			 (by doing (i*j + i) kind of index allocation) */
-			if (FunctGroupArray[guildcase].groupAgeType == AGE_STRUCTURED || FunctGroupArray[ts_id].groupAgeType == AGE_STRUCTURED_BIOMASS)
+			if (FunctGroupArray[guildcase].groupAgeType == AGE_STRUCTURED || FunctGroupArray[guildcase].groupAgeType == AGE_STRUCTURED_BIOMASS)
 				age_scale_catch = bm->DiscardTS_agedistrib[nf][guildcase][basechrt];
 			else
 				age_scale_catch = 1.0;
@@ -214,7 +214,7 @@ double Get_Discards(MSEBoxModel *bm, int guildcase, int chrt, int stage, int nf,
 		*SPtoFC += catch_step;  // In case any extra catch occurs as a result - due to catch of other species
 
 		if((do_debug || do_debug_dis) && bm->newweek){
-			fprintf(llogfp,"Time: %e, %d-%d %s-%d %s loatDetFC initial: %e (with SPtoFC = %e)\n",
+			fprintf(llogfp,"Time: %e, %d-%d %s-%d %s loadDetFC initial: %e (with SPtoFC = %e)\n",
 				bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[guildcase].groupCode,
 				basechrt, FisheryArray[nf].fisheryCode, loadDetFC, *SPtoFC);
             
@@ -236,7 +236,7 @@ double Get_Discards(MSEBoxModel *bm, int guildcase, int chrt, int stage, int nf,
 
 	/**/
 	if((do_debug || do_debug_dis || do_debug_econ) && bm->newweek){
-		fprintf(llogfp, "Time: %e, %d-%d %s-%d %s loatDetFC initial: %e (flagspdiscard = %d)\n", bm->dayt, bm->current_box, bm->current_layer,
+		fprintf(llogfp, "Time: %e, %d-%d %s-%d %s loadDetFC initial: %e (flagspdiscard = %d)\n", bm->dayt, bm->current_box, bm->current_layer,
 				FunctGroupArray[guildcase].groupCode, basechrt, FisheryArray[nf].fisheryCode, loadDetFC, flagspdiscard);
 	}
 	/**/
@@ -255,7 +255,7 @@ double Get_Discards(MSEBoxModel *bm, int guildcase, int chrt, int stage, int nf,
 
 	/**/
 	if((do_debug || do_debug_dis || do_debug_econ) && bm->newweek){
-		fprintf(llogfp, "Time: %e, %d-%d %s-%d %s loatDetFC after flagmanage: %e\n", bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[guildcase].groupCode, basechrt,
+		fprintf(llogfp, "Time: %e, %d-%d %s-%d %s loadDetFC after flagmanage: %e\n", bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[guildcase].groupCode, basechrt,
 				FisheryArray[nf].fisheryCode, loadDetFC);
 	}
 	/**/
@@ -267,7 +267,7 @@ double Get_Discards(MSEBoxModel *bm, int guildcase, int chrt, int stage, int nf,
 
 	/**/
 	if ((do_debug || do_debug_dis) && bm->newweek) {
-		fprintf(llogfp, "Time: %e, %d-%d %s-%d %s loatDetFC after carry-over: %e, SPtoFC: %e\n", bm->dayt, bm->current_box, bm->current_layer,
+		fprintf(llogfp, "Time: %e, %d-%d %s-%d %s loadDetFC after carry-over: %e, SPtoFC: %e\n", bm->dayt, bm->current_box, bm->current_layer,
 				FunctGroupArray[guildcase].groupCode, basechrt, FisheryArray[nf].fisheryCode, loadDetFC, *SPtoFC);
 	}
 	/**/
@@ -280,7 +280,7 @@ double Get_Discards(MSEBoxModel *bm, int guildcase, int chrt, int stage, int nf,
 		loadDetFC = 1.0;
 
 	if((do_debug || do_debug_dis || do_debug_econ) && bm->newweek){
-		fprintf(llogfp,"Time: %e, %d-%d %s-%d %s loatDetFC after high grading: %e\n",
+		fprintf(llogfp,"Time: %e, %d-%d %s-%d %s loadDetFC after high grading: %e\n",
 			bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[guildcase].groupCode, basechrt, FisheryArray[nf].fisheryCode, loadDetFC);
 	}
 
@@ -292,7 +292,7 @@ double Get_Discards(MSEBoxModel *bm, int guildcase, int chrt, int stage, int nf,
 	}
 
 	if((do_debug || do_debug_dis || do_debug_econ) && bm->newweek){
-		fprintf(llogfp, "Time: %e, %d-%d %s-%d %s loatDetFC after trip limits: %e (tripcatch: %e, catch_allowed: %e)\n", bm->dayt, bm->current_box,
+		fprintf(llogfp, "Time: %e, %d-%d %s-%d %s loadDetFC after trip limits: %e (tripcatch: %e, catch_allowed: %e)\n", bm->dayt, bm->current_box,
 				bm->current_layer, FunctGroupArray[guildcase].groupCode, basechrt, FisheryArray[nf].fisheryCode, loadDetFC, bm->TripCatch[guildcase][nf],
 				bm->SP_FISHERYprms[guildcase][nf][catch_allowed]);
 	}
@@ -305,7 +305,7 @@ double Get_Discards(MSEBoxModel *bm, int guildcase, int chrt, int stage, int nf,
 	}
 
 	if((do_debug || do_debug_dis || do_debug_econ) && bm->newweek){
-		fprintf(llogfp, "Time: %e, %d-%d %s-%d %s loatDetFC after market-based discarding: %e\n", bm->dayt, bm->current_box, bm->current_layer,
+		fprintf(llogfp, "Time: %e, %d-%d %s-%d %s loadDetFC after market-based discarding: %e\n", bm->dayt, bm->current_box, bm->current_layer,
 				FunctGroupArray[guildcase].groupCode, basechrt, FisheryArray[nf].fisheryCode, loadDetFC);
 	}
     
@@ -381,13 +381,13 @@ double Calc_Dependent_Discards_For_Species(MSEBoxModel *bm, int sp, int boxkey_i
 		active_scale = 86400.0 / bm->dt;
     else {
         active_scale = 1.0;
-        if (bm->newmonth && ((bm->dt < 43200.0 ) || (bm->dt < 43200.0 )))
+        if (bm->newmonth && (bm->dt < 43200.0 ))
             warn("Imposing discards but dt %e doesn't match assumptions of 12-24 hours per timestep\n", bm->dt);
     }
 
 	for(i=0; i<bm->K_num_tot_sp; i++){
 		if(FunctGroupArray[i].isFished == TRUE){
-			if(bm->FCcocatch[i][i] > 0){
+			if(bm->FCcocatch[sp][i] > 0){
 				if(boxkey_id > -1){
 					FisheryTimeSeries *this_tsCatch = &tsCatch[boxkey_id];
 					ts_id = tscatchid[i];
@@ -439,7 +439,7 @@ double Calc_Dependent_Discards_For_Other_Species(MSEBoxModel *bm, int i, int ich
 	double SPtoFC = 0.0;
 	double age_scale_catch = 1.0;
 	//int spcat = bm->SPtoCATid[i];
-	int ibasechrt = chrt / FunctGroupArray[i].numGeneTypes;
+	int ibasechrt = ichrt / FunctGroupArray[i].numGeneTypes;
 
 	/* Load size of discards to impose - currently assume one dump for all
 	fisheries,	FIX - will need to allow for this to be fishery specific

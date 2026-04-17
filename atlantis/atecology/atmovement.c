@@ -499,6 +499,10 @@ static void Get_Vert_Diet(MSEBoxModel *bm, double ***preyamt, int ij, int k, int
 				}
 			}
 		}
+        
+        /* Crreate and populate the contaminant frequency distributions */
+        
+        
 	}
 
 	return;
@@ -786,7 +790,7 @@ void Store_Min_Max_Avg(MSEBoxModel *bm, int sp) {
                     }
                     FunctGroupArray[sp].rolling_wgt[n][bm->K_rolling_cap_num] = this_wgt;
                     FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num] = this_biom;
-                    bm->rolling_cap_initialised[n][sp] = 1;
+                    bm->rolling_cap_initialised[sp][n] = 1;
                 } else {
                     if ( bm->newmonth) {
                         for ( nlist = 0; nlist < (bm->K_rolling_cap_num - 1); nlist++) {
@@ -916,7 +920,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
     Util_Init_2D_Double(bm->targetspbiom, bm->K_num_tot_sp, bm->nbox, 0.0);
 	Util_Init_3D_Double(bm->stock_struct_prop, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->K_num_stocks_per_sp, 0.0);
     Util_Init_3D_Double(bm->HomeRangeTotal, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->K_num_homerange, 0.0);
-    
+        
 	/* Determine tot numbers per cohort per species and total
 	 amount of each prey in each box of the bay. Will update the totden array. */
 	Calculate_Prey_Values(bm, preyamt, llogfp);
@@ -1219,7 +1223,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                             VERTinfo[sp][n][RN_id] = (oldrn * oldden + stepRN) / (totden[sp][n] + small_num);
                         }
                         
-                        /* Reset Migration matrix if all have returned or this migration period is over */
+						/* Reset Migration matrix if all have returned or this migration period is over */  
 						if (MIGRATION[sp].DEN[n][qid] < 0.0) {
 							if (bm->flagavgmig) {
                                 MIGRATION[sp].SN[n][qid] = 0.0;
@@ -1307,7 +1311,6 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                     ContaminantDirectRectuitMigrants(bm, sp, n, qid);
                                 }
 
-
                                 totden[sp][n] += yoy_den;  // Add the recruits to tot numbers
                                 MIGRATION[sp].recruit[n][qid] = 0;  // Reset
                             
@@ -1337,35 +1340,36 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
             printf("Doing movement for %s\n", FunctGroupArray[sp].groupCode);
 
         if (FunctGroupArray[sp].isVertebrate == TRUE) {
-            
-            spmigrate = 0;
-            bearlive = 0;
-            flagmother = 0;
-            sp_amt = 0;
-            this_tot_biom = 0;
-            
-            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                newden_sum[n] = 0.0;
-            }
-            
-            flagsp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
-            
-            /* Get the current season index */
-            qrt = FunctGroupArray[sp].moveEntryIndex;
-            //qrt = bm->QofY;
+
+			spmigrate = 0;
+			bearlive = 0;
+			flagmother = 0;
+			sp_amt = 0;
+			this_tot_biom = 0;
+            spawnmove = 1.0;
+
+			 for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+				 newden_sum[n] = 0.0;
+			 }
+
+			flagsp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
+
+			/* Get the current season index */
+			qrt = FunctGroupArray[sp].moveEntryIndex;
+			//qrt = bm->QofY;
             next_qrt = FunctGroupArray[sp].next_moveEntryIndex;
-            
-            /* If which check is greater than all funct groups then show debugging for all groups */
+
+			/* If which check is greater than all funct groups then show debugging for all groups */
             do_debug2 = 0;
             /**
              if(sp == 64)
              do_debug2 = 1;
              
              if (bm->debug && ((bm->debug == debug_migrate) && (((sp == bm->which_check) && (bm->dayt > bm->checkstart)) || (bm->which_check > bm->K_num_tot_sp)))) {
-             do_debug2 = 1;
-             }
-             if (bm->which_check == sp)
-             do_debug2 = 1;
+				do_debug2 = 1;
+			}
+            if (bm->which_check == sp)
+                do_debug2 = 1;
              **/
             
             /* Skip over groups not in the model */
@@ -1376,40 +1380,40 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
             if(bm->do_syst_cap) {
                 Store_Min_Max_Avg(bm, sp);
             }
-            
+
             /* if a group doesn't move vertically or horizontally then skip */
             if(FunctGroupArray[sp].isMobile == FALSE && FunctGroupArray[sp].sp_geo_move == FALSE)
                 continue;
             
             /* Normalise proportion of total abundance in each stock */
-            for (ij = 0; ij < maxij; ij++) {
-                for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                    bm->stock_struct_prop[sp][n][ij] = init_stock_struct_prop[sp][n][ij] / (totden[sp][n] + small_num);
-                    sp_amt += totden[sp][n];
-                    
+			for (ij = 0; ij < maxij; ij++) {
+				for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+					bm->stock_struct_prop[sp][n][ij] = init_stock_struct_prop[sp][n][ij] / (totden[sp][n] + small_num);
+					sp_amt += totden[sp][n];
+
                     /**
-                     if(do_debug2){
-                     fprintf(llogfp,"Time: %e %s-%d, stock: %d (of %d), prop_stock: %e\n",
-                     bm->dayt, FunctGroupArray[sp].groupCode, n, ij, FunctGroupArray[sp].numStocks, bm->stock_struct_prop[sp][n][ij]);
-                     }
-                     **/
-                }
-            }
+					if(do_debug2){
+                        fprintf(llogfp,"Time: %e %s-%d, stock: %d (of %d), prop_stock: %e\n",
+							 bm->dayt, FunctGroupArray[sp].groupCode, n, ij, FunctGroupArray[sp].numStocks, bm->stock_struct_prop[sp][n][ij]);
+					}
+                    **/
+				}
+			}
             
             /* If non present (less than one individual present in entire system) then skip ahead */
-            if (sp_amt < bm->min_dens) {
-                if (do_debug2 || (do_debug && (sp == bm->move_check)))
-                    fprintf(llogfp, "No %s present so skipping ahead (%e)\n", FunctGroupArray[sp].groupCode, sp_amt);
-                continue;
-            }
+			if (sp_amt < bm->min_dens) {
+				if (do_debug2 || (do_debug && (sp == bm->move_check)))
+					fprintf(llogfp, "No %s present so skipping ahead (%e)\n", FunctGroupArray[sp].groupCode, sp_amt);
+				continue;
+			}
             
             Util_Init_1D_Double(totboxden, (bm->K_num_max_cohort * bm->K_num_max_genetypes), 0.0);
             
             /* Note that this use of growth rate and clearance parameters is based only
-             on the default Holling type feeding relation and on surface temperatures. This
-             would need to change if other feeding types are used regularly and if depth related
-             changes in feeding efficiency guiding feeding depths */
-            sp_ddepend_move = (int) (FunctGroupArray[sp].speciesParams[ddepend_move_id]);
+			 on the default Holling type feeding relation and on surface temperatures. This
+			 would need to change if other feeding types are used regularly and if depth related
+			 changes in feeding efficiency guiding feeding depths */
+			sp_ddepend_move = (int) (FunctGroupArray[sp].speciesParams[ddepend_move_id]);
             
             // Allow for vertical movement only - over-write movement case
             if(FunctGroupArray[sp].sp_geo_move == FALSE) {
@@ -1554,7 +1558,6 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 								} else {
 									roc[ij][n] = 0.0;
 								}
-                                
 
 								switch (bm->flagroc) {
 								case no_ddepend_id: /* No forage- and density- dependent movement so do nothing */
@@ -1748,9 +1751,6 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 							*/
 
                             switch (sp_ddepend_move) {
-                            
-                            spawnmove = 1.0;
-                              
 								case weight_ddepend:
 								case switch_ddepend:
 								case only_ddepend:
@@ -1778,7 +1778,6 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                     thiscase2 = 1;
                                     thiscase1 = 0;
                                 }
-                                    
 
                                 /* Find other migration pressure */
                                 if (thiscase1 || (sp_ddepend_move != switch_ddepend)) {
@@ -1791,7 +1790,6 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                      */
                                     spawnmove = 1.0;
                                 }
-                                    
                             
 
                                 /* Find feeding migration pressure.
@@ -2020,7 +2018,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                     chkbox = bm->boxes[ij].ibox[adbox];
                                     for (kk = 0; kk < bm->boxes[chkbox].nz; kk++) {
                                         // Check conditions
-                                        is_suitable = Check_Realloc_Conditions(bm, sp, n, ij, k);
+                                        is_suitable = Check_Realloc_Conditions(bm, sp, n, chkbox, kk);
                                         if (is_suitable) {
                                             newden[sp][n][chkbox][kk] += den_diff;
                                             check_done = 1;
@@ -2052,11 +2050,11 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                 }
                             }
 						}
-                        if( bm->track_contaminants && bm->flag_contamMaternalTransfer && (flagmother > 0)) {
+                        if( bm->track_contaminants && bm->flag_contamMaternalTransfer && (flagmother > 0) && (FunctGroupArray[sp].speciesParams[suckler_contam_today_id] > 0)) {
                             for (n = 0; n < age_mat; n++) {
                                 juv_num = FunctGroupArray[sp].LocalPopCount[n];
                                 not_done = 1;
-                                if(juv_num > bm->min_dens){ // Only do i if juveniles present
+                                if(juv_num > bm->min_dens){ // Only do if juveniles present
                                     ad_start_cohort = (int)(floor(drandom(start_n, end_n))); // Find random starting point so not always the youngest adutlts feeding the young
                                     for (ad_cohort = ad_start_cohort; ad_cohort < FunctGroupArray[sp].numCohortsXnumGenes; ad_cohort++) { // Iterate up age classes
                                         ad_num = FunctGroupArray[sp].LocalPopCount[ad_cohort];
@@ -2072,7 +2070,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                         }
                                     }
                                     if(not_done > 0){
-                                        for (ad_cohort = ad_start_cohort; ad_cohort > (age_mat - 1); ad_cohort--) { // Iterate over the rest of the adults if we haev to
+                                        for (ad_cohort = ad_start_cohort; ad_cohort > (age_mat - 1); ad_cohort--) { // Iterate over the rest of the adults if we have to
                                             ad_num = FunctGroupArray[sp].LocalPopCount[ad_cohort];
                                             if(ad_num > bm->min_dens) {
                                                 Get_Suckling_Contaminants(bm, sp, ad_cohort, n);
@@ -2089,11 +2087,12 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                 }
                             }
                         }
+                        FunctGroupArray[sp].speciesParams[suckler_contam_today_id] = 1;  // Reset this marker here as only skip delivery the day of the birth. May be reset in atdemography.
 					}
 				}
 			}
 
-            if(bm->flagenviro_warn & cells_impacted) {
+            if(bm->flagenviro_warn && cells_impacted) {
                 fprintf(llogfp, "Time: %e %s is environmemtally constrained in %d of %d cells (box*layer*cohort combos)\n", bm->dayt, FunctGroupArray[sp].groupCode, cells_impacted, cells_checked);
             }
             
@@ -2122,13 +2121,19 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 										chkbox = 0;
 										for (adbox = 0; adbox < bm->boxes[ij].nconn; adbox++) {
 											chkbox = bm->boxes[ij].ibox[adbox];
-											for (k = 0; k < bm->boxes[chkbox].nz; k++) {
-												newden[sp][n][k][chkbox] += newden[sp][n][k][ij] * bm->boxes[chkbox].area * bm->boxes[chkbox].dz[k]
-														* tempdistrib[k][stage] / nbox_spread;
-											}
+                                            if (bm->boxes[chkbox].current_botz >= bm->min_channel_depth) {
+                                                for (k = 0; k < bm->boxes[chkbox].nz; k++) {
+                                                    newden[sp][n][k][chkbox] += newden[sp][n][k][ij] * bm->boxes[chkbox].area * bm->boxes[chkbox].dz[k] * tempdistrib[k][stage] / nbox_spread;
+                                                }
+                                            } else {
+                                                /* Empty the shallows and flats */
+                                                for (k = 0; k < bm->boxes[chkbox].nz; k++) {
+                                                    newden[sp][n][k][chkbox] = 0;
+                                                }
+                                            }
 										}
-										/* Empty the shallows and flats */
-										for (k = 0; k < bm->boxes[chkbox].nz; k++) {
+										/* Finishing emptying the shallows and flats */
+										for (k = 0; k < bm->boxes[ij].nz; k++) {
 											newden[sp][n][k][ij] = 0;
 										}
 									}
@@ -2925,18 +2930,16 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 				}
 			}
 
-			/* Store population sizes and check stock structure */
+			/* Store population sizes and check stock structure and contaminant levels - has to be done post migration step so have final numbers */
 			for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
 				VERTabund_check[sp][n] = totden[sp][n];
+                
+                if(bm->track_contaminants && FunctGroupArray[sp].isVertebrate){
+                    Move_Vert_Contaminated(bm, sp, n, currentden);
+                }
 			}
 
 		}
-        
-        if(bm->track_contaminants && FunctGroupArray[sp].isVertebrate){
-            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                Move_Vert_Contaminated(bm, sp, n, currentden);
-            }
-        }
  	}
     
     /**
@@ -4011,14 +4014,14 @@ int Invade_Spread(MSEBoxModel *bm, int sp, FILE *llogfp, int b, int nb, int k, d
         go_there = 1;
     
     if (temp_sensitive_sp) {
-        if ( (min_temp_sp < there_temp ) || (max_temp_sp > there_temp ))
+        if ( (min_temp_sp > there_temp ) || (max_temp_sp < there_temp ))
             go_there = 0;
         else
             go_there = 1;
     }
     
     if (salt_sensitive_sp) {
-        if ( (min_salt_sp < there_salt ) || (max_salt_sp > there_salt ))
+        if ( (min_salt_sp > there_salt ) || (max_salt_sp < there_salt ))
             go_there = 0;
         else
             go_there = 1;
@@ -4259,7 +4262,7 @@ void Get_Vertical_Distribution(MSEBoxModel *bm, int ij, int species, double ****
 		} else {
 			for (k = 0; k < bm->boxes[ij].nz; k++) {
 				layerk = k + diffdeep;
-				tempdistrib[k][0] = step1distrib[layerk][juv_id] / sumnzj1;
+				tempdistrib[k][juv_id] = step1distrib[layerk][juv_id] / sumnzj1;
 			}
 		}
 		if (sumnza1 < sumnza2) {

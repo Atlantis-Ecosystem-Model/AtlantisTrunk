@@ -56,7 +56,7 @@ int Util_Read_Fisheries_XML(MSEBoxModel *bm, char *fileName, FILE *llogfp) {
 
 		/* Convert the file to XML. */
 		/* Build the converted filename */
-		sprintf(convertedXMLFileName, "%s", fileName);
+		snprintf(convertedXMLFileName, sizeof(convertedXMLFileName), "%s", fileName);
 		*(strstr(convertedXMLFileName, ".csv")) = '\0';
 		strcat(convertedXMLFileName, ".xml");
 
@@ -65,7 +65,7 @@ int Util_Read_Fisheries_XML(MSEBoxModel *bm, char *fileName, FILE *llogfp) {
 		inputDoc = xmlReadFileDestFolder(bm->destFolder, convertedXMLFileName, NULL, 0);
 
 	}else{
-		sprintf(convertedXMLFileName, "%s", fileName);
+		snprintf(convertedXMLFileName, sizeof(convertedXMLFileName), "%s", fileName);
 		inputDoc = xmlReadFileDestFolder("", convertedXMLFileName, NULL, 0);
 
 
@@ -99,7 +99,7 @@ int Util_Read_Fisheries_XML(MSEBoxModel *bm, char *fileName, FILE *llogfp) {
 		/* Check the number of groups match the values in the run input file*/
 		numFisheries = fisheryList->nodesetval->nodeNr;
 		if (numFisheries != bm->K_num_fisheries) {
-			quit("Util_Read_Fisheries_XML: Number of fisheries specified (%d) in your fishery defintion file %s does not match the K_num_fisheries value in your run file\n",
+			quit("Util_Read_Fisheries_XML: Number of fisheries specified (%d) in your fishery defintion file %s does not match the K_num_fisheries value (%d) in your run file\n",
 					numFisheries, fileName, bm->K_num_fisheries);
 		}
 
@@ -117,7 +117,7 @@ int Util_Read_Fisheries_XML(MSEBoxModel *bm, char *fileName, FILE *llogfp) {
 			Util_XML_Get_Value_Integer(fileName, ATLANTIS_ATTRIBUTE, 0, TRUE, fisheryNode, integer_check, "Index", &FisheryArray[fisheryIndex].index);
 			Util_XML_Get_Value_String(fileName, ATLANTIS_ATTRIBUTE, TRUE, fisheryNode, "Name", FisheryArray[fisheryIndex].name);
 			Util_XML_Get_Value_Integer(fileName, ATLANTIS_ATTRIBUTE, 0, TRUE, fisheryNode, integer_check, "IsRec", &FisheryArray[fisheryIndex].isRec);
-			Util_XML_Get_Value_Double(fileName, ATLANTIS_ATTRIBUTE, 0, TRUE, fisheryNode, integer_check, "NumSubFleets", &bm->FISHERYprms[fisheryIndex][nsubfleets_id]);
+			Util_XML_Get_Value_Integer(fileName, ATLANTIS_ATTRIBUTE, 0, TRUE, fisheryNode, integer_check, "NumSubFleets", &bm->FISHERYprms[fisheryIndex][nsubfleets_id]);
 
 			if( bm->FISHERYprms[fisheryIndex][nsubfleets_id] > bm->K_max_num_subfleet)
 				bm->K_max_num_subfleet = (int)bm->FISHERYprms[fisheryIndex][nsubfleets_id];

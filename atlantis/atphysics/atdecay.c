@@ -44,6 +44,7 @@ void decayBM(MSEBoxModel *bm, double ***newwc, double ***newsed)
 	int allowsed = bm->decay_sed;
     int allowwc = bm->decay_wc;
 	double dt = bm->dt;
+    double dks, seddks;
 
 	if( verbose )
 		fprintf(stderr,"Entering decayBM\n");
@@ -63,14 +64,16 @@ void decayBM(MSEBoxModel *bm, double ***newwc, double ***newsed)
 
 				if( bp->type != BOUNDARY && bp->type != LAND ) {
 					/* Loop through water column */
-					if( inwc && allowwc ){ 
+                    dks = dk * bm->boxes[b].decay_scalar;
+					if( inwc && allowwc ){
 						for(k=0; k<bp->nz; k++)
-							newwc[b][k][n] = (*decay)(newwc[b][k][n],dk,dt);
+							newwc[b][k][n] = (*decay)(newwc[b][k][n],dks,dt);
 					}
 					/* Loop through sediment layers */
+                    seddks = seddk * bm->boxes[b].decay_scalar;
 					if( insed && allowsed){
 						for(k=sm->topk; k<sm->nz; k++){
-							newsed[b][k][n] = (*decay)(newsed[b][k][n],seddk,dt);
+							newsed[b][k][n] = (*decay)(newsed[b][k][n],seddks,dt);
 						}
 					}
 				}	

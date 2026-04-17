@@ -27,8 +27,6 @@ int tsRecruitstype; /**< Whether to use interpolated or last valid entries from 
 int *tsRecruitsid; /**< Array matching boxmodel species ids to recruits time series entry ids */
 FisheryTimeSeries *tsRecruits; /**< List of recruit time series (one per box) - use a FisheryTimeSeries as want a list of time series not just one time series */
 
-int first_data_done;
-
 static double Get_Loaded_MultRecruits(MSEBoxModel *bm, int guildcase, int boxkey_id, int do_debug, FILE *llogfp);
 
 /**
@@ -84,7 +82,7 @@ int Load_Imposed_Recruits(MSEBoxModel *bm, FILE *llogfp) {
                 }
             }
 		} else
-			quit("Expecting catch time series but didn't find any\n");
+			quit("Expecting recruit time series but didn't find any\n");
 	} else {
 		tsRecruits = NULL;
 
@@ -115,7 +113,7 @@ double Get_Imposed_MultRecruits(MSEBoxModel *bm, int guildcase, int do_debug, in
 
 	} else {
 		if (!tsRecruitswarned) {
-			fprintf(llogfp, "expecting imposed catch in box %d (and maybe others), but never got it - check catch timeseries definitions\n", bm->current_box);
+			fprintf(llogfp, "expecting imposed recruits in box %d (and maybe others), but never got it - check catch timeseries definitions\n", bm->current_box);
 			tsRecruitswarned++;
 		}
 		loadFC = 0;
@@ -129,7 +127,7 @@ double Get_Loaded_MultRecruits(MSEBoxModel *bm, int guildcase, int boxkey_id, in
 	int ts_id = tsRecruitsid[guildcase];
     double tsEvaled = 0.0;
     
-    /* Load reruits */
+    /* Load recruits */
     if (tsRecruitstype == interpolate_id)
         tsEvaled = tsEval(&this_tsRecruits->ts, ts_id, bm->t);
     else

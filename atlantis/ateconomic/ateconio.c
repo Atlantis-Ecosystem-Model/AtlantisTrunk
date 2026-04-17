@@ -58,7 +58,7 @@ static FILE *tradefp;
 /* Economic performance measures output file */
 static FILE *anneconfp;
 
-/* Port Indicies output file*/
+/* Port Indices output file*/
 static FILE *annportfp;
 
 /* Quota Allocations output file - quota_per_fishery */
@@ -162,7 +162,7 @@ FILE * Init_Econ_Ind_File(MSEBoxModel *bm) {
 	int sp = 0;
 
 	/** Create filename **/
-	sprintf(fname, "%sEconSubIndx.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sEconSubIndx.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -241,7 +241,7 @@ FILE * Init_Effort_Schedule_File(MSEBoxModel *bm) {
 	char fname[STRLEN];
 
 	/** Create filename **/
-	sprintf(fname, "%sEffortSchedIndx.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sEffortSchedIndx.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -265,7 +265,7 @@ FILE * Init_Real_Effort_Schedule_File(MSEBoxModel *bm) {
 	char fname[STRLEN];
 
 	/** Create filename **/
-	sprintf(fname, "%sRealEffortSchedIndx.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sRealEffortSchedIndx.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -370,7 +370,7 @@ FILE * Init_Trades_File(MSEBoxModel *bm) {
 	char fname[STRLEN];
 
 	/** Create filename **/
-	sprintf(fname, "%sTradeIndx.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sTradeIndx.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -433,7 +433,7 @@ FILE * Init_Econ_Meas_File(MSEBoxModel *bm) {
 	int sp = 0;
 
 	/** Create filename **/
-	sprintf(fname, "%sEconIndx.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sEconIndx.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -512,7 +512,7 @@ FILE * Init_Port_Meas_File(MSEBoxModel *bm) {
 	int sp = 0;
 
 	/** Create filename **/
-	sprintf(fname, "%sPortIndx.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sPortIndx.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -567,7 +567,7 @@ FILE * Init_Price_File(MSEBoxModel *bm) {
 	int sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sPrices.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sPrices.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -656,7 +656,7 @@ FILE * Init_Deemed_Value_File(MSEBoxModel *bm) {
 	int sp = 0;
 
 	/** Create filename **/
-	sprintf(fname, "%sDeemedValue.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sDeemedValue.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -718,7 +718,7 @@ FILE * Init_QuotaAlloc_File(MSEBoxModel *bm) {
 	int sp, flag_sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sQuotaAlloc.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sQuotaAlloc.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -822,7 +822,7 @@ FILE * Init_Trade_Matrix_File(MSEBoxModel *bm) {
 	int nf;
 
 	/** Create filename **/
-	sprintf(fname, "%sTradeMatrix.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sTradeMatrix.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -918,7 +918,7 @@ FILE * Init_Temporal_Catch_File(MSEBoxModel *bm) {
 	int sp = 0;
 
 	/** Create filename **/
-	sprintf(fname, "%sCatchPerMonth.txt", bm->startfname);
+	snprintf(fname, sizeof(fname),"%sCatchPerMonth.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -976,7 +976,7 @@ FILE * Init_Expected_CatchPerMonth_File(MSEBoxModel *bm)
 	int sp = 0;
 
 	/** Create filename **/
-	sprintf(fname,"%sExpectedCatchPerMonth.txt",bm->startfname);
+	snprintf(fname, sizeof(fname), "%sExpectedCatchPerMonth.txt",bm->startfname);
 	printf("Creating %s\n",fname);
 
     /** Create file **/
@@ -1033,7 +1033,7 @@ void Economic_Output_ExpectedCatchPerMonth(MSEBoxModel *bm)
 {
 
 	if( verbose )
-		fprintf(stderr,"Writing realised monthly expected catchn");
+		fprintf(stderr,"Writing realised monthly expected catch\n");
 
 	/* Initialise files if necessary */
 	if( !expectedcatchpermonthfp)

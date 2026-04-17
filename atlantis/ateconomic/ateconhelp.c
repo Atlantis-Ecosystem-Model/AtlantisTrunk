@@ -158,13 +158,13 @@ void Quicksort_Dir(double *x, double *bbx, double *ccx, double *ddx, double *eex
 			/* Push pointers to larger subarray on stack, process smaller subarray immediately */
 			if (jstack > NSTACK)
 				quit("NSTACK too small in Quicksort_Dir() in economics library. Recode define statement.\n");
-			if (ir - 1 + i >= j - 1) {
+			if (ir - 1 + i >= j - l) {
 				istack[jstack] = ir;
 				istack[jstack - 1] = i;
 				ir = j - 1;
 			} else {
 				istack[jstack] = j - 1;
-				istack[jstack - 1] = i;
+				istack[jstack - 1] = l;
 				l = i;
 			}
 		}

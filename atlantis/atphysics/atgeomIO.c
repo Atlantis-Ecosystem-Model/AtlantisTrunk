@@ -53,9 +53,9 @@ static void CopyBGMFile(MSEBoxModel *bm, char *name){
 
 	if(strlen(bm->destFolder) > 0){
 	#ifdef _WIN32
-		sprintf(str, "copy %s %s", name, bm->destFolder);
+		snprintf(str, sizeof(str), "copy %s %s", name, bm->destFolder);
 	#else
-		sprintf(str, "cp %s %s", name, bm->destFolder);
+		snprintf(str, sizeof(str), "cp %s %s", name, bm->destFolder);
 	#endif
 		system(str);
 	}
@@ -433,13 +433,13 @@ void readBoxGeom(FILE *fp, char *name, Box *b)
 		fprintf(stderr,"readBoxGeom: reading box %d in bgm file %s\n",b->n, name);
 
     /* Read box label */
-    sprintf(key,"box%d.label",b->n);
+    snprintf(key,sizeof(key),"box%d.label",b->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%s",b->label) != 1 )
 		quit("readBoxGeom: Can't read %s in bgm file %s\n",key, name);
 
     /* Read station location */
-    sprintf(key,"box%d.inside",b->n);
+    snprintf(key,sizeof(key),"box%d.inside",b->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%lf %lf",&b->inside.x,&b->inside.y) != 2 )
 		quit("readBoxGeom: Can't read %s in bgm file %s\n",key, name);
@@ -451,7 +451,7 @@ void readBoxGeom(FILE *fp, char *name, Box *b)
   		warn("readBoxGeom: Box %d has negative inside y points %e in bgm file %s.\n", b->n, b->inside.y, name);
 
     /* Read number of connections */
-    sprintf(key,"box%d.nconn",b->n);
+    snprintf(key,sizeof(key),"box%d.nconn",b->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%d",&b->nconn) != 1 || b->nconn < 0 )
 		quit("readBoxGeom: Can't read %s in bgm file %s\n",key, name);
@@ -466,21 +466,21 @@ void readBoxGeom(FILE *fp, char *name, Box *b)
 		quit("readBoxGeom: Can't allocate memory for iface or ibox\n");
 
     /* Read the face index list */
-    sprintf(key,"box%d.iface",b->n);
+    snprintf(key,sizeof(key),"box%d.iface",b->n);
     skipToKeyEnd(fp,key);
     for(i=0; i<b->nconn; i++)
 		if( fscanf(fp,"%d",&b->iface[i]) != 1 )
 			quit("readBoxGeom: Can't read %s in bgm file %s\n",key, name);
 
     /* Read the box index list */
-    sprintf(key,"box%d.ibox",b->n);
+    snprintf(key,sizeof(key),"box%d.ibox",b->n);
     skipToKeyEnd(fp,key);
     for(i=0; i<b->nconn; i++)
 		if( fscanf(fp,"%d",&b->ibox[i]) != 1 )
 			quit("readBoxGeom: Can't read %s in bgm file %s\n",key, name);
 
     /* Read the bottom z-coord for this box */
-    sprintf(key,"box%d.botz",b->n);
+    snprintf(key,sizeof(key),"box%d.botz",b->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%lf",&b->botz) != 1 )
 		quit("readBoxGeom: Can't read %s in bgm file %s\n",key, name);
@@ -490,13 +490,13 @@ void readBoxGeom(FILE *fp, char *name, Box *b)
 	b->current_botz = b->botz;
 
 	/* Read box area */
-    sprintf(key,"box%d.area",b->n);
+    snprintf(key,sizeof(key),"box%d.area",b->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%lf",&b->area) != 1 || b->area <= 0.0 )
 		quit("readBoxGeom: Can't read %s in bgm file %s\n",key, name);
 
     /* Read box vertical mixing constant */
-    sprintf(key,"box%d.vertmix",b->n);
+    snprintf(key,sizeof(key),"box%d.vertmix",b->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%lf",&b->vertmix) != 1 || b->vertmix < 0.0 )
 		quit("readBoxGeom: Can't read %s in bgm file %s\n",key, name);
@@ -512,7 +512,7 @@ void readBoxGeom(FILE *fp, char *name, Box *b)
     }
 
     /* Read box specific horizontal mixing constant */
-    sprintf(key,"box%d.horizmix",b->n);
+    snprintf(key,sizeof(key),"box%d.horizmix",b->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%lf",&b->horizmix) != 1 || b->horizmix < 0.0 )
 		quit("readBoxGeom: Can't read %s in bgm file %s\n",key, name);
@@ -527,7 +527,7 @@ void readBoxGeom(FILE *fp, char *name, Box *b)
 	}
 
     /* Read whether this is a box where may have to relax the tolerance of the adpative difference method */
-    sprintf(key,"box%d.relax_tol",b->n);
+    snprintf(key,sizeof(key),"box%d.relax_tol",b->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%d",&b->relax_tol) != 1 || b->relax_tol < 0 )
         quit("readBoxGeom: Can't read %s in bgm file %s\n",key, name);
@@ -538,10 +538,10 @@ void readBoxGeom(FILE *fp, char *name, Box *b)
      */
     b->bnd = createpolyline();
 
-	sprintf(key,"box%d.vert",b->n);
+	snprintf(key,sizeof(key),"box%d.vert",b->n);
     skipToKeyStart(fp,key);
 
-    sprintf(key,"box%d.vert %%lf %%lf ",b->n);
+    snprintf(key,sizeof(key),"box%d.vert %%lf %%lf ",b->n);
 
 	while( fscanf(fp,key,&p.x,&p.y) == 2 ){
 		addtoend(b->bnd, p);
@@ -675,30 +675,30 @@ void readFaceGeom(FILE *fp, Face *f)
 		fprintf(stderr,"readFaceGeom: reading face %d\n",f->n);
 
     /* Read face endpoints */
-    sprintf(key,"face%d.p1",f->n);
+    snprintf(key,sizeof(key),"face%d.p1",f->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%lf %lf",&f->p1.x,&f->p1.y) != 2 )
 		quit("readFaceGeom: Can't read %s\n",key);
 
-    sprintf(key,"face%d.p2",f->n);
+    snprintf(key,sizeof(key),"face%d.p2",f->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%lf %lf",&f->p2.x,&f->p2.y) != 2 )
 		quit("readFaceGeom: Can't read %s\n",key);
 
     /* Read face length */
-    sprintf(key,"face%d.length",f->n);
+    snprintf(key,sizeof(key),"face%d.length",f->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%lf",&f->len) != 1 || f->len <= 0.0 )
 		quit("readFaceGeom: Can't read %s\n",key);
 
     /* Read face orientation */
-    sprintf(key,"face%d.cs",f->n);
+    snprintf(key,sizeof(key),"face%d.cs",f->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%lf %lf",&f->cos,&f->sin) != 2 )
 		quit("readFaceGeom: Can't read %s\n",key);
 
     /* Read indices of boxes to left and right */
-    sprintf(key,"face%d.lr",f->n);
+    snprintf(key,sizeof(key),"face%d.lr",f->n);
     skipToKeyEnd(fp,key);
     if( fscanf(fp,"%d %d",&f->ibl,&f->ibr) != 2 || f->ibl < 0 || f->ibr < 0 )
 		quit("readFaceGeom: Can't read %s\n",key);

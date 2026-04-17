@@ -95,11 +95,17 @@ double decay_exact(double c, double k, double dt)
     static double last_kdt = 0.0;
     static double v = 1.0;
     double kdt = -k*dt;
+    double ans = 0.0;
 
     if( kdt != last_kdt ) {
 	v = exp(kdt);
 	last_kdt = kdt;
     }
 
-    return(c*v);
+    ans = c*v;
+    if (!_finite(ans)){  // Sanity trap
+        ans = 0.0;
+    }
+    
+    return(ans);
 }

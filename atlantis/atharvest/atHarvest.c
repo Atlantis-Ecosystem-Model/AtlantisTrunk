@@ -185,8 +185,8 @@ void Harvest_Init_Box_Arrays(MSEBoxModel *bm, int ij, FILE *llogfp) {
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		if (FunctGroupArray[sp].isImpacted == TRUE) {
             for (n = 0; n < bm->K_num_fisheries; n++) {
-                bm->TotCumRecCatch[sp][ij] += bm->RecCatch[ij][sp][ij];
-                bm->RecCatch[ij][sp][ij] = 0;
+                bm->TotCumRecCatch[sp][n] += bm->RecCatch[ij][sp][n];
+                bm->RecCatch[ij][sp][n] = 0;
             }
 		}
 	}
@@ -525,18 +525,19 @@ int Harvest_Do_Fishing_And_ByCatch(MSEBoxModel *bm, FILE *llogfp, int guildcase,
 
 		mpa_losses = 0.0;
 		/* Get the fishing catch value */
-		if (Get_Catch(bm, guildcase, chrt, stage, nf, do_debug, flagimposecatch, depend_dis, boxkey_id, Biom, li, vert_scale, &gear_change_scale, &loadFC,
-				&SPtoFC, &mpa_losses, llogfp) < 0) {
+		if (Get_Catch(bm, guildcase, chrt, stage, nf, do_debug, flagimposecatch, depend_dis, boxkey_id, Biom, li, vert_scale, &gear_change_scale, &loadFC, &SPtoFC, &mpa_losses, llogfp) < 0) {
 			continue;
 		}
         if(SPtoFC < 0.0)
             SPtoFC = 0.0;
 
+		/*
 		if(do_debug){
 			//fprintf(llogfp, "Catch Outcomes %s:%d SPtoFC = %.20e\n", FunctGroupArray[sp].groupCode, chrt, SPtoFC);
 			fprintf(llogfp, "Time: %e %s Catch Outcomes %s:%d SPtoFC = %.20e\n",
 								bm->dayt, FisheryArray[nf].fisheryCode, FunctGroupArray[sp].groupCode, chrt, SPtoFC);
-		}        
+		}    
+		*/    
         
 		/* Fisheries discarding - assumes all discards are dead
 		 * This is the proportion caught that is discarded
@@ -1582,6 +1583,7 @@ void Harvest_Skip_biology(MSEBoxModel *bm, FILE *llogfp) {
 							for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
 								pid = FunctGroupArray[sp].totNTracers[n];
 								spbiom = bm->boxes[ij].tr[k][pid];
+                                stage = FunctGroupArray[sp].cohort_stage[n];
 
 								/* Get catch per fishery */
 								sel = bm->selectivity[sp][nf][stage];
@@ -1621,7 +1623,7 @@ void Harvest_Skip_biology(MSEBoxModel *bm, FILE *llogfp) {
 							loadDetFC = bm->SP_FISHERYprms[sp][nf][FFCDR_id];
 							spfishing = FCpressure * sel * q * spbiom * (1.0 - loadDetFC) * swept_area;
 
-							bm->Catch[ij][sp][nf][k] += spfishing * bm->cell_vol * bm->dt;
+							bm->Catch[ij][sp][nf][0] += spfishing * bm->cell_vol * bm->dt;
 							CatchSum[sp][tscocatch_id] += spfishing * bm->cell_vol * bm->dt;
 
 						}

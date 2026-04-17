@@ -137,12 +137,12 @@ void Grow_Coral_Symbionts(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, FILE *l
 			* (1.0 + FunctGroupArray[guild].speciesParams[KN_id] / DIN);
 
 	if (lim_case != one_nut_lim)
-		uptakeSi = sp_grow * X_SiN;
+		uptakeSi = sp_grow * bm->X_SiN;
 	else
 		uptakeSi = 0.0;
 
 	if (micro_case)
-		uptakeFe = sp_grow * X_FeN;
+		uptakeFe = sp_grow * bm->X_FeN;
 	else
 		uptakeFe = 0.0;
 
@@ -151,11 +151,11 @@ void Grow_Coral_Symbionts(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, FILE *l
 	if (uptakeNH > NH)
 		scale_uptake = NH / uptakeNH;
 	if (uptakeNO > NO)
-		scale_uptake = max(scale_uptake, NO / uptakeNO);
+		scale_uptake = min(scale_uptake, NO / uptakeNO);  // This used to say max
 	if (uptakeSi > Si)
-		scale_uptake = max(scale_uptake, Si / uptakeSi);
-	if (uptakeFe > Fe)
-		scale_uptake = max(scale_uptake, Fe / uptakeFe);
+		scale_uptake = min(scale_uptake, Si / uptakeSi);  // This used to say max
+	if ((Fe > bm->min_pool) && (uptakeFe > Fe)) // Only useful if MicroNut in play
+		scale_uptake = min(scale_uptake, Fe / uptakeFe);  // This used to say max
 
 	/* Assign uptake */
 	FunctGroupArray[guild].uptakeNH[cohort] += uptakeNH * scale_uptake;   // As zooxanthellae stored inside the host tissue slot not differentiated
@@ -271,9 +271,9 @@ void Coral_Consumer_Activities(MSEBoxModel *bm, HABITAT_TYPES habitatType, FILE 
 	int habitat;
 
 	if (FunctGroupArray[guild].groupAgeType == AGE_STRUCTURED_BIOMASS && cohort == 0)
-		sprintf(code, "j%s", FunctGroupArray[guild].groupCode);
+		snprintf(code, sizeof(code), "j%s", FunctGroupArray[guild].groupCode);
 	else
-		sprintf(code, "%s", FunctGroupArray[guild].groupCode);
+		snprintf(code, sizeof(code), "%s", FunctGroupArray[guild].groupCode);
 
 
     /*
@@ -599,8 +599,8 @@ double Calculate_Rugosity(MSEBoxModel *bm, int guild, int cohort, FILE *llogfp, 
                        (FunctGroupArray[sp].groupType == SPONGE)  ||
                        (FunctGroupArray[sp].groupType == SEAGRASS) ||
                        (FunctGroupArray[sp].groupType == TURF)) {
-                        rug_space += bm->coveramt[FunctGroupArray[sp].coverID][bm->current_box] * FunctGroupArray[guild].speciesParams[rug_factor_id];
-                        rug_correction += FunctGroupArray[guild].speciesParams[rug_factor_id];
+                        rug_space += bm->coveramt[FunctGroupArray[sp].coverID][bm->current_box] * FunctGroupArray[sp].speciesParams[rug_factor_id];
+                        rug_correction += FunctGroupArray[sp].speciesParams[rug_factor_id];
                     }
                 }
             }
@@ -975,7 +975,7 @@ double Coral_Variable_Transitions(MSEBoxModel *bm, int species, int cohort, int 
 
 	for ( i = (int) (sp_AgeClassSize - 2); i > 0; i--) {
 		avail_i = FunctGroupArray[species].boxPopRatio[bm->current_box][bm->current_layer][cohort][i];
-		trans_i = max(avail_i, max_accel_transition / (1 + exp(-accel_transA * (i - accel_transB))));
+		trans_i = min(avail_i, max_accel_transition / (1 + exp(-accel_transA * (i - accel_transB))));  // Used to say max, but can't transition more than what's available for transer so needs to be a min so avail_i is max possible
 		FunctGroupArray[species].boxPopRatio[bm->current_box][bm->current_layer][cohort][i] -= trans_i;
 		ans += trans_i;
 	}

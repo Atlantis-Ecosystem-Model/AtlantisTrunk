@@ -580,7 +580,7 @@ double Avail_Fish(MSEBoxModel *bm, int guildcase, int chrt, int chrtstage, int p
 					} else {
                         if ( !bm->UseBiLogisticFeedingWindow ) {  // Using humped relaitonship with potential skew
                             Kmax_coefft = FunctGroupArray[guildcase].speciesParams[Kmax_coefft_id];
-                            rel_size = SP[prey][bpreychrt][SN_id] / (SN * KUP_SN);
+                            rel_size = SP[prey][bpreychrt][SN_id] / KUP_SN; // This used to be (SN *  KUP_SN) but "SN *" not needed as alrady in KLP_SN
                             sizeScalar = rel_size * exp(Kmax_coefft * (1.0 - rel_size));
                             
                             /**
@@ -609,12 +609,12 @@ double Avail_Fish(MSEBoxModel *bm, int guildcase, int chrt, int chrtstage, int p
 
                             /*
                             maxavail = KLP_SN + (KUP_SN - KLP_SN) * 0.5;
-                            if (SP[prey][bpreychrt][SN_id] <= (maxavail * SN)){
-                                xmid = (KLP_SN + (maxavail - KLP_SN ) * 0.5) * SN;
+                            if (SP[prey][bpreychrt][SN_id] <= maxavail){  // was (maxavail * SN)
+                                xmid = KLP_SN + (maxavail - KLP_SN ) * 0.5;   // was (KLP_SN + (maxavail - KLP_SN ) * 0.5) * SN but final SN not needed as alrady in maxavail, KLP_SN and KUP_SN
                                 sizeScalar = 1.0 / (1.0 + exp(-Kmax_coefft * (SP[prey][bpreychrt][SN_id] - xmid)));
                             }
-                            if (SP[prey][bpreychrt][SN_id] > (maxavail * SN)){
-                                xmid = (KUP_SN - (KUP_SN - maxavail) * 0.5) * SN;
+                            if (SP[prey][bpreychrt][SN_id] > maxavail * SN){  // was (maxavail * SN)
+                                xmid = (KUP_SN - (KUP_SN - maxavail) * 0.5); // was (KUP_SN - (KUP_SN - maxavail) * 0.5) * SN but final SN not needed as alrady in maxavail, KLP_SN and KUP_SN
                                 sizeScalar = 1.0 / (1.0 + exp(Kmax_coefft * (SP[prey][bpreychrt][SN_id] - xmid)));
                             }
                             */
@@ -1057,7 +1057,7 @@ double Do_Vertebrate_Living(MSEBoxModel *bm, FILE *llogfp, int guildcase, HABITA
                 } else if (bm->flag_shrinkfat && (test_value < 0.0)) { // No flag_shrinkfat check here as will be trapped by first half of if statement regardless
                     if (bm -> flag_dynamicXRS) {
                         RNcost_sp = FunctGroupArray[guildcase].speciesParams[RNcost_id];
-                        FunctGroupArray[guildcase].grow[cohort][RN_id] = 1/RNcost_sp * VGrowth; // if there is a cost in converting energy to RN, the same inverse cost applies when
+                        FunctGroupArray[guildcase].grow[cohort][RN_id] = 1.0 / RNcost_sp * VGrowth; // if there is a cost in converting energy to RN, the same inverse cost applies when
                     } else {
                         FunctGroupArray[guildcase].grow[cohort][RN_id] = VGrowth;  // Take deficit from the reserve so this represents living off fat
                     }

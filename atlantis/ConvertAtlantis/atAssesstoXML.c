@@ -472,7 +472,7 @@ void RAssessFlagXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc, xm
         bm->NumRAssessScriptNames = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, integer_check, "NumRAssessScriptNames");
         
         for (nf = 0; nf < bm->NumRAssessScriptNames; nf ++) {
-            sprintf(nameString, "RAssessRscriptName%d", nf);
+            snprintf(nameString, sizeof(nameString), "RAssessRscriptName%d", nf);
             Util_XML_Parse_Create_Node(fp, fileName, groupingNode, nameString, "Base of name for RAssess R script", "", XML_TYPE_STRING, "");
         }
         childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "speciesRAssess", "speciesRAssess", "", "");
@@ -511,11 +511,11 @@ void InitAssessStockAgeXML(MSEBoxModel *bm, xmlNodePtr parent) {
 			groupNode = Util_XML_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[guild].groupCode, "", "", "");
             
 			for (ns = 0; ns < bm->K_num_sexes; ns++) {
-				sprintf(str, "%s", sexStrings[ns]);
+				snprintf(str, sizeof(str), "%s", sexStrings[ns]);
 				sexNode = Util_XML_Create_Node(ATLANTIS_SEX_ATTRIBUTE, groupNode, str, "", "", "");
                 
 				for (stock = 0; stock < FunctGroupArray[guild].numStocks; stock++) {
-					sprintf(str, "stock%d", stock + 1);
+					snprintf(str, sizeof(str), "stock%d", stock + 1);
 					Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, sexNode, str, "", "", "");
 				}
 			}
@@ -554,11 +554,11 @@ void AssessStockXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, 
 	speciesIndex = Util_Get_FG_Index_From_Token(bm, strPtr, fileName, str, TRUE);
 
 	if (strstr(str, "Mzero") != NULL) {
-		sprintf(paramStr, "Mzero");
+		snprintf(paramStr, sizeof(paramStr), "Mzero");
 	} else if (strstr(str, "MeanLenAge") != NULL) {
-		sprintf(paramStr, "MeanLenAge");
+		snprintf(paramStr, sizeof(paramStr), "MeanLenAge");
 	} else if (strstr(str, "SigmaLenAge") != NULL) {
-		sprintf(paramStr, "SigmaLenAge");
+		snprintf(paramStr, sizeof(paramStr), "SigmaLenAge");
 	}
     
 	// Find stock index
@@ -572,7 +572,7 @@ void AssessStockXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, 
 	speciesNode = Util_XML_Get_Or_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode);
 	sexNode = Util_XML_Get_Or_Create_Node(ATLANTIS_SEX_ATTRIBUTE, speciesNode, sexStrings[ns]);
     
-    sprintf(attributeName, "stock%d", stockIndex);
+    snprintf(attributeName, sizeof(attributeName), "stock%d", stockIndex);
 	Util_XML_Set_Node_Value(ATLANTIS_ATTRIBUTE, sexNode, attributeName, valueStr);
     
 }
@@ -602,7 +602,7 @@ void InitAssessSexXML(MSEBoxModel *bm, xmlNodePtr parent) {
 			groupNode = Util_XML_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[guild].groupCode, "", "", "");
             
 			for (stock = 0; stock < FunctGroupArray[guild].numStocks; stock++) {
-                sprintf(str, "stock%d", stock + 1);
+                snprintf(str, sizeof(str), "stock%d", stock + 1);
                 Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, str, "", "", "");
 			}
 		}
@@ -636,23 +636,23 @@ void AssessSexXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, ch
 	speciesIndex = Util_Get_FG_Index_From_Token(bm, strPtr, fileName, str, TRUE);
     
 	if (strstr(str, "CvLA0") != NULL) {
-		sprintf(paramStr, "CvLA0");
+		snprintf(paramStr, sizeof(paramStr), "CvLA0");
 	} else if (strstr(str, "CvLAmax") != NULL) {
-		sprintf(paramStr, "CvLAmax");
+		snprintf(paramStr, sizeof(paramStr), "CvLAmax");
 	} else if (strstr(str, "Wtlena") != NULL) {
-		sprintf(paramStr, "Wtlena");
+		snprintf(paramStr, sizeof(paramStr), "Wtlena");
 	} else if (strstr(str, "Wtlenb") != NULL) {
-		sprintf(paramStr, "Wtlenb");
+		snprintf(paramStr, sizeof(paramStr), "Wtlenb");
 	} else if (strstr(str, "Fecund") != NULL) {
-		sprintf(paramStr, "Fecund");
+		snprintf(paramStr, sizeof(paramStr), "Fecund");
 	} else if (strstr(str, "VBLinf") != NULL) {
-		sprintf(paramStr, "VBLinf");
+		snprintf(paramStr, sizeof(paramStr), "VBLinf");
 	} else if (strstr(str, "VBk") != NULL) {
-		sprintf(paramStr, "VBk");
+		snprintf(paramStr, sizeof(paramStr), "VBk");
 	} else if (strstr(str, "VBt0") != NULL) {
-		sprintf(paramStr, "VBt0");
+		snprintf(paramStr, sizeof(paramStr), "VBt0");
 	} else if (strstr(str, "SSMort") != NULL) {
-		sprintf(paramStr, "SSMort");
+		snprintf(paramStr, sizeof(paramStr), "SSMort");
 	}
     
 	// Find stock index
@@ -664,7 +664,7 @@ void AssessSexXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, ch
     
 	//paramNode = Util_XML_Get_Or_Create_Node(ATLANTIS_ATTRIBUTE, parent, paramStr);
 	speciesNode = Util_XML_Get_Or_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode);
-    sprintf(attributeName, "stock%d", stockIndex);
+    snprintf(attributeName, sizeof(attributeName), "stock%d", stockIndex);
 	Util_XML_Set_Node_Value(ATLANTIS_ATTRIBUTE, speciesNode, attributeName, valueStr);
     
 }
@@ -772,7 +772,7 @@ void TierAssessmentXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc,
         bm->NumRAssessScriptNames = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, integer_check, "NumRAssessScriptNames");
         
         for (nf = 0; nf < bm->NumRAssessScriptNames; nf ++) {
-            sprintf(nameString, "RAssessRscriptName%d", nf);
+            snprintf(nameString, sizeof(nameString), "RAssessRscriptName%d", nf);
             Util_XML_Parse_Create_Node(fp, fileName, groupingNode, nameString, "Base of name for R script", "", XML_TYPE_STRING, "");
         }
         

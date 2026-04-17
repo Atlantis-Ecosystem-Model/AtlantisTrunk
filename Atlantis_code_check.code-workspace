@@ -1,0 +1,58 @@
+{
+	"folders": [
+		{
+			"path": "atlantis/atassess"
+		},
+		{
+			"path": "atlantis/atbrokerlink"
+		},
+		{
+			"path": "atlantis/atCLAMLink"
+		},
+		{
+			"path": "atlantis/atecology"
+		},
+		{
+			"path": "atlantis/ateconomic"
+		},
+		{
+			"path": "atlantis/atharvest"
+		},
+		{
+			"path": "atlantis/atimplementation"
+		},
+		{
+			"path": "atlantis/atlantismain"
+		},
+		{
+			"path": "atlantis/atlantisUtil"
+		},
+		{
+			"path": "atlantis/atlink"
+		},
+		{
+			"path": "atlantis/atmanage"
+		},
+		{
+			"path": "atlantis/atphysics"
+		},
+		{
+			"path": "atlantis/atSS3Link"
+		},
+		{
+			"path": "atlantis/autom4te.cache"
+		},
+		{
+			"path": "atlantis/ConvertAtlantis"
+		},
+		{
+			"path": "atlantis/externalLibs"
+		},
+		{
+			"path": "atlantis/netcdf"
+		},
+		{
+			"path": "atlantis/sjwlib"
+		}
+	]
+}

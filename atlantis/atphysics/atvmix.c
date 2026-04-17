@@ -104,8 +104,12 @@ void vertical_mixing(MSEBoxModel *bm, double ***newval) {
 				for (k = 0; k < bp->nz; k++) {
 					c[k] = newval[b][k][n];
 
-					//if(strcmp(bm->tinfo[n].name, "NH3") == 0)
-					//	printf("day: %e, box: %d starting conc[%d]: %e\n", bm->dayt, b, k, c[k]);
+                    /**
+                    if(bm->dayt > 1092.0) {
+                        fprintf(bm->logFile, "day: %e, box: %d-%d starting c: %e\n", bm->dayt, b, k, c[k]);
+                        fflush(bm->logFile);
+                    }
+                    **/
 				}
 				/* Calculate exchanges  - ignoring bottom most water column
 				 layer as obviously can't have upwelling through the seafloor */
@@ -139,10 +143,12 @@ void vertical_mixing(MSEBoxModel *bm, double ***newval) {
 						bp->vflux[k] -= cvol;
 
 						/**
-                        if(( b == 47 ) && (bm->newmonth))
-                            fprintf(bm->logFile,"day: %e, box: %d, %s conc[%d]: %e, conc[%d]: %e, cvol: %e, lvol: %e, wvol: %e, mrate: %e, vflux-%d: %e\n",
-                                    bm->dayt, b, bm->tinfo[n].name, k, c[k], k-1, c[k-1], cvol, lvol, wvol, mrate[k], k - 1, bp->vflux[k - 1]);
-						 **/
+                        //if(( b == 47 ) && (bm->newmonth)) {
+                            fprintf(bm->logFile,"day: %e, box: %d-%d, %s c: %e, c[%d]: %e, cvol: %e, lvol: %e, wvol: %e, mrate: %e, vflux-%d: %e\n",
+                                    bm->dayt, b, k, bm->tinfo[n].name, c[k], k-1, c[k-1], cvol, lvol, wvol, mrate[k], k - 1, bp->vflux[k - 1]);
+                            fflush(bm->logFile);
+                        }
+						**/
 					} else {
 						/* Check amount to exchange is not more than in the cells */
 						if (lvol < cvol)
@@ -165,9 +171,12 @@ void vertical_mixing(MSEBoxModel *bm, double ***newval) {
 						/**
                         //if(!strcmp(bm->tinfo[n].name, "NH3"))
                         //if(b == bm->checkbox)
-                        if(( b == 47 ) && (bm->newmonth))
-                            fprintf(bm->logFile, "day: %e, box: %d, %s conc[%d]: %e, conc[%d]: %e, cvol: %e, lvol: %e, wvol: %e, mrate: %e, vflux-%d: %e\n",
-                                    bm->dayt, b, bm->tinfo[n].name, k, c[k], k-1, c[k-1], cvol, lvol, wvol, mrate[k], k, bp->vflux[k]);
+                        //if(( b == 47 ) && (bm->newmonth))
+                        //if(bm->dayt > 1092.0) {
+                            fprintf(bm->logFile, "day: %e, box: %d-%d, %s c: %e, c[%d]: %e, cvol: %e, lvol: %e, wvol: %e, mrate: %e, vflux-%d: %e\n",
+                                    bm->dayt, b, k, bm->tinfo[n].name, c[k], k-1, c[k-1], cvol, lvol, wvol, mrate[k], k, bp->vflux[k]);
+                            fflush(bm->logFile);
+                        }
                          **/
 						 
 					}
@@ -177,6 +186,18 @@ void vertical_mixing(MSEBoxModel *bm, double ***newval) {
                          fprintf(bm->logFile, "day: %e, box: %d, %s conc[%d]: %e, conc[%d]: %e, cvol: %e, mrate: %e, \n",
                               bm->dayt, b, bm->tinfo[n].name, k, c[k], k-1, c[k-1], cvol, mrate[k]);
 					 **/
+                    
+                    if (!_finite(c[k])) {
+                        fprintf(bm->logFile, "day: %e, box: %d-%d, %s c starts: %e c: %e, c[%d]: %e, cvol: %e, lvol: %e, wvol: %e, mrate: %e, vflux-%d: %e\n",
+                                bm->dayt, b, k, bm->tinfo[n].name, newval[b][k][n], c[k], k-1, c[k-1], cvol, lvol, wvol, mrate[k], k, bp->vflux[k]);
+                        fflush(bm->logFile);
+                        printf("day: %e, box: %d-%d, %s c starts: %e c: %e, c[%d]: %e, cvol: %e, lvol: %e, wvol: %e, mrate: %e, vflux-%d: %e\n",
+                                bm->dayt, b, k, bm->tinfo[n].name, newval[b][k][n], c[k], k-1, c[k-1], cvol, lvol, wvol, mrate[k], k, bp->vflux[k]);
+                        fflush(stdout);
+                        fflush(stderr);
+                        quit("vertical_mixing - %s in %d:%d at time %e is non finite\n", bm->tinfo[n].name, b, k, bm->dayt);
+                    }
+
 
 				}
 
@@ -203,11 +224,22 @@ void vertical_mixing(MSEBoxModel *bm, double ***newval) {
 				}
 
 				/* Store new values */
-				for (k = 0; k < bp->nz; k++)
-					newval[b][k][n] = c[k];
+                for (k = 0; k < bp->nz; k++) {
+                    newval[b][k][n] = c[k];
+                    
+                    if (!_finite(newval[b][k][n])) {
+                        fflush(bm->logFile);
+                        fflush(stdout);
+                        fflush(stderr);
+                        quit("vertical_mixing - %s in %d:%d at time %e is non finite\n", bm->tinfo[n].name, b, k, bm->dayt);
+                    }
+                }
 			}
 		}
 	}
+    
+    fflush(stdout);
+    fflush(stderr);
 
 	free1d(c);
 	free1d(mrate);

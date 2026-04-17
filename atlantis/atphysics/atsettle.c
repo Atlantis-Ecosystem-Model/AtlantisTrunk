@@ -130,9 +130,11 @@ void settleBMwc(MSEBoxModel *bm, double ***newwc, double ***newsed, FILE *llogfp
     }
 
 	 /* Loop over each box, depositing material to sediments */
-    for(b=0; b<bm->nbox; b++)
-		if( bm->boxes[b].type != BOUNDARY && bm->boxes[b].type != LAND)
-			deposit(bm,&bm->boxes[b],bm->atPhysicsModule->masstosed[b],newwc[b],newsed[b],llogfp);
+    for(b=0; b<bm->nbox; b++) {
+        if( bm->boxes[b].type != BOUNDARY && bm->boxes[b].type != LAND) {
+            deposit(bm,&bm->boxes[b],bm->atPhysicsModule->masstosed[b],newwc[b],newsed[b],llogfp);
+        }
+    }
 
     /* Re-calculate layer coordinates */
     layer_coords(bm, llogfp);

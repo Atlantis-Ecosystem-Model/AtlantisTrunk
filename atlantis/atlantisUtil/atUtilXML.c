@@ -886,7 +886,7 @@ void Util_XML_Set_Node_Property(xmlNodePtr attributeNode, char *attributeName, c
 	xmlXPathObjectPtr attributeValueNode;
 	char xpath[1000];
 	char *currentPath = (char *)xmlGetNodePath(attributeNode);
-	sprintf(xpath, "%s/%s", currentPath, (unsigned char *) attributeName);
+	snprintf(xpath, sizeof(xpath), "%s/%s", currentPath, (unsigned char *) attributeName);
 	free(currentPath);
 
 	/* Need to see if the given attributeNode has a child called attributeName - if so then set its value */
@@ -916,7 +916,7 @@ static char *Get_Node_Property(xmlNodePtr attributeNode, char *attributeName) {
 	char xpath[1000];
 	char *currentPath = (char *)xmlGetNodePath(attributeNode);
 	char *returnValue;
-	sprintf(xpath, "%s/%s", currentPath, (unsigned char *) attributeName);
+	snprintf(xpath, sizeof(xpath), "%s/%s", currentPath, (unsigned char *) attributeName);
 	free(currentPath);
 
 	/* Need to see if the given attributeNode has a child called attributeName - if so then set its value */
@@ -942,14 +942,14 @@ static char *Get_Node_Property(xmlNodePtr attributeNode, char *attributeName) {
  *
  *
  */
-static void Build_Node_XPath(xmlNodePtr parent, char *xpath, char *nodeName, char *attributeName, char *attributeValue) {
+static void Build_Node_XPath(xmlNodePtr parent, char *xpath, int bufPath, char *nodeName, char *attributeName, char *attributeValue) {
 
 	char *currentPath = (char *) xmlGetNodePath(parent);
 
 #ifdef ELEMENT_ATTRIBUTE
-	sprintf(xpath, "%s/%s[%s='%s']", currentPath, (unsigned char *)nodeName, (unsigned char *)attributeName, (unsigned char *) attributeValue);
+	snprintf(xpath, bufPath, "%s/%s[%s='%s']", currentPath, (unsigned char *)nodeName, (unsigned char *)attributeName, (unsigned char *) attributeValue);
 #else
-	sprintf(xpath, "%s/%s[@%s='%s']", currentPath, (unsigned char *) nodeName, (unsigned char *) attributeName, (unsigned char *) attributeValue);
+	snprintf(xpath, bufPath, "%s/%s[@%s='%s']", currentPath, (unsigned char *) nodeName, (unsigned char *) attributeName, (unsigned char *) attributeValue);
 #endif
 	free(currentPath);
 }
@@ -1026,7 +1026,7 @@ xmlXPathObjectPtr Util_XML_Get_Node_List(int type, xmlNodePtr parent, char *attr
 	/**
 	 * See if the node already exists.
 	 */
-	Build_Node_XPath(parent, &xpath[0], AtlantisXMLObjectNAMES[type][ATTRIBUTE_TYPE], AtlantisXMLObjectNAMES[type][ATTRIBUTE_NAME], attributeName);
+	Build_Node_XPath(parent, &xpath[0], sizeof(xpath), AtlantisXMLObjectNAMES[type][ATTRIBUTE_TYPE], AtlantisXMLObjectNAMES[type][ATTRIBUTE_NAME], attributeName);
 
 	if (verbose > 2)
 		printf("Util_XML_Get_Node_List: xpath = %s\n", xpath);
@@ -1089,7 +1089,7 @@ void Util_XML_Set_Node_Value(int type, xmlNodePtr parent, char *attributeName, c
 	if (strchr(value, '\n') != NULL)
 		*strchr(value, '\n') = '\0';
 
-	Build_Node_XPath(parent, &xpath[0], AtlantisXMLObjectNAMES[type][ATTRIBUTE_TYPE], AtlantisXMLObjectNAMES[type][ATTRIBUTE_NAME], attributeName);
+	Build_Node_XPath(parent, &xpath[0], sizeof(xpath), AtlantisXMLObjectNAMES[type][ATTRIBUTE_TYPE], AtlantisXMLObjectNAMES[type][ATTRIBUTE_NAME], attributeName);
 	
 	if (verbose > 2)
 		printf("Util_XML_Set_Node_Value: xpath = %s with value %s\n", xpath, value);
@@ -1112,7 +1112,7 @@ void Util_XML_Replace_Node_Value(int type, xmlNodePtr parent, char *attributeNam
 	char *newNodeValue;
 	int i;
 
-	Build_Node_XPath(parent, &xpath[0], AtlantisXMLObjectNAMES[type][ATTRIBUTE_TYPE], AtlantisXMLObjectNAMES[type][ATTRIBUTE_NAME], attributeName);
+	Build_Node_XPath(parent, &xpath[0], sizeof(xpath), AtlantisXMLObjectNAMES[type][ATTRIBUTE_TYPE], AtlantisXMLObjectNAMES[type][ATTRIBUTE_NAME], attributeName);
 
 	if (verbose > 2)
 		printf("Util_XML_Replace_Node_Value: xpath = %s with value %s\n", xpath, value);
@@ -1218,11 +1218,8 @@ int Util_XML_Get_Value_Double(char *fileName, int type, int localecotest, int is
 		printf("value = %e\n", value);
 	Check_Value(valueName, value, entry_type, valueName);
 	
-	printf("In atUtilXML printing ecosystem parameters");
-	
 	if (localecotest > 2)
 		printf("Ecosystem parameter: %s = %f\n", valueName, value);
-	printf("In atUtilXML printing ecosystem parameters");
 	
 	*returnValue = value;
 	return TRUE;
@@ -1366,7 +1363,7 @@ xmlNodePtr Util_XML_Parse_Create_Node(FILE *infile, char *fileName, xmlNodePtr c
 				if(unitstr != NULL){
 					for(i = 0; i < numUnits; i++){
 						if(strcmp(unitstr, unitTypes[i]) == 0){
-							sprintf(tempBuf, "%s %s", valuestr, unitstr);
+							snprintf(tempBuf, sizeof(tempBuf), "%s %s", valuestr, unitstr);
 							strcpy(valuestr, tempBuf);
 							break;
 						}
@@ -1483,13 +1480,13 @@ static char *Replace_String_Entry(char *valueStr, char *replaceStr, int size, in
 			if (i == 0)
 				strcpy(tempStr, replaceStr);
 			else
-				sprintf(tempStr, "%s %s", returnString, replaceStr);
+				snprintf(tempStr, sizeof(tempStr), "%s %s", returnString, replaceStr);
 			strcpy(returnString, tempStr);
 		} else {
 			if (i == 0)
 				strcpy(tempStr, varStr);
 			else
-				sprintf(tempStr, "%s %s", returnString, varStr);
+				snprintf(tempStr, sizeof(tempStr), "%s %s", returnString, varStr);
 			strcpy(returnString, tempStr);
 		}
 	}
@@ -1662,7 +1659,7 @@ int Util_XML_Read_Array_Double(int type, char *fileName, char *errorPath, xmlNod
 	xmlNodePtr attributeNode;
 	char *values;
 	char xpath[1000];
-	sprintf(xpath, "%s/%s", errorPath, key);
+	snprintf(xpath, sizeof(xpath), "%s/%s", errorPath, key);
 
 	attributeNode = Util_XML_Get_Node(type, parent, key);
 	if (attributeNode == NULL) {
@@ -1694,7 +1691,7 @@ int Util_XML_Read_Array_String(int type, char *fileName, char *errorPath, xmlNod
 
 	*p = (char **) c_alloc2d(STRLEN, size);
 
-	sprintf(xpath, "%s/%s", errorPath, key);
+	snprintf(xpath, sizeof(xpath), "%s/%s", errorPath, key);
 
 	attributeNode = Util_XML_Get_Node(type, parent, key);
 	if (attributeNode == NULL) {
@@ -2228,7 +2225,7 @@ int skipToKeyEndNoRewind(FILE *fp, char *key)
 xmlDocPtr xmlReadFileDestFolder(char *destFolder, char *fileName,  const char *encoding, int options){
 	char finalFile[BMSLEN];
 
-	sprintf(finalFile, "%s%s", destFolder, fileName);
+	snprintf(finalFile, sizeof(finalFile), "%s%s", destFolder, fileName);
 	return xmlReadFile(finalFile, encoding, options);
 
 }

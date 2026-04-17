@@ -210,7 +210,7 @@ void Assess_Init(MSEBoxModel *bm, FILE *llogfp) {
 	physprocess = (double **) alloc2d(bm->nbox, 3);
 
 	/* Sampled data (mostly fisheries independent) */
-	individVERTinfo = (double *****) alloc5d(2, bm->nfzones, bm->K_num_tot_sp, bm->K_num_size, K_num_individ_char);
+	individVERTinfo = (double *****) alloc5d(2, bm->nfzones, bm->K_num_size, bm->K_num_tot_sp, K_num_individ_char);
 
 	invstockinfo = (double ****) alloc4d(2, bm->nfzones, bm->K_num_tot_sp, 3);
 	pop_fraction = (double ***) alloc3d(bm->nfzones, bm->K_num_tot_sp, 2);
@@ -531,25 +531,27 @@ void Assess_Init(MSEBoxModel *bm, FILE *llogfp) {
  * \brief This routine names the classical assessment parameters that are estimated
  */
 void Assess_Set_Name_ID(MSEBoxModel *bm) {
-	sprintf(bm->NAssessNAME[est_med_recruit_id], "%s", "Med_Recruit");
-	sprintf(bm->NAssessNAME[est_top_recruit_id], "%s", "Top_Recruit");
-	sprintf(bm->NAssessNAME[est_bot_recruit_id], "%s", "Bott_Recruit");
-	sprintf(bm->NAssessNAME[est_med_prm2_id], "%s", "Med_Prm2");
-	sprintf(bm->NAssessNAME[est_top_prm2_id], "%s", "Top_Prm2");
-	sprintf(bm->NAssessNAME[est_bot_prm2_id], "%s", "Bott_Prm2");
-	sprintf(bm->NAssessNAME[est_med_stock_id], "%s", "Med_Stock");
-	sprintf(bm->NAssessNAME[est_top_stock_id], "%s", "Top_Stock");
-	sprintf(bm->NAssessNAME[est_bot_stock_id], "%s", "Bott_Stock");
-	sprintf(bm->NAssessNAME[est_SS_id], "%s", "Sum_Sq");
-	sprintf(bm->NAssessNAME[est_FrefA_id], "%s", "FrefA");
-	sprintf(bm->NAssessNAME[est_FrefC_id], "%s", "FrefC");
-	sprintf(bm->NAssessNAME[est_Fcurr_id], "%s", "Fcurr");
-	sprintf(bm->NAssessNAME[est_M_id], "%s", "M_est");
-	sprintf(bm->NAssessNAME[est_Ccurr_id], "%s", "AvgCurrentCatch");
-	sprintf(bm->NAssessNAME[est_Cslope_id], "%s", "CPUEtrend");
-	sprintf(bm->NAssessNAME[est_numyr_id], "%s", "CPUErun");
-	sprintf(bm->NAssessNAME[est_CPUEnow_id], "%s", "CPUEnow");
-	sprintf(bm->NAssessNAME[est_CPUEstart_id], "%s", "CPUEtrendStart");
+    int paramlength = 20;
+    
+	snprintf(bm->NAssessNAME[est_med_recruit_id], paramlength, "%s", "Med_Recruit");
+	snprintf(bm->NAssessNAME[est_top_recruit_id], paramlength, "%s", "Top_Recruit");
+	snprintf(bm->NAssessNAME[est_bot_recruit_id], paramlength, "%s", "Bott_Recruit");
+	snprintf(bm->NAssessNAME[est_med_prm2_id], paramlength, "%s", "Med_Prm2");
+	snprintf(bm->NAssessNAME[est_top_prm2_id], paramlength, "%s", "Top_Prm2");
+	snprintf(bm->NAssessNAME[est_bot_prm2_id], paramlength, "%s", "Bott_Prm2");
+	snprintf(bm->NAssessNAME[est_med_stock_id], paramlength, "%s", "Med_Stock");
+	snprintf(bm->NAssessNAME[est_top_stock_id], paramlength, "%s", "Top_Stock");
+	snprintf(bm->NAssessNAME[est_bot_stock_id], paramlength, "%s", "Bott_Stock");
+	snprintf(bm->NAssessNAME[est_SS_id], paramlength, "%s", "Sum_Sq");
+	snprintf(bm->NAssessNAME[est_FrefA_id], paramlength, "%s", "FrefA");
+	snprintf(bm->NAssessNAME[est_FrefC_id], paramlength, "%s", "FrefC");
+	snprintf(bm->NAssessNAME[est_Fcurr_id], paramlength, "%s", "Fcurr");
+	snprintf(bm->NAssessNAME[est_M_id], paramlength, "%s", "M_est");
+	snprintf(bm->NAssessNAME[est_Ccurr_id], paramlength, "%s", "AvgCurrentCatch");
+	snprintf(bm->NAssessNAME[est_Cslope_id], paramlength, "%s", "CPUEtrend");
+	snprintf(bm->NAssessNAME[est_numyr_id], paramlength, "%s", "CPUErun");
+	snprintf(bm->NAssessNAME[est_CPUEnow_id], paramlength, "%s", "CPUEnow");
+	snprintf(bm->NAssessNAME[est_CPUEstart_id], paramlength, "%s", "CPUEtrendStart");
 
 	return;
 }
@@ -746,7 +748,7 @@ static void Setup_Biased_Sample_Values(MSEBoxModel *bm, FILE *llogfp) {
     Set_Species_Biased_Value(spErrorStructure, SPONGE, flagepibiom, k_avgepif1, k_varepif1, 0, 0, k_avgepi1p, k_varepi1p, k_avgepi1eat, k_varepi1eat);
     
 	Set_Species_Biased_Value(spErrorStructure, PWN, flagepibiom, k_avgepif2, k_varepif2, 0, 0, k_avgepi2p, k_varepi2p, k_avgepi2eat, k_varepi2eat);
-	Set_Species_Biased_Value(spErrorStructure, MOB_EP_OTHER, flagepibiom, k_avgepif2, k_varepif2, 0, 0, k_avgepi2p, k_varepi2p, k_varepi2eat, k_varepi2eat);
+	Set_Species_Biased_Value(spErrorStructure, MOB_EP_OTHER, flagepibiom, k_avgepif2, k_varepif2, 0, 0, k_avgepi2p, k_varepi2p, k_avgepi2eat, k_varepi2eat);
 
 	Set_Species_Biased_Value(spErrorStructure, PL_BACT, flaginvpbiom, k_avgpbact, k_varpbact, 0, 0, k_avgpbactp, k_varpbactp, k_avgpbacteat, k_varpbacteat);
 	Set_Species_Biased_Value(spErrorStructure, SED_BACT, flaginvpbiom, k_avgsbact, k_varsbact, 0, 0, k_avgsbactp, k_varsbactp, k_avgsbacteat, k_varsbacteat);
@@ -766,11 +768,11 @@ static void Setup_Biased_Sample_Values(MSEBoxModel *bm, FILE *llogfp) {
 	Set_Species_Biased_Value(spErrorStructure, ICE_MIXOTROPHS, flagdetbiom, k_avgphyts, k_varphyts, 0, 0, k_avgpelpp, k_varpelpp, 0, 0);
 	Set_Species_Biased_Value(spErrorStructure, ICE_ZOOBIOTA, flaginvpbiom, k_avgzoops, k_varzoops, 0, 0, k_avgzoopp, k_varzoopp, k_avgzoopeat, k_varzoopeat);
 
-	Set_Species_Biased_Value(spErrorStructure, LAB_DET, flagdetbiom, k_avgldet, k_varldet, 0, 0, 0, 0, 0, 0);
-	Set_Species_Biased_Value(spErrorStructure, CARRION, flagdetbiom, k_avgldet, k_varldet, 0, 0, 0, 0, 0, 0);
+	//Set_Species_Biased_Value(spErrorStructure, LAB_DET, flagdetbiom, k_avgldet, k_varldet, 0, 0, 0, 0, 0, 0);
+	//Set_Species_Biased_Value(spErrorStructure, CARRION, flagdetbiom, k_avgldet, k_varldet, 0, 0, 0, 0, 0, 0);
 
 	Set_Species_Biased_Value(spErrorStructure, REF_DET, flagdetbiom, k_avgrdet, k_varrdet, k_avgrdet, k_varrdet, 0, 0, 0, 0);
-	Set_Species_Biased_Value(spErrorStructure, LAB_DET, flagdetbiom, k_avgrdet, k_varrdet, k_avgrdet, k_varrdet, 0, 0, 0, 0);
-	Set_Species_Biased_Value(spErrorStructure, CARRION, flagdetbiom, k_avgrdet, k_varrdet, k_avgrdet, k_varrdet, 0, 0, 0, 0);
+	Set_Species_Biased_Value(spErrorStructure, LAB_DET, flagdetbiom, k_avgldet, k_varldet, k_avgldet, k_varldet, 0, 0, 0, 0);
+	Set_Species_Biased_Value(spErrorStructure, CARRION, flagdetbiom, k_avgldet, k_varldet, k_avgldet, k_varldet, 0, 0, 0, 0);
 
 }

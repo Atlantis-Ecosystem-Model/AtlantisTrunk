@@ -81,23 +81,19 @@ void Read_Econ_Time_Series(char *folderPath, char *name, char *tsname, char *t_u
     if( verbose > 1)
 		fprintf(stderr, "Reading Economic Time Series %s\n", name);
 
-    /* Set the number of economic time series to one for purposes of creating the array
-	   (as only one economic time series file to load at present)
-	*/
-	nnts = 1;
-	i = nnts - 1;
+    readkeyprm_i(fp,"nEconts",&nEconts);
+    if(!nEconts)
+        quit("Economic model currently expects a GDP file, if you don't have one please create a dummy file (filled with zeroes for example)\n");
+
+    nnts = nEconts;
 
 	/* Allocate memory for list of time series */
     if( (fts=(FisheryTimeSeries *)malloc((size_t)nnts*sizeof(FisheryTimeSeries))) == NULL )
         quit("Read_Econ_Time_Series: Can't allocate memory for economic %s time series list\n", tsname);
 
-    readkeyprm_i(fp,"nEconts",&nEconts);
-    if(!nEconts)
-    	quit("Economic model currently expects a GDP file, if you don't have one please create a dummy file (filled with zeroes for example)\n");
-
     /** Read each economic time series input **/
 	/* Location */
-    sprintf(key,"%sts%d.location",tsname,i);
+    snprintf(key, sizeof(key), "%sts%d.location",tsname,i);
 	readkeyprm_s(fp,key,buf);
 	if( sscanf(buf,"%lf %lf",&fts[i].x,&fts[i].y) != 2 )
 		quit("Incorrect information specified for %s, need x y format", key);
@@ -108,7 +104,7 @@ void Read_Econ_Time_Series(char *folderPath, char *name, char *tsname, char *t_u
 	fts[i].b = 0;
 
 	/* Data */
-    sprintf(key,"%sts%d.data",tsname,i);
+    snprintf(key, sizeof(key),"%sts%d.data",tsname,i);
 
 	readkeyprm_s(fp,key,buf);
     tsRead(folderPath, buf,&fts[i].ts);
@@ -133,9 +129,3 @@ void Read_Econ_Time_Series(char *folderPath, char *name, char *tsname, char *t_u
 
 	return;
 }
-
-void Free_Econ_Time_Series(FisheryTimeSeries **ts)
-{
-	Harvest_Free_Time_Series(*ts, 1);
-}
-

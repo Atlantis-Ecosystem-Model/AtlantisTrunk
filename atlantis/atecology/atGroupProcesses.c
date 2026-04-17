@@ -99,9 +99,6 @@ static void Update_Detritus(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABIT
 
 	case WC:
 		FunctGroupArray[pelagicBactIndex].preyEaten[0][WC] += GRAZEinfo[pelagicBactIndex][0][WC];
-		bm->calcMnumPerPred[pelagicBactIndex][guild][current_id] += (GRAZEinfo[pelagicBactIndex][0][WC] * bm->boxes[bm->current_box].dz[bm->current_layer] * bm->boxes[bm->current_box].area * FunctGroupArray[guild].habitatCoeffs[WC]);
-		bm->calcTrackedMort[pelagicBactIndex][0][0][ongoing_id] += (GRAZEinfo[pelagicBactIndex][0][WC] * bm->boxes[bm->current_box].dz[bm->current_layer] * bm->boxes[bm->current_box].area * FunctGroupArray[guild].habitatCoeffs[WC] * bm->dt);
-
 		if(bm->track_atomic_ratio == TRUE){
 			Loose_Element_From_Prey(bm, boxLayerInfo, habitatType, pelagicBactIndex, 0, GRAZEinfo[pelagicBactIndex][0][WC], WC, isGlobal);
 			Loose_Element_From_Prey(bm, boxLayerInfo, habitatType, RefDetIndex, 0, GRAZEinfo[RefDetIndex][0][WC], WC, isGlobal);
@@ -109,6 +106,7 @@ static void Update_Detritus(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABIT
 		}
 
 		bm->calcMnumPerPred[pelagicBactIndex][guild][current_id] += (GRAZEinfo[pelagicBactIndex][0][WC] * bm->boxes[bm->current_box].dz[bm->current_layer] * bm->boxes[bm->current_box].area * FunctGroupArray[guild].habitatCoeffs[WC]);
+        bm->calcTrackedMort[pelagicBactIndex][0][0][ongoing_id] += (GRAZEinfo[pelagicBactIndex][0][WC] * bm->boxes[bm->current_box].dz[bm->current_layer] * bm->boxes[bm->current_box].area * FunctGroupArray[guild].habitatCoeffs[WC] * bm->dt);
 		bm->calcTrackedMort[pelagicBactIndex][0][0][ongoingM2_id] += (GRAZEinfo[pelagicBactIndex][0][WC] * bm->boxes[bm->current_box].dz[bm->current_layer] * bm->boxes[bm->current_box].area * FunctGroupArray[guild].habitatCoeffs[WC] * FunctGroupArray[pelagicBactIndex].speciesParams[Mdt_id]);
 		bm->calcTrackedPredMort[pelagicBactIndex][0][0][guild][ongoing_id] += (GRAZEinfo[pelagicBactIndex][0][WC] * bm->boxes[bm->current_box].dz[bm->current_layer] * bm->boxes[bm->current_box].area * FunctGroupArray[guild].habitatCoeffs[WC] * FunctGroupArray[pelagicBactIndex].speciesParams[Mdt_id]);
 
@@ -300,9 +298,8 @@ static void Update_Detritus(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABIT
 
 			if (FunctGroupArray[guild].diagTol == 2 && it_count == 1){
 				boxLayerInfo->NutsProd[SED][NH_id] += FunctGroupArray[guild].releaseNH[cohort];
-
 			} else {
-				boxLayerInfo->NutsProd[WC][NH_id] += FunctGroupArray[guild].releaseNH[cohort];
+				boxLayerInfo->NutsProdGlobal[EPIFAUNA][SED][NH_id] += FunctGroupArray[guild].releaseNH[cohort]; // Was boxLayerInfo->NutsProd[WC][NH_id]
 			}
 
 		} else {
@@ -416,6 +413,9 @@ static void Update_Detritus(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABIT
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
         break;
+    default:
+        quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
+        break;
 	}
 }
 
@@ -503,7 +503,9 @@ void Update_Debug_Info(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, int habita
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
         break;
-
+    default:
+        quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
+        break;
 	}
 }
 
@@ -975,6 +977,9 @@ int Invert_Consumers_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habita
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
         break;
+    default:
+        quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
+        break;
 	}
 
 	/* Calculate the linear mortality due to oxygen */
@@ -1073,6 +1078,9 @@ int Invert_Consumers_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habita
 			break;
         case MIXED:
             quit("How did we get here as should come through a primary habitat\n");
+            break;
+        default:
+            quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
             break;
 		}
 
@@ -1228,6 +1236,9 @@ int Coral_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int 
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
         break;
+    default:
+        quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
+        break;
 	}
 
 	/* Calculate the linear mortality due to oxygen */
@@ -1299,7 +1310,7 @@ int Coral_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int 
 		 */
 		for (preyID = 0; preyID < bm->K_num_tot_sp; preyID++) {
 			for (prey_chrt = 0; prey_chrt < FunctGroupArray[preyID].numCohortsXnumGenes; prey_chrt++) {
-				for (hab = WC; hab <= EPIFAUNA; hab++) {
+				for (hab = WC; hab < bm->num_active_habitats; hab++) { // Was <= EPIFAUNA
 					if(GRAZEinfo[preyID][prey_chrt][hab] > 0){
 
 						if (bm->flag_olddiet && (FunctGroupArray[guild].diagTol == 2))
@@ -1588,6 +1599,9 @@ int Dinoflag_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, i
 			break;
         case MIXED:
             quit("How did we get here as should come through a primary habitat\n");
+            break;
+        default:
+            quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
             break;
 		}
 
@@ -1983,7 +1997,6 @@ int Epibenthic_Invert_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habit
 			FunctGroupArray[guild].transDR[cohort] = DR * FunctGroupArray[guild].CLEAR[cohort]
 					* FunctGroupArray[guild].speciesParams[k_trans_id];
 			if(bm->track_atomic_ratio == TRUE){
-
 				/* RF is lost in the water column */
 				loss = FunctGroupArray[guild].transDR[cohort]/wcLayerThick;
 				Loose_Element(bm, boxLayerInfo, WC,  RefDetIndex, 0, loss, EPIFAUNA, isGlobal);
@@ -1992,7 +2005,7 @@ int Epibenthic_Invert_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habit
 				Gain_Element(bm, boxLayerInfo, SED, RefDetIndex, 0,  guild, cohort, loss, EPIFAUNA, isGlobal);
 			}
 		} else {
-			FunctGroupArray[guild].transDR[cohort] = 0.0;
+			FunctGroupArray[guild].transDR[cohort] = 0.0; // TODO: Fix - should this occur?
 		}
 
 		/**
@@ -2112,7 +2125,7 @@ int Sediment_Epi_Other_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habi
 
 		for (preyID = 0; preyID < bm->K_num_tot_sp; preyID++) {
 			for (prey_chrt = 0; prey_chrt < FunctGroupArray[preyID].numCohortsXnumGenes; prey_chrt++) {
-				for (hab = 0; hab <  bm->num_active_habitats; hab++) {
+				for (hab = WC; hab <  bm->num_active_habitats; hab++) {
 					if(GRAZEinfo[preyID][prey_chrt][hab] > 0){
 						if(bm->flag_olddiet)
 							UpdateTrackedMort(bm, llogfp, guild, cohort, habitatType, (HABITAT_TYPES)hab, preyID, prey_chrt, boxLayerInfo, 1.0, 1);

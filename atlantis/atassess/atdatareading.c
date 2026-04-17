@@ -181,7 +181,7 @@ void Init_Data_Array(MSEBoxModel *bm) {
  bioleat[BFSeat_id][box] = total grazing (mg m-2) shallow filter feeders on sediment
  bioleat[BFFeat_id][box] = total grazing (mg m-2) other filter feeders on sediment
  bioleat[BFDeat_id][box] = total grazing (mg m-2) deep filter feeders on sediment
- bioleat[BFDeat_id][box] = total grazing (mg m-2) benthic grazers on sediment
+ bioleat[BFDeat_id][box] = total grazing (mg m-2) benthic filter feeders on sediment
  bioleat[BMSeat_id][box] = total grazing (mg m-2) shallow macrozoobenthos on sediment
  bioleat[BMLeat_id][box] = total grazing (mg m-2) megazoobenthos on sediment
  bioleat[BMDeat_id][box] = total grazing (mg m-2) deep macrozoobenthos on sediment
@@ -329,7 +329,7 @@ void Populate_Arrays(MSEBoxModel *bm, FILE *ofp)
 						if (bm->flagecosysassess)
 							/* Sediment biomass data */
 							for (k = 0; k < bm->sednz; k++)
-								biolbiom[sp][b][WC] += bm->sedtr[b][k][FunctGroupArray[sp].totNTracers[0]] * bm->boxes[b].sm.dz[k];
+								biolbiom[sp][b][SED] += bm->sedtr[b][k][FunctGroupArray[sp].totNTracers[0]] * bm->boxes[b].sm.dz[k];
 
 						break;
 
@@ -351,7 +351,7 @@ void Populate_Arrays(MSEBoxModel *bm, FILE *ofp)
 							if (FunctGroupArray[sp].habitatType == SED)
 								/* Sediment biomass data */
 								for (k = 0; k < bm->sednz; k++){
-									biolbiom[sp][b][WC] += bm->sedtr[b][k][FunctGroupArray[sp].totNTracers[0]] * bm->boxes[b].sm.dz[k];
+									biolbiom[sp][b][SED] += bm->sedtr[b][k][FunctGroupArray[sp].totNTracers[0]] * bm->boxes[b].sm.dz[k];
 								}
 							else {
 								biolbiom[sp][b][WC] += bm->epi[b][FunctGroupArray[sp].totNTracers[0]];

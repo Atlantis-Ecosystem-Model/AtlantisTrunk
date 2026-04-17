@@ -24,9 +24,11 @@
  *
  */
 void Ecology_Initialise_Atomic_Info(MSEBoxModel *bm) {
+    int paramlen = 25;
+    
 	bm->atomicRatioInfo = (AtomicRatioStructure *) malloc(sizeof(AtomicRatioStructure));
 
-	bm->atomicRatioInfo->atomicName = (char **) c_alloc2d(25, num_atomic_id);
+	bm->atomicRatioInfo->atomicName = (char **) c_alloc2d(paramlen, num_atomic_id);
 	bm->atomicRatioInfo->C_decomp = 0;
 	bm->atomicRatioInfo->C_trans = 0;
 	bm->atomicRatioInfo->C_respiration = 0;
@@ -40,8 +42,8 @@ void Ecology_Initialise_Atomic_Info(MSEBoxModel *bm) {
 	bm->atomicRatioInfo->K_Lc = 0;
 	bm->atomicRatioInfo->PCM_decomp = 0;
 
-	sprintf(bm->atomicRatioInfo->atomicName[p_id], "Phosphorus");
-	sprintf(bm->atomicRatioInfo->atomicName[c_id], "Carbon");
+	snprintf(bm->atomicRatioInfo->atomicName[p_id], paramlen, "Phosphorus");
+	snprintf(bm->atomicRatioInfo->atomicName[c_id], paramlen, "Carbon");
 }
 
 /**
@@ -217,7 +219,7 @@ double *TOP_respiration) {
 static int Calculate_Carbon_Respiration(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitatType, double *C_respiration) {
 
 	int sp;
-	double PSA, PRatio, biomass, PSAMIN;
+	double CA, PRatio, biomass, CMIN;
 	double *tracerArray = getTracerArray(boxLayerInfo, habitatType);
 	double resp, RRESP;
 	double T, Tcorr;
@@ -240,19 +242,19 @@ static int Calculate_Carbon_Respiration(MSEBoxModel *bm, BoxLayerValues *boxLaye
 
 
 					/* Calculate the existing amount of Carbon */
-					PSA = PRatio * biomass; /* amount in mg/m^3 */
+					CA = PRatio; // Was CA = PRatio * biomass but that would square biomass below in resp calculation, not square in the P calc above
 
-					PSAMIN = FunctGroupArray[sp].speciesParams[C_min_id];
+					CMIN = FunctGroupArray[sp].speciesParams[C_min_id];
 
 					/* Respiration rate per second */
 					RRESP = FunctGroupArray[sp].speciesParams[phyto_resp_rate_id];
-					resp += (biomass * (PSA - PSAMIN) * RRESP * Tcorr) * 1 / 1000.0;
+					resp += (biomass * (CA - CMIN) * RRESP * Tcorr) * 1 / 1000.0;
 
 					/*
 					 //if(strcmp(FunctGroupArray[sp].groupCode, "PL") == 0 &&
 					 if(bm->current_box == 5 && bm->current_layer == 5){
-					 fprintf(bm->logFile, "%s - resp = %e, biomass = %e, PRatio= %e, PSA= %e, PSAMIN= %e, RRESP= %e, Tcorr = %e\n",
-					 FunctGroupArray[sp].groupCode, resp, biomass, PRatio, PSA, PSAMIN,RRESP, Tcorr);
+					 fprintf(bm->logFile, "%s - resp = %e, biomass = %e, PRatio= %e, CA= %e, CMIN= %e, RRESP= %e, Tcorr = %e\n",
+					 FunctGroupArray[sp].groupCode, resp, biomass, PRatio, CA, CMIN,RRESP, Tcorr);
 					 }*/
 				}
 			}
@@ -315,7 +317,6 @@ static int Calculate_Phosphorus_Transformation(MSEBoxModel *bm, BoxLayerValues *
 	double *tracerArray = getTracerArray(boxLayerInfo, habitatType);
 	double RTOP, TOP, T;
 
-	tracerArray = getTracerArray(boxLayerInfo, habitatType);
 	T = tracerArray[Temp_i];
 	TOP = tracerArray[TOP_i];
 
@@ -563,8 +564,7 @@ void PP_uptake(MSEBoxModel *bm, int sp, double uptakeN, double uptakeP, double u
 
 	FunctGroupArray[sp].addRatioFluxes[0][c_id] = uptakeC;
 	FunctGroupArray[sp].addRatioFluxes[0][p_id] = uptakeP;
-	FunctGroupArray[sp].addRatioFluxes[0][num_atomic_id] = uptakeN;
-
+	FunctGroupArray[sp].addRatioFluxes[0][num_atomic_id] = uptakeN;  // Overloaded intentional, the addRatioFluxes array has been sized to cope
 
 	/*
 	if(sp == 20 && bm->current_box == 1){

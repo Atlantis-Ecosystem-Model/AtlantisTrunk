@@ -332,7 +332,7 @@ MapProjection *mpInitialise(int nargs, char *args[]) {
 		else
 			new_args = add_argument("y_0=10000000.0", new_nargs, new_args, &new_nargs, TRUE);
 
-		sprintf(buf, "lon_0=%f", UTM_ZONE(new_nargs, new_args) * 6 - 183);
+		snprintf(buf, sizeof(buf), "lon_0=%f", UTM_ZONE(new_nargs, new_args) * 6 - 183);
 		new_args = add_argument(buf, new_nargs, new_args, &new_nargs, TRUE);
 
 		new_args = add_argument("k_0=0.9996", new_nargs, new_args, &new_nargs, TRUE);
@@ -594,8 +594,13 @@ static char** add_argument(char *arg, int nargs, char *args[], int *new_nargs, i
 static void subst_argument_value(char *arg, char* value, int nargs, char *args[]) {
 	int index = find_argument(arg, nargs, args);
 
-	if (index >= 0)
-		sprintf(args[index], "%s=%s", arg, value);
+    if (index >= 0){
+        size_t needed = strlen(arg) + 1 + strlen(value) + 1;  // arg + '=' + value + '\0'
+        args[index] = (char *)realloc(args[index], needed);  // So can have the size "needed" for the snprintf call
+        snprintf(args[index], needed, "%s=%s", arg, value);
+        
+        //sprintf(args[index], "%s=%s", arg, value);   Can't Just use this as sptrintf deprecated now
+    }
 }
 
 /*

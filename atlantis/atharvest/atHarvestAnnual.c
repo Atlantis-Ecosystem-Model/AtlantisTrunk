@@ -81,7 +81,6 @@ void Report_Annual_Harvest(MSEBoxModel *bm, FILE *llogfp) {
 	/* Report catches in log file */
 	Harvest_Report_Fisheries_Stats(bm, llogfp);
 
-	did_printout = 0;
 	/* Report on extra catch and discards and reset for the new year */
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		if (FunctGroupArray[sp].isImpacted == TRUE) {

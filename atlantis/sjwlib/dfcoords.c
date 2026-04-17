@@ -50,30 +50,30 @@ void geo_inverse(void *d, int n, double from[], double to[]);
 void geo_free(void *d);
 
 void cm_1free(Datafile *df, CoordinateMapping *cm);
-int cm_1d_ctoi(Datafile * df, CoordinateMapping *cm, const int depindicies[],
+int cm_1d_ctoi(Datafile * df, CoordinateMapping *cm, const int depindices[],
 		const double coords[], double indices[]);
-int cm_1d_itoc(Datafile * df, CoordinateMapping *cm, const int depindicies[],
+int cm_1d_itoc(Datafile * df, CoordinateMapping *cm, const int depindices[],
 		const double indices[], double coords[]);
 void cm_rect_2free(Datafile *df, CoordinateMapping *cm);
 int cm_rect_2d_ctoi(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double coords[], double indices[]);
+		const int depindices[], const double coords[], double indices[]);
 int cm_rect_2d_itoc(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double indices[], double coords[]);
+		const int depindices[], const double indices[], double coords[]);
 void cm_polar_2free(Datafile *df, CoordinateMapping *cm);
 int cm_polar_2d_ctoi(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double coords[], double indices[]);
+		const int depindices[], const double coords[], double indices[]);
 int cm_polar_2d_itoc(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double indices[], double coords[]);
+		const int depindices[], const double indices[], double coords[]);
 void cm_bilinear_2free(Datafile *df, CoordinateMapping *cm);
 int cm_bilinear_2d_ctoi(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double coords[], double indices[]);
+		const int depindices[], const double coords[], double indices[]);
 int cm_bilinear_2d_itoc(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double indices[], double coords[]);
+		const int depindices[], const double indices[], double coords[]);
 void cm_1d_multi_free(Datafile *df, CoordinateMapping *cm);
 int cm_1d_multi_ctoi(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double coords[], double indices[]);
+		const int depindices[], const double coords[], double indices[]);
 int cm_1d_multi_itoc(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double indices[], double coords[]);
+		const int depindices[], const double indices[], double coords[]);
 
 int df_default_geotype = GT_NONE;
 char *df_default_projection = NULL;
@@ -1160,7 +1160,7 @@ void df_set_1d_coords(Datafile *df, Variable *v, CoordinateMapping *cm) {
 void cm_1free(Datafile *df, CoordinateMapping *cm) {
 }
 
-int cm_1d_ctoi(Datafile * df, CoordinateMapping *cm, const int depindicies[],
+int cm_1d_ctoi(Datafile * df, CoordinateMapping *cm, const int depindices[],
 		const double coords[], double indices[]) {
 	Variable *v = &df->variables[cm->coordids[0]];
 	double *data = NULL;
@@ -1205,7 +1205,7 @@ int cm_1d_ctoi(Datafile * df, CoordinateMapping *cm, const int depindicies[],
 	return 1;
 }
 
-int cm_1d_itoc(Datafile * df, CoordinateMapping *cm, const int depindicies[],
+int cm_1d_itoc(Datafile * df, CoordinateMapping *cm, const int depindices[],
 		const double indices[], double coords[]) {
 	Variable *v = &df->variables[cm->coordids[0]];
 	double *data = NULL;
@@ -1233,7 +1233,7 @@ int cm_1d_itoc(Datafile * df, CoordinateMapping *cm, const int depindicies[],
 /* Defines an X{Y{Z}}toI and ItoX{Y{Z}} conversion.
  * There are many possible ways that a 1d to multiple coordinate
  * map could be handled. The scheme choosen here will truncate all
- * fractional indicies to integers, and will find the index
+ * fractional indices to integers, and will find the index
  * closest to the specified coordinate when performing the inverse
  * mapping.
  */
@@ -1251,7 +1251,7 @@ void cm_1d_multi_free(Datafile *df, CoordinateMapping *cm) {
 }
 
 int cm_1d_multi_ctoi(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double coords[], double indices[]) {
+		const int depindices[], const double coords[], double indices[]) {
 	int dsize = (int)df->dimensions[cm->dimids[cm->nd - 1]].size;
 	double smalldist = 0.0;
 	Variable *vars = df->variables;
@@ -1277,7 +1277,7 @@ int cm_1d_multi_ctoi(Datafile * df, CoordinateMapping *cm,
 }
 
 int cm_1d_multi_itoc(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double indices[], double coords[]) {
+		const int depindices[], const double indices[], double coords[]) {
 	int dsize = (int)df->dimensions[cm->dimids[cm->nd - 1]].size;
 	Variable *vars = df->variables;
 	int i, j;
@@ -1457,7 +1457,7 @@ struct CoordinateTransform *df_create_geo_transform(int int_geotype,
 	data = (struct GeoTransformData *) malloc(sizeof(struct GeoTransformData));
 	memset(data, 0, sizeof(struct GeoTransformData));
 
-	sprintf(buf, "%s", int_proj);
+	snprintf(buf, sizeof(buf), "%s", int_proj);
 	data->int_geotype = int_geotype;
 	if (int_geotype == GT_PROJECTION) {
 		int nargs = parseline(buf, args, 256);
@@ -1554,7 +1554,7 @@ void cm_rect_2free(Datafile *df, CoordinateMapping *cm) {
 }
 
 int cm_rect_2d_ctoi(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double coords[], double indices[]) {
+		const int depindices[], const double coords[], double indices[]) {
 	RectGridInfo *rgi = (RectGridInfo*) cm->special_data;
 	double i, j, x, y;
 
@@ -1571,7 +1571,7 @@ int cm_rect_2d_ctoi(Datafile * df, CoordinateMapping *cm,
 }
 
 int cm_rect_2d_itoc(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double indices[], double coords[]) {
+		const int depindices[], const double indices[], double coords[]) {
 	RectGridInfo *rgi = (RectGridInfo*) cm->special_data;
 	double i, j, x, y;
 
@@ -1593,7 +1593,7 @@ void cm_polar_2free(Datafile *df, CoordinateMapping *cm) {
 }
 
 int cm_polar_2d_ctoi(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double coords[], double indices[]) {
+		const int depindices[], const double coords[], double indices[]) {
 	PolarGridInfo *pgi = (PolarGridInfo*) cm->special_data;
 	double i, j, x, y;
 	double r2, th, xdiff, ydiff;
@@ -1621,7 +1621,7 @@ int cm_polar_2d_ctoi(Datafile * df, CoordinateMapping *cm,
 }
 
 int cm_polar_2d_itoc(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double indices[], double coords[]) {
+		const int depindices[], const double indices[], double coords[]) {
 	PolarGridInfo *pgi = (PolarGridInfo*) cm->special_data;
 	double i, j, x, y, r, th;
 
@@ -1645,7 +1645,7 @@ void cm_bilinear_2free(Datafile *df, CoordinateMapping *cm) {
 }
 
 int cm_bilinear_2d_ctoi(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double coords[], double indices[]) {
+		const int depindices[], const double coords[], double indices[]) {
 	tree *partition = (tree*) cm->special_data;
 
 	(void) xytofij(partition, coords[0], coords[1], &indices[1], &indices[0]);
@@ -1653,7 +1653,7 @@ int cm_bilinear_2d_ctoi(Datafile * df, CoordinateMapping *cm,
 }
 
 int cm_bilinear_2d_itoc(Datafile * df, CoordinateMapping *cm,
-		const int depindicies[], const double indices[], double coords[]) {
+		const int depindices[], const double indices[], double coords[]) {
 	tree *partition = (tree*) cm->special_data;
 
 	(void) fijtoxy(partition, indices[1], indices[0], &coords[0], &coords[1]);

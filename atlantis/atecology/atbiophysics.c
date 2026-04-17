@@ -303,7 +303,7 @@ void Box_Light_Process(MSEBoxModel *bm, Box *pBox, FILE *llogfp) {
 		/*
 		 Depth related water absorption of light to reflect difference between
 		 coastal k_w and open ocean k_w */
-		if (totdepth < k_w_depth)
+		if (totdepth < k_w_depth)  // Noting that totdepth and k_w_depth are negative numbers
 			Kd = k_w_deep + k_PN * phytoBiomass + k_DON * DON + k_DL * (DL + DR) + k_IS + layerSEDValue;
 		else{
 			Kd = k_w_shallow + k_PN * phytoBiomass + k_DON * DON + k_DL * (DL + DR) + k_IS + layerSEDValue;
@@ -446,7 +446,6 @@ void Box_Nutrient_Check(MSEBoxModel *bm, Box *pBox) {
         // Water column tracers
         for (ij = 0; ij < pBox->nz; ij++){
             Y1 = (double*) pBox->tr[ij];
-            Y2 = (double*) pBox->sm.tr[ij];
             if(Y1[NH3_i] < 0) Y1[NH3_i] = 0;
             if(Y1[NO3_i] < 0) Y1[NO3_i] = 0;
             if(Y1[Light_i] < 0) Y1[Light_i] = 0;
@@ -456,7 +455,6 @@ void Box_Nutrient_Check(MSEBoxModel *bm, Box *pBox) {
         
         // Sediment tracers
         for(ij = 0; ij < pBox->sm.nz; ij++){
-            Y1 = (double*) pBox->tr[ij];
             Y2 = (double*) pBox->sm.tr[ij];
             if(Y2[NH3_i] < 0) Y2[NH3_i] = 0;
             if(Y2[NO3_i] < 0) Y2[NO3_i] = 0;
@@ -562,7 +560,7 @@ void Properties_At_Depth(MSEBoxModel *bm, Box *pBox, double dayt, int numwclayer
 
 
 	checked_already = bm->checkedalready[pBox->n][clayer + flagmodel * bm->wcnz];
-
+    
 	/* Regression and southern hemisphere */
 	if ((bm->flagmodeltemp == 1) && (!bm->flaghemisphere)) {
 		/* Determine sea surface temperature using linear regression

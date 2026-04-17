@@ -40,7 +40,7 @@ int createBMAnnAgeBioDataFile(char *destFolder, char *name, MSEBoxModel *bm) {
     int fid;
     char fileName[BMSLEN];
     
-    sprintf(fileName, "%s%s", destFolder, name);
+    snprintf(fileName, sizeof(fileName), "%s%s", destFolder, name);
     /* Set netCDF error handling */
     ncopts = NC_VERBOSE | NC_FATAL;
     
@@ -111,14 +111,14 @@ void writeBMAnnAgeBioInfo(int fid, MSEBoxModel *bm) {
                         
                         switch (propit) {
                             case out_nums_id:
-                                sprintf(ann_name, "%s%d_Nums", FunctGroupArray[sp].name, this_cohort+1);
-                                sprintf(ann_longname, "Numbers of %s annual age class %d", FunctGroupArray[sp].name, this_cohort+1);
-                                sprintf(unitstr, "Numbers");
+                                snprintf(ann_name, sizeof(ann_name), "%s%d_Nums", FunctGroupArray[sp].name, this_cohort+1);
+                                snprintf(ann_longname, sizeof(ann_longname), "Numbers of %s annual age class %d", FunctGroupArray[sp].name, this_cohort+1);
+                                snprintf(unitstr, sizeof(unitstr), "Numbers");
                                 break;
                             case out_size_id:
-                                sprintf(ann_name, "%s%d_Weight", FunctGroupArray[sp].name, this_cohort+1);
-                                sprintf(ann_longname, "Individ weight for %s annual age class %d", FunctGroupArray[sp].name, this_cohort+1);
-                                sprintf(unitstr, "g");
+                                snprintf(ann_name, sizeof(ann_name), "%s%d_Weight", FunctGroupArray[sp].name, this_cohort+1);
+                                snprintf(ann_longname, sizeof(ann_longname), "Individ weight for %s annual age class %d", FunctGroupArray[sp].name, this_cohort+1);
+                                snprintf(unitstr, sizeof(unitstr), "g");
                                 break;
                             default:
                                 quit("writeBMAnnAgeInfo: How did you get this value as only 2 bio classes (propit: %d)\n", propit);
@@ -195,10 +195,10 @@ void writeBMAnnAgeBioData(int fid, int dump, MSEBoxModel *bm) {
                         for (propit = 0; propit < out_catch_id; propit++) {
                             switch (propit) {
                                 case out_nums_id:
-                                    sprintf(strname, "%s%d_Nums", FunctGroupArray[sp].name, this_cohort+1);
+                                    snprintf(strname, sizeof(strname), "%s%d_Nums", FunctGroupArray[sp].name, this_cohort+1);
                                     break;
                                 case out_size_id:
-                                    sprintf(strname, "%s%d_Weight", FunctGroupArray[sp].name, this_cohort+1);
+                                    snprintf(strname, sizeof(strname), "%s%d_Weight", FunctGroupArray[sp].name, this_cohort+1);
                                     break;
                                 default:
                                     quit("writeBMAnnAgeBioInfo: How did you get this value as only 3 classes (propit: %d)\n", propit);
@@ -269,7 +269,7 @@ int createBMAnnAgeCatDataFile(char *destFolder, char *name, MSEBoxModel *bm) {
     int fid;
     char fileName[BMSLEN];
     
-    sprintf(fileName, "%s%s", destFolder, name);
+    snprintf(fileName, sizeof(fileName), "%s%s", destFolder, name);
     /* Set netCDF error handling */
     ncopts = NC_VERBOSE | NC_FATAL;
     
@@ -344,14 +344,14 @@ void writeBMAnnAgeCatInfo(int fid, MSEBoxModel *bm) {
                             if (FisherySpeciesCatchFlags[sp][nf] == TRUE) {
                                 switch (propit) {
                                     case out_catch_id:
-                                        sprintf(ann_name, "%s%d_Catch_%s", FunctGroupArray[sp].name, this_cohort+1,FisheryArray[nf].fisheryCode);
-                                        sprintf(ann_longname, "Catch of %s annual age class %d by fishery %s", FunctGroupArray[sp].name, this_cohort+1, FisheryArray[nf].name);
-                                        sprintf(unitstr, "Numbers");
+                                        snprintf(ann_name, sizeof(ann_name), "%s%d_Catch_%s", FunctGroupArray[sp].name, this_cohort+1,FisheryArray[nf].fisheryCode);
+                                        snprintf(ann_longname, sizeof(ann_longname), "Catch of %s annual age class %d by fishery %s", FunctGroupArray[sp].name, this_cohort+1, FisheryArray[nf].name);
+                                        snprintf(unitstr, sizeof(unitstr), "Numbers");
                                         break;
                                     case out_discards_id:
-                                        sprintf(ann_name, "%s%d_Discard_%s", FunctGroupArray[sp].name, this_cohort+1,FisheryArray[nf].fisheryCode);
-                                        sprintf(ann_longname, "Discards of %s annual age class %d by fshery %s", FunctGroupArray[sp].name, this_cohort+1, FisheryArray[nf].name);
-                                        sprintf(unitstr, "Numbers");
+                                        snprintf(ann_name, sizeof(ann_name), "%s%d_Discard_%s", FunctGroupArray[sp].name, this_cohort+1,FisheryArray[nf].fisheryCode);
+                                        snprintf(ann_longname, sizeof(ann_longname), "Discards of %s annual age class %d by fshery %s", FunctGroupArray[sp].name, this_cohort+1, FisheryArray[nf].name);
+                                        snprintf(unitstr, sizeof(unitstr), "Numbers");
                                         break;
                                     default:
                                         quit("writeBMAnnAgeInfo: How did you get this value as only 3 classes (propit: %d)\n", propit);
@@ -484,12 +484,12 @@ void writeBMAnnAgeCatData(int fid, int dump, MSEBoxModel *bm) {
                                         rel_access = Harvest_How_Much_Fishery_Access(bm,sp,cohort,nf,avgsze[b]);
                                         switch (propit) {
                                             case out_catch_id:
-                                                sprintf(strname, "%s%d_Catch_%s", FunctGroupArray[sp].name, this_cohort+1,FisheryArray[nf].fisheryCode);
+                                                snprintf(strname, sizeof(strname), "%s%d_Catch_%s", FunctGroupArray[sp].name, this_cohort+1,FisheryArray[nf].fisheryCode);
                                                 tid = FunctGroupArray[sp].CaughtByFisheryTracers[nf];
                                                 id = FunctGroupArray[sp].CatchTracers[cohort];  // This points to numbers caught at that age
                                                 break;
                                             case out_discards_id:
-                                                sprintf(strname, "%s%d_Discard_%s", FunctGroupArray[sp].name, this_cohort+1,FisheryArray[nf].fisheryCode);
+                                                snprintf(strname, sizeof(strname), "%s%d_Discard_%s", FunctGroupArray[sp].name, this_cohort+1,FisheryArray[nf].fisheryCode);
                                                 tid = FunctGroupArray[sp].DiscardedByFisheryTracers[nf];
                                                 id = FunctGroupArray[sp].DiscardTracers[cohort];  // This points to numbers discarded at that age
                                                 break;

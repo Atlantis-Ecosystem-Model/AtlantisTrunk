@@ -89,7 +89,7 @@ void hydro_init(MSEBoxModel *bm)
     /* Read the list of files */
     for(i=0; i<bm->hd.nfiles; i++) {
 		char key[BMSLEN];
-		sprintf(key,"hd%d.name",i);
+		snprintf(key,sizeof(key),"hd%d.name",i);
 		readkeyprm_s(fp,key,bm->hd.fname[i]);
     }
 

@@ -132,7 +132,7 @@ static void Read_Cohort_Species_Param_Values(MSEBoxModel *bm, char *fileName, xm
 	if (verbose > 0)
 		printf("Read species cohort parameters %s\n", cohortSpeciesParamStructArray[index].tag);
 
-	sprintf(errorString, "%s/%s", nodeName, cohortSpeciesParamStructArray[index].tag);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, cohortSpeciesParamStructArray[index].tag);
 	free(nodeName);
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, cohortSpeciesParamStructArray[index].tag);
 	if (attributeGroup == NULL)
@@ -302,7 +302,7 @@ static void Read_Spawn_Species_Param_Values(MSEBoxModel *bm, char *fileName, xml
 	if (verbose > 0)
 		printf("Read species spawn parameters %s\n", spawnSpeciesParamStructArray[index].tag);
 
-	sprintf(errorString, "%s/%s", nodeName, spawnSpeciesParamStructArray[index].tag);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, spawnSpeciesParamStructArray[index].tag);
 	free(nodeName);
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, spawnSpeciesParamStructArray[index].tag);
 	if (attributeGroup == NULL)
@@ -380,8 +380,8 @@ void Read_Change_DataXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, cha
 
 	for (i = 0; i < 3; i++) {
 
-		sprintf(str, "%s%s", parameterName, names[i]);
-		sprintf(errorString, "%s/%s", nodeName, str);
+		snprintf(str, sizeof(str), "%s%s", parameterName, names[i]);
+		snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, str);
 		if (verbose)
 			printf("Reading %s values\n", str);
 
@@ -411,7 +411,7 @@ void Read_Vert_Species_IntegerXML(MSEBoxModel *bm, char *fileName, xmlNodePtr pa
 	char *nodeName;
 
 	nodeName =  Util_Get_Node_Name(parent);
-	sprintf(errorString, "%s/%s", nodeName, parameterName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, parameterName);
 
 	if (verbose)
 		printf("Reading %s values\n", parameterName);
@@ -450,7 +450,7 @@ static void Read_Cultured_SpeciesXML(MSEBoxModel *bm, char *fileName, xmlNodePtr
     
 	nodeName =  Util_Get_Node_Name(parent);
     
-	sprintf(errorString, "%s/%s", nodeName, parameterName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, parameterName);
     
 	if (verbose)
 		printf("Reading %s values\n", parameterName);
@@ -489,7 +489,7 @@ static void Read_Vert_SpeciesXML(MSEBoxModel *bm, char *fileName, xmlNodePtr par
 
 	nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/%s", nodeName, parameterName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, parameterName);
 
 	if (verbose)
 		printf("Reading %s values\n", parameterName);
@@ -535,7 +535,7 @@ static void Read_Vert_FSPBXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent
 	char *nodeName;
 
 	nodeName =  Util_Get_Node_Name(parent);
-	sprintf(errorString, "%s/SpawningProportion", nodeName);
+	snprintf(errorString, sizeof(errorString), "%s/SpawningProportion", nodeName);
 
 	if (verbose)
 		printf("Reading SpawningProportion values\n");
@@ -900,11 +900,11 @@ static void Read_Physical_Chem_Values(MSEBoxModel *bm, char *fileName, xmlNodePt
 	if (attributeGroup == NULL)
 		quit("Redfield attribute group not found in input file %s.\n", fileName);
 
-	X_ON = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, no_checking, "X_ON");
+	bm->X_ON = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, no_checking, "X_ON");
 	bm->X_CN = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, no_checking, "X_CN");
-	X_CHLN = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, no_checking, "X_CHLN");
-	X_SiN = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, no_checking, "X_SiN");
-	X_FeN = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, no_checking, "X_FeN");
+    bm->X_CHLN = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, no_checking, "X_CHLN");
+    bm->X_SiN = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, no_checking, "X_SiN");
+    bm->X_FeN = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, no_checking, "X_FeN");
 
     bm->k_wetdry = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "k_wetdry");
 
@@ -1459,7 +1459,7 @@ static void Read_Habitat_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent)
 			case AGE_STRUCTURED_BIOMASS: /* Intentional follow through */
 			case AGE_STRUCTURED:
 				/* get the species node */
-				sprintf(errorString, "%s/Group_Habitat_Preference/%s", nodeName, FunctGroupArray[guild].groupCode);
+				snprintf(errorString, sizeof(errorString), "%s/Group_Habitat_Preference/%s", nodeName, FunctGroupArray[guild].groupCode);
 
 				speciesNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeGroup, FunctGroupArray[guild].groupCode);
 				if (speciesNode == NULL)
@@ -1549,7 +1549,7 @@ static void Read_Ice_Habitat_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr par
 			case AGE_STRUCTURED_BIOMASS: /* Intentional follow through */
 			case AGE_STRUCTURED:
 				/* get the species node */
-				sprintf(errorString, "%s/Group_Ice_Preference/%s", nodeName, FunctGroupArray[guild].groupCode);
+				snprintf(errorString, sizeof(errorString), "%s/Group_Ice_Preference/%s", nodeName, FunctGroupArray[guild].groupCode);
 
 				speciesNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeGroup, FunctGroupArray[guild].groupCode);
 				if (speciesNode == NULL)
@@ -1595,7 +1595,7 @@ static void Read_Ice_Habitat_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr par
 			case AGE_STRUCTURED_BIOMASS: /* Intentional follow through */
 			case AGE_STRUCTURED:
 				/* get the species node */
-				sprintf(errorString, "%s/Group_IceReprod_Preference/%s", nodeName, FunctGroupArray[guild].groupCode);
+				snprintf(errorString, sizeof(errorString), "%s/Group_IceReprod_Preference/%s", nodeName, FunctGroupArray[guild].groupCode);
 
 				speciesNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeGroup, FunctGroupArray[guild].groupCode);
 				if (speciesNode == NULL)
@@ -1728,7 +1728,7 @@ static void Read_VERT_Function(MSEBoxModel *bm, char *fileName, xmlNodePtr paren
 
 			if (FunctGroupArray[guild].isMobile > 0) {
 				for (dayIndex = 0; dayIndex < 2; dayIndex++) {
-					sprintf(errorString , "Movement/VerticalDistribution/%s/%s", FunctGroupArray[guild].groupCode, dayStrings[dayIndex]);
+					snprintf(errorString, sizeof(errorString), "Movement/VerticalDistribution/%s/%s", FunctGroupArray[guild].groupCode, dayStrings[dayIndex]);
 					tempNode = Util_XML_Get_Node(ATLANTIS_TEMPORAL_ATTRIBUTE, specieNode, dayStrings[dayIndex]);
 					if (tempNode == NULL)
 						quit("%s species attribute group not found.\n", errorString);
@@ -1747,7 +1747,7 @@ static void Read_VERT_Function(MSEBoxModel *bm, char *fileName, xmlNodePtr paren
 			}
 
 			if(FunctGroupArray[guild].isOverWinter > 0){
-				sprintf(errorString , "Movement/VerticalDistribution/%s/overwinter", FunctGroupArray[guild].groupCode);
+				snprintf(errorString, sizeof(errorString), "Movement/VerticalDistribution/%s/overwinter", FunctGroupArray[guild].groupCode);
 				tempNode = Util_XML_Get_Node(ATLANTIS_TEMPORAL_ATTRIBUTE, specieNode, "overwinter");
 				if (tempNode == NULL)
 					quit("%s species attribute group not found.\n", errorString);
@@ -1767,7 +1767,7 @@ static void Read_VERT_Function(MSEBoxModel *bm, char *fileName, xmlNodePtr paren
 
 		} else if(FunctGroupArray[guild].isMobile == TRUE && FunctGroupArray[guild].habitatType != EPIFAUNA){
 
-			sprintf(errorString , "Movement/VerticalDistribution/%s", FunctGroupArray[guild].groupCode);
+			snprintf(errorString, sizeof(errorString), "Movement/VerticalDistribution/%s", FunctGroupArray[guild].groupCode);
 
 			specieNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeNode, FunctGroupArray[guild].groupCode);
 			if (specieNode == NULL)
@@ -1856,14 +1856,14 @@ static void Read_Sesonal_Dist_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr pa
                 switch (readcase) {
 				case 1:
 					for (cohort = 0; cohort < FunctGroupArray[guild].numStages; cohort++) {  
-						sprintf(errorString, "Movement/SeasonalDistribution/%s/%s", FunctGroupArray[guild].groupCode, cohortString[cohort]);
+						snprintf(errorString, sizeof(errorString), "Movement/SeasonalDistribution/%s/%s", FunctGroupArray[guild].groupCode, cohortString[cohort]);
 						cohortNode = Util_XML_Get_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, specieNode, cohortString[cohort]);
 						if (cohortNode == NULL)
 							quit("%s cohort attribute group not found.\n", errorString);
 
 
 						for (season = 1; season <= FunctGroupArray[guild].numMoveEntries; season++) {
-							sprintf(str, "season%d", season);
+							snprintf(str, sizeof(str), "season%d", season);
 							if (Util_XML_Read_Array_Double(ATLANTIS_TEMPORAL_ATTRIBUTE, fileName, errorString, cohortNode, probability_check, str, &values, bm->nbox) == FALSE) {
 								quit("Error: Unable to find parameter '/%s/%s' in input file %s\n",
 										errorString, str, fileName);
@@ -1878,14 +1878,14 @@ static void Read_Sesonal_Dist_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr pa
 					}
 					break;
 				case 0:
-					sprintf(errorString, "Movement/SeasonalDistribution/%s/adult", FunctGroupArray[guild].groupCode);
+					snprintf(errorString, sizeof(errorString), "Movement/SeasonalDistribution/%s/adult", FunctGroupArray[guild].groupCode);
 					cohort = adult_id;
 					cohortNode = Util_XML_Get_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, specieNode, "adult");
 					if (cohortNode == NULL)
 						quit("%s cohort attribute group not found.\n", errorString);
 
 					for (season = 1; season <= FunctGroupArray[guild].numMoveEntries; season++) {
-						sprintf(str, "season%d", season);
+						snprintf(str, sizeof(str), "season%d", season);
 
 						//printf("Reading %s %s\n", errorString, str);
 						if (Util_XML_Read_Array_Double(ATLANTIS_TEMPORAL_ATTRIBUTE, fileName, errorString, cohortNode, probability_check, str, &values, bm->nbox) == FALSE) {
@@ -1964,7 +1964,7 @@ static void Read_Vert_Body_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr pa
 	bm->XRS_static = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "X_RS"); //Read in case dynamic X_RS not being used
     
 	Kthresh1 = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "Kthresh1");
-	Kthresh2 = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "Kthresh1");
+	Kthresh2 = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "Kthresh2");
 	KHTD = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "KHTD");
 	KHTI = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "KHTI");
 }
@@ -1996,7 +1996,7 @@ static void Read_Detritus_Sediment_Food_Avail(MSEBoxModel *bm, char *fileName, x
 
 				switch (FunctGroupArray[guild].groupAgeType) {
 				case AGE_STRUCTURED:
-					sprintf(errorString, "Diet/DetritusSedimentFoodAvail/%s", FunctGroupArray[guild].groupCode);
+					snprintf(errorString, sizeof(errorString), "Diet/DetritusSedimentFoodAvail/%s", FunctGroupArray[guild].groupCode);
 					specieNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeNode, FunctGroupArray[guild].groupCode);
 					if (specieNode == NULL)
 						quit("%s species attribute group not found.\n", errorString);
@@ -2013,14 +2013,15 @@ static void Read_Detritus_Sediment_Food_Avail(MSEBoxModel *bm, char *fileName, x
 							prey = Util_Get_Detritus_Index(bm, b);
 
 							FunctGroupArray[guild].pSPEat[cohort][prey][SED] = values[b];
-							if (FunctGroupArray[guild].pSPEat[cohort][prey][SED] == 0 && values[b] > 0)
-								FunctGroupArray[guild].pSPEat[0][prey][SED] = values[b];
+                            if ((FunctGroupArray[guild].pSPEat[cohort][prey][SED] == 0) && values[b] > 0) {
+                                FunctGroupArray[guild].pSPEat[0][prey][SED] = values[b];
+                            }
 						}
 						free(values);
 					}
 					break;
 				case AGE_STRUCTURED_BIOMASS:
-					sprintf(errorString, "Diet/DetritusSedimentFoodAvail/%s", FunctGroupArray[guild].groupCode);
+					snprintf(errorString, sizeof(errorString), "Diet/DetritusSedimentFoodAvail/%s", FunctGroupArray[guild].groupCode);
 
 					specieNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeNode, FunctGroupArray[guild].groupCode);
 					if (specieNode == NULL)
@@ -2090,7 +2091,7 @@ static void Read_Vertebrate_Food_Avail(MSEBoxModel *bm, char *fileName, xmlNodeP
 				quit("Diet/VertebrateFoodAvail/%s species attribute group not found.\n", FunctGroupArray[guild].groupCode);
 
 			for (cohort = 0; cohort < FunctGroupArray[guild].numStages; cohort++) {
-				sprintf(errorString, "Diet/VertebrateFoodAvail/%s/%s", FunctGroupArray[guild].groupCode, cohortString[cohort]);
+				snprintf(errorString, sizeof(errorString), "Diet/VertebrateFoodAvail/%s/%s", FunctGroupArray[guild].groupCode, cohortString[cohort]);
 				cohortNode = Util_XML_Get_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, specieNode, cohortString[cohort]);
 				if (cohortNode == NULL)
 					quit("%s cohort attribute group not found.\n", errorString);
@@ -2160,7 +2161,7 @@ static void Read_Invertebrate_Food_Avail(MSEBoxModel *bm, char *fileName, xmlNod
 				switch (FunctGroupArray[guild].groupAgeType) {
 				case AGE_STRUCTURED_BIOMASS:
 
-					sprintf(errorString, "Diet/InvertebrateFoodAvail/%s", FunctGroupArray[guild].groupCode);
+					snprintf(errorString, sizeof(errorString), "Diet/InvertebrateFoodAvail/%s", FunctGroupArray[guild].groupCode);
 					specieNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeNode, FunctGroupArray[guild].groupCode);
 					if (specieNode == NULL)
 						quit("%s species attribute group not found.\n", errorString);
@@ -2291,7 +2292,7 @@ static void Read_Age_Diet_Avail_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr 
 	for (vertGuild = 0; vertGuild < bm->K_num_tot_sp; vertGuild++) {
 		if ((FunctGroupArray[vertGuild].isVertebrate) && (FunctGroupArray[vertGuild].speciesParams[age_structured_prey_id] > 0)) {
 
-			sprintf(errorString, "Diet/AgeDietAvail/%s", FunctGroupArray[vertGuild].groupCode);
+			snprintf(errorString, sizeof(errorString), "Diet/AgeDietAvail/%s", FunctGroupArray[vertGuild].groupCode);
 			specieNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeNode, FunctGroupArray[vertGuild].groupCode);
 			if (specieNode == NULL)
 				quit("%s species attribute group not found.\n", errorString);
@@ -2348,23 +2349,24 @@ static void Read_Seagrass_Diet_Avail_XML(MSEBoxModel *bm, char *fileName, xmlNod
     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
         if(FunctGroupArray[sp].groupType == SEAGRASS){
 
-            sprintf(errorString, "Diet/SeagrassFoodAvail/%s", FunctGroupArray[sp].groupCode);
+            snprintf(errorString, sizeof(errorString), "Diet/SeagrassFoodAvail/%s", FunctGroupArray[sp].groupCode);
             specieNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeNode, FunctGroupArray[sp].groupCode);
             if (specieNode == NULL)
                 quit("%s species attribute group not found.\n", errorString);
             
-            for (cohort = 0; cohort < FunctGroupArray[sp].numStages; cohort++) {
-                sprintf(stageString, "stage%d", cohort);
-                sprintf(errorString, "Diet/SeagrassFoodAvail/%s/stage%d", FunctGroupArray[sp].groupCode, cohort);
+            for (cohort = 0; cohort < FunctGroupArray[sp].numStages; cohort++) { // This is actually habitats - sed, wc, epiphytes rather than cohorts
+                snprintf(stageString, sizeof(stageString), "stage%d", cohort);
+                snprintf(errorString, sizeof(errorString), "Diet/SeagrassFoodAvail/%s/stage%d", FunctGroupArray[sp].groupCode, cohort);
                 cohortNode = Util_XML_Get_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, specieNode, stageString);
                 if (cohortNode == NULL)
                     quit("%s cohort attribute group not found.\n", errorString);
                 
                 if (Util_XML_Read_Array_Double(ATLANTIS_AGE_CLASS_ATTRIBUTE, fileName, errorString, cohortNode, proportion_check, stageString, &values, bm->K_num_tot_sp) == FALSE) {
-                    quit("Error: Unable to find parameter 'Diet/SeagrassFoodAvail/%s' in input file %s\n", errorString, stageString, fileName);
+                    quit("Error: Unable to find parameter 'Diet/SeagrassFoodAvail/%s %s' in input file %s\n", errorString, stageString, fileName);
                 }
                 
-                // Store the values
+                // Store the values - assumes the vector is the diet contribution by seagrass (sp) to the predator (b)
+                // TODO: Allow for multiple Seagrass species - currently overwrites
                 for (b = 0; b < bm->K_num_tot_sp; b++){
                     FunctGroupArray[b].pSP_SG_eat[cohort] = values[b];
                 }
@@ -2396,7 +2398,7 @@ static void Read_PStock_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) 
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
 		if (FunctGroupArray[guild].isVertebrate == TRUE) {
 
-			sprintf(errorString, "Diet/pStock/%s", FunctGroupArray[guild].groupCode);
+			snprintf(errorString, sizeof(errorString), "Diet/pStock/%s", FunctGroupArray[guild].groupCode);
 			specieNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeNode, FunctGroupArray[guild].groupCode);
 			if (specieNode == NULL)
 				quit("%s species attribute group not found.\n", errorString);
@@ -2945,16 +2947,6 @@ static void Read_Diet_Information_Values(MSEBoxModel *bm, char *fileName, xmlNod
 	Util_XML_Read_Species_Param(bm, fileName, attributeGroup, flagq10eff_id);
     Util_XML_Read_Species_Param(bm, fileName, attributeGroup, flagq10receff_id);
 
-	/* In case need temperature dependent efficiencies store original values */
-	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-		if (FunctGroupArray[sp].isVertebrate == TRUE) {
-			FunctGroupArray[sp].speciesParams[E1orig_id] = FunctGroupArray[sp].speciesParams[E1_id];
-			FunctGroupArray[sp].speciesParams[E2orig_id] = FunctGroupArray[sp].speciesParams[E2_id];
-			FunctGroupArray[sp].speciesParams[E3orig_id] = FunctGroupArray[sp].speciesParams[E3_id];
-			FunctGroupArray[sp].speciesParams[E4orig_id] = FunctGroupArray[sp].speciesParams[E4_id];
-		}
-	}
-
 	if(bm->containsCoral){
 		attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, attributeGroupNode, "Rugosity_Feeding");
 			if (attributeGroup == NULL)
@@ -3072,7 +3064,7 @@ static void Read_Encystment(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) 
 
 static void Read_Fish_Respiration_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 	xmlNodePtr attributeGroupNode;
-	int sp;
+	//int sp;
 
 	if (verbose)
 		printf("Reading the Fish_Respiration values\n");
@@ -3085,19 +3077,6 @@ static void Read_Fish_Respiration_Values(MSEBoxModel *bm, char *fileName, xmlNod
 	KST_shark = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "KST_shark");
 	KST_bird = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "KST_bird");
 	KST_mammal = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "KST_mammal");
-
-	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-		if (FunctGroupArray[sp].isVertebrate == TRUE) {
-			if ((FunctGroupArray[sp].groupType == FISH) || (FunctGroupArray[sp].groupType == FISH_INVERT))
-				FunctGroupArray[sp].speciesParams[KST_id] = KST_fish;
-			else if (FunctGroupArray[sp].groupType == SHARK)
-				FunctGroupArray[sp].speciesParams[KST_id] = KST_shark;
-			else if (FunctGroupArray[sp].groupType == BIRD)
-				FunctGroupArray[sp].speciesParams[KST_id] = KST_bird;
-			else
-				FunctGroupArray[sp].speciesParams[KST_id] = KST_mammal;
-		}
-	}
 
 	Ktmp_fish = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "Ktmp_fish");
 	Ktmp_shark = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "Ktmp_shark");
@@ -3209,7 +3188,7 @@ static void Read_Mortality_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr pa
 }
 static void Read_Detritus_Conversion_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 	xmlNodePtr attributeGroupNode;
-	int sp;
+	//int sp;
 
 	if (verbose)
 		printf("Reading the Detritus_Conversion values\n");
@@ -3236,32 +3215,6 @@ static void Read_Detritus_Conversion_Values(MSEBoxModel *bm, char *fileName, xml
 		FDL_SG_roots = 1.0;
 		FDL_SG_leaves = 1.0;
 	}
-
-	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-		if (FunctGroupArray[sp].isVertebrate == TRUE) {
-			if (FunctGroupArray[sp].groupType == FISH_INVERT)
-                FunctGroupArray[sp].speciesParams[FDL_id] = FDL_benth;
-            else if ((FunctGroupArray[sp].groupType == FISH) || (FunctGroupArray[sp].groupType == SHARK))
-				FunctGroupArray[sp].speciesParams[FDL_id] = FDL_fish;
-			else
-				FunctGroupArray[sp].speciesParams[FDL_id] = FDL_top;
-		}else{
-			/* Now set up the invert FDL_id values */
-			if(FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED_BIOMASS){
-				FunctGroupArray[sp].speciesParams[FDL_id] = FDL_benth;
-			}else{
-				if(FunctGroupArray[sp].groupType == CEP || FunctGroupArray[sp].groupType == PWN
-						|| FunctGroupArray[sp].habitatType == SED || FunctGroupArray[sp].habitatType == EPIFAUNA){
-					FunctGroupArray[sp].speciesParams[FDL_id] = FDL_benth;
-				}else{
-					FunctGroupArray[sp].speciesParams[FDL_id] = FDL_wc;
-				}
-			}
-		}
-	}
-
-
-
 
 	/* Fraction of bacterial losses sent to detritus */
 	FPB_DR = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, proportion_check, "FPB_DR");
@@ -3393,8 +3346,8 @@ static void Read_Popratio_Stock_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr 
 
 			for (cohort = 0; cohort < FunctGroupArray[guild].numCohorts; cohort++) {
 
-				sprintf(str, "cohort%d", cohort + 1);
-				sprintf(errorString, "Reproduction/popratioStock/%s/%s", FunctGroupArray[guild].groupCode, str);
+				snprintf(str, sizeof(str), "cohort%d", cohort + 1);
+				snprintf(errorString, sizeof(errorString), "Reproduction/popratioStock/%s/%s", FunctGroupArray[guild].groupCode, str);
 
 				cohortNode = Util_XML_Get_Node(ATLANTIS_COHORT_ATTRIBUTE, speciesNode, str);
 				if (cohortNode == NULL)
@@ -3403,10 +3356,10 @@ static void Read_Popratio_Stock_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr 
 				for (i = 0; i < FunctGroupArray[guild].numStocks; i++) {
 					counter = FunctGroupArray[guild].ageClassSize;
                     if (FunctGroupArray[guild].ageClassSize < 1) {
-                        quit("Currently the popratioStock code will not work for ageclasses < 1 - you have ageClassSize for %s if %e\n", FunctGroupArray[guild].groupCode, FunctGroupArray[guild].ageClassSize);
+                        quit("Currently the popratioStock code will not work for ageclasses < 1 - you have ageClassSize for %s of %e\n", FunctGroupArray[guild].groupCode, FunctGroupArray[guild].ageClassSize);
                     }
 
-					sprintf(str, "stock%d", i + 1);
+					snprintf(str, sizeof(str), "stock%d", i + 1);
 
 					if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, errorString, cohortNode, proportion_check, str, &values, counter) == FALSE) {
 						quit("Error: Unable to find parameter '%s/%s' in input file %s\n", errorString, str, fileName);
@@ -3719,122 +3672,122 @@ static void Read_Contaminant_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr 
 			if((FunctGroupArray[sp].speciesParams[flag_id] == TRUE) && (FunctGroupArray[sp].isDetritus == FALSE)){
 
                 if (bm->flag_contam_halflife_spbased) {
-                    sprintf(varStr, "%s_%s_decay_half_life", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                    snprintf(varStr, sizeof(varStr), "%s_%s_decay_half_life", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                     bm->contaminantStructure[cIndex]->sp_decay_half_life[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 }
                 
-				sprintf(varStr, "%s_%s_uptake_rate", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_uptake_rate", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				bm->contaminantStructure[cIndex]->sp_uptake_rate[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 bm->contaminantStructure[cIndex]->sp_uptake_rate[sp] /= 86400.0; // So now per second rate
 
-				sprintf(varStr, "%s_%s_uptake_option", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_uptake_option", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				bm->contaminantStructure[cIndex]->sp_uptake_option[sp] = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, varStr);
 
-				sprintf(varStr, "%s_%s_LD50", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_LD50", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				bm->contaminantStructure[cIndex]->sp_LD50[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
-				sprintf(varStr, "%s_%s_LD100", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_LD100", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				bm->contaminantStructure[cIndex]->sp_LD100[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
 				bm->contaminantStructure[cIndex]->sp_maxConcentration[sp] = bm->contaminantStructure[cIndex]->sp_LD100[sp];
                 bm->contaminantStructure[cIndex]->sp_maxLethalConc[sp] = bm->contaminantStructure[cIndex]->sp_LD100[sp];
 
-                sprintf(varStr, "%s_%s_LDChronic", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_LDChronic", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 
                 bm->contaminantStructure[cIndex]->sp_LDChronic[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
                 bm->contaminantStructure[cIndex]->sp_maxChronicConc[sp] = bm->contaminantStructure[cIndex]->sp_LDChronic[sp];
                 
-                sprintf(varStr, "%s_%s_LDslope", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_LDslope", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_LDslope[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_EC50", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_EC50", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_EC50[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_ECslope", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_ECslope", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_ECslope[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_EC50_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_EC50_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_EC50_r[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_ECslope_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_ECslope_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_ECslope_r[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_TimeToLD50", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_TimeToLD50", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_TimeToLD50[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
-				sprintf(varStr, "%s_%s_Cx", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_Cx", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				bm->contaminantStructure[cIndex]->sp_Cx[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
-				sprintf(varStr, "%s_%s_Cy", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_Cy", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				bm->contaminantStructure[cIndex]->sp_Cy[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
-                sprintf(varStr, "%s_%s_spL", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_spL", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_L[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_spA", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_spA", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_A[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
-                sprintf(varStr, "%s_%s_spB", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_spB", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_B[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
-                sprintf(varStr, "%s_%s_spL_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_spL_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_L_r[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_spA_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_spA_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_A_r[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_spB_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_spB_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_B_r[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_avoid", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_avoid", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_avoid[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
-                sprintf(varStr, "%s_%s_K_avoid", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_K_avoid", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_K_avoid[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
                 /* Don't think we will use this - invitro used instant dose mort for eating */
-                sprintf(varStr, "%s_%s_InstantDoseMortality", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_InstantDoseMortality", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_instantDoseMortality[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_GrowthThresh", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_GrowthThresh", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_GrowthThresh[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_GrowthEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_GrowthEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 			          bm->contaminantStructure[cIndex]->sp_GrowthEffect[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_MoveEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_MoveEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_MoveEffect[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_ReprodThresh", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_ReprodThresh", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_ReprodThresh[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_ReprodEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_ReprodEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_ReprodEffect[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_maternal_transfer", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_maternal_transfer", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_maternal_transfer[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
                 
-                sprintf(varStr, "%s_%s_suckling_transfer", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_suckling_transfer", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_suckling_transfer[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
-                sprintf(varStr, "%s_%s_ContamScalar", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_ContamScalar", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 bm->contaminantStructure[cIndex]->sp_ContamScalar[sp] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
 			}
 		}
 
-		sprintf(varStr, "%s_half_life", bm->contaminantStructure[cIndex]->contaminant_name);
+		snprintf(varStr, sizeof(varStr), "%s_half_life", bm->contaminantStructure[cIndex]->contaminant_name);
 		bm->contaminantStructure[cIndex]->half_life = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, varStr);
 
-        sprintf(varStr, "%s_temp_depend", bm->contaminantStructure[cIndex]->contaminant_name);
+        snprintf(varStr, sizeof(varStr), "%s_temp_depend", bm->contaminantStructure[cIndex]->contaminant_name);
         bm->contaminantStructure[cIndex]->contam_temp_depend = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, varStr);
 
-        sprintf(varStr, "%s_dissolv_coefft", bm->contaminantStructure[cIndex]->contaminant_name);
+        snprintf(varStr, sizeof(varStr), "%s_dissolv_coefft", bm->contaminantStructure[cIndex]->contaminant_name);
         bm->contaminantStructure[cIndex]->dissolv_coefft = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, varStr);
         
         if (bm->num_contaminants > 1) {
-            sprintf(varStr, "%s_contam_interaction", bm->contaminantStructure[cIndex]->contaminant_name);
+            snprintf(varStr, sizeof(varStr), "%s_contam_interaction", bm->contaminantStructure[cIndex]->contaminant_name);
             if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, "Contaminants", attributeGroupNode, no_checking, varStr, &values, bm->num_contaminants) == FALSE){
                 quit("Error: Unable to read parameter %s from input file %s\n", varStr, fileName);
             }
@@ -3962,6 +3915,9 @@ int Read_Biology_Parameters(MSEBoxModel *bm, char *filename, FILE *llogfp) {
 		}
 	}
     
+    printf("**");
+    fflush(stdout);
+    
     /* In case need temperature dependent efficiencies store original values */
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		if (FunctGroupArray[sp].isVertebrate == TRUE) {
@@ -3971,6 +3927,9 @@ int Read_Biology_Parameters(MSEBoxModel *bm, char *filename, FILE *llogfp) {
 			FunctGroupArray[sp].speciesParams[E4orig_id] = FunctGroupArray[sp].speciesParams[E4_id];
 		}
 	}
+    
+    printf("**");
+    fflush(stdout);
     
     /* TODO: Change these to species values - read in a value per group. */
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
@@ -4003,12 +3962,30 @@ int Read_Biology_Parameters(MSEBoxModel *bm, char *filename, FILE *llogfp) {
 		} else {
 			/* Age class of maturity */
 			FunctGroupArray[sp].speciesParams[age_mat_id] = 1;
+            
+            /* Now set up the invert FDL_id values */
+            if (FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED_BIOMASS) {
+                FunctGroupArray[sp].speciesParams[FDL_id] = FDL_benth;
+            } else {
+                if (FunctGroupArray[sp].groupType == CEP || FunctGroupArray[sp].groupType == PWN
+                        || FunctGroupArray[sp].habitatType == SED || FunctGroupArray[sp].habitatType == EPIFAUNA) {
+                    FunctGroupArray[sp].speciesParams[FDL_id] = FDL_benth;
+                } else {
+                    FunctGroupArray[sp].speciesParams[FDL_id] = FDL_wc;
+                }
+            }
 		}
 	}
+    
+    printf("**");
+    fflush(stdout);
     
     xmlFreeDoc(inputDoc);
 	/* Shutdown libxml */
 	xmlCleanupParser();
+    
+    printf("** Load Done\n");
+    fflush(stdout);
     
 	return TRUE;
 }
@@ -4085,13 +4062,13 @@ static void Read_MigrateIO_Box_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr p
                     case AGE_STRUCTURED_BIOMASS:
                     case AGE_STRUCTURED:
                         for (cohort = 0; cohort < FunctGroupArray[guild].numStages; cohort++) {
-                            sprintf(errorString, "Migration/MigrateIOBox/%s/%s", FunctGroupArray[guild].groupCode, cohortString[cohort]);
+                            snprintf(errorString, sizeof(errorString), "Migration/MigrateIOBox/%s/%s", FunctGroupArray[guild].groupCode, cohortString[cohort]);
                             cohortNode = Util_XML_Get_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, specieNode, cohortString[cohort]);
                             if (cohortNode == NULL)
                                 quit("%s cohort attribute group not found.\n", errorString);
                             
                             for (migrate = 0; migrate < FunctGroupArray[guild].num_migrate; migrate++) {
-                                sprintf(str, "Migrate%d", migrate + 1);
+                                snprintf(str, sizeof(str), "Migrate%d", migrate + 1);
                                 if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, errorString, cohortNode, proportion_check, str, &values, bm->nbox) == FALSE) {
                                     quit("Error: Unable to find parameter '%s/%s' in input file %s\n", errorString, str, fileName);
                                 }
@@ -4110,9 +4087,9 @@ static void Read_MigrateIO_Box_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr p
                         break;
                     case BIOMASS:
                         cohort = juv_id;
-                        sprintf(errorString, "Migration/MigrateIOBox/%s", FunctGroupArray[guild].groupCode);
+                        snprintf(errorString, sizeof(errorString), "Migration/MigrateIOBox/%s", FunctGroupArray[guild].groupCode);
                         for (migrate = 0; migrate < FunctGroupArray[guild].num_migrate; migrate++) {
-                            sprintf(str, "Migrate%d", migrate + 1);
+                            snprintf(str, sizeof(str), "Migrate%d", migrate + 1);
                             if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, errorString, specieNode, proportion_check, str, &values, bm->nbox) == FALSE) {
                                 quit("Error: Unable to find parameter '%s/%s' in input file %s\n", errorString, str,
                                      fileName);
@@ -4151,10 +4128,10 @@ static void Read_KMIG_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, ch
     if (verbose)
         printf("Reading %s values\n", parameterName);
     
-    sprintf(errorString, "Migration/%s", parameterName);
+    snprintf(errorString, sizeof(errorString), "Migration/%s", parameterName);
     attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, parameterName);
     if (attributeNode == NULL)
-        quit("errorString%s attribute group not found.\n", errorString);
+        quit("%s attribute group not found.\n", errorString);
     
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         // If doesn't migrate this often leave
@@ -4204,7 +4181,7 @@ static void Read_KMIG_INVERT_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr par
     if (verbose)
         printf("Reading %s values\n", parameterName);
     
-    sprintf(errorString, "Migration/%s", parameterName);
+    snprintf(errorString, sizeof(errorString), "Migration/%s", parameterName);
     attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, parameterName);
     if (attributeNode == NULL)
         quit("%s attribute group not found.\n", errorString);
@@ -4212,8 +4189,8 @@ static void Read_KMIG_INVERT_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr par
     /* Create a node for each functional group*/
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         for (qid = 0; qid < FunctGroupArray[guild].num_migrate; qid++) {
-            sprintf(errorString, "Migration/%s%d", parameterName,qid);
-            sprintf(parameterNameMigNum, "Migration/%s%d", parameterName, qid); // This wasn't originally set - was that intentional?
+            snprintf(errorString, sizeof(errorString), "%s%d", parameterName,qid);  // This used to be "Migration/%s%d" but parent is "Migration" so don't need it again as otherwise doubled up in attributeNode code
+            snprintf(parameterNameMigNum, sizeof(parameterNameMigNum), "%s%d", parameterName, qid); // This wasn't originally set - was that intentional?
             attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, parameterNameMigNum);
             
             // Load those migrations that do happen
@@ -4263,6 +4240,10 @@ int Read_Migration_Information(MSEBoxModel *bm, char *fileName, xmlNodePtr paren
 void Zero_Create_Migration_Arrays(MSEBoxModel *bm, FILE *llogfp) {
     int n = 0, sp;
     
+    if(verbose > 1) {
+        printf("Doing Zero_Create_Migration_Arrays\n");
+    }
+    
     bm->K_max_num_migration = 0;
     MIGRATION = (MigrationStruct *) malloc(sizeof(MigrationStruct) * (size_t)(bm->K_num_tot_sp + 1));
     
@@ -4290,6 +4271,10 @@ void Create_Migration_Arrays(MSEBoxModel *bm, FILE *llogfp) {
     //int use_nyears;  // Was used previously but not anymore excpet for reporting
     int nyears = (int) (ceil((bm->tstop - bm->tstart) / (365.0 * 86400.0))) + 1;
     
+    if(verbose > 1) {
+        printf("Doing Create_Migration_Arrays\n");
+    }
+
     bm->K_max_num_migration = 0;
     for(sp = 0; sp < bm->K_num_tot_sp; sp++){
         if(FunctGroupArray[sp].sp_geo_move){

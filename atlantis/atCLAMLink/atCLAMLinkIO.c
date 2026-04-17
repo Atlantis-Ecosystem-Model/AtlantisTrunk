@@ -548,7 +548,7 @@ int Read_CLAM_Link_Params(MSEBoxModel *bm, char *fileName) {
 	}
 
 	/* Build the command line string */
-	sprintf(commandLinesStr, "%s \"%s\" %s", pathToICMSBuilder, ICMSProject, ICMSDLL);
+	snprintf(commandLinesStr, sizeof(commandLinesStr), "%s \"%s\" %s", pathToICMSBuilder, ICMSProject, ICMSDLL);
 
 	printf("commandLinesStr = %s\n", commandLinesStr);
 	/* Set the wait times */
@@ -556,7 +556,7 @@ int Read_CLAM_Link_Params(MSEBoxModel *bm, char *fileName) {
 	startedWaitTime = 1000 * 60 * 2;
 
 	/* Clear the output folder before the CLAM model is called */
-	//    sprintf(str, "del /Q %s\\*.*", outputFolderPath);
+	//    snprintf(str, sizeof(str), "del /Q %s\\*.*", outputFolderPath);
 	//    printf("str = %s\n", str);
 	//    system(str);
 

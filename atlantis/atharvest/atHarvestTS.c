@@ -71,16 +71,16 @@ void Harvest_Read_Time_Series(char *folderPath, char *name, char *tsname, char *
         printf( "Reading %s Time Series\n", tsname);
 
 	/* Get the number of time series */
-	sprintf(keyn, "n%sts", tsname);
+	snprintf(keyn, sizeof(keyn), "n%sts", tsname);
 	readkeyprm_i(fp, keyn, &nnts);
 
 	/* Get the type of time series */
-	sprintf(keyn, "type%sts", tsname);
+	snprintf(keyn, sizeof(keyn), "type%sts", tsname);
 	readkeyprm_i(fp, keyn, &typts);
 
 	/* Allocate memory for list of time series */
 	if ((fts = (FisheryTimeSeries *) malloc((size_t)nnts * sizeof(FisheryTimeSeries))) == NULL)
-		quit("read%sTimeSeries: Can't allocate memory for %s time series list\n", tsname);
+		quit("Harvest readTimeSeries: Can't allocate memory for %s time series list\n", tsname);
 
 	/* Read each fisheries time series input */
 	for (i = 0; i < nnts; i++) {
@@ -88,13 +88,13 @@ void Harvest_Read_Time_Series(char *folderPath, char *name, char *tsname, char *
 		char buf[MAXLINELEN];
 
 		/* Location */
-		sprintf(key, "%sts%d.location", tsname, i);
+		snprintf(key, sizeof(key), "%sts%d.location", tsname, i);
 		readkeyprm_s(fp, key, buf);
 		if (sscanf(buf, "%lf %lf %d", &fts[i].x, &fts[i].y, &fts[i].b) != 3)
 			quit("Incorrect information specified for %s, need x y box format", key);
 
 		/* Data */
-		sprintf(key, "%sts%d.data", tsname, i);
+		snprintf(key, sizeof(key), "%sts%d.data", tsname, i);
 
 		fprintf(stderr, "Loading %s for box %d\n", key, fts[i].b);
 

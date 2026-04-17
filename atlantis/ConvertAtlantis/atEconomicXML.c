@@ -44,17 +44,17 @@ void createMarketXMLNodes(MSEBoxModel *bm, xmlNodePtr parent) {
 
 	groupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, parent, "Market_Intercept", "", "", "");
 	for (index = 0; index < bm->K_num_markets; index++) {
-		sprintf(str, "Market_%d", index);
+		snprintf(str, sizeof(str), "Market_%d", index);
 		Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupingNode, str, "", "", "");
 	}
 	groupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, parent, "Market_Trend", "", "", "");
 	for (index = 0; index < bm->K_num_markets; index++) {
-		sprintf(str, "Market_%d", index);
+		snprintf(str, sizeof(str), "Market_%d", index);
 		Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupingNode, str, "", "", "");
 	}
 	groupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, parent, "Market_Autocoefft", "Overall market specific coefficient", "", "");
 	for (index = 0; index < bm->K_num_markets; index++) {
-		sprintf(str, "Market_%d", index);
+		snprintf(str, sizeof(str), "Market_%d", index);
 		Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupingNode, str, "", "", "");
 	}
 }
@@ -81,7 +81,7 @@ void MarketXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *str, ch
 		quit("MarketXML: Unrecognised option %s\n", str);
 	}
 
-	sprintf(paramStr, "Market_%d", index);
+	snprintf(paramStr, sizeof(paramStr), "Market_%d", index);
 	Util_XML_Set_Node_Value(ATLANTIS_ATTRIBUTE, groupingNode, paramStr, valueStr);
 
 }
@@ -95,13 +95,13 @@ void createMonthlyMarketXMLNodes(MSEBoxModel *bm, xmlNodePtr parent) {
 	groupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, parent, "MarketCoefft1",
 			"Monthly market specific coefficients -  per fished species for the first market", "", "");
 	for (index = 0; index < 12; index++) {
-		sprintf(str, "%s", monthStrings[index]);
+		snprintf(str, sizeof(str), "%s", monthStrings[index]);
 		Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupingNode, str, "", "", "");
 	}
 	groupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, parent, "MarketCoefft2",
 			"Monthly market specific coefficients -  per fished species for the second market", "", "");
 	for (index = 0; index < 12; index++) {
-		sprintf(str, "%s", monthStrings[index]);
+		snprintf(str, sizeof(str), "%s", monthStrings[index]);
 		Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupingNode, str, "", "", "");
 	}
 }
@@ -121,7 +121,7 @@ void MonthlyMarketXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *
 	*strstr(str, "MarketCoefft") = '\0';
 
 	/* find the parent node */
-	sprintf(paramStr, "MarketCoefft%d", index);
+	snprintf(paramStr, sizeof(paramStr), "MarketCoefft%d", index);
 	groupingNode = Util_XML_Get_Or_Create_Node(ATLANTIS_ATTRIBUTE, parent, paramStr);
 
 	Util_XML_Set_Node_Value(ATLANTIS_ATTRIBUTE, groupingNode, str, valueStr);
@@ -151,7 +151,7 @@ void createOwnQuotaXMLNodes(MSEBoxModel *bm, xmlNodePtr parent) {
 		if (FunctGroupArray[sp].isFished == TRUE) {
 			groupingNode = Util_XML_Get_Or_Create_Node(ATLANTIS_ATTRIBUTE, parent, FunctGroupArray[sp].groupCode);
 			for (i = 0; i < bm->K_max_num_subfleet; i++) {
-				sprintf(str, "sub%d", i + 1);
+				snprintf(str, sizeof(str), "sub%d", i + 1);
 				Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupingNode, str, "", "", "");
 
 			}
@@ -178,7 +178,7 @@ void OwnQuotaXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *str, 
 	/* find the FG node */
 	groupingNode = Util_XML_Get_Or_Create_Node(ATLANTIS_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode);
 
-	sprintf(tempStr, "sub%d", index + 1);
+	snprintf(tempStr, sizeof(tempStr), "sub%d", index + 1);
 	Util_XML_Set_Node_Value(ATLANTIS_ATTRIBUTE, groupingNode, tempStr, valueStr);
 }
 
@@ -203,6 +203,7 @@ void economicFlagParamsXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr 
 
 	/* General economic fleet dynamics flags */
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "MultiPlanEffort", "Whether use base (Fulton) economic model (1) or Dan Holland model (0)", "", XML_TYPE_BOOLEAN,"1");
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "MonthlyProfitUpdate", "Whether monthly profit updates are used in the economic model (1) or only annually (0)", "", XML_TYPE_BOOLEAN,"1");
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "econweekly", "Whether use weekly step as finest step in economic model (1) or based on trip length (0)", "", XML_TYPE_BOOLEAN,"1");
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "quota_trading", "Whether allow quota trading (1) or not (0)", "", XML_TYPE_BOOLEAN,"1");
 
@@ -580,7 +581,7 @@ void createTempBlackBookXMLNodes(MSEBoxModel *bm, xmlNodePtr parent) {
 			for (month = 0; month < 12; month++) {
 				monthNode = Util_XML_Get_Or_Create_Node(ATLANTIS_ATTRIBUTE, groupingNode, monthStrings[month]);
 				for (i = 0; i < bm->K_max_num_subfleet; i++) {
-					sprintf(str, "sub%d", i + 1);
+					snprintf(str, sizeof(str), "sub%d", i + 1);
 					Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, monthNode, str, "", "", "");
 
 				}
@@ -613,7 +614,7 @@ void TemporalBlackBookXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, ch
 	/* find the FG node */
 	groupingNode = Util_XML_Get_Or_Create_Node(ATLANTIS_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode);
 	monthNode = Util_XML_Get_Or_Create_Node(ATLANTIS_ATTRIBUTE, groupingNode, str);
-	sprintf(tempStr, "sub%d", index + 1);
+	snprintf(tempStr, sizeof(tempStr), "sub%d", index + 1);
 	Util_XML_Set_Node_Value(ATLANTIS_ATTRIBUTE, monthNode, tempStr, valueStr);
 }
 
@@ -628,7 +629,7 @@ void createSpatialBlackBookXMLNodes(MSEBoxModel *bm, xmlNodePtr parent) {
 		for (month = 0; month < 12; month++) {
 			monthNode = Util_XML_Get_Or_Create_Node(ATLANTIS_ATTRIBUTE, groupingNode, monthStrings[month]);
 			for (i = 0; i < bm->K_max_num_subfleet; i++) {
-				sprintf(str, "sub%d", i + 1);
+				snprintf(str, sizeof(str), "sub%d", i + 1);
 				Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, monthNode, str, "", "", "");
 
 			}
@@ -660,7 +661,7 @@ void SpatialBlackBookXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, cha
 	/* find the FG node */
 	groupingNode = Util_XML_Get_Or_Create_Node(ATLANTIS_ATTRIBUTE, parent, FisheryArray[fisheryIndex].fisheryCode);
 	monthNode = Util_XML_Get_Or_Create_Node(ATLANTIS_ATTRIBUTE, groupingNode, str);
-	sprintf(tempStr, "sub%d", index + 1);
+	snprintf(tempStr, sizeof(tempStr), "sub%d", index + 1);
 	Util_XML_Set_Node_Value(ATLANTIS_ATTRIBUTE, monthNode, tempStr, valueStr);
 }
 

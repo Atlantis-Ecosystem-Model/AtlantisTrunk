@@ -122,13 +122,13 @@ void create_r_redus_object(int numSP, const char** names, int endYear)
 	for (sp = 0; sp < numSP; sp++) {
 		char tmp2[255];
 
-		sprintf(tmp2, "biomassIndex[[\"%s\"]] <- FLStock(FLQuant(NA, dimnames=list(age=\"all\", year=0:%d), units='t'))", names[sp], endYear);
+		snprintf(tmp2, sizeof(tmp2), "biomassIndex[[\"%s\"]] <- FLStock(FLQuant(NA, dimnames=list(age=\"all\", year=0:%d), units='t'))", names[sp], endYear);
 		exec_r(tmp2);
 
-		sprintf(tmp2, "assessmentOutput[[\"%s\"]] <- FLQuant(NA, dimnames=list(age=\"all\", year=0:%d))", names[sp], endYear);
+		snprintf(tmp2, sizeof(tmp2), "assessmentOutput[[\"%s\"]] <- FLQuant(NA, dimnames=list(age=\"all\", year=0:%d))", names[sp], endYear);
 		exec_r(tmp2);
 
-		sprintf(tmp2, "hcrOutput[[\"%s\"]] <- FLQuant(NA, dimnames=list(age=\"all\", year=0:%d))", names[sp], endYear);
+		snprintf(tmp2, sizeof(tmp2), "hcrOutput[[\"%s\"]] <- FLQuant(NA, dimnames=list(age=\"all\", year=0:%d))", names[sp], endYear);
 		exec_r(tmp2);
 	}
 
@@ -151,7 +151,7 @@ void redus_update_biomass(int year, char* groupCode, double biomass)
 {
     char test[255];
 
-	sprintf(test, "stock(biomassIndex[[\"%s\"]])[, \"%d\"] <- %f", groupCode, year, biomass);
+	snprintf(test, sizeof(test), "stock(biomassIndex[[\"%s\"]])[, \"%d\"] <- %f", groupCode, year, biomass);
 	//printf("%s\n", test);
 
 	exec_r(test);
@@ -283,7 +283,7 @@ int freeRedus()
 }
 
 
-void intRedus()
+void intRedus(int dummy)
 {
    // Check interrupts
    R_CheckUserInterrupt();

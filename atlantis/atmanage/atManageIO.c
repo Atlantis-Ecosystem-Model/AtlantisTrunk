@@ -140,7 +140,7 @@ FILE * initAnnBrokenStickFile(MSEBoxModel *bm)
     char fname[STRLEN];
 
 	/** Create filename **/
-	sprintf(fname,"%s_BrokenStick.txt",bm->startfname);
+	snprintf(fname, sizeof(fname),"%s_BrokenStick.txt",bm->startfname);
 	printf("Creating %s\n",fname);
 
     /** Create file **/
@@ -184,7 +184,7 @@ FILE * initCapResultStickFile(MSEBoxModel *bm)
     char fname[STRLEN];
 
     /** Create filename **/
-    sprintf(fname,"%s_EcosystemCapResult.txt",bm->startfname);
+    snprintf(fname, sizeof(fname),"%s_EcosystemCapResult.txt",bm->startfname);
     printf("Creating %s\n",fname);
 
     /** Create file **/
@@ -226,7 +226,7 @@ FILE * initCPUEGenFile(MSEBoxModel *bm) {
     printf("Actually creating CPUE file\n");
     
 	/** Create filename **/
-	sprintf(fname, "%sCPUEgen.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sCPUEgen.txt", bm->startfname);
 	printf("Creating %s\n", fname);
     
 	/** Create file **/
@@ -284,7 +284,7 @@ FILE * initCPUEFile(MSEBoxModel *bm) {
     printf("Creating CPUE file\n");
     
 	/** Create filename **/
-	sprintf(fname, "%sCPUE.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sCPUE.txt", bm->startfname);
 	printf("Creating %s\n", fname);
     
 	/** Create file **/

@@ -141,13 +141,13 @@ dparam(FILE *fp, char *label, double *p, double min, double max)
 		/* check for label match, plus following space */
 		if( strncmp(label,line,(size_t)ll)==0 && isspace(line[ll]) ) {
 			if( sscanf(line+ll,"%lf",&val) != 1 ) {
-				sprintf(msg,"Parameter %s format bad on line>> %s",label,line);
+				snprintf(msg, sizeof(msg), "Parameter %s format bad on line>> %s",label,line);
 				param_error(msg);
 				return(-1);
 			}
 			/* range check */
 			if( val < min || val > max ) {
-				sprintf(msg,"Parameter %s outside valid range\n",label);
+				snprintf(msg, sizeof(msg), "Parameter %s outside valid range\n",label);
 				param_error(msg);
 				return(-1);
 			}
@@ -157,13 +157,13 @@ dparam(FILE *fp, char *label, double *p, double min, double max)
 		}
 	}
 	if( assigned == 0 ) {
-		sprintf(msg,"Parameter %s not found\n",label);
+		snprintf(msg, sizeof(msg), "Parameter %s not found\n",label);
 		param_error(msg);
 		return(-1);
 	}
 
 	if( assigned > 1 ) {
-		sprintf(msg,"Warning - parameter %s found %d times - last value used\n",label,assigned);
+		snprintf(msg, sizeof(msg), "Warning - parameter %s found %d times - last value used\n",label,assigned);
 		warn(msg);
 	}
 	return(fpos);
@@ -204,12 +204,12 @@ fparam(FILE *fp, char *label, float *p, double min, double max)
 		/* check for label match, plus following space */
 		if( strncmp(label,line,(size_t)ll)==0 && isspace(line[ll]) ) {
 			if( sscanf(line+ll,"%lf",&val) != 1 ) {
-				sprintf(msg,"Parameter %s format bad on line>> %s",label,line);
+				snprintf(msg,sizeof(msg), "Parameter %s format bad on line>> %s",label,line);
 				param_error(msg);
 				return(-1);
 			}
 			if( val < min || val > max ) {
-				sprintf(msg,"Parameter %s outside valid range\n",label);
+				snprintf(msg,sizeof(msg), "Parameter %s outside valid range\n",label);
 				param_error(msg);
 				return(-1);
 			}
@@ -219,13 +219,13 @@ fparam(FILE *fp, char *label, float *p, double min, double max)
 		}
 	}
 	if( assigned == 0 ) {
-		sprintf(msg,"Parameter %s not found\n",label);
+		snprintf(msg,sizeof(msg), "Parameter %s not found\n",label);
 		param_error(msg);
 		return(-1);
 	}
 
 	if( assigned > 1 ) {
-		sprintf(msg,"Warning - parameter %s found %d times - last value used\n",label,assigned);
+		snprintf(msg,sizeof(msg), "Warning - parameter %s found %d times - last value used\n",label,assigned);
 		warn(msg);
 	}
 	return(fpos);
@@ -267,12 +267,12 @@ lparam(FILE *fp, char *label, long int *p, long int min, long int max)
 		/* check for label match, plus following space */
 		if( strncmp(label,line,(size_t)ll)==0 && isspace(line[ll]) ) {
 			if( sscanf(line+ll,"%ld",&val) != 1 ) {
-				sprintf(msg,"Parameter %s format bad on line>> %s",label,line);
+				snprintf(msg, sizeof(msg),"Parameter %s format bad on line>> %s",label,line);
 				param_error(msg);
 				return(-1);
 			}
 			if( val < min || val > max ) {
-				sprintf(msg,"Parameter %s outside valid range\n",label);
+				snprintf(msg, sizeof(msg),"Parameter %s outside valid range\n",label);
 				param_error(msg);
 				return(-1);
 			}
@@ -282,13 +282,13 @@ lparam(FILE *fp, char *label, long int *p, long int min, long int max)
 		}
 	}
 	if( assigned == 0 ) {
-		sprintf(msg,"Parameter %s not found\n",label);
+		snprintf(msg, sizeof(msg),"Parameter %s not found\n",label);
 		param_error(msg);
 		return(-1);
 	}
 
 	if( assigned > 1 ) {
-		sprintf(msg,"Warning - parameter %s found %d times - last value used\n",label,assigned);
+		snprintf(msg, sizeof(msg),"Warning - parameter %s found %d times - last value used\n",label,assigned);
 		warn(msg);
 	}
 	return(fpos);
@@ -330,12 +330,12 @@ iparam(FILE *fp, char *label, int *p, int min, int max)
 		/* check for label match, plus following space */
 		if( strncmp(label,line,(size_t)ll)==0 && isspace(line[ll]) ) {
 			if( sscanf(line+ll,"%d",&val) != 1 ) {
-				sprintf(msg,"Parameter %s format bad on line>> %s",label,line);
+				snprintf(msg, sizeof(msg),"Parameter %s format bad on line>> %s",label,line);
 				param_error(msg);
 				return(-1);
 			}
 			if( val < min || val > max ) {
-				sprintf(msg,"Parameter %s outside valid range\n",label);
+				snprintf(msg, sizeof(msg),"Parameter %s outside valid range\n",label);
 				param_error(msg);
 				return(-1);
 			}
@@ -345,13 +345,13 @@ iparam(FILE *fp, char *label, int *p, int min, int max)
 		}
 	}
 	if( assigned == 0 ) {
-		sprintf(msg,"Parameter %s not found\n",label);
+		snprintf(msg, sizeof(msg),"Parameter %s not found\n",label);
 		param_error(msg);
 		return(-1);
 	}
 
 	if( assigned > 1 ) {
-		sprintf(msg,"Warning - parameter %s found %d times - last value used\n",label,assigned);
+		snprintf(msg, sizeof(msg),"Warning - parameter %s found %d times - last value used\n",label,assigned);
 		warn(msg);
 	}
 	return(fpos);
@@ -392,12 +392,12 @@ sparam(FILE *fp, char *label, short int *p, int min, int max)
 		/* check for label match, plus following space */
 		if( strncmp(label,line,(size_t)ll)==0 && isspace(line[ll]) ) {
 			if( sscanf(line+ll,"%d",&val) != 1 ) {
-				sprintf(msg,"Parameter %s format bad on line>> %s",label,line);
+				snprintf(msg, sizeof(msg),"Parameter %s format bad on line>> %s",label,line);
 				param_error(msg);
 				return(-1);
 			}
 			if( val < min || val > max ) {
-				sprintf(msg,"Parameter %s outside valid range\n",label);
+				snprintf(msg, sizeof(msg),"Parameter %s outside valid range\n",label);
 				param_error(msg);
 				return(-1);
 			}
@@ -407,13 +407,13 @@ sparam(FILE *fp, char *label, short int *p, int min, int max)
 		}
 	}
 	if( assigned == 0 ) {
-		sprintf(msg,"Parameter %s not found\n",label);
+		snprintf(msg, sizeof(msg),"Parameter %s not found\n",label);
 		param_error(msg);
 		return(-1);
 	}
 
 	if( assigned > 1 ) {
-		sprintf(msg,"Warning - parameter %s found %d times - last value used\n",label,assigned);
+		snprintf(msg, sizeof(msg),"Warning - parameter %s found %d times - last value used\n",label,assigned);
 		warn(msg);
 	}
 	return(fpos);
@@ -456,13 +456,13 @@ cparam(FILE *fp, char *label, char *p, char *chset)
 			s = line+ll;
 			while( *s && isspace(*s) ) s++;
 			if( *s == 0 ) {
-				sprintf(msg,"Parameter %s format bad on line>> %s",label,line);
+				snprintf(msg, sizeof(msg),"Parameter %s format bad on line>> %s",label,line);
 				param_error(msg);
 				return(-1);
 			}
 			/* check if character is in allowable set */
 			if( strchr(chset,*s) == NULL ) {
-				sprintf(msg,"Parameter %s outside valid range\n",label);
+				snprintf(msg, sizeof(msg),"Parameter %s outside valid range\n",label);
 				param_error(msg);
 				return(-1);
 			}
@@ -472,13 +472,13 @@ cparam(FILE *fp, char *label, char *p, char *chset)
 		}
 	}
 	if( assigned == 0 ) {
-		sprintf(msg,"Parameter %s not found\n",label);
+		snprintf(msg, sizeof(msg),"Parameter %s not found\n",label);
 		param_error(msg);
 		return(-1);
 	}
 
 	if( assigned > 1 ) {
-		sprintf(msg,"Warning - parameter %s found %d times - last value used\n",label,assigned);
+		snprintf(msg, sizeof(msg),"Warning - parameter %s found %d times - last value used\n",label,assigned);
 		warn(msg);
 	}
 	return(fpos);
@@ -522,7 +522,7 @@ strparam(FILE *fp, char *label, char *p, long int maxlen)
 			s = line+ll;
 			while( *s && isspace(*s) ) s++;
 			if( !(*s) ) {
-				sprintf(msg,"Parameter %s format bad on line>> %s",label,line);
+				snprintf(msg, sizeof(msg),"Parameter %s format bad on line>> %s",label,line);
 				param_error(msg);
 				return(-1);
 			}
@@ -546,13 +546,13 @@ strparam(FILE *fp, char *label, char *p, long int maxlen)
 		}
 	}
 	if( assigned == 0 ) {
-		sprintf(msg,"Parameter %s not found\n",label);
+		snprintf(msg, sizeof(msg),"Parameter %s not found\n",label);
 		param_error(msg);
 		return(-1);
 	}
 
 	if( assigned > 1 ) {
-		sprintf(msg,"Warning - parameter %s found %d times - last value used\n",label,assigned);
+		snprintf(msg, sizeof(msg),"Warning - parameter %s found %d times - last value used\n",label,assigned);
 		warn(msg);
 	}
 	return(fpos);
@@ -597,7 +597,7 @@ dparamarray(FILE *fp, char *label, double **p, double min, double max, long int 
 	/* check for label match, plus following space */
 	if( strncmp(label,line,(size_t)ll)==0 && isspace(line[ll]) ) {
 	    if( sscanf(line+ll,"%ld",size) != 1 || *size < 0L ) {
-		sprintf(msg,"dparamarray: Parameter %s array size format bad on line>> %s",label,line);
+		snprintf(msg, sizeof(msg),"dparamarray: Parameter %s array size format bad on line>> %s",label,line);
 		param_error(msg);
 		return(-1);
 	    }
@@ -606,20 +606,20 @@ dparamarray(FILE *fp, char *label, double **p, double min, double max, long int 
 	}
     }
     if( !found ) {
-	sprintf(msg,"dparamarray: Parameter %s not found\n",label);
+	snprintf(msg, sizeof(msg),"dparamarray: Parameter %s not found\n",label);
 	param_error(msg);
 	return(-1);
     }
 
     if( found > 1 ) {
-	sprintf(msg,"dparamarray:  parameter %s found %d times - last values used\n",label,found);
+	snprintf(msg, sizeof(msg),"dparamarray:  parameter %s found %d times - last values used\n",label,found);
 	warn(msg);
     }
 
     if( (*size) > 0L ) {
     /* allocate memory for array if required */
 	if( *p==NULL && (*p=(double *)malloc((size_t)(*size)*sizeof(double))) == NULL ) {
-	    sprintf(msg,"dparamarray: %s: Can't read array value\n",label);
+	    snprintf(msg, sizeof(msg),"dparamarray: %s: Can't read array value\n",label);
 	    param_error(msg);
 	    return(-1);
 	}
@@ -632,13 +632,13 @@ dparamarray(FILE *fp, char *label, double **p, double min, double max, long int 
 		/* we've run out of values */
 		if( i == 0 ) {
 		    /* no values at all */
-		    sprintf(msg,"dparamarray: %s: Can't read any array value\n",label);
+		    snprintf(msg, sizeof(msg),"dparamarray: %s: Can't read any array value\n",label);
 		    param_error(msg);
 		    return(-1);
 		}
 		else {
 		    /* not enough values - fill remainder with last value */
-		    sprintf(msg,"dparamarray: %s: Filling to end of array with last value, %e\n",label,lastval);
+		    snprintf(msg, sizeof(msg),"dparamarray: %s: Filling to end of array with last value, %e\n",label,lastval);
 		    warn(msg);
                     for(; i<(*size); i++)
 			(*p)[i] = lastval;
@@ -647,7 +647,7 @@ dparamarray(FILE *fp, char *label, double **p, double min, double max, long int 
 	    }
 	    /* range check */
 	    if( val < min || val > max ) {
-		sprintf(msg,"dparamarray: %s: array element outside valid range\n",label);
+		snprintf(msg, sizeof(msg),"dparamarray: %s: array element outside valid range\n",label);
 		param_error(msg);
 		return(-1);
 	    }

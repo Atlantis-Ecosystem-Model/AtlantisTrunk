@@ -158,18 +158,19 @@ double Nutrient_Lim(MSEBoxModel *bm, int nut_case, int micro_case, double amt_di
 
 	/* Do the Phosphorus calculation once */
 	if(bm->track_atomic_ratio == TRUE){
-		if(PRatio < P0)
-			PValue = 0;
-		else if(PRatio > P1)
-			PValue = 0;
-		else
-			PValue = ((P1 - PRatio)/(P1 - P0)) * (amt_p/(KP_sp + amt_p));
+        if(PRatio < P0) {
+            PValue = 0;
+        } else if(PRatio > P1) {
+            PValue = 0;
+        } else {
+            PValue = ((P1 - PRatio)/(P1 - P0)) * (amt_p/(KP_sp + amt_p));
+        }
 
 		if(PRatio == 0){
-			printf("nut_case = %d, micro_case = %d, amt_din = %.20e, amt_si = %.20e, amt_fe = %.20e, KN_sp = %.20e, KS_sp = %.20e, KF_sp = %.20e,KP_sp= %e, PValue= %e\n",
-						nut_case, micro_case, amt_din, amt_si, amt_fe, KN_sp, KS_sp, KF_sp, KP_sp, PValue);
-
+			printf("nut_case = %d, micro_case = %d, amt_din = %.20e, amt_si = %.20e, amt_fe = %.20e, KN_sp = %.20e, KS_sp = %.20e, KF_sp = %.20e,KP_sp= %e, PValue= %e\n", nut_case, micro_case, amt_din, amt_si, amt_fe, KN_sp, KS_sp, KF_sp, KP_sp, PValue);
 			printf("P1 = %e, P0 = %e, PRatio = %e\n", P1, P0, PRatio);
+            fflush(stdout);
+            fflush(stderr);
 			abort();
 		}
 	}
@@ -196,8 +197,8 @@ double Nutrient_Lim(MSEBoxModel *bm, int nut_case, int micro_case, double amt_di
 			break;
 		case WQI_id:
 			if(bm->track_atomic_ratio == TRUE){
-				hN = 2.0 / ((KN_sp + amt_din) / amt_din + (KS_sp + amt_si) / amt_si + 1.0/PValue);
-			}else{
+				hN = 2.0 / ((KN_sp + amt_din) / amt_din + (KS_sp + amt_si) / amt_si + 1.0 / PValue);
+			} else {
 				hN = 2.0 / ((KN_sp + amt_din) / amt_din + (KS_sp + amt_si) / amt_si);
 			}
 			break;
@@ -227,8 +228,8 @@ double Nutrient_Lim(MSEBoxModel *bm, int nut_case, int micro_case, double amt_di
 			break;
 		case WQI_id:
 			if(bm->track_atomic_ratio == TRUE){
-				hN = 3.0 / ((KN_sp + amt_din) / amt_din + (KS_sp + amt_si) / amt_si + (KF_sp + amt_fe) / amt_fe + 1.0/PValue);
-			}else{
+				hN = 3.0 / ((KN_sp + amt_din) / amt_din + (KS_sp + amt_si) / amt_si + (KF_sp + amt_fe) / amt_fe + 1.0 / PValue);
+			} else {
 				hN = 3.0 / ((KN_sp + amt_din) / amt_din + (KS_sp + amt_si) / amt_si + (KF_sp + amt_fe) / amt_fe);
 			}
 			break;
@@ -250,8 +251,8 @@ double Nutrient_Lim(MSEBoxModel *bm, int nut_case, int micro_case, double amt_di
 				break;
 			case WQI_id:
 				if(bm->track_atomic_ratio == TRUE){
-					hN = 2.0 / ((KN_sp + amt_din) / amt_din + (KF_sp + amt_fe) / amt_fe + PValue);
-				}else{
+					hN = 2.0 / ((KN_sp + amt_din) / amt_din + (KF_sp + amt_fe) / amt_fe + 1.0 / PValue);
+				} else {
 					hN = 2.0 / ((KN_sp + amt_din) / amt_din + (KF_sp + amt_fe) / amt_fe);
 				}
 				break;
@@ -527,15 +528,15 @@ static void Calculate_PreyAvail(MSEBoxModel *bm, FILE *llogfp, int predatorGuild
 void Get_Predator_Competition(MSEBoxModel *bm, int sp_id, int cohort, long double *tot_pred, long double *tot_pred_comp_sp, FILE *llogfp) {
     double ans_tot_pred = 0.0;
     double ans_tot_pred_comp = 0.0;
-    int predID, pid;
+    int predID, pid, predCohort;
     
     //TODO: FIX the dim_corrections
     double epi_dim_correction = 1.0, sm_dim_correction = 1.0, wc_dim_correction = 1.0;
     
     if (!bm->need_predcomp_params ) { // Just need total predation but not competition
         for (predID = 0; predID < bm->K_num_tot_sp; predID++) {
-            for (cohort = 0; cohort < FunctGroupArray[predID].numCohortsXnumGenes; cohort++) {
-                pid = FunctGroupArray[predID].totNTracers[cohort];
+            for (predCohort = 0; predCohort < FunctGroupArray[predID].numCohortsXnumGenes; predCohort++) {
+                pid = FunctGroupArray[predID].totNTracers[predCohort];
             
                 if ( !bm->current_layer ) { // Need sediment based predators
                     if ( FunctGroupArray[predID].isEpiFauna )
@@ -548,8 +549,11 @@ void Get_Predator_Competition(MSEBoxModel *bm, int sp_id, int cohort, long doubl
                 }
             }
         }
-
+        ans_tot_pred_comp = ans_tot_pred;
     } else { // Need to include predator competition - where it is sum(competition param * pred biomass)
+        
+        quit("Ask development team to code in predator competition fully\n ");
+        
         for (predID = 0; predID < bm->K_num_tot_sp; predID++) {
             if (current_layer_sed > -1) { // Need sediment based predators
                     
@@ -770,7 +774,7 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
 
 			if (catcheater && bm->flag_fisheries_on){
 				for (fleet = 0; fleet < bm->K_num_fisheries; fleet++) {
-					bm->groupTotCatch[preyID][kij] = bm->FCcaughttemp[preyID][fleet][kij] * bm->pFLEET[sp_id][fleet];
+					bm->groupTotCatch[preyID][kij] += bm->FCcaughttemp[preyID][fleet][kij] * bm->pFLEET[sp_id][fleet];
 				}
 				if(!bm->flag_olddiet)
 					bm->groupTotCatch[preyID][kij] *= bm->pSPFCeat[sp_id][preyID][cohort][kij];
@@ -954,7 +958,7 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
 				case eat_minmax:
 
 					rel_scalar = 0.0;
-					for (habitat = EPIFAUNA; habitat >= max_hab; habitat--) {
+					for (habitat = EPIFAUNA; habitat >= 0; habitat--) {
 						if(habitat == WC){
 							catch_addition = CATCHEATINGinfo[preyID][kij];
 						} else {
@@ -985,7 +989,7 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
                         for (habitat = WC; habitat <= max_hab; habitat++) {
                             spGRAZEinfo[preyID][kij][habitat] = EATINGinfo[preyID][kij][habitat] * EATINGinfo[preyID][kij][habitat] * (double)(scaled_clear / tot_prey_sq);
                         }
-                        spCATCHGRAZEinfo[preyID][kij] = CATCHEATINGinfo[preyID][kij] * CATCHEATINGinfo[preyID][kij] * (double)(scaled_clear / tot_prey);
+                        spCATCHGRAZEinfo[preyID][kij] = CATCHEATINGinfo[preyID][kij] * CATCHEATINGinfo[preyID][kij] * (double)(scaled_clear / tot_prey_sq);
                         scalar = pHscalar / tot_prey_sq;
                         tprey = tot_prey_sq;
                     break;
@@ -1059,7 +1063,7 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
 					if(!_finite(spGRAZEinfo[preyID][kij][habitat] )){
 						printf("In Eat for group %s, cohort %d in box%d-%d habitat %d. Amount of %s-%d eaten is infinite\n",
 								FunctGroupArray[sp_id].groupCode, cohort, bm->current_box, bm->current_layer, habitat, FunctGroupArray[preyID].groupCode, kij);
-                        fprintf(bm->logFile, "In Eat for group %s, cohort %d in box%d-%d habitat %d-%d. Amount of %s eaten is infinite\n", FunctGroupArray[sp_id].groupCode, cohort, bm->current_box, bm->current_layer, habitat, FunctGroupArray[preyID].groupCode, kij);
+                        fprintf(bm->logFile, "In Eat for group %s, cohort %d in box%d-%d habitat %d. Amount of %s-%d eaten is infinite\n", FunctGroupArray[sp_id].groupCode, cohort, bm->current_box, bm->current_layer, habitat, FunctGroupArray[preyID].groupCode, kij);
 						quit("");
 					}
 				}
@@ -1184,9 +1188,9 @@ void Invert_Activities(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TY
 	}
 
 	if (FunctGroupArray[guild].groupAgeType == AGE_STRUCTURED_BIOMASS && cohort == 0)
-		sprintf(code, "j%s", FunctGroupArray[guild].groupCode);
+		snprintf(code, sizeof(code), "j%s", FunctGroupArray[guild].groupCode);
 	else
-		sprintf(code, "%s", FunctGroupArray[guild].groupCode);
+		snprintf(code, sizeof(code),"%s", FunctGroupArray[guild].groupCode);
 
 
     /*
@@ -1491,16 +1495,16 @@ void Primary_Production(MSEBoxModel *bm, FILE *llogfp, int sp_id, int micro_case
 			* (1.0 + FunctGroupArray[sp_id].speciesParams[KN_id] / DIN);
 
 	if (lim_case != one_nut_lim)
-		uptakeSi = sp_grow * X_SiN;
+		uptakeSi = sp_grow * bm->X_SiN;
 	else
 		uptakeSi = 0.0;
 
 	if (micro_case)
-		uptakeFe = sp_grow * X_FeN;
+		uptakeFe = sp_grow * bm->X_FeN;
 	else
 		uptakeFe = 0.0;
 
-	/* Cap nutrient uptake to what is available */
+	/* Cap nutrient uptake to what is available - this intentionally a max as it is rescaling the NH uptake based on which is the least limitign of the limiting nutients */
 	scale_uptake = 1.0;
 	if (uptakeNH > NH)
 		scale_uptake = NH / uptakeNH;
@@ -1908,7 +1912,12 @@ void Calculate_Catch(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, FILE *llogfp
 		double propSediment, double propWater) {
 	double biomassToDL, numDead, numInvDead;
 	int nf, stock_id;
-
+    int do_debug = 0;
+    
+    if(do_debug) {
+        fprintf(llogfp, "Time: %e box%d-%d attempting to Calculate_Catch for %s-%d\n", bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[guild].groupCode, cohort);
+    }
+    
 	//FunctGroupArray[guild].dead[cohort] = 0.0;  This removed as was zeroing out density dependent fishing discard effects
 
 	/* Calculate the biomass that is lost due to fishing - either though catch (stored in the bm->FishingResults array), and the amount that is discarded dead

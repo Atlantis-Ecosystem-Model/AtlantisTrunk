@@ -410,8 +410,6 @@ static void Box_Bio_Process(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp)
 
 	FlagModel = 1;
     
-    //Ecology_Check_VertAbund(bm, newwctr, llogfp, 0);
-    
 	for (ij = numwclayer - 1; ij > stopij; ij--) {
 		if (verbose > 1)
         printf("processing water column layer %d\n", ij);
@@ -449,18 +447,12 @@ static void Box_Bio_Process(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp)
 		else
 			Susp_Sed = pBox->stress * pBox->area / bm->cell_vol;
 
-        //Ecology_Check_VertAbund(bm, newwctr, llogfp, 1);
-        
         /* Run Adaptive Difference Method */
 		Adapt_Diff_Method(bm, FlagModel, dt, boxLayerInfo, llogfp);
-        
-        //Ecology_Check_VertAbund(bm, newwctr, llogfp, 2);
-        
+
 		/* Spawning */
 		Vertebrate_Reproduction(bm, ij, maxdeep, totaldeep, numwclayer, boxLayerInfo->localWCTracers, llogfp);
 		Invertebrate_Reproduction(bm, ij, maxdeep, totaldeep, boxLayerInfo->localWCTracers, llogfp);
-        
-        //Ecology_Check_VertAbund(bm, newwctr, llogfp, 3);
 
 		/* Transfer all the temporary values back to their final locations */
 		for (k = 0; k < numwcvar; k++)
@@ -469,8 +461,6 @@ static void Box_Bio_Process(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp)
 			pBox->diagnost[k] = boxLayerInfo->localDiagTracers[k]; /* To diagnostics */
 		for (k = 0; k < numfstatvar; k++)
 			pBox->fishstat[k] = boxLayerInfo->localFishTracers[k]; /* To fisheries statistics */
-        
-        //Ecology_Check_VertAbund(bm, newwctr, llogfp, 4);
 	}
     
     /** Now process sediment layers not in contact with water. **/
@@ -506,13 +496,9 @@ static void Box_Bio_Process(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp)
 				Bact_stim = 1.0; // Originally introduced while model being balanced
 
 			current_layer_sed = ij;
-            
-            //Ecology_Check_VertAbund(bm, newwctr, llogfp, 5);
 
 			/* Run Adaptive Difference Method */
 			Adapt_Diff_Method(bm, FlagModel, dt, boxLayerInfo, llogfp);
-            
-            //Ecology_Check_VertAbund(bm, newwctr, llogfp, 6);
 
 			/* Transfer all of the values back to the final locations */
 			for (k = 0; k < numwcvar; k++)
@@ -521,8 +507,6 @@ static void Box_Bio_Process(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp)
 				pBox->diagnost[k] = boxLayerInfo->localDiagTracers[k]; /* To diagnostics */
 			for (k = 0; k < numfstatvar; k++)
 				pBox->fishstat[k] = boxLayerInfo->localFishTracers[k]; /* To fisheries statistics */
-            
-            //Ecology_Check_VertAbund(bm, newwctr, llogfp, 7);
 		}
         
         /** Now process epibenthic layer and adjacent water and sediment layers. **/
@@ -603,18 +587,12 @@ static void Box_Bio_Process(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp)
 			smLayerThick += small_num;
 		}
 
-        //Ecology_Check_VertAbund(bm, newwctr, llogfp, 8);
-        
 		/* Run Adaptive Difference Method */
 		Adapt_Diff_Method(bm, FlagModel, dt, boxLayerInfo, llogfp);
-        
-        //Ecology_Check_VertAbund(bm, newwctr, llogfp, 9);
 
 		/* Spawning */
 		Vertebrate_Reproduction(bm, 0, maxdeep, totaldeep, numwclayer, boxLayerInfo->localWCTracers, llogfp);
 		Invertebrate_Reproduction(bm, 0, maxdeep, totaldeep, boxLayerInfo->localWCTracers, llogfp);
-        
-        //Ecology_Check_VertAbund(bm, newwctr, llogfp, 10);
 
 		/* Transfer all values in localWCTracers and localSed to the appropriate variables and
 		 reset pointers Y1 and Y2 to newwctr and newsed tr pointing to returned value space
@@ -625,8 +603,6 @@ static void Box_Bio_Process(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp)
 			newsedtr[bm->current_box][0][ij] = boxLayerInfo->localSEDTracers[ij]; /* To top cell in sediment*/
 		}
 
-        //Ecology_Check_VertAbund(bm, newwctr, llogfp, 11);
-        
 		for (ij = 0; ij < numepivar; ij++) /* To epibenthic variables*/
 			pBox->epi[ij] = boxLayerInfo->localEPITracers[ij];
 		for (k = 0; k < numdiagvar; k++)
@@ -673,8 +649,6 @@ static void Box_Bio_Process(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp)
 	/* Calculate new detrital depth */
 	bm->boxes[bm->current_box].sm.detdepth = bm->boxes[bm->current_box].sm.detdepth + Enviro_turb * BioturbEnh / DRdepth * (1.0 - exp(-K_TUR_DEP / (DRdepth
 			+ small_num)));
-    
-    //Ecology_Check_VertAbund(bm, newwctr, llogfp, 12);
     
     /*
     pid = FunctGroupArray[8].contamPropTracers[3][0];
@@ -784,8 +758,7 @@ static void Get_Time_Change(MSEBoxModel *bm, FILE *llogfp, int flagModel, double
 
 	if(flagModel == EPIFAUNA){
 		/* Get the max change in the epibenthic variables */
-		Get_Max_Flux_Change(bm, boxLayerInfo->localEPITracers, boxLayerInfo->localEPIFlux, bm->nepi, 2 * bm ->ntracer, del, &maxEpi_del, &epi_ind_unstable_var,
-				llogfp);
+		Get_Max_Flux_Change(bm, boxLayerInfo->localEPITracers, boxLayerInfo->localEPIFlux, bm->nepi, 2 * bm ->ntracer, del, &maxEpi_del, &epi_ind_unstable_var, llogfp);
 		offset_int = 2 * bm->ntracer;
 		if (maxEpi_del > max_del) {
 			max_del = maxEpi_del;
@@ -797,10 +770,10 @@ static void Get_Time_Change(MSEBoxModel *bm, FILE *llogfp, int flagModel, double
 	}
 
 	if(flagModel == ICE_BASED ){
-		/* Get the max change in the epibenthic variables */
+		/* Get the max change in the ice-based variables */
 		Get_Max_Flux_Change(bm, boxLayerInfo->localICETracers, boxLayerInfo->localICEFlux, bm->ntracer, bm ->ntracer, del, &maxIce_del, &ice_ind_unstable_var,
 				llogfp);
-		offset_int = 2 * bm->ntracer;
+		offset_int = 0;  // Its assumed to be zero in Adapt_Diff_Method().... should it actually be "3 * bm->ntracer" so not accidentally overwriting anything?
 		if (maxIce_del > max_del) {
 			max_del = maxIce_del;
 			ind_unstable_var = ice_ind_unstable_var;
@@ -1198,13 +1171,16 @@ static void Integrate_Diag_Variables(MSEBoxModel *bm, double *tracerArray, doubl
 				continue;
 
 		/* Do once per day first */
-		if (it_count == 1)
-			if (DiagTolflag[i + offset] >= 2)
-				tracerArray[i] = tracerArray[i] + fluxArray[i] * tsz;
+        if (it_count == 1) {
+            if (DiagTolflag[i + offset] >= 2) {
+                tracerArray[i] = tracerArray[i] + fluxArray[i] * tsz;
+            }
+        }
 
 		/* Do finer scale ones */
-		if (DiagTolflag[i + offset] < 2)
-			tracerArray[i] = tracerArray[i] + fluxArray[i] * dtsz;
+        if (DiagTolflag[i + offset] < 2) {
+            tracerArray[i] = tracerArray[i] + fluxArray[i] * dtsz;
+        }
 	}
 }
 
@@ -1234,8 +1210,8 @@ static void Adapt_Diff_Method(MSEBoxModel *bm, int flagModel, double tsz, BoxLay
 	int i;
     
     if (verbose > 1) {
-        printf("Time: %e Doing adaptive timestep for box: %d, layer %d (Water Column)\n", bm->dayt, bm->current_box, bm->current_layer);
-        fprintf(llogfp, "\nTime: %e Doing adaptive timestep for box: %d, layer %d (Water Column)\n", bm->dayt, bm->current_box, bm->current_layer);
+        printf("Time: %e Doing adaptive timestep for box: %d, layer %d (Water Column) - flagModel : %d \n", bm->dayt, bm->current_box, bm->current_layer, flagModel);
+        fprintf(llogfp, "\nTime: %e Doing adaptive timestep for box: %d, layer %d (Water Column) - flagModel: %d\n", bm->dayt, bm->current_box, bm->current_layer, flagModel);
 	}
     
 	/* Initialize adaptive time step dtsz, time_left*/
@@ -1431,23 +1407,16 @@ static void Accumulate_Mortality_Estimates(MSEBoxModel *bm, double dtsz, FILE *l
 	int prey, pred;
 
 	for (prey = 0; prey < bm->K_num_tot_sp; prey++) {
+        /* Add the current entry to the cumulative total - correcting for the period of time
+         the mortality has been calculated for (in most cases one time step, but in some it
+         will be one adaptive time step)
+
+         Also reset for next iteration.
+         */
 		if ((FunctGroupArray[prey].isOncePerDt == TRUE) && (it_count == 1)) {
 			for (pred = 0; pred < bm->K_num_tot_sp; pred++) {
-				/* Add the current entry to the cumulative total - correcting for the period of time
-				 the mortality has been calculated for (in most cases one time step, but in some it
-				 will be one adaptive time step)
-
-				 Also reset for next iteration.
-				 */
 				bm->calcMnumPerPred[prey][pred][expect_id] += (bm->calcMnumPerPred[prey][pred][current_id] * bm->dt);
-
-				/*
-				 if(pred == FVS_id)
-				 fprintf(llogfp,"Time: %e, box: %d-%d, it_count: %d, calcM-%s by %s expect: %e, adding %e (current: %e, dt: %e)\n",
-				 bm->dayt, bm->current_box, bm->current_layer, it_count, FunctGroupArray[guild].groupCode[prey], FunctGroupArray[guild].groupCode[pred], bm->calcMnumPerPred[prey][pred][expect_id], bm->calcMnumPerPred[prey][pred][current_id] * bm->dt, bm->calcMnumPerPred[prey][pred][current_id], bm->dt);
-				 */
 				bm->calcMnumPerPred[prey][pred][current_id] = 0;
-
 			}
 
 			/* Update the linear mortality, quad mortality and mortality due to explict birds and mammals */
@@ -1469,13 +1438,15 @@ static void Accumulate_Mortality_Estimates(MSEBoxModel *bm, double dtsz, FILE *l
 		} else {
 			for (pred = 0; pred < bm->K_num_tot_sp; pred++) {
 				bm->calcMnumPerPred[prey][pred][expect_id] += bm->calcMnumPerPred[prey][pred][current_id] * dtsz;
-				bm->calcMLinearMort[prey][expect_id] += bm->calcMLinearMort[prey][current_id] * bm->dt;
-				bm->calcELinearMort[prey][expect_id] += bm->calcELinearMort[prey][current_id] * bm->dt;
-
 				bm->calcMnumPerPred[prey][pred][current_id] = 0;
 			}
 
-			bm->calcMLinearMort[prey][current_id] = 0;
+            bm->calcMLinearMort[prey][expect_id] += bm->calcMLinearMort[prey][current_id] * dtsz;
+            bm->calcELinearMort[prey][expect_id] += bm->calcELinearMort[prey][current_id] * dtsz;
+            bm->calcMQuadMort[prey][expect_id] += bm->calcMQuadMort[prey][current_id] * dtsz;
+            bm->calcMPredMort[prey][expect_id] += bm->calcMPredMort[prey][current_id] * dtsz;
+            
+            bm->calcMLinearMort[prey][current_id] = 0;
 			bm->calcELinearMort[prey][current_id] = 0;
 			bm->calcMQuadMort[prey][current_id] = 0;
 			bm->calcMPredMort[prey][current_id] = 0;

@@ -102,7 +102,8 @@ extern int ntsDiscard; /**< Number of discard time series (should match one per 
 extern int tsDiscardtype; /**< Whether to use interpolated or last valid entries from time-series */
 extern int *tsdiscardid; /**< Array matching boxmodel species ids to discard time series entry ids */
 extern FisheryTimeSeries *tsDiscard; /**< List of discard time series (one per box) */
-extern int first_data_done;
+
+int first_data_done;
 
 
 /* Harvest Performance measure variables */

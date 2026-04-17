@@ -4,7 +4,7 @@
 /* atRlink.h */
 
 //Redus related
-void intRedus();
+void intRedus(int dummy);
 void create_r_redus_object(int numSP, const char** names, int endYear);
 void redus_do_assessment(int minyearC, int maxyearC, char* groupCodeC);
 void redus_update_biomass(int year, char* groupCode, double biomass);

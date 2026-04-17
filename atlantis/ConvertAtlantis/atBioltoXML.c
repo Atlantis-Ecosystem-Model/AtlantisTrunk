@@ -184,7 +184,7 @@ void InitSpeciesQ10ValuesXML(MSEBoxModel *bm, xmlNodePtr parent) {
 
 	/* Do Q10 first */
 	Util_XML_Get_Value_Double("", ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, no_checking, "Q10", &Q10);
-	sprintf(valueStr, "%f", Q10);
+	snprintf(valueStr, sizeof(valueStr), "%f", Q10);
 
 	/* Create a node for each functional group*/
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
@@ -490,7 +490,7 @@ void InitspSeagrassXML(MSEBoxModel *bm, xmlNodePtr parent) {
         if(FunctGroupArray[guild].groupType == SEAGRASS){
             groupNode = Util_XML_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[guild].groupCode, "", "", "");
             for(stage = 0; stage < FunctGroupArray[guild].numStages; stage++){
-                sprintf(stageString, "stage%d", stage);
+                snprintf(stageString, sizeof(stageString), "stage%d", stage);
                 Util_XML_Create_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, groupNode, stageString, "", "", "");
             }
         }
@@ -522,7 +522,7 @@ void SeagrassPreyXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent,
 	*tempstr = '\0';
     
     
-	// Get the indicies of each group
+	// Get the indices of each group
 	predatorIndex = Util_Get_FG_Index_From_Token(bm, predatorString, fileName, str, TRUE);
 	preyIndex = Util_Get_FG_Index_From_Token(bm, preyString, fileName, str, TRUE);
     
@@ -555,7 +555,7 @@ void SeagrassPreyXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent,
     } else {
         quit("No stage string found for seagrass predation\n");
     }
-    sprintf(stageString, "stage%d", stageIndex);
+    snprintf(stageString, sizeof(stageString), "stage%d", stageIndex);
     
     strcpy(finalValues, "");
 
@@ -576,7 +576,7 @@ void SeagrassPreyXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent,
     trim(finalValues);
     
     
-    /* Get the indicies of each group */
+    /* Get the indices of each group */
     preyIndex = Util_Get_FG_Index_From_Token(bm, preyString, fileName, str, TRUE);
     speciesNode = Util_XML_Get_Or_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[preyIndex].groupCode);
     cohortNode = Util_XML_Get_Or_Create_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, speciesNode, stageString);
@@ -736,7 +736,7 @@ void spVERTEatXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, ch
 	double *sedimentArray = (double *)malloc(sizeof(double) * (unsigned int long)bm->K_num_detritus);
 	char lengthStr[50];
     
-	sprintf(lengthStr, "%d", bm->K_num_tot_sp);
+	snprintf(lengthStr, sizeof(lengthStr), "%d", bm->K_num_tot_sp);
 
 	strcpy(sedimentValues, "");
 	strcpy(finalValues, "");
@@ -762,10 +762,10 @@ void spVERTEatXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, ch
 	for (sp = 0; sp < (bm->K_num_tot_sp + bm->K_num_detritus); sp++) {
 
 		if (sp < bm->K_num_tot_sp) {
-			sprintf(tempStr, "%s%.10e", sp>0?" ":"", p[sp]);
+			snprintf(tempStr, sizeof(tempStr), "%s%.10e", sp>0?" ":"", p[sp]);
 			strcat(finalValues, tempStr);
 
-			//sprintf(finalValues, "%s%s%.10e", finalValues, sp>0?" ":"", p[sp]);
+			//snprintf(finalValues, sizeof(finalValue), "%s%s%.10e", finalValues, sp>0?" ":"", p[sp]);
 		} else {
 			sedimentArray[sp - bm->K_num_tot_sp] = p[sp];
 		}
@@ -788,9 +788,9 @@ void spVERTEatXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, ch
 
 	for(sp = 0; sp < bm->K_num_detritus; sp++){
 		if(tempArray[sp] == 0){
-			sprintf(tempStr, "%s%e", sp>0?" ":"", sedimentArray[sp]);
+			snprintf(tempStr, sizeof(tempStr), "%s%e", sp>0?" ":"", sedimentArray[sp]);
 		}else{
-			sprintf(tempStr, "%s%e", sp>0?" ":"", tempArray[sp]);
+			snprintf(tempStr, sizeof(tempStr), "%s%e", sp>0?" ":"", tempArray[sp]);
 		}
 		strcat(sedimentValues, tempStr);
 
@@ -821,7 +821,7 @@ void InitSedimentFoodAvailXML(MSEBoxModel *bm, xmlNodePtr parent, char *tag, cha
 	char lengthStr[100];
 	char *zeroString =  CreateZeroString(bm->K_num_detritus);
 
-	sprintf(lengthStr, "%d", length);
+	snprintf(lengthStr, sizeof(lengthStr), "%d", length);
 
 	newNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, parent, tag, comment, units, "");
 	Util_XML_Add_Node_Property(newNode, "AttributeType", AtlantisXMLAttributeTypeStrings[type]);
@@ -902,11 +902,11 @@ void VERTXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *s
 	strcpy(tempStr, str);
 	// Find out if this is day or night.
 	if (strstr(tempStr, "day")) {
-		sprintf(dayStr, "day");
+		snprintf(dayStr, sizeof(dayStr), "day");
 	}else if(strstr(tempStr, "overwinter")) {
-		sprintf(dayStr, "overwinter");
+		snprintf(dayStr, sizeof(dayStr), "overwinter");
 	} else {
-		sprintf(dayStr, "night");
+		snprintf(dayStr, sizeof(dayStr), "night");
 	}
 
 	speciesStr = strchr(tempStr, '_') + 1;
@@ -1006,7 +1006,7 @@ void InitVertSeasonalDistXML(MSEBoxModel *bm, xmlNodePtr parent) {
             for (cohort = 0; cohort <= 1; cohort++) {
                 cohortNode = Util_XML_Create_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, groupNode, cohortStrings[cohort], "", "", "");
                 for (season = 1; season <= FunctGroupArray[guild].numMoveEntries; season++) {
-                    sprintf(str, "season%d", season);
+                    snprintf(str, sizeof(str), "season%d", season);
                     Util_XML_Create_Node(ATLANTIS_TEMPORAL_ATTRIBUTE, cohortNode, str, "", "", "");
                 }
             }
@@ -1015,7 +1015,7 @@ void InitVertSeasonalDistXML(MSEBoxModel *bm, xmlNodePtr parent) {
             cohortNode = Util_XML_Create_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, groupNode, "adult", "", "", "");
 
             for (season = 1; season <= FunctGroupArray[guild].numMoveEntries; season++) {
-                sprintf(str, "season%d", season);
+                snprintf(str, sizeof(str),"season%d", season);
                 Util_XML_Create_Node(ATLANTIS_TEMPORAL_ATTRIBUTE, cohortNode, str, "", "", "");
 			}
 		}
@@ -1072,7 +1072,7 @@ void VertSeasonalDistXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr par
 
 	speciesNode = Util_XML_Get_Or_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode);
 	ageClassNode = Util_XML_Get_Or_Create_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, speciesNode, cohortStrings[cohort]);
-	sprintf(stockStr, "season%d", index);
+	snprintf(stockStr, sizeof(stockStr), "season%d", index);
 	Util_XML_Set_Node_Value(ATLANTIS_TEMPORAL_ATTRIBUTE, ageClassNode, stockStr, valueStr);
 }
 
@@ -1296,7 +1296,7 @@ void InitMigrateIOBoxXML(MSEBoxModel *bm, xmlNodePtr parent) {
 					cohortNode = Util_XML_Create_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, groupNode, cohortStrings[cohort], "", "", "");
 
 					for (migrate = 0; migrate < K_max_num_mig; migrate++) {
-						sprintf(migrateString, "Migrate%d", migrate + 1);
+						snprintf(migrateString, sizeof(migrateString), "Migrate%d", migrate + 1);
 						Util_XML_Create_Node(
 								ATLANTIS_ATTRIBUTE,
 								cohortNode,
@@ -1309,7 +1309,7 @@ void InitMigrateIOBoxXML(MSEBoxModel *bm, xmlNodePtr parent) {
 				break;
 			case BIOMASS:
 				for (migrate = 0; migrate < K_max_num_mig; migrate++) {
-					sprintf(migrateString, "Migrate%d", migrate + 1);
+					snprintf(migrateString,sizeof(migrateString),  "Migrate%d", migrate + 1);
 					Util_XML_Create_Node(
 							ATLANTIS_ATTRIBUTE,
 							groupNode,
@@ -1361,19 +1361,19 @@ void MigrateReturnXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent
 	speciesIndex = Util_Get_FG_Index_From_Token(bm, strPtr, fileName, str, TRUE);
 
 	if (strstr(str, "Migrate_Time") != NULL) {
-		sprintf(param, "MigrateTime");
+		snprintf(param, sizeof(param), "MigrateTime");
 	} else if (strstr(str, "Migrate_Return") != NULL) {
-		sprintf(param, "MigrateReturn");
+		snprintf(param, sizeof(param), "MigrateReturn");
 	} else if (strstr(str, "Period") != NULL) {
-		sprintf(param, "MigratePeriod");
+		snprintf(param, sizeof(param), "MigratePeriod");
     } else if (strstr(str, "YearsAway") != NULL) {
-        sprintf(param, "MigrateYearsAway");
+        snprintf(param, sizeof(param), "MigrateYearsAway");
     } else if (strstr(str, "ReturnStock") != NULL) {
-		sprintf(param, "MigrateStockReturn");
+		snprintf(param, sizeof(param), "MigrateStockReturn");
 	} else if (strstr(str, "FSMG") != NULL) {
-		sprintf(param, "MigrateProportionIncrease");
+		snprintf(param, sizeof(param), "MigrateProportionIncrease");
 	} else if (strstr(str, "FSM") != NULL) {
-		sprintf(param, "MigrateSurvivorshipProportion");
+		snprintf(param, sizeof(param), "MigrateSurvivorshipProportion");
 	}
 
 	paramNode = Util_XML_Get_Or_Create_Node(ATLANTIS_ATTRIBUTE, parent->parent, param);
@@ -1525,7 +1525,7 @@ void MigrateIOBoxXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent,
 		quit("Parameter %s is not a valid parameter. If a group has more than 1 stage then juv and ad values should be provided\n", str);
 	}
 
-	sprintf(migrateString, "Migrate%d", index + 1);
+	snprintf(migrateString, sizeof(migrateString), "Migrate%d", index + 1);
 	if (adultIndex != -1) {
 		ageNode = Util_XML_Get_Or_Create_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, speciesNode, cohortStrings[adultIndex]);
 		Util_XML_Set_Node_Value(ATLANTIS_ATTRIBUTE, ageNode, migrateString, valueStr);
@@ -1746,11 +1746,11 @@ void InitPopRatioStockXML(MSEBoxModel *bm, xmlNodePtr parent) {
 
 			for (cohort = 0; cohort < FunctGroupArray[guild].numCohorts; cohort++) {
 
-				sprintf(str, "cohort%d", cohort + 1);
+				snprintf(str, sizeof(str), "cohort%d", cohort + 1);
 				cohortNode = Util_XML_Create_Node(ATLANTIS_COHORT_ATTRIBUTE, groupNode, str, "", "", "");
 
 				for (stock = 0; stock < bm->K_num_stocks_per_sp; stock++) {
-					sprintf(str, "stock%d", stock + 1);
+					snprintf(str, sizeof(str), "stock%d", stock + 1);
 					Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, cohortNode, str, "", "", "");
 				}
 			}
@@ -1795,10 +1795,10 @@ void PopRatioStockXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent
 	speciesIndex = Util_Get_FG_Index_From_Token(bm, speciesStr, fileName, str, TRUE);
 	speciesNode = Util_XML_Get_Or_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode);
 
-	sprintf(cohortString, "cohort%d", cohortIndex);
+	snprintf(cohortString, sizeof(cohortString), "cohort%d", cohortIndex);
 	cohortNode = Util_XML_Get_Or_Create_Node(ATLANTIS_COHORT_ATTRIBUTE, speciesNode, cohortString);
 
-	sprintf(attributeName, "stock%d", stockIndex);
+	snprintf(attributeName, sizeof(attributeName), "stock%d", stockIndex);
 	Util_XML_Set_Node_Value(ATLANTIS_ATTRIBUTE, cohortNode, attributeName, valueStr);
 
 }
@@ -3554,157 +3554,157 @@ void createContaminantsXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr 
 			if(FunctGroupArray[sp].speciesParams[flag_id] == TRUE && FunctGroupArray[sp].isDetritus == FALSE){
 
                 if(bm->flag_contam_halflife_spbased) {
-                    sprintf(varStr, "%s_%s_decay_half_life", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                    sprintf(longStr, "Species specific half life value of group %s for contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                    snprintf(varStr, sizeof(varStr), "%s_%s_decay_half_life", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                    snprintf(longStr, sizeof(longStr), "Species specific half life value of group %s for contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 }
-				sprintf(varStr, "%s_%s_uptake_rate", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				sprintf(longStr, "Uptake rate of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_uptake_rate", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(longStr, sizeof(longStr), "Uptake rate of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
-				sprintf(varStr, "%s_%s_uptake_option", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				sprintf(longStr, "Uptake option of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_uptake_option", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(longStr, sizeof(longStr), "Uptake option of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_INTEGER, "");
 
-				sprintf(varStr, "%s_%s_LD50", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				sprintf(longStr, "LD50 value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_LD50", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(longStr, sizeof(longStr), "LD50 value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
-				sprintf(varStr, "%s_%s_LD100", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				sprintf(longStr, "LD100 value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_LD100", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(longStr, sizeof(longStr), "LD100 value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
-                sprintf(varStr, "%s_%s_LDChronic", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "LDchronic value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_LDChronic", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "LDchronic value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
-                sprintf(varStr, "%s_%s_TimeToLD50", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				sprintf(longStr, "Time to LD50 value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_TimeToLD50", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(longStr, sizeof(longStr), "Time to LD50 value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
-                sprintf(varStr, "%s_%s_LDslope", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "slope of LD50 function of value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_LDslope", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "slope of LD50 function of value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
-                sprintf(varStr, "%s_%s_EC50", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "EC50 (50 percent growth reduction) value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_EC50", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "EC50 (50 percent growth reduction) value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
-                sprintf(varStr, "%s_%s_ECslope", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "slope of EC50 function of value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_ECslope", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "slope of EC50 function of value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
-                sprintf(varStr, "%s_%s_EC50_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "EC50 (50 percent reprod reduction) value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_EC50_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "EC50 (50 percent reprod reduction) value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
-                sprintf(varStr, "%s_%s_ECslope_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "slope of EC50_r function of value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_ECslope_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "slope of EC50_r function of value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
-                sprintf(varStr, "%s_%s_spL", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "growth effects model minimum (L) value for group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_spL", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "growth effects model minimum (L) value for group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
-                sprintf(varStr, "%s_%s_spA", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "growth effects model slope (A) value for group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_spA", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "growth effects model slope (A) value for group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
-                sprintf(varStr, "%s_%s_spB", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "growth effects model midpoint (B) value for group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_spB", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "growth effects model midpoint (B) value for group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
-                sprintf(varStr, "%s_%s_spL_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "Reprod effects model minimum (L) value for group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_spL_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "Reprod effects model minimum (L) value for group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
-                sprintf(varStr, "%s_%s_spA_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "Reprod effects model slope (A) value for group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_spA_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "Reprod effects model slope (A) value for group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
-                sprintf(varStr, "%s_%s_spB_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "Reprod effects model midpoint (B) value for group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_spB_r", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "Reprod effects model midpoint (B) value for group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
-                sprintf(varStr, "%s_%s_avoid", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "level triggering avoidance behaviour in group %s of contaminant %s", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_avoid", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "level triggering avoidance behaviour in group %s of contaminant %s", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
-                sprintf(varStr, "%s_%s_K_avoid", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "Constant in avoidance behaviour relationship for group %s of contaminant %s ", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_K_avoid", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "Constant in avoidance behaviour relationship for group %s of contaminant %s ", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
                 set_keyprm_errfn(warn);
-				sprintf(varStr, "%s_%s_Cx", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				sprintf(longStr, "Cx value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_Cx", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(longStr, sizeof(longStr), "Cx value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
-				sprintf(varStr, "%s_%s_Cy", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				sprintf(longStr, "Cy value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_Cy", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(longStr, sizeof(longStr), "Cy value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
 				set_keyprm_errfn(quit);
-				sprintf(varStr, "%s_%s_InstantDoseMortality", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				sprintf(longStr, "Instant Dose Mortality value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_InstantDoseMortality", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(longStr, sizeof(longStr), "Instant Dose Mortality value of group %s of contaminant %s.", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_INTEGER, "");
                 
 				set_keyprm_errfn(quit);
-				sprintf(varStr, "%s_%s_GrowthThresh", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				sprintf(longStr, "Threshold value of contaminant %s when %s sees growth effects ", bm->contaminantStructure[cIndex]->contaminant_name, FunctGroupArray[sp].groupCode);
+				snprintf(varStr, sizeof(varStr), "%s_%s_GrowthThresh", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(longStr, sizeof(longStr), "Threshold value of contaminant %s when %s sees growth effects ", bm->contaminantStructure[cIndex]->contaminant_name, FunctGroupArray[sp].groupCode);
 				Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
 				set_keyprm_errfn(quit);
-				sprintf(varStr, "%s_%s_ReprodThresh", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				sprintf(longStr, "Threshold value of contaminant %s when %s sees reprod effects ", bm->contaminantStructure[cIndex]->contaminant_name, FunctGroupArray[sp].groupCode);
+				snprintf(varStr, sizeof(varStr), "%s_%s_ReprodThresh", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(longStr, sizeof(longStr), "Threshold value of contaminant %s when %s sees reprod effects ", bm->contaminantStructure[cIndex]->contaminant_name, FunctGroupArray[sp].groupCode);
 				Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
                 set_keyprm_errfn(quit);
-				sprintf(varStr, "%s_%s_GrowthEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-				sprintf(longStr, "Growth effect for group %s once contaminant %s above the threshold", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(varStr, sizeof(varStr), "%s_%s_GrowthEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+				snprintf(longStr, sizeof(longStr), "Growth effect for group %s once contaminant %s above the threshold", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
 				Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
                 set_keyprm_errfn(quit);
-                sprintf(varStr, "%s_%s_ReprodEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "Reproduction effect for group %s once contaminant %s above the threshold", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_ReprodEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "Reproduction effect for group %s once contaminant %s above the threshold", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
                 set_keyprm_errfn(quit);
-                sprintf(varStr, "%s_%s_MoveEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "Movement effect for group %s once contaminant %s above the threshold", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_MoveEffect", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "Movement effect for group %s once contaminant %s above the threshold", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
                 set_keyprm_errfn(quit);
-                sprintf(varStr, "%s_%s_ContamScalar", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "Generic scalar for group %s once contaminant %s above the threshold", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_ContamScalar", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "Generic scalar for group %s once contaminant %s above the threshold", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
                 
                 set_keyprm_errfn(quit);
-                sprintf(varStr, "%s_%s_maternal_transfer", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "Maternal transfer for group %s and contaminant %s during recruitment and breeding", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_maternal_transfer", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "Maternal transfer for group %s and contaminant %s during recruitment and breeding", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
                 set_keyprm_errfn(quit);
-                sprintf(varStr, "%s_%s_suckling_transfer", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
-                sprintf(longStr, "Maternal transfer for group %s and contaminant %s during sucking", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(varStr, sizeof(varStr), "%s_%s_suckling_transfer", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
+                snprintf(longStr, sizeof(longStr), "Maternal transfer for group %s and contaminant %s during sucking", FunctGroupArray[sp].groupCode, bm->contaminantStructure[cIndex]->contaminant_name);
                 Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 			}
 		}
 
-		sprintf(varStr, "%s_half_life", bm->contaminantStructure[cIndex]->contaminant_name);
-		sprintf(longStr, "Half life of contaminant %s.", bm->contaminantStructure[cIndex]->contaminant_name);
+		snprintf(varStr, sizeof(varStr), "%s_half_life", bm->contaminantStructure[cIndex]->contaminant_name);
+		snprintf(longStr, sizeof(longStr), "Half life of contaminant %s.", bm->contaminantStructure[cIndex]->contaminant_name);
 		Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
         
-        sprintf(varStr, "%s_temp_depend", bm->contaminantStructure[cIndex]->contaminant_name);
-        sprintf(longStr, "Flag indicating using temperature dependent LD50 for contaminant %s (1) or not (0)", bm->contaminantStructure[cIndex]->contaminant_name);
+        snprintf(varStr, sizeof(varStr), "%s_temp_depend", bm->contaminantStructure[cIndex]->contaminant_name);
+        snprintf(longStr, sizeof(longStr), "Flag indicating using temperature dependent LD50 for contaminant %s (1) or not (0)", bm->contaminantStructure[cIndex]->contaminant_name);
         Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
         
-        sprintf(varStr, "%s_dissolv_coefft", bm->contaminantStructure[cIndex]->contaminant_name);
-        sprintf(longStr, "coefficient showing capacity to be dissolved and moved in excretion %s.", bm->contaminantStructure[cIndex]->contaminant_name);
+        snprintf(varStr, sizeof(varStr), "%s_dissolv_coefft", bm->contaminantStructure[cIndex]->contaminant_name);
+        snprintf(longStr, sizeof(longStr), "coefficient showing capacity to be dissolved and moved in excretion %s.", bm->contaminantStructure[cIndex]->contaminant_name);
         Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
 
         if (bm->num_contaminants > 1) {
-            sprintf(varStr, "%s_contam_interaction", bm->contaminantStructure[cIndex]->contaminant_name);
-            sprintf(longStr, "Interaction of %s with other contaminants", bm->contaminantStructure[cIndex]->contaminant_name);
+            snprintf(varStr, sizeof(varStr), "%s_contam_interaction", bm->contaminantStructure[cIndex]->contaminant_name);
+            snprintf(longStr, sizeof(longStr), "Interaction of %s with other contaminants", bm->contaminantStructure[cIndex]->contaminant_name);
             Util_XML_Create_Node_Next_Line(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOATARRAY);
         }
 
@@ -4021,7 +4021,7 @@ int Util_Read_Migration_XML(MSEBoxModel *bm, char *fileName, FILE *llogfp) {
     if (strstr(fileName, ".csv") != NULL) {
         /* Convert the file to XML. */
         /* Build the converted filename */
-        sprintf(convertedXMLFileName, "%s", fileName);
+        snprintf(convertedXMLFileName, sizeof(convertedXMLFileName), "%s", fileName);
         *(strstr(convertedXMLFileName, ".csv")) = '\0';
         strcat(convertedXMLFileName, ".xml");
         
@@ -4029,7 +4029,7 @@ int Util_Read_Migration_XML(MSEBoxModel *bm, char *fileName, FILE *llogfp) {
         Convert_Migration_To_XML(bm, fileName, convertedXMLFileName);
         inputDoc = xmlReadFileDestFolder(bm->destFolder, convertedXMLFileName, NULL, 0);
     } else {
-        sprintf(convertedXMLFileName, "%s", fileName);
+        snprintf(convertedXMLFileName, sizeof(convertedXMLFileName), "%s", fileName);
         inputDoc = xmlReadFileDestFolder("", convertedXMLFileName, NULL, 0);
     }
     

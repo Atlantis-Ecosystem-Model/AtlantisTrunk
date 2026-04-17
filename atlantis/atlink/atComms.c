@@ -323,9 +323,9 @@ char *buildDataString(double **dataArray, int numRows, int numColumns)
    	for(rows = 0; rows < numRows; rows++){
    		for(columns = 0; columns < numColumns; columns++){
    			if(rows == 0 && columns == 0)
-   				sprintf(str, "%e", dataArray[rows][columns]);
+   				snprintf(str, sizeof(str), "%e", dataArray[rows][columns]);
    			else
-   				sprintf(str, "%s,%e", str, dataArray[rows][columns]);
+   				snprintf(str, sizeof(str), "%s,%e", str, dataArray[rows][columns]);
    		}
    	}
    	return str;

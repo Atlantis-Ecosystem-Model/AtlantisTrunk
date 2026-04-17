@@ -823,8 +823,9 @@ void Write_Individs(FILE *fid, MSEBoxModel *bm, int ij, int id) {
 					fprintf(fid, "%d ", k);
 
 					/* Write Info */
-					for (j = 0; j < 7; j++)
-						fprintf(fid, "%.8g ", individVERTinfo[j][k][sp][z][id]);
+					for (j = 0; j < 7; j++) {
+						fprintf(fid, "%.8g ", individVERTinfo[j][sp][k][z][id]);
+					}
 
 					/* New line */
 					fprintf(fid, "\n");
@@ -1563,7 +1564,7 @@ void Write_Binbioms(FILE *fid, MSEBoxModel *bm, int ij) {
 
 		/* Write Biomass Bin Info */
 		for (j = 0; j < bm->K_num_pelbin; j++)
-			fprintf(fid, "%.8g ", pelbin[j][0][z]);
+			fprintf(fid, "%.8g ", pelbin[j][bioindex_id][z]);
 		for (j = 0; j < bm->K_num_sedbin; j++)
 			fprintf(fid, "%.8g ", sedbin[j][z]);
 
@@ -1616,7 +1617,7 @@ void Write_Bin_Abunds(FILE *fid, MSEBoxModel *bm, int ij) {
 
 		/* Write Abundance Bin Info */
 		for (j = 0; j < bm->K_num_pelbin; j++)
-			fprintf(fid, "%.8g ", pelbin[j][1][z]);
+			fprintf(fid, "%.8g ", pelbin[j][abundindex_id][z]);
 
 		/* New line */
 		fprintf(fid, "\n");
@@ -1695,28 +1696,31 @@ void Write_Abcs(FILE *fid, MSEBoxModel *bm, int ij) {
 		/* Write Zone */
 		fprintf(fid, "%d ", z);
 
-		for (j = 0; j < bm->K_num_abcbin; j++)
-			/* Write Biomass Info */
-			fprintf(fid, "%.8g ", endnums[j][1][z]);
+		/* Write Biomass Info */
+        for (j = 0; j < bm->K_num_abcbin; j++) {
+			fprintf(fid, "%.8g ", endnums[j][bioindex_id][z]);
+		}
 
-		for (j = 0; j < bm->K_num_abcbin; j++)
-			/* Write Abundance Info */
-			fprintf(fid, "%.8g ", endnums[j][0][z]);
+		/* Write Abundance Info */
+		for (j = 0; j < bm->K_num_abcbin; j++) {
+			fprintf(fid, "%.8g ", endnums[j][abundindex_id][z]);
+		}
 
 		/* Write Biomass Info */
 		index = 0;
 		for (j = 0; j < bm->K_num_tot_sp; j++) {
 			if (FunctGroupArray[j].isMacroFauna == TRUE) {
-				fprintf(fid, "%.8g ", endnumsbig[index][1][z]);
+				fprintf(fid, "%.8g ", endnumsbig[index][bioindex_id][z]);
 				index++;
 			}
 		}
 		fprintf(fid, "%.8g ", (double)0.0);
+		
 		/* Write Abundance Info */
 		index = 0;
 		for (j = 0; j < bm->K_num_tot_sp; j++) {
 			if (FunctGroupArray[j].isMacroFauna == TRUE) {
-				fprintf(fid, "%.8g ", endnumsbig[index][0][z]);
+				fprintf(fid, "%.8g ", endnumsbig[index][abundindex_id][z]);
 				index++;
 			}
 		}

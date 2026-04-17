@@ -72,7 +72,7 @@ void InitFisherySeasonalDistXML(MSEBoxModel *bm, xmlNodePtr parent) {
 		fisheryNode = Util_XML_Create_Node(ATLANTIS_FISHERY_ATTRIBUTE, parent, FisheryArray[fisheryIndex].fisheryCode, "", "", "");
 
 		for (season = 1; season <= 4; season++) {
-			sprintf(str, "season%d", season);
+			snprintf(str, sizeof(str), "season%d", season);
 			Util_XML_Create_Node(ATLANTIS_TEMPORAL_ATTRIBUTE, fisheryNode, str, "", "", "");
 
 		}
@@ -94,7 +94,7 @@ void InitBiMonthlyTACXML(MSEBoxModel *bm, xmlNodePtr parent) {
 		if (FunctGroupArray[speciesIndex].isFished == TRUE) {
 			speciesNode = Util_XML_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode, "", "", "");
 			for (region = 1; region < totalreg_id + 1; region++) {
-				sprintf(str, "region%d", region);
+				snprintf(str, sizeof(str), "region%d", region);
 				Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, speciesNode, str, "", "", "");
 			}
 		}
@@ -123,7 +123,7 @@ void BiMonthlyXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *str,
 		quit("FBoMonthlyXML - Failed to get the index value %s\n", indexStr);
 
 	speciesNode = Util_XML_Get_Or_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode);
-	sprintf(regionStr, "region%d", index);
+	snprintf(regionStr, sizeof(regionStr), "region%d", index);
 	Util_XML_Set_Node_Value(ATLANTIS_ATTRIBUTE, speciesNode, regionStr, valueStr);
 }
 
@@ -166,7 +166,7 @@ void Init_Co_Sp_CatchXML(MSEBoxModel *bm, xmlNodePtr parent) {
             groupNode = Util_XML_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[guild].groupCode, "", "", "");
 
             for (co_sp = 0; co_sp < bm->K_max_co_sp; co_sp++) {
-                sprintf(str, "companion%d", co_sp + 1);
+                snprintf(str, sizeof(str), "companion%d", co_sp + 1);
                 Util_XML_Create_Node(ATLANTIS_COMPANION_ATTRIBUTE, groupNode, str, "", "", "");
             }
         }
@@ -200,8 +200,6 @@ void Co_Sp_CatchXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, 
         tempStr[strlen(tempStr) - strlen("_co_sp_catch") - 1] = '\0';
     }
 
-    printf("Checking string %s\n", tempStr);
-    
     // Get the species string section of the string.
     for (i = 0; isalpha(tempStr[i]); i++) {
         speciesStr[i] = tempStr[i];
@@ -210,7 +208,7 @@ void Co_Sp_CatchXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, 
     speciesIndex = Util_Get_FG_Index_From_Token(bm, speciesStr, fileName, str, TRUE);
     speciesNode = Util_XML_Get_Or_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode);
 
-    sprintf(attributeName, "companion%d", cospIndex);
+    snprintf(attributeName, sizeof(attributeName),"companion%d", cospIndex);
     Util_XML_Set_Node_Value(ATLANTIS_COMPANION_ATTRIBUTE, speciesNode, attributeName, valueStr);
 
 }
@@ -257,7 +255,7 @@ void FisheriesEffortDistributionXML(MSEBoxModel *bm, char *fileName, xmlNodePtr 
 
 	fisheryNode = Util_XML_Get_Or_Create_Node(ATLANTIS_FISHERY_ATTRIBUTE, parent, FisheryArray[fisheryIndex].fisheryCode);
 
-	sprintf(stockStr, "season%d", index);
+	snprintf(stockStr, sizeof(stockStr), "season%d", index);
 	Util_XML_Set_Node_Value(ATLANTIS_TEMPORAL_ATTRIBUTE, fisheryNode, stockStr, valueStr);
 }
 
@@ -271,7 +269,7 @@ void InitPortChangeXML(MSEBoxModel *bm, xmlNodePtr parent) {
 
 	/* create a node for each port */
 	for (index = 1; index < bm->K_num_ports + 1; index++) {
-		sprintf(str, "port%d", index);
+		snprintf(str, sizeof(str), "port%d", index);
 		Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, parent, str, "", "", "");
 	}
 }
@@ -290,7 +288,7 @@ void PortChangeXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *str
 	indexStr = str + strlen("Port");
 	index = atoi(indexStr);
 
-	sprintf(portStr, "port%d", index);
+	snprintf(portStr, sizeof(portStr), "port%d", index);
 	Util_XML_Set_Node_Value(ATLANTIS_ATTRIBUTE, parent, portStr, valueStr);
 }
 
@@ -1165,8 +1163,8 @@ void ContaminantFisheryXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr 
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "contam_fishery_closure_option", "Option that defines how the fishery is closed due to a spill", "", XML_TYPE_INTEGER, "1");
 
     for(cIndex = 0; cIndex < bm->num_contaminants; cIndex++){
-        sprintf(varStr, "%s_fishery_thresh_level", bm->contaminantStructure[cIndex]->contaminant_name);
-        sprintf(longStr, "Concentration of contaminant %s where fishery closed", bm->contaminantStructure[cIndex]->contaminant_name);
+        snprintf(varStr, sizeof(varStr), "%s_fishery_thresh_level", bm->contaminantStructure[cIndex]->contaminant_name);
+        snprintf(longStr, sizeof(longStr), "Concentration of contaminant %s where fishery closed", bm->contaminantStructure[cIndex]->contaminant_name);
         Util_XML_Parse_Create_Node(fp, fileName, groupingNode, varStr, longStr, "", XML_TYPE_FLOAT, "");
     }
 

@@ -36,6 +36,7 @@
 void resuspendBM(MSEBoxModel *bm, double ***newwc, double ***newsed, FILE *llogfp)
 {
     int b = 0;
+    double step1;
 
     /* Loop over each box */
     for(b=0; b<bm->nbox; b++) {
@@ -44,7 +45,8 @@ void resuspendBM(MSEBoxModel *bm, double ***newwc, double ***newsed, FILE *llogf
 	double tleft = bm->dt;
 	double nxsbs = 0;
 	double er_limited;
-    double ask_t;
+	//oldval;
+    double ask_t, Shipping_stress_ratio;
 
 	if( verbose )
 		fprintf(stderr,"Entering resuspendBM\n");
@@ -58,7 +60,12 @@ void resuspendBM(MSEBoxModel *bm, double ***newwc, double ***newsed, FILE *llogf
 	    /* No - skip this box */
 	    continue;
 
-	if(!bm->supplied_stress){
+	if(bm->dynamic_stress){
+        Shipping_stress_ratio = 1.0;
+        if(bm->containsShipping) {
+            Shipping_stress_ratio = bm->boxes[b].stress / bm->boxes[b].init_stress;
+        }
+        
 		/* Read the normalised excess bottom stress value.
 		 * Here we assume that this represents the value
 		 * appropriately integrated over the time step, and including
@@ -80,11 +87,29 @@ void resuspendBM(MSEBoxModel *bm, double ***newwc, double ***newsed, FILE *llogf
         else
             ask_t = bm->t;
 
-		nxsbs = tsEvalXY(bm->stress,bm->stress_id,ask_t,bp->inside.x,bp->inside.y);
+        if(bm->use_stressfiles)
+            nxsbs = tsEvalXY(bm->stress,bm->stress_id,ask_t,bp->inside.x,bp->inside.y);
+        else {
+            /* Using from Mitchener and Torfs, 1996 relationship */
+            step1 = (1.0 - bm->boxes[b].soft) * 300.0;
+            nxsbs = 0.0012 * pow(step1, 1.2);
+        }
+        
 		/*Store new stress values*/
-		bm->boxes[b].stress = nxsbs;
+		bm->boxes[b].stress = nxsbs * Shipping_stress_ratio;  // So don't loose any recent shipping movement effects
+        bm->boxes[b].init_stress = nxsbs;
+
+        /*
+        if (bp->n == bm->checkbox)
+            fprintf(llogfp, "Time: %e box%d final stress: %e supplied_stress: %d stress: %e nxsbs: %e Shipping_stress_ratio: %e\n", bm->dayt, b, bm->boxes[b].stress, bm->supplied_stress, bm->boxes[b].stress, nxsbs, Shipping_stress_ratio);
+         */
 	}
-	bp->erosion_rate = bm->boxes[b].stress * sm->er[sm->topk];
+    
+    if (bm->boxes[b].stress < bm->stress_silt_thresh) {
+        bp->erosion_rate = 0.0;
+    } else {
+        bp->erosion_rate = bm->boxes[b].stress * sm->er[sm->topk];
+    }
 	er_limited = bp->erosion_rate;
 
 	/* Limit maximum erosion depth in any one time step */
@@ -116,13 +141,19 @@ void resuspendBM(MSEBoxModel *bm, double ***newwc, double ***newsed, FILE *llogf
 		if( bm->tinfo[n].insed && bm->tinfo[n].partic && bm->tinfo[n].can_be_moved) {
 
 		    /* Particulate  tracers */
-		    newwc[b][0][n] = (newwc[b][0][n]*bp->volume[0] +
-				      newsed[b][tk][n]*ervol)/newwcvol;
+            //oldval = newwc[b][0][n];
+		    newwc[b][0][n] = (newwc[b][0][n]*bp->volume[0] + newsed[b][tk][n]*ervol)/newwcvol;
+            newsed[b][tk][n] -= newsed[b][tk][n]*ervol/(sm->dz[tk]*bp->area);  // Adjust the sediment values accordingly
+            
+            /*
+            if (bp->n == bm->checkbox)
+                fprintf(llogfp,"Time: %e box%d newwc: %e oldval: %.20e volwc: %e, newsed: %e ervol: %e newwcvol: %e\n", bm->dayt, n, newwc[b][0][n], oldval, bp->volume[0], newsed[b][tk][n], ervol, newwcvol);
+            */
 
 		} else if( bm->tinfo[n].insed && bm->tinfo[n].dissol && bm->tinfo[n].can_be_moved)
 		    /* Pore water */
-		    newwc[b][0][n] = (newwc[b][0][n]*bp->volume[0] +
-				      newsed[b][tk][n]*pwv)/newwcvol;
+		    newwc[b][0][n] = (newwc[b][0][n]*bp->volume[0] + newsed[b][tk][n]*pwv)/newwcvol;
+            newsed[b][tk][n] -= newsed[b][tk][n]*pwv/(sm->dz[tk]*bp->area);  // Adjust the sediment values accordingly
 	    }
 
 	    /* Adjust water column volume */
@@ -132,6 +163,13 @@ void resuspendBM(MSEBoxModel *bm, double ***newwc, double ***newsed, FILE *llogf
 	    /* Adjust sediment thickness */
 	    sm->dz[tk] -= erdz;
 	    sm->volume[tk] = sm->dz[tk]*bp->area;
+
+        if(bm->maintain_sedlayer) {
+            if (sm->dz[tk] < sm->mindz)
+                sm->dz[tk] = sm->mindz;
+            if (sm->dz[tk] > sm->maxdz)
+                sm->dz[tk] = sm->maxdz;
+        }
 
 	    /* If layer fully eroded, shift to next layer */
 	    if( sm->dz[tk] <= 0.0 ) {

@@ -129,7 +129,7 @@ xmlNodePtr Parse_File(MSEBoxModel *bm, FILE *inputFP, char *fileName, xmlNodePtr
 
 	/* Set up the length string */
 	if (length > 0)
-		sprintf(lengthStr, "%d", length);
+		snprintf(lengthStr, sizeof(lengthStr), "%d", length);
 	else
 		strcpy(lengthStr, "");
 
@@ -1174,7 +1174,7 @@ xmlNodePtr Create_Species_ParamXML(MSEBoxModel *bm, char *fileName, FILE *inputF
 					(*strstr(speciesStr, "_")) = '\0';
 					break;
 
-					/* Note the different order of the sprintf - this is intentional. These
+					/* Note the different order of the snprintf - this is intentional. These
 					 * parameters have the format "FPS_habdepend"
 					 */
 				case ddepend_move_id:
@@ -1384,7 +1384,7 @@ xmlNodePtr Create_Species_Cohort_ParamXML(MSEBoxModel *bm, char *fileName, FILE 
 	if( verbose > 1)
 		printf("Creating cohort XML\n");
 
-	sprintf(lengthStr, "%d", bm->K_num_max_stages);
+	snprintf(lengthStr, sizeof(lengthStr), "%d", bm->K_num_max_stages);
 
 
 	/* Get the index of this paramID in the speciesParamStructArray structure - done this way so the
@@ -1542,7 +1542,7 @@ xmlNodePtr Create_Species_Spawn_ParamXML(MSEBoxModel *bm, char *fileName, FILE *
 	if( verbose > 1)
 		printf("Creating spawn XML\n"); 
 	
-	sprintf(lengthStr, "%d", bm->K_num_max_spawns);
+	snprintf(lengthStr, sizeof(lengthStr), "%d", bm->K_num_max_spawns);
 
 	/* Get the index of this paramID in the speciesParamStructArray structure - done this way so the
 	 * values in speciesParamStructArray don't have to be in any particular order
@@ -1733,7 +1733,7 @@ xmlNodePtr Create_Harvest_Fishery_Group_ParamXML(MSEBoxModel *bm, FILE *inputFP,
 	if(index == -1){
 		quit("Create_Harvest_Fishery_Group_ParamXML param (%d) not found in the FisheryGroupParamsArray array.\n", paramID);
 	}
-	sprintf(lengthStr, "%d", bm->K_num_fisheries);
+	snprintf(lengthStr, sizeof(lengthStr), "%d", bm->K_num_fisheries);
 
 	at_compileRegExpression(&regBuffer, FisheryGroupParamsArray[index].regEx);
 	if (verbose > 0)
@@ -2115,25 +2115,22 @@ void Create_Fished_Groups_ChangeXML(MSEBoxModel *bm, FILE *fp, char *fileName, x
 	char commentStr[MAX_XML_COMMENT_LENGTH];
 	char parameterName[200];
 
-	sprintf(parameterName, "^%s_start", paramName);
-	sprintf(
-			commentStr,
+	snprintf(parameterName, sizeof(parameterName), "^%s_start", paramName);
+	snprintf(commentStr, sizeof(commentStr),
 			"Arrays to indicate when each change in %s begins (days from run start).\nThere must be as many entries in this array as the MAXIMUM number of changes in %s across all groups (e.g. if the highest number of changes for a single fishery by a single group is 6 then there must be 6 entries etc).",
 			comment, comment);
 
 	Parse_File(bm, fp, fileName, parent, "ChangeStart", parameterName, commentStr, "d", XML_TYPE_INTEGERARRAY, -1, TRUE, Create_Impacted_Species_XMLNodes, Species_Last_XMLFunction);
 
-	sprintf(parameterName, "^%s_period", paramName);
-	sprintf(
-			commentStr,
+	snprintf(parameterName, sizeof(parameterName), "^%s_period", paramName);
+	snprintf(commentStr, sizeof(commentStr),
 			"Arrays to indicate period over which change in %s occurs (days). \nThere must be as many entries in this array as the MAXIMUM number of changes in %s across all groups.",
 			comment, comment);
 
 	Parse_File(bm, fp, fileName, parent, "ChangePeriod", parameterName, commentStr, "d", XML_TYPE_INTEGERARRAY, -1, TRUE, Create_Impacted_Species_XMLNodes, Species_Last_XMLFunction);
 
-	sprintf(parameterName, "^%s_mult", paramName);
-	sprintf(
-			commentStr,
+	snprintf(parameterName, sizeof(parameterName), "^%s_mult", paramName);
+	snprintf(commentStr, sizeof(commentStr),
 			"Arrays to indicate new level of %s for that group. \nIt a a multiplication factor relative to the original level of %s. There must be as many entries in this array as the MAXIMUM number of changes in %s across all groups.",
 			comment, comment, comment);
 	Parse_File(bm, fp, fileName, parent, "ChangeMult", parameterName, commentStr, "", XML_TYPE_FLOATARRAY, -1, TRUE, Create_Impacted_Species_XMLNodes, Species_Last_XMLFunction);
@@ -2145,24 +2142,21 @@ void Create_Fishery_ChangeXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocP
 	char commentStr[MAX_XML_COMMENT_LENGTH];
 	char parameterName[200];
 
-	sprintf(parameterName, "^%s_start", paramName);
-	sprintf(
-			commentStr,
+	snprintf(parameterName, sizeof(parameterName), "^%s_start", paramName);
+	snprintf(commentStr, sizeof(commentStr),
 			"Arrays to indicate when each change in %s begins (days from run start).\n There must be as many entries in this array as there are number of changes in %s for that fishery.",
 			comment, comment);
 
 	Parse_File(bm, fp, fileName, parent, "ChangeStart", parameterName, commentStr, "d", XML_TYPE_INTEGERARRAY, -1, TRUE, Create_Fishery_XMLNodes, Fishery_Last_XMLFunction);
 
-	sprintf(parameterName, "^%s_period", paramName);
-	sprintf(
-			commentStr,
+	snprintf(parameterName, sizeof(parameterName), "^%s_period", paramName);
+	snprintf(commentStr, sizeof(commentStr),
 			"Arrays to indicate time period over which change in %s occurs (days). \nThere must be as many entries in this array as there are number of changes in %s for that fishery.",
 			comment, comment);
 	Parse_File(bm, fp, fileName, parent, "ChangePeriod", parameterName, commentStr, "d", XML_TYPE_INTEGERARRAY, -1, TRUE, Create_Fishery_XMLNodes, Fishery_Last_XMLFunction);
 
-	sprintf(parameterName, "^%s_mult", paramName);
-	sprintf(
-			commentStr,
+	snprintf(parameterName, sizeof(parameterName), "^%s_mult", paramName);
+	snprintf(commentStr, sizeof(commentStr),
 			"Arrays to indicate proportional change in %s (relative to %s entered above). \nThere must be as many entries in this array as there are number of changes in %s for that fishery.",
 			comment, multParam, comment);
 	Parse_File(bm, fp, fileName, parent, "ChangeMult", parameterName, commentStr, "", XML_TYPE_FLOATARRAY, -1, TRUE, Create_Fishery_XMLNodes, Fishery_Last_XMLFunction);
@@ -2403,7 +2397,7 @@ xmlNodePtr Create_RBC_Species_ParamXML(MSEBoxModel *bm, char *fileName, FILE *in
 void xmlSaveFormatFileDestFolder(char *destFolder, char *fileName, xmlDocPtr doc, int number){
 	char finalFile[BMSLEN];
 
-	sprintf(finalFile, "%s%s", destFolder, fileName);
+	snprintf(finalFile, sizeof(finalFile), "%s%s", destFolder, fileName);
 	xmlSaveFormatFile(finalFile, doc, number);
 }
 

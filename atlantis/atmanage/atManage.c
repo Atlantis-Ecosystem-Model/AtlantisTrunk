@@ -84,8 +84,7 @@ double k_proprecfish;
  */
 void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
 	double EFF_scale1 = 0.0, EFF_scale2 = 0.0, EFF_scale3 = 0.0, EFF_scale4, FCpressure, orig_FCpressure, fish_infringe, FCdisplaced, prop_pop_fish = 0.0, localcell_vol, FC_likeREEF, FC_likeFLAT, FC_likeSOFT, FC_dempel, reef_area, flat_area, soft_area, otherFC_likeREEF, otherFC_likeFLAT, totconflict, otherFC_likeSOFT, otherFC_dempel, dempel_match, K_GearConflict, conflict_contrib, active_scale, step1_cpue, totcatch, dummy, mpa_scale, mpa_infringe, F_displaced, F_rescale;
-	int ij, k, sp, nf, flagspeffortmodel, fishery_id, flagmanage, end_trigger_tripped, new_fish_loc = 0, nstock, flagfcmpa,
-    crunch_id;
+	int ij, k, sp, nf, flagspeffortmodel, fishery_id, flagmanage, end_trigger_tripped, new_fish_loc = 0, nstock, flagfcmpa, crunch_id, flagMFCdisplace;
     //int do_debug_nf;
     //int do_debug;
 	int ncells = bm->nbox;
@@ -146,6 +145,11 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
                     bm->CumDisplaceEffort[ij][nf] = 0.0;
                 } else {
                     bm->CumDisplaceEffort[ij][nf] += bm->Effort[ij][nf];
+                }
+                if(!bm->Effort[ij][nf] && (bm->FISHERYprms[nf][flagMFCdisplace_id])){
+                    bm->Effort[ij][nf] = 1.0;  // As used a scalar in mFC fisheries
+                    
+                    fprintf(bm->logFile, "Have reset bm->Effort for %s in box %d to 1.0\n", FisheryArray[nf].fisheryCode, ij);
                 }
             }
         }
@@ -364,7 +368,8 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
 
         
         /* Check if fishery activated and if no set to zero and only continue if fishery active this time step */
-		if (((!flagspeffortmodel) && ((!mEff[fishery_id][bm->NextQofY]) && (!mEff[fishery_id][bm->QofY]))) || (!bm->FISHERYprms[fishery_id][fisheriesactive_id])) {
+        flagMFCdisplace = (int)(bm->FISHERYprms[fishery_id][flagMFCdisplace_id]);
+		if (((!flagspeffortmodel) && (!flagMFCdisplace) && ((!mEff[fishery_id][bm->NextQofY]) && (!mEff[fishery_id][bm->QofY]))) || (!bm->FISHERYprms[fishery_id][fisheriesactive_id])) {
 			for (ij = 0; ij < bm->nbox; ij++) {
 				bm->Effort[ij][fishery_id] = 0;
 			}

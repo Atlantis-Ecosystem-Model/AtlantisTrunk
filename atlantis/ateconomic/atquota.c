@@ -110,6 +110,7 @@ void Get_Fish_Prices(MSEBoxModel *bm, FILE *llogfp) {
 					/* If can't catch the group skip ahead */
 					if (!bm->SP_FISHERYprms[sp][nf][q_id])
 						continue;
+                    
 					if (!nmarket)
 						market_wgt = bm->SP_FISHERYprms[sp][nf][marketwgt_id];
 					else
@@ -219,7 +220,7 @@ void Get_Fish_Prices(MSEBoxModel *bm, FILE *llogfp) {
 					}
 
 					bm->SP_FISHERYprms[sp][nf][saleprice_id] += marketSalePrice - FinalDV;
-					//bm->SP_FISHERYprms[spp_id][nf][saleprice_id] -= FinalDV;
+					//bm->SP_FISHERYprms[sp][nf][saleprice_id] -= FinalDV;
 					bm->SP_FISHERYprms[sp][nf][deemprice_id] = FinalDV;
 
 					if (do_debug) {
@@ -232,7 +233,7 @@ void Get_Fish_Prices(MSEBoxModel *bm, FILE *llogfp) {
 					if (bm->TemporalBycatchAvoid || bm->SpatialBycatchAvoid) {
 
 						//if(bm->dayt > bm->checkstart)
-						//	fprintf(llogfp,"Time: %e, %s by %s has saleprice %e ", bm->dayt, FunctGroupArray[sp].groupCode, FisheryArray[nf].fisheryCode, bm->SP_FISHERYprms[spp_id][nf][saleprice_id]);
+						//	fprintf(llogfp,"Time: %e, %s by %s has saleprice %e ", bm->dayt, FunctGroupArray[sp].groupCode, FisheryArray[nf].fisheryCode, bm->SP_FISHERYprms[sp][nf][saleprice_id]);
 
 						if ((do_stuff && (bm->dayt > bm->TaxStart)) || ((bm->SP_FISHERYprms[sp][nf][tax_id] > 0.0)
 								|| (bm->SP_FISHERYprms[sp][nf][FixedMinTax_id] > 0.0))) {
@@ -565,6 +566,7 @@ void Total_Quota_Price(MSEBoxModel *bm, FILE *llogfp) {
 						}
 
 						/* Add small_num to anything that will be logged so that don't run the risk of trying to log zero */
+                        price = bm->SP_FISHERYprms[sp][nf][saleprice_id];
 						if (price < bm->minValue) {
 							if (bm->UseMinValue) {
 								/* Use a minimum value */
@@ -683,8 +685,8 @@ void Total_Catch_Value(MSEBoxModel *bm, FILE *llogfp) {
 
 	/* Calculate marginal rent, yields */
 	for (nf = 0; nf < bm->K_num_fisheries; nf++) {
-		for (ns = 0; ns < bm->K_max_num_subfleet; ns++) {
-			//for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) {
+		//for (ns = 0; ns < bm->K_max_num_subfleet; ns++) {
+        for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) { // Was K_max_num_subfleet but why need more subfleets than the fishery has?
 			/* If no boats in the subfleet currently skip ahead */
 			if (!bm->SUBFLEET_ECONprms[nf][ns][nboat_id]) {
 				continue;
@@ -1443,7 +1445,7 @@ void Quota_trade(MSEBoxModel *bm, FILE *llogfp) {
 							supply = 0;
 						}
 
-						/* Closer to end of year then more likely to sell what extra remains */
+						/* Closer to end of year then more likely to sell what extra remains - intentionally keep less so happy to sell so don't zero out supply as easily */
 						spareend = bm->prop_spareend + (((1.0 / bm->prop_spareend) - 1.0) * bm->prop_spareend - 1.0) * (bm->MofY / 12.0);
 						if (supply < spareend * (SELLERownQuota + SELLERleaseQuota)) {
 							/* Want to hold on to their last little bit of quota.

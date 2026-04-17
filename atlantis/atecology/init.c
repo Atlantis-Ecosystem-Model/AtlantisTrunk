@@ -121,7 +121,7 @@
 //    dpoint p;
 //    errfn errfn_orig = keyprm_errfn;
 //
-//    sprintf(key, "box%d.label", b->index);
+//    snprintf(key, sizeof(key), "box%d.label", b->index);
 //    readkeyprm_s(f, key, buf);
 //    b->label = strdup(buf);
 //
@@ -129,10 +129,10 @@
 //	int i, j;
 //	int n = 0;
 //	int *nv = NULL;
-//	sprintf(key, "box%d.nconn", b->index);
+//	snprintf(key, sizeof(key), "box%d.nconn", b->index);
 //	readkeyprm_i(f, key, &n);
 //	nv = malloc(n * sizeof(int));
-//	sprintf(key, "box%d.ibox", b->index);
+//	snprintf(key, sizeof(key), "box%d.ibox", b->index);
 //	skipToKeyEnd(f, key);
 //	for (i = 0; i < n; ++i)
 //	    if (fscanf(f, "%d", &nv[i]) != 1)
@@ -155,13 +155,13 @@
 //    }
 //
 //    b->boundary = createpolyline();
-//    sprintf(key, "box%d.vert", b->index);
+//    snprintf(key, sizeof(key), "box%d.vert", b->index);
 //    skipToKeyStart(f, key);
-//    sprintf(key, "box%d.vert %%e %%e ", b->index);
+//    snprintf(key, sizeof(key), "box%d.vert %%e %%e ", b->index);
 //    while (fscanf(f, key, &p.x, &p.y) == 2)
 //	addtoend(b->boundary, p);
 //
-//    sprintf(key, "box%d.inside", b->index);
+//    snprintf(key, sizeof(key), "box%d.inside", b->index);
 //    skipToKeyEnd(f,key);
 //    if (fscanf(f,"%e %e",&b->inside.x,&b->inside.y) != 2)
 //	keyprm_errfn("error: could not read \"%s\"\n", key, b->index);
@@ -177,7 +177,7 @@
 //	b->is_boundary = 1;
 //
 //    set_keyprm_errfn(quiet);
-//    sprintf(key, "box%d.area", b->index);
+//    snprintf(key, sizeof(key), "box%d.area", b->index);
 //    if (b->e->use_polyarea || !readkeyprm_d(f, key, &b->area))
 //	if ((b->area = polyarea(*b->boundary)) <= 0 )
 //	    quit("error: could not either read \"%s\" or calculate bounding polygon area\n", key);
@@ -305,7 +305,7 @@
 //	char tsfname[512];
 //	int b, k;
 //
-//	sprintf(key, "btscell%d", i);
+//	snprintf(key, sizeof(key), "btscell%d", i);
 //	readkeyprm_s(f, key, buf);
 //	if (sscanf(buf, "(%d,%d) %s", &b, &k, tsfname) != 3)
 //	    quit("error: %s: %s: \"%s\" does not match format \"(%%d,%%d) %%s\"\n", e->fname, key, buf);
@@ -388,7 +388,7 @@
 //	int l;
 //	double w;
 //
-//	sprintf(key, "exchangeweight%d", i);
+//	snprintf(key, sizeof(key), "exchangeweight%d", i);
 //	readkeyprm_s(f, key, buf);
 //	if (sscanf(buf, "(%d,%d)->(%d,%d) %e", &b0, &k0, &b1, &k1, &w) != 5)
 //	    quit("error: %s: %s: \"%s\" does not match format \"(%%d,%%d)->(%%d,%%d) %%e\"\n", e->fname, key, buf);
@@ -430,7 +430,7 @@
 //	cell* cfrom;
 //	cell* cto;
 //
-//	sprintf(key, "addexchange%d", i);
+//	snprintf(key, sizeof(key), "addexchange%d", i);
 //	readkeyprm_s(f, key, buf);
 //	if (sscanf(buf, "(%d,%d)->(%d,%d)", &b0, &k0, &b1, &k1) != 4) {
 //	    printf("error: %s: %s: \"%s\" does not match format \"(%%d,%%d)->(%%d,%%d)\"\n", e->fname, key, buf);
@@ -473,7 +473,7 @@
 //	int l;
 //	double w;
 //
-//	sprintf(key, "fixedexchange%d", i);
+//	snprintf(key, sizeof(key), "fixedexchange%d", i);
 //	readkeyprm_s(f, key, buf);
 //	if (sscanf(buf, "(%d,%d)->(%d,%d) %e", &b0, &k0, &b1, &k1, &w) != 5) {
 //	    printf("error: %s: %s: \"%s\" does not match format \"(%%d,%%d)->(%%d,%%d) %%e\"\n", e->fname, key, buf);
@@ -674,16 +674,16 @@
 //
 //	t->index = i;
 //
-//	sprintf(key, "tracer%d.name", i);
+//	snprintf(key, sizeof(key), "tracer%d.name", i);
 //	readkeyprm_s(f, key, buf);
 //	t->name = strdup(buf);
 //
 //	/* optional parameters */
 //	set_keyprm_errfn(quiet);
-//	sprintf(key, "tracer%d.weight", i);
+//	snprintf(key, sizeof(key), "tracer%d.weight", i);
 //	if (!(readkeyprm_d(f, key, &t->weight)))
 //	    t->weight = 1.0;
-//	sprintf(key, "tracer%d.scale", i);
+//	snprintf(key, sizeof(key), "tracer%d.scale", i);
 //	if (!(readkeyprm_d(f, key, &t->scale)))
 //	    t->scale = 1.0;
 //

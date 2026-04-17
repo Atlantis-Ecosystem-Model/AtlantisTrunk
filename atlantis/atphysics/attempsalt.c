@@ -305,7 +305,7 @@ void init_PhyPropertyData(MSEBoxModel *bm, FILE *fp, PhyPropertyData *propInput,
 	/* property to specify if this is a 2D or 3D property - means we can read in surface data.*/
 	propInput->is_valid_z = is_valid_z;
 	/* Read the number of files */
-	sprintf(buf, "n%sfiles", shortName);
+	snprintf(buf, sizeof(buf), "n%sfiles", shortName);
 	readkeyprm_i(fp, buf, &propInput->nFiles);
 	if (propInput->nFiles < 1)
 		quit("init_PhyPropertyData: Must be at least 1 %s input file (%d in %s)\n", variableName, propInput->nFiles, bm->forceIfname);
@@ -315,13 +315,13 @@ void init_PhyPropertyData(MSEBoxModel *bm, FILE *fp, PhyPropertyData *propInput,
     propInput->use_resets = (int *)i_alloc1d(propInput->nFiles);
 	propInput->variableName = c_alloc1d(BMSLEN);
 	strcpy(propInput->variableName, variableName);
-	sprintf(buf, "%s_rewind", shortName);
+	snprintf(buf, sizeof(buf), "%s_rewind", shortName);
 	readkeyprm_i(fp, buf, &propInput->rewind);
 
 	/* Read the list of files */
 	for (i = 0; i < propInput->nFiles; i++) {
 		char key[BMSLEN];
-		sprintf(key, "%s%d.name", longName, i);
+		snprintf(key, sizeof(key), "%s%d.name", longName, i);
 		readkeyprm_s(fp, key, propInput->fname[i]);
         propInput->use_resets[i] = 0;
 	}
@@ -418,7 +418,7 @@ void init_forceTracers(MSEBoxModel *bm, FILE *fp) {
 				quit("Unable to find tracer %s from forcing file %s\n", bm->forceTracerInput[tracerIndex].variableName, bm->forceIfname);
 			}
 
-			sprintf(key, "%s_nFiles", bm->forceTracerInput[tracerIndex].variableName);
+			snprintf(key, sizeof(key), "%s_nFiles", bm->forceTracerInput[tracerIndex].variableName);
 			readkeyprm_i(fp, key, &bm->forceTracerInput[tracerIndex].nFiles);
             
             bm->forceTracerInput[tracerIndex].fname = c_alloc2d(BMSLEN, bm->forceTracerInput[tracerIndex].nFiles);
@@ -428,7 +428,7 @@ void init_forceTracers(MSEBoxModel *bm, FILE *fp) {
 
 			for (i = 0; i < bm->forceTracerInput[tracerIndex].nFiles; i++) {
 
-				sprintf(key, "%s_File%d.name", bm->forceTracerInput[tracerIndex].variableName, i);
+				snprintf(key, sizeof(key), "%s_File%d.name", bm->forceTracerInput[tracerIndex].variableName, i);
                 
                 printf("Looking for %s\n", key);
                 
@@ -436,7 +436,7 @@ void init_forceTracers(MSEBoxModel *bm, FILE *fp) {
                 
                 printf("file %d for %s is %s\n", i, bm->forceTracerInput[tracerIndex].variableName, bm->forceTracerInput[tracerIndex].fname[i]);
                 
-                sprintf(key, "%s_File%d.use_resets", bm->forceTracerInput[tracerIndex].variableName, i);
+                snprintf(key, sizeof(key), "%s_File%d.use_resets", bm->forceTracerInput[tracerIndex].variableName, i);
                 readkeyprm_i(fp, key, &bm->forceTracerInput[tracerIndex].use_resets[i]);
                 
                 if (bm->forceTracerInput[tracerIndex].use_resets[i] > 0) {
@@ -445,11 +445,11 @@ void init_forceTracers(MSEBoxModel *bm, FILE *fp) {
 
 			}
 
-			sprintf(key, "%s_rewind", bm->forceTracerInput[tracerIndex].variableName);
+			snprintf(key, sizeof(key), "%s_rewind", bm->forceTracerInput[tracerIndex].variableName);
 			readkeyprm_i(fp, key, &bm->forceTracerInput[tracerIndex].rewind);
 
             if (bm->use_weighted_assim) {
-                sprintf(key, "%s_wgt_coefft", bm->forceTracerInput[tracerIndex].variableName);
+                snprintf(key, sizeof(key), "%s_wgt_coefft", bm->forceTracerInput[tracerIndex].variableName);
                 
                 readkeyprm_d(fp, key, &bm->forceTracerInput[tracerIndex].wgt_coefft);
             } else { // No use of assimilation weighting so the read-in value gets all the weigting
@@ -457,7 +457,7 @@ void init_forceTracers(MSEBoxModel *bm, FILE *fp) {
             }
                         
             if(any_use_resets > 0) {
-                sprintf(key, "%s_ResetTol", bm->forceTracerInput[tracerIndex].variableName);
+                snprintf(key, sizeof(key), "%s_ResetTol", bm->forceTracerInput[tracerIndex].variableName);
                 readkeyprm_d(fp, key, &bm->forceTracerInput[tracerIndex].ResetTol);
             } else {
                 bm->forceTracerInput[tracerIndex].ResetTol = 0.0;
@@ -913,7 +913,7 @@ void tracerForcingBM(MSEBoxModel *bm, double ***newwc, double ***newsedtr, PhyPr
 
 	if(inputData->atEnd)
 		return;
-
+    
 	/* Loop while more time remains in this transport time step */
 	while (tleft > 0) {
 
@@ -939,7 +939,6 @@ void tracerForcingBM(MSEBoxModel *bm, double ***newwc, double ***newsedtr, PhyPr
 			if(inputData->is_valid_z == TRUE){
 				/* Loop through water column */
 				for (k = 0; k < bp->nz; k++) {
-
 					if(inputData->missing_value_set == FALSE || inputData->dataBuffer[b][k] != inputData->missing_value){
                        //newwc[b][k][inputData->tracerID] = inputData->dataBuffer[b][k];
                         cur_value = newwc[b][k][inputData->tracerID];
@@ -951,13 +950,11 @@ void tracerForcingBM(MSEBoxModel *bm, double ***newwc, double ***newsedtr, PhyPr
                                          inputData->dataBuffer[b][k]);
                         }
                         newwc[b][k][inputData->tracerID] = new_value;
-                        
                         inputData->total_input += ((new_value - cur_value) * bp->dz[k]);
-                        
+                                                
 						if (!_finite(newwc[b][k][inputData->tracerID])) {
-							quit("%s in %d:%d at time %e is not finite %e\n", inputData->variableName, b, k, bm->dayt, newwc[b][k][inputData->tracerID]);
+							quit("tracerForcingBM - %s in %d:%d at time %e is not finite %e\n", inputData->variableName, b, k, bm->dayt, newwc[b][k][inputData->tracerID]);
 						}
-						//fprintf(bm->logFile, "Time %e: %s in box %d:%d is set to %e, inputData->tleft= %e, rewind = %d\n", bm->dayt, inputData->variableName, b, k, newwc[b][k][inputData->tracerID], inputData->tleft, inputData->rewind);
 					}
 				}
 				/* Loop through sediment columns */
@@ -976,7 +973,7 @@ void tracerForcingBM(MSEBoxModel *bm, double ***newwc, double ***newsedtr, PhyPr
                         inputData->total_input += ((new_value - cur_value) * bp->dz[k]);
 
 						if (!_finite(newsedtr[b][k][inputData->tracerID])) {
-							quit("%s in %d:%d at time %e is not finite %e\n", b, k, bm->dayt, inputData->variableName, newsedtr[b][k][inputData->tracerID]);
+							quit("tracerForcingBM - %s in %d:%d at time %e sed value is not finite %e\n", b, k, bm->dayt, inputData->variableName, newsedtr[b][k][inputData->tracerID]);
 						}
 						//fprintf(bm->logFile, "Time %e: %s in box %d:sediment layer %d is set to %e, inputData->tleft= %e, rewind = %d\n",
 						//		bm->dayt, inputData->variableName, b, k, newsedtr[b][k][inputData->tracerID], inputData->tleft, inputData->rewind);
@@ -988,7 +985,7 @@ void tracerForcingBM(MSEBoxModel *bm, double ***newwc, double ***newsedtr, PhyPr
 
 				/* Check the value read in is valid - otherwise quit now - non NAN values allowed ! */
 				if (!_finite(inputData->dataBuffer[b][0])) {
-					quit("%s in %d:%d at time %e is not finite %e\n", b, k, bm->dayt, inputData->variableName, inputData->dataBuffer[b][0]);
+					quit("tracerForcingBM - %s in %d:%d at time %e has non finite %e input value\n", b, k, bm->dayt, inputData->variableName, inputData->dataBuffer[b][0]);
 				}
 
 				if(inputData->isBoxValue == TRUE){
@@ -1054,7 +1051,7 @@ void resetForcingBM(MSEBoxModel *bm, double ***newwc, double ***newsedtr, PhyPro
     int totnz = bm->wcnz + bm->sednz;
     int i, j;
 
-    //if (verbose)
+    if (verbose)
         fprintf(stderr, "Entering resetForcingBM and doing %s ID %d\n", inputData->variableName, inputData->tracerID);
 
     if(inputData->atEnd)
@@ -1085,12 +1082,10 @@ void resetForcingBM(MSEBoxModel *bm, double ***newwc, double ***newsedtr, PhyPro
             if(inputData->is_valid_z == TRUE){
                 /* Loop through water column */
                 for (k = 0; k < bp->nz; k++) {
-
-                    fprintf(bm->logFile, "Doing box%d-%d with missing_value_set: %d dataBuffer: %e \n", b, k, inputData->missing_value_set, inputData->dataBuffer[b][k]);
-                    
                     if (inputData->missing_value_set == FALSE || inputData->dataBuffer[b][k] != inputData->missing_value){
                        //newwc[b][k][inputData->tracerID] = inputData->dataBuffer[b][k];
                         cur_value = newwc[b][k][inputData->tracerID];
+
                         if(inputData->wgt_coefft < 0) {
                             new_value = cur_value + inputData->dataBuffer[b][k];
                         } else {
@@ -1102,12 +1097,10 @@ void resetForcingBM(MSEBoxModel *bm, double ***newwc, double ***newsedtr, PhyPro
                         if((cur_value < tol_valueA) || (cur_value > tol_valueB)) {
                             newwc[b][k][inputData->tracerID] = new_value;
                             inputData->total_input += (new_value * bp->dz[k]);
-                            
-                            fprintf(bm->logFile, "Time: %e box%d-%d %s added = %e with total_input %e\n", bm->dayt, b, k, inputData->variableName, new_value, inputData->total_input);
                         }
 
                         if (!_finite(newwc[b][k][inputData->tracerID])) {
-                            quit("%s in %d:%d at time %e is not finite %e\n", inputData->variableName, b, k, bm->dayt, newwc[b][k][inputData->tracerID]);
+                            quit("resetForcingBM - %s in %d:%d at time %e is not finite %e\n", inputData->variableName, b, k, bm->dayt, newwc[b][k][inputData->tracerID]);
                         }
                         //fprintf(bm->logFile, "Time %e: %s in box %d:%d is set to %e, inputData->tleft= %e, rewind = %d, new_value: %e, cur_value: %e, tol_valueA: %e, tol_valueB: %e\n", bm->dayt, inputData->variableName, b, k, newwc[b][k][inputData->tracerID], inputData->tleft, inputData->rewind, new_value, cur_value, tol_valueA, tol_valueB);
                     }
@@ -1118,6 +1111,7 @@ void resetForcingBM(MSEBoxModel *bm, double ***newwc, double ***newsedtr, PhyPro
                     if(inputData->missing_value_set == FALSE || inputData->dataBuffer[b][k + bm->wcnz] != inputData->missing_value){
                         //newsedtr[b][k][inputData->tracerID] = inputData->dataBuffer[b][k + bm->wcnz];
                         cur_value = newsedtr[b][k][inputData->tracerID];
+                        
                         if(inputData->wgt_coefft < 0) {
                             new_value = cur_value + inputData->dataBuffer[b][k + bm->wcnz];
                         } else {
@@ -1134,7 +1128,7 @@ void resetForcingBM(MSEBoxModel *bm, double ***newwc, double ***newsedtr, PhyPro
                         }
 
                         if (!_finite(newsedtr[b][k][inputData->tracerID])) {
-                            quit("%s in %d:%d at time %e is not finite %e\n", b, k, bm->dayt, inputData->variableName, newsedtr[b][k][inputData->tracerID]);
+                            quit("resetForcingBM - %s in %d:%d sed value at time %e is not finite %e\n", b, k, bm->dayt, inputData->variableName, newsedtr[b][k][inputData->tracerID]);
                         }
                         //fprintf(bm->logFile, "Time %e: %s in box %d:sediment layer %d is set to %e, inputData->tleft= %e, rewind = %d, new_value: %e, cur_value: %e, tol_valueA: %e, tol_valueB: %e\n", bm->dayt, inputData->variableName, b, k, newsedtr[b][k][inputData->tracerID], inputData->tleft, inputData->rewind, new_value, cur_value, tol_valueA, tol_valueB);
                     }
@@ -1145,7 +1139,7 @@ void resetForcingBM(MSEBoxModel *bm, double ***newwc, double ***newsedtr, PhyPro
 
                 /* Check the value read in is valid - otherwise quit now - non NAN values allowed ! */
                 if (!_finite(inputData->dataBuffer[b][0])) {
-                    quit("%s in %d:%d at time %e is not finite %e\n", b, k, bm->dayt, inputData->variableName, inputData->dataBuffer[b][0]);
+                    quit("resetForcingBM - %s in %d:%d at time %e is non finite %e input\n", b, k, bm->dayt, inputData->variableName, inputData->dataBuffer[b][0]);
                 }
 
                 if(inputData->isBoxValue == TRUE){

@@ -192,7 +192,7 @@ void InvertebrateSampling(MSEBoxModel *bm, FILE *ofp) {
 			for (sampleIndex = 0; sampleIndex < phys_samplingsize; sampleIndex++) {
 
 				SamplePhysicalProperty(bm, salinity_id, bb, b, z, k_avgsalt, k_varsalt);
-				SamplePhysicalProperty(bm, temperature_id, bb, b, z, k_avgsalt, k_varsalt);
+				SamplePhysicalProperty(bm, temperature_id, bb, b, z, k_avgsalt, k_varsalt); // Intentioanl reulst of salt properties here as treating as well known physical properties
 
 				for (i = light_wc_id; i < don_wc_id; i++) {
 					SamplePhysicalProperty(bm, i, bb, b, z, k_avgphys, k_varphys);
@@ -464,31 +464,31 @@ void CharismaticEstimates(MSEBoxModel *bm, FILE *ofp) {
 								raw = biolVERTinfo[bstruct_id][sp][chrt][b] + biolVERTinfo[bres_id][sp][chrt][b];
 								sample = Assess_Add_Error(bm, flagverts, raw, k_avgweight, k_varweight);
 								sampleW = sample;
-								individVERTinfo[iweight_id][lbin][sp][z][sample_id] += sample;
+								individVERTinfo[iweight_id][sp][lbin][z][sample_id] += sample;
 
 								/* Numbers in stock */
 								raw = biolVERTinfo[bstocknums_id][sp][chrt][b];
 								sample = Assess_Add_Error(bm, flagcount, raw, k_avgcount, k_varcount);
 								sampleN = sample;
-								individVERTinfo[istocknums_id][lbin][sp][z][sample_id] += sample;
+								individVERTinfo[istocknums_id][sp][lbin][z][sample_id] += sample;
 
 								/* Numbers in catch*/
 								raw = biolVERTinfo[bcatchnums_id][sp][chrt][b];
 								sample = Assess_Add_Error(bm, flagcount, raw, k_avgcobs, k_varcobs);
-								individVERTinfo[icatchnums_id][lbin][sp][z][sample_id] += sample;
+								individVERTinfo[icatchnums_id][sp][lbin][z][sample_id] += sample;
 
 								/* Biomass */
-								individVERTinfo[ibiomass_id][lbin][sp][z][sample_id] += sampleW * sampleN / (bm->boxes[b].area + TINY);
+								individVERTinfo[ibiomass_id][sp][lbin][z][sample_id] += sampleW * sampleN / (bm->boxes[b].area + TINY);
 
 								/* Discards */
 								raw = biolVERTinfo[bdiscards_id][sp][chrt][b];
 								sample = Assess_Add_Error(bm, flagcount, raw, k_avgcobs, k_varcobs);
-								individVERTinfo[idiscards_id][lbin][sp][z][sample_id] += sample;
+								individVERTinfo[idiscards_id][sp][lbin][z][sample_id] += sample;
 
 								/* Condition */
-								raw = biolVERTinfo[bres_id][chrt][b][sp];
+								raw = biolVERTinfo[bres_id][sp][chrt][b];
 								sample = Assess_Add_Error(bm, flagverts, raw, k_avgweight, k_varweight);
-								individVERTinfo[icondn_id][lbin][sp][z][sample_id] += (sample / (sampleW + TINY)) * (bm->boxes[b].area / (bm->totarea + TINY));
+								individVERTinfo[icondn_id][sp][lbin][z][sample_id] += (sample / (sampleW + TINY)) * (bm->boxes[b].area / (bm->totarea + TINY));
 							}
 						}
 					}
@@ -502,18 +502,18 @@ void CharismaticEstimates(MSEBoxModel *bm, FILE *ofp) {
 					if(FunctGroupArray[sp].groupType == BIRD){
 						for (chrt = 0; chrt < FunctGroupArray[sp].numCohortsXnumGenes; chrt++) {
 							/* Bird stock biomass */
-							stockinfo[sbiomass_id][sp][z][sample_id] += individVERTinfo[ibiomass_id][chrt][sp][z][sample_id];
+							stockinfo[sbiomass_id][sp][z][sample_id] += individVERTinfo[ibiomass_id][sp][chrt][z][sample_id];
 
 							/* Bird stock numbers */
-							stockinfo[sstocknums_id][sp][z][sample_id] += individVERTinfo[istocknums_id][chrt][sp][z][sample_id];
+							stockinfo[sstocknums_id][sp][z][sample_id] += individVERTinfo[istocknums_id][sp][chrt][z][sample_id];
 
 							/* Bird catch numbers */
-							stockinfo[scatchnums_id][sp][z][sample_id] += individVERTinfo[icatchnums_id][chrt][sp][z][sample_id];
+							stockinfo[scatchnums_id][sp][z][sample_id] += individVERTinfo[icatchnums_id][sp][chrt][z][sample_id];
 						}
 						for (chrt = 0; chrt < FunctGroupArray[sp].numCohortsXnumGenes; chrt++) {
 							/* Normalise individual bird numbers */
-							individVERTinfo[istocknums_id][chrt][sp][z][sample_id] /= (stockinfo[sstocknums_id][sp][z][sample_id] + TINY);
-							individVERTinfo[icatchnums_id][chrt][sp][z][sample_id] /= (stockinfo[scatchnums_id][sp][z][sample_id] + TINY);
+							individVERTinfo[istocknums_id][sp][chrt][z][sample_id] /= (stockinfo[sstocknums_id][sp][z][sample_id] + TINY);
+							individVERTinfo[icatchnums_id][sp][chrt][z][sample_id] /= (stockinfo[scatchnums_id][sp][z][sample_id] + TINY);
 						}
 					}
 				}
@@ -596,6 +596,7 @@ void CharismaticEstimates(MSEBoxModel *bm, FILE *ofp) {
 						sample = Assess_Add_Error(bm, flagcount, rawn, k_avgcobs, k_varcobs);
 						samplenums[chrt][samplecatch_id] = ceil(sample);
 						totn[samplecatch_id] += samplenums[chrt][samplecatch_id];
+                        raw = biolVERTinfo[bstruct_id][sp][chrt][b] + biolVERTinfo[bres_id][sp][chrt][b];
 						rawn = biolVERTinfo[bdiscards_id][sp][chrt][b] / (raw + TINY);
 						sample = Assess_Add_Error(bm, flagcount, rawn, k_avgcobs, k_varcobs);
 						samplenums[chrt][samplediscard_id] = ceil(sample);
@@ -644,7 +645,7 @@ void CharismaticEstimates(MSEBoxModel *bm, FILE *ofp) {
 							if (bm->sample_now) {
 								raw = biolVERTinfo[bres_id][sp][chrt][b];
 								sample = Assess_Add_Error(bm, flagverts, raw, k_avgweight, k_varweight);
-								individVERTinfo[icondn_id][ltc][sp][z][sample_id] += (sample / (wgt + TINY)) * samplearea[bb] / (nsample + TINY);
+								individVERTinfo[icondn_id][sp][ltc][z][sample_id] += (sample / (wgt + TINY)) * samplearea[bb] / (nsample + TINY);
 							}
 
 							i++;
@@ -729,26 +730,26 @@ void CharismaticEstimates(MSEBoxModel *bm, FILE *ofp) {
 					if(FunctGroupArray[sp].groupType == MAMMAL){
 						for (i = 0; i < bm->K_num_size; i++) {
 							/* Size distribution */
-							individVERTinfo[istocknums_id][i][sp][z][sample_id] = sizebins[sizestocknums_id][sp][z][i][0][sample_id]
+							individVERTinfo[istocknums_id][sp][i][z][sample_id] = sizebins[sizestocknums_id][sp][z][i][0][sample_id]
 									/ (totnums[totstocknums_id][sp][z] + TINY);
 
 							/* Average weight of individual in that size bin */
-							individVERTinfo[iweight_id][i][sp][z][sample_id] = sizebins[sizeweight_id][sp][z][i][0][sample_id]
+							individVERTinfo[iweight_id][sp][i][z][sample_id] = sizebins[sizeweight_id][sp][z][i][0][sample_id]
 									/ (totnums[totstocknums_id][sp][z] + totnums[totcatchnums_id][sp][z] + totnums[totdiscardnums_id][sp][z] + TINY);
 
 							/* Biomass */
-							individVERTinfo[ibiomass_id][i][sp][z][sample_id] = stockinfo[sstocknums_id][sp][z][sample_id]
-									* individVERTinfo[istocknums_id][i][sp][z][sample_id] * individVERTinfo[iweight_id][i][sp][z][sample_id];
+							individVERTinfo[ibiomass_id][sp][i][z][sample_id] = stockinfo[sstocknums_id][sp][z][sample_id]
+									* individVERTinfo[istocknums_id][sp][i][z][sample_id] * individVERTinfo[iweight_id][sp][i][z][sample_id];
 
 							/* Stock biomass */
-							stockinfo[sbiomass_id][sp][z][sample_id] += individVERTinfo[ibiomass_id][i][sp][z][sample_id];
+							stockinfo[sbiomass_id][sp][z][sample_id] += individVERTinfo[ibiomass_id][sp][i][z][sample_id];
 
 							/* Size distribution of catch */
-							individVERTinfo[icatchnums_id][i][sp][z][sample_id] = sizebins[sizecatchnums_id][sp][z][i][0][sample_id]
+							individVERTinfo[icatchnums_id][sp][i][z][sample_id] = sizebins[sizecatchnums_id][sp][z][i][0][sample_id]
 									/ (totnums[totcatchnums_id][sp][z] + TINY);
 
 							/* Size distribution of discards */
-							individVERTinfo[idiscards_id][i][sp][z][sample_id] = sizebins[sizediscardnums_id][sp][z][i][0][sample_id]
+							individVERTinfo[idiscards_id][sp][i][z][sample_id] = sizebins[sizediscardnums_id][sp][z][i][0][sample_id]
 									/ (totnums[totdiscardnums_id][sp][z] + TINY);
 
 							/* Age-length keys */
@@ -949,7 +950,7 @@ void FisheriesRecords(MSEBoxModel *bm, FILE *ofp) {
 						samplenums[chrt][samplediscard_id] = ceil(sample);
 						totn[samplediscard_id] += samplenums[chrt][samplediscard_id];
 
-						/* Collect assessment data */
+						/* Collect assessment data - add discards to landings to get totoal catch */
 						bm->CatchRecord[Yr][sp][chrt][commerical_id] += sample;
 					}
 					for (chrt = 0; chrt < FunctGroupArray[sp].numCohortsXnumGenes; chrt++) {
@@ -988,7 +989,7 @@ void FisheriesRecords(MSEBoxModel *bm, FILE *ofp) {
 							if (bm->sample_now) {
 								rawwgt = biolVERTinfo[bres_id][sp][chrt][b];
 								sample = Assess_Add_Error(bm, flagverts, rawwgt, k_avgweight, k_varweight);
-								individVERTinfo[icondn_id][ltc][sp][z][sample_id] += (sample / (wgt + TINY)) * samplearea[bb] / (nsample + TINY);
+								individVERTinfo[icondn_id][sp][ltc][z][sample_id] += (sample / (wgt + TINY)) * samplearea[bb] / (nsample + TINY);
 							}
 
 							i++;
@@ -1045,25 +1046,25 @@ void FisheriesRecords(MSEBoxModel *bm, FILE *ofp) {
 								 caught and discarded fish to give an average weight of individual
 								 in that size bin, this value will be replaced by a fisheries
 								 independent one if it is collected */
-								individVERTinfo[iweight_id][i][sp][z][sample_id] = sizebins[sizeweight_id][sp][z][i][1][sample_id]
+								individVERTinfo[iweight_id][sp][i][z][sample_id] = sizebins[sizeweight_id][sp][z][i][1][sample_id]
 										/ (sizebins[sizecatchnums_id][sp][z][i][1][sample_id] + sizebins[sizediscardnums_id][sp][z][i][1][sample_id] + TINY);
 
 								/* Size distribution of catch */
-								individVERTinfo[icatchnums_id][i][sp][z][sample_id] = sizebins[sizecatchnums_id][sp][z][i][1][sample_id]
+								individVERTinfo[icatchnums_id][sp][i][z][sample_id] = sizebins[sizecatchnums_id][sp][z][i][1][sample_id]
 										/ (totnums[totcatchnums_id][sp][z] + TINY);
 
 								/* Size distribution of discards */
-								individVERTinfo[idiscards_id][i][sp][z][sample_id] = sizebins[sizediscardnums_id][sp][z][i][1][sample_id]
+								individVERTinfo[idiscards_id][sp][i][z][sample_id] = sizebins[sizediscardnums_id][sp][z][i][1][sample_id]
 										/ (totnums[totdiscardnums_id][sp][z] + TINY);
 							} else {
 								/* Store mammal bycatch info */
 								/* Total number of mammals caught */
 								stockinfo[scatchnums_id][sp][z][sample_id] += stockinfo[stotcatch_id][sp][z][sample_id]
-										* individVERTinfo[icatchnums_id][i][sp][z][sample_id] / (individVERTinfo[iweight_id][i][sp][z][sample_id] + TINY);
+										* individVERTinfo[icatchnums_id][sp][i][z][sample_id] / (individVERTinfo[iweight_id][sp][i][z][sample_id] + TINY);
 
 								/* Total number of mammals in discards */
 								stockinfo[sdiscardnums_id][sp][z][sample_id] += stockinfo[sdiscards_id][sp][z][sample_id]
-										* individVERTinfo[idiscards_id][i][sp][z][sample_id] / (individVERTinfo[iweight_id][i][sp][z][sample_id] + TINY);
+										* individVERTinfo[idiscards_id][sp][i][z][sample_id] / (individVERTinfo[iweight_id][sp][i][z][sample_id] + TINY);
 
 							}
 						}
@@ -1071,11 +1072,11 @@ void FisheriesRecords(MSEBoxModel *bm, FILE *ofp) {
 						for (i = 0; i < 3; i++) {
 							/* Total number of seabirds caught */
 							stockinfo[scatchnums_id][sp][z][sample_id] += stockinfo[stotcatch_id][sp][z][sample_id]
-									* individVERTinfo[icatchnums_id][i][sp][z][sample_id] / (individVERTinfo[iweight_id][i][sp][z][sample_id] + TINY);
+									* individVERTinfo[icatchnums_id][sp][i][z][sample_id] / (individVERTinfo[iweight_id][sp][i][z][sample_id] + TINY);
 
 							/* Total number of seabirds in discards */
 							stockinfo[sdiscardnums_id][sp][z][sample_id] += stockinfo[sdiscards_id][sp][z][sample_id]
-									* individVERTinfo[idiscards_id][i][sp][z][sample_id] / (individVERTinfo[iweight_id][i][sp][z][sample_id] + TINY);
+									* individVERTinfo[idiscards_id][sp][i][z][sample_id] / (individVERTinfo[iweight_id][sp][i][z][sample_id] + TINY);
 						}
 					}
 				}
@@ -1309,30 +1310,30 @@ void FishEstimates(MSEBoxModel *bm, FILE *ofp) {
 
 							fprintf(bm->logFile, "nsq[sp][z][i][sample_id] = %d\n", nsq[sp][z][i][sample_id]);
 							/* Catchability */
-							individVERTinfo[iq_id][i][sp][z][sample_id] = sizebins[sizeselectnums_id][sp][z][i][0][sample_id] / (nsq[sp][z][i][sample_id]
+							individVERTinfo[iq_id][sp][i][z][sample_id] = sizebins[sizeselectnums_id][sp][z][i][0][sample_id] / (nsq[sp][z][i][sample_id]
 									+ TINY);
 
 							/* Size distribution of stock - correcting for selectivity */
-							individVERTinfo[istocknums_id][i][sp][z][sample_id] = (sizebins[sizestocknums_id][sp][z][i][0][sample_id]
-									/ (totnums[totstocknums_id][sp][z] + TINY)) / (individVERTinfo[iq_id][i][sp][z][sample_id] + TINY);
+							individVERTinfo[istocknums_id][sp][i][z][sample_id] = (sizebins[sizestocknums_id][sp][z][i][0][sample_id]
+									/ (totnums[totstocknums_id][sp][z] + TINY)) / (individVERTinfo[iq_id][sp][i][z][sample_id] + TINY);
 
 							fprintf(ofp, "Time: %e, %s-%d, z: %d, individVERTinfo: %e, sizebin; %e, totnums: %e, iq: %e\n", bm->dayt,
-									FunctGroupArray[sp].groupCode, i, z, individVERTinfo[istocknums_id][i][sp][z][sample_id],
+									FunctGroupArray[sp].groupCode, i, z, individVERTinfo[istocknums_id][sp][i][z][sample_id],
 									sizebins[sizestocknums_id][sp][z][i][0][sample_id], totnums[totstocknums_id][sp][z],
-									individVERTinfo[iq_id][i][sp][z][sample_id]);
+									individVERTinfo[iq_id][sp][i][z][sample_id]);
 
 							/* Average weight of individual in that size bin */
 							step1 = sizebins[sizeweight_id][sp][z][i][0][sample_id] / (sizebins[sizestocknums_id][sp][z][i][0][sample_id] + TINY);
 							if (step1 > 0)
-								individVERTinfo[iweight_id][i][sp][z][sample_id] = step1;
+								individVERTinfo[iweight_id][sp][i][z][sample_id] = step1;
 
 							/* Numbers in the catch */
 							stockinfo[scatchnums_id][sp][z][sample_id] += stockinfo[stotcatch_id][sp][z][sample_id]
-									* individVERTinfo[icatchnums_id][i][sp][z][sample_id] / (individVERTinfo[iweight_id][i][sp][z][sample_id] + TINY);
+									* individVERTinfo[icatchnums_id][sp][i][z][sample_id] / (individVERTinfo[iweight_id][sp][i][z][sample_id] + TINY);
 
 							/* Numbers in the discards */
 							stockinfo[sdiscardnums_id][sp][z][sample_id] += stockinfo[sdiscards_id][sp][z][sample_id]
-									* individVERTinfo[idiscards_id][i][sp][z][sample_id] / (individVERTinfo[iweight_id][i][sp][z][sample_id] + TINY);
+									* individVERTinfo[idiscards_id][sp][i][z][sample_id] / (individVERTinfo[iweight_id][sp][i][z][sample_id] + TINY);
 
 							/* Age-length keys */
 							sum = 0.0;
@@ -1348,29 +1349,29 @@ void FishEstimates(MSEBoxModel *bm, FILE *ofp) {
 						/* Reset total numbers */
 						totnums[totstocknums_id][sp][z] = 0.0;
 						for (i = 0; i < bm->K_num_size; i++) {
-							totnums[totstocknums_id][sp][z] += individVERTinfo[istocknums_id][i][sp][z][sample_id];
+							totnums[totstocknums_id][sp][z] += individVERTinfo[istocknums_id][sp][i][z][sample_id];
 						}
 
 						/* Rescale size distribution so it sums to one */
 						for (i = 0; i < bm->K_num_size; i++) {
-							individVERTinfo[istocknums_id][i][sp][z][sample_id] = individVERTinfo[istocknums_id][i][sp][z][sample_id]
+							individVERTinfo[istocknums_id][sp][i][z][sample_id] = individVERTinfo[istocknums_id][sp][i][z][sample_id]
 									/ (totnums[totstocknums_id][sp][z] + TINY);
 
 							fprintf(ofp, "Time: %e %s-%d new individVERT: %e (totnums: %e)\n", bm->dayt, FunctGroupArray[sp].groupCode, i,
-									individVERTinfo[istocknums_id][i][sp][z][sample_id], totnums[totstocknums_id][sp][z]);
+									individVERTinfo[istocknums_id][sp][i][z][sample_id], totnums[totstocknums_id][sp][z]);
 
 							/* Do stuff that was dependent on rescaled size distribution */
 							/* Biomass per size bin - corrected for selectivity */
-							individVERTinfo[ibiomass_id][i][sp][z][sample_id] = stockinfo[sbiomass_id][sp][z][sample_id]
-									* individVERTinfo[istocknums_id][i][sp][z][sample_id];
+							individVERTinfo[ibiomass_id][sp][i][z][sample_id] = stockinfo[sbiomass_id][sp][z][sample_id]
+									* individVERTinfo[istocknums_id][sp][i][z][sample_id];
 
 							/* Numbers in the stock - corrected for selectivity */
 							stockinfo[sstocknums_id][sp][z][sample_id] += stockinfo[sbiomass_id][sp][z][sample_id]
-									* individVERTinfo[istocknums_id][i][sp][z][sample_id] / (individVERTinfo[iweight_id][i][sp][z][sample_id] + TINY);
+									* individVERTinfo[istocknums_id][sp][i][z][sample_id] / (individVERTinfo[iweight_id][sp][i][z][sample_id] + TINY);
 
 							fprintf(ofp, "Time: %e %s-%d z: %d, stocknums: %e, stockinfo: %e, individVERT: %e, individWGT: %e\n", bm->dayt,
 									FunctGroupArray[sp].groupCode, i, z, stockinfo[sstocknums_id][sp][z][sample_id], stockinfo[sbiomass_id][sp][z][sample_id],
-									individVERTinfo[istocknums_id][i][sp][z][sample_id], individVERTinfo[iweight_id][i][sp][z][sample_id]);
+									individVERTinfo[istocknums_id][sp][i][z][sample_id], individVERTinfo[iweight_id][sp][i][z][sample_id]);
 						}
 					}
 				}
@@ -1398,9 +1399,9 @@ void FishEstimates(MSEBoxModel *bm, FILE *ofp) {
 						for (chrt = 0; chrt < matage; chrt++) {
 							for (i = 0; i < bm->K_num_size; i++) {
 
-								contrib1 = individVERTinfo[istocknums_id][i][sp][z][sample_id] * agelengthkey[i][chrt][sp][z][sample_id];
+								contrib1 = individVERTinfo[istocknums_id][sp][i][z][sample_id] * agelengthkey[i][chrt][sp][z][sample_id];
 								raw1 += contrib1;
-								contrib2 = individVERTinfo[icatchnums_id][i][sp][z][sample_id] * agelengthkey[i][chrt][sp][z][sample_id];
+								contrib2 = individVERTinfo[icatchnums_id][sp][i][z][sample_id] * agelengthkey[i][chrt][sp][z][sample_id];
 								raw2 += contrib2;
 							}
 						}
@@ -1449,21 +1450,13 @@ void FishEstimates(MSEBoxModel *bm, FILE *ofp) {
 				for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 					if (FunctGroupArray[sp].isVertebrate == TRUE) {
 						for (j = 0; j < bm->K_num_size; j++) {
-							fprintf(ofp, "individVERTinfo[iweight_id][%d][%s][%d]: %e\n", j, FunctGroupArray[sp].groupCode, z,
-									individVERTinfo[iweight_id][j][sp][z][sample_id]);
-							fprintf(ofp, "individVERTinfo[istocknums_id][%d][%s][%d]: %e\n", j, FunctGroupArray[sp].groupCode, z,
-									individVERTinfo[istocknums_id][j][sp][z][sample_id]);
-							fprintf(ofp, "individVERTinfo[icatchnums_id][%d][%s][%d]: %e\n", j, FunctGroupArray[sp].groupCode, z,
-									individVERTinfo[icatchnums_id][j][sp][z][sample_id]);
-							fprintf(ofp, "individVERTinfo[ibiomass_id][%d][%s][%d]: %e\n", j, FunctGroupArray[sp].groupCode, z,
-									individVERTinfo[ibiomass_id][j][sp][z][sample_id]);
-							fprintf(ofp, "individVERTinfo[idiscards_id][%d][%s][%d]: %e\n", j, FunctGroupArray[sp].groupCode, z,
-									individVERTinfo[idiscards_id][j][sp][z][sample_id]);
-							fprintf(ofp, "individVERTinfo[iq_id][%d][%s][%d]: %e\n", j, FunctGroupArray[sp].groupCode, z,
-									individVERTinfo[iq_id][j][sp][z][sample_id]);
-							fprintf(ofp, "individVERTinfo[icondn_id][%d][%s][%d]: %e\n", j, FunctGroupArray[sp].groupCode, z,
-									individVERTinfo[icondn_id][j][sp][z][sample_id]);
-
+							fprintf(ofp, "individVERTinfo[iweight_id][%s][%d][%d]: %e\n", FunctGroupArray[sp].groupCode, j, z, individVERTinfo[iweight_id][sp][j][z][sample_id]);
+							fprintf(ofp, "individVERTinfo[istocknums_id][%s][%d][%d]: %e\n", FunctGroupArray[sp].groupCode, j, z, individVERTinfo[istocknums_id][sp][j][z][sample_id]);
+							fprintf(ofp, "individVERTinfo[icatchnums_id][%s][%d][%d]: %e\n", FunctGroupArray[sp].groupCode, j, z, individVERTinfo[icatchnums_id][sp][j][z][sample_id]);
+							fprintf(ofp, "individVERTinfo[ibiomass_id][%s][%d][%d]: %e\n", FunctGroupArray[sp].groupCode, j, z, individVERTinfo[ibiomass_id][sp][j][z][sample_id]);
+							fprintf(ofp, "individVERTinfo[idiscards_id][%s][%d][%d]: %e\n", FunctGroupArray[sp].groupCode, j, z, individVERTinfo[idiscards_id][sp][j][z][sample_id]);
+							fprintf(ofp, "individVERTinfo[iq_id][%s][%d][%d]: %e\n", FunctGroupArray[sp].groupCode, j, z, individVERTinfo[iq_id][sp][j][z][sample_id]);
+							fprintf(ofp, "individVERTinfo[icondn_id][%s][%d][%d]: %e\n", FunctGroupArray[sp].groupCode, j, z, individVERTinfo[icondn_id][sp][j][z][sample_id]);
 						}
 					}
 				}

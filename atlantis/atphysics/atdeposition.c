@@ -172,6 +172,13 @@ void deposit(MSEBoxModel *bm, Box *bp, double *m, double **newwc, double **newse
 	sm->filltime[tk] = bm->t;
 	sm->porosity[tk] = newwatervol/newvol;
 
+    if(bm->maintain_sedlayer) {
+        if (sm->dz[tk] < sm->mindz)
+            sm->dz[tk] = sm->mindz;
+        if (sm->dz[tk] > sm->maxdz)
+            sm->dz[tk] = sm->maxdz;
+    }
+
     /* Form new layer if necessary */
 	depdz -= thisdz;
 	if( depdz > 0.0 ) {

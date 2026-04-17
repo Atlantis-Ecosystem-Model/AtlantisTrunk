@@ -100,12 +100,7 @@ void Tracer_Array_Free(MSEBoxModel *bm) {
  */
 
 void Epi_Tracer_Array_Free(MSEBoxModel *bm) {
-	int index;
-
-	for (index = 0; index <= bm->nepi; index++) {
-		if (!epinamelist[index].name)
-			free(epinamelist[index].name);
-	}
+    
 	free(epinamelist);
 }
 
@@ -228,11 +223,11 @@ void Build_TrName_NameList(MSEBoxModel *bm) {
 	for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
 		if (FunctGroupArray[fgIndex].groupType == SM_PHY || FunctGroupArray[fgIndex].groupType == LG_PHY
 				|| FunctGroupArray[fgIndex].groupType == MICROPHTYBENTHOS) {
-			sprintf(str, "Light_Adaptn_%s", FunctGroupArray[fgIndex].groupCode);
+			snprintf(str, sizeof(str), "Light_Adaptn_%s", FunctGroupArray[fgIndex].groupCode);
 			Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].Light_Adaptn_TracerID, 0, 0, 0, 0);
 		}
 		if (FunctGroupArray[fgIndex].groupType == DINOFLAG && FunctGroupArray[fgIndex].speciesParams[flag_id]) {
-			sprintf(str, "Light_Adaptn_%s", FunctGroupArray[fgIndex].groupCode);
+			snprintf(str, sizeof(str), "Light_Adaptn_%s", FunctGroupArray[fgIndex].groupCode);
 			Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].Light_Adaptn_TracerID, 0, 0, 0, 0);
 
 		}
@@ -244,14 +239,14 @@ void Build_TrName_NameList(MSEBoxModel *bm) {
 
 			switch (FunctGroupArray[fgIndex].groupAgeType) {
 			case AGE_STRUCTURED:
-				sprintf(str, "%s_N", FunctGroupArray[fgIndex].name);
+				snprintf(str, sizeof(str), "%s_N", FunctGroupArray[fgIndex].name);
 
 				Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].totNTracers[0], 1, 0, 0, 0);
 
 				break;
 			case AGE_STRUCTURED_BIOMASS:
 				for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
-					sprintf(str, "%s_N%d", FunctGroupArray[fgIndex].name, cohort + 1);
+					snprintf(str, sizeof(str), "%s_N%d", FunctGroupArray[fgIndex].name, cohort + 1);
 
 					Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].totNTracers[cohort], 0, FunctGroupArray[fgIndex].diagTol, 1, 0);
 				}
@@ -260,14 +255,14 @@ void Build_TrName_NameList(MSEBoxModel *bm) {
 
 				/* Bit of a hack for now so older models will work */
 				//				if (FunctGroupArray[fgIndex].groupType == CEP || FunctGroupArray[fgIndex].groupType == PWN){
-				//					sprintf(str, "%s_N2", FunctGroupArray[fgIndex].name);
+				//					snprintf(str, sizeof(str), "%s_N2", FunctGroupArray[fgIndex].name);
 				//					Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].totNTracers[0], 0, FunctGroupArray[fgIndex].diagTol, 1);
 				//
-				//					sprintf(str, "%s_N1", FunctGroupArray[fgIndex].name);
+				//					snprintf(str, sizeof(str), "%s_N1", FunctGroupArray[fgIndex].name);
 				//					Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].totNTracers[1], 0, FunctGroupArray[fgIndex].diagTol, 1);
 				//					continue;
 				//				}else{
-				sprintf(str, "%s_N", FunctGroupArray[fgIndex].name);
+				snprintf(str, sizeof(str), "%s_N", FunctGroupArray[fgIndex].name);
 				//}
 
 				if (FunctGroupArray[fgIndex].groupType == CARRION) {
@@ -290,9 +285,9 @@ void Build_TrName_NameList(MSEBoxModel *bm) {
 	/* Add the silicon tracers */
 	for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
 		if (FunctGroupArray[fgIndex].isSiliconDependant && (FunctGroupArray[fgIndex].groupType != SPONGE)) {
-			sprintf(str, "%s_S", FunctGroupArray[fgIndex].name);
+			snprintf(str, sizeof(str), "%s_S", FunctGroupArray[fgIndex].name);
 			Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].secondNutrientTracerIndex, 0, 1, 1, 0);
-			FunctGroupArray[fgIndex].secondNutrient = X_SiN;
+			FunctGroupArray[fgIndex].secondNutrient = bm->X_SiN;
 		}
 
 	}
@@ -305,7 +300,7 @@ void Build_TrName_NameList(MSEBoxModel *bm) {
 		if (FunctGroupArray[fgIndex].isVertebrate == TRUE) {
 			for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
 
-				sprintf(str, "%s%d_StructN", FunctGroupArray[fgIndex].name, cohort + 1);
+				snprintf(str, sizeof(str), "%s%d_StructN", FunctGroupArray[fgIndex].name, cohort + 1);
 				Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].structNTracers[cohort], 0, 2, 1, 0);
 			}
 		}
@@ -316,7 +311,7 @@ void Build_TrName_NameList(MSEBoxModel *bm) {
 		if (FunctGroupArray[fgIndex].isVertebrate == TRUE) {
 			for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
 
-				sprintf(str, "%s%d_ResN", FunctGroupArray[fgIndex].name, cohort + 1);
+				snprintf(str, sizeof(str), "%s%d_ResN", FunctGroupArray[fgIndex].name, cohort + 1);
 				Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].resNTracers[cohort], 0, 2, 1, 0);
 			}
 		}
@@ -327,7 +322,7 @@ void Build_TrName_NameList(MSEBoxModel *bm) {
 		if (FunctGroupArray[fgIndex].isVertebrate == TRUE) {
 			for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
 
-				sprintf(str, "%s%d_Nums", FunctGroupArray[fgIndex].name, cohort + 1);
+				snprintf(str, sizeof(str), "%s%d_Nums", FunctGroupArray[fgIndex].name, cohort + 1);
 				Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].NumsTracers[cohort], 0, 3, 1, 0);
 			}
 		}
@@ -337,7 +332,7 @@ void Build_TrName_NameList(MSEBoxModel *bm) {
 	/* add physical and nutrient tracers */
 	for (fgIndex = 0; fgIndex < bm->K_num_physiochem; fgIndex++) {
 		if (strcmp(PhysioChemArray[fgIndex].name, "") != 0) {
-			sprintf(str, "%s", PhysioChemArray[fgIndex].name);
+			snprintf(str, sizeof(str), "%s", PhysioChemArray[fgIndex].name);
 			Add_Tracer(&trnamelist, index++, str, PhysioChemArray[fgIndex].tracerIndex, PhysioChemArray[fgIndex].diagFlux, PhysioChemArray[fgIndex].diagTol,
 					PhysioChemArray[fgIndex].diagBiol, 0);
 		}
@@ -352,18 +347,18 @@ void Build_TrName_NameList(MSEBoxModel *bm) {
 
 					if((FunctGroupArray[fgIndex].numCohortsXnumGenes) > 1){
 						for(cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++){
-							sprintf(str, "N_to_P_%s%d", FunctGroupArray[fgIndex].name, cohort + 1);
+							snprintf(str, sizeof(str), "N_to_P_%s%d", FunctGroupArray[fgIndex].name, cohort + 1);
 							Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].addRatioTracers[cohort][p_id], 2, FunctGroupArray[fgIndex].diagTol, 0, 0);
 
-							sprintf(str, "N_to_C_%s%d", FunctGroupArray[fgIndex].name, cohort + 1);
+							snprintf(str, sizeof(str), "N_to_C_%s%d", FunctGroupArray[fgIndex].name, cohort + 1);
 							Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].addRatioTracers[cohort][c_id], 2, FunctGroupArray[fgIndex].diagTol, 0, 0);
 
 						}
 					}else{
-						sprintf(str, "N_to_P_%s", FunctGroupArray[fgIndex].name);
+						snprintf(str, sizeof(str), "N_to_P_%s", FunctGroupArray[fgIndex].name);
 						Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].addRatioTracers[0][p_id], 2, FunctGroupArray[fgIndex].diagTol, 0, 0);
 
-						sprintf(str, "N_to_C_%s", FunctGroupArray[fgIndex].name);
+						snprintf(str, sizeof(str), "N_to_C_%s", FunctGroupArray[fgIndex].name);
 						Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].addRatioTracers[0][c_id], 2, FunctGroupArray[fgIndex].diagTol, 0, 0);
 					}
 				}
@@ -381,15 +376,15 @@ void Build_TrName_NameList(MSEBoxModel *bm) {
 						if (FunctGroupArray[fgIndex].numCohorts > 1) {
 
 							for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohorts; cohort++) {
-								sprintf(str, "%s%d_%s", FunctGroupArray[fgIndex].name, cohort + 1, bm->contaminantStructure[contamIndex]->contaminant_name);
+								snprintf(str, sizeof(str), "%s%d_%s", FunctGroupArray[fgIndex].name, cohort + 1, bm->contaminantStructure[contamIndex]->contaminant_name);
 								Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].contaminantTracers[cohort][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);
-                                sprintf(str, "%s%d_Prop_%s", FunctGroupArray[fgIndex].name, cohort + 1, bm->contaminantStructure[contamIndex]->contaminant_name);
+                                snprintf(str, sizeof(str), "%s%d_Prop_%s", FunctGroupArray[fgIndex].name, cohort + 1, bm->contaminantStructure[contamIndex]->contaminant_name);
                                 Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].contamPropTracers[cohort][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);
 							}
 						} else {
-							sprintf(str, "%s_%s", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name);
+							snprintf(str, sizeof(str), "%s_%s", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name);
 							Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].contaminantTracers[0][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);
-                            sprintf(str, "%s_Prop_%s", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name);
+                            snprintf(str, sizeof(str), "%s_Prop_%s", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name);
                             Add_Tracer(&trnamelist, index++, str, &FunctGroupArray[fgIndex].contamPropTracers[0][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);
 
 						}
@@ -403,7 +398,7 @@ void Build_TrName_NameList(MSEBoxModel *bm) {
 	Add_Tracer(&trnamelist, index++, NULL, NULL, 0, 0, 0, 0);
 
 	if ((index - 1) != nTrSize) {
-		quit("ERROR: Build_TrName_NameList - Mismatch in the number of tracers we are expected and the number we have built. We are expecting %d, but we have built %d tracers\n", nTrSize, index);
+		quit("ERROR: Build_TrName_NameList - Mismatch in the number of tracers we are expected and the number we have built. We are expecting %d, but we have built %d tracers\n", nTrSize, (index - 1));
 	}
 
 }
@@ -475,7 +470,7 @@ void Build_EPI_NameList(MSEBoxModel *bm) {
 			case AGE_STRUCTURED_BIOMASS:
 				// Allow for multiple cohorts so can have age structure reefs and multiple macrophyte pools
 				for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
-					sprintf(str, "%s_N%d", FunctGroupArray[fgIndex].name, cohort + 1);
+					snprintf(str, sizeof(str), "%s_N%d", FunctGroupArray[fgIndex].name, cohort + 1);
 					Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].totNTracers[cohort], 0, FunctGroupArray[fgIndex].diagTol, 1, 0);
 				}
 				break;
@@ -483,11 +478,11 @@ void Build_EPI_NameList(MSEBoxModel *bm) {
 				if(bm->flag_macro_model == 1 && FunctGroupArray[fgIndex].groupType == SEAGRASS){
 					// Allow for multiple cohorts so can have age structure reefs and multiple macrophyte pools
 					for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
-						sprintf(str, "%s_N%d", FunctGroupArray[fgIndex].name, cohort + 1);
+						snprintf(str, sizeof(str), "%s_N%d", FunctGroupArray[fgIndex].name, cohort + 1);
 						Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].totNTracers[cohort], 0, FunctGroupArray[fgIndex].diagTol, 1, 0);
 					}
 				}else{
-					sprintf(str, "%s_N", FunctGroupArray[fgIndex].name);
+					snprintf(str, sizeof(str), "%s_N", FunctGroupArray[fgIndex].name);
 					Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].totNTracers[0], 0, FunctGroupArray[fgIndex].diagTol, 1, 0);
 				}
 				break;
@@ -498,7 +493,7 @@ void Build_EPI_NameList(MSEBoxModel *bm) {
 		}
 
 		if (FunctGroupArray[fgIndex].isCover == TRUE) {
-			sprintf(str, "%s_Cover", FunctGroupArray[fgIndex].name);
+			snprintf(str, sizeof(str), "%s_Cover", FunctGroupArray[fgIndex].name);
 			Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].CoverTracer, 1, 0, 0, 0);
 		}
 	
@@ -511,17 +506,17 @@ void Build_EPI_NameList(MSEBoxModel *bm) {
 
 					if((FunctGroupArray[fgIndex].numCohortsXnumGenes) > 1){
 						for(cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++){
-							sprintf(str, "N_to_P_%s%d", FunctGroupArray[fgIndex].name, cohort + 1);
+							snprintf(str, sizeof(str), "N_to_P_%s%d", FunctGroupArray[fgIndex].name, cohort + 1);
 							Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].addRatioTracers[cohort][p_id], 2, FunctGroupArray[fgIndex].diagTol, 0, 0);
 
-							sprintf(str, "N_to_C_%s%d", FunctGroupArray[fgIndex].name, cohort + 1);
+							snprintf(str, sizeof(str), "N_to_C_%s%d", FunctGroupArray[fgIndex].name, cohort + 1);
 							Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].addRatioTracers[cohort][c_id], 2, FunctGroupArray[fgIndex].diagTol, 0, 0);
 						}
 					}else{
-						sprintf(str, "N_to_P_%s", FunctGroupArray[fgIndex].name);
+						snprintf(str, sizeof(str), "N_to_P_%s", FunctGroupArray[fgIndex].name);
 						Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].addRatioTracers[0][p_id], 2, FunctGroupArray[fgIndex].diagTol, 0, 0);
 
-						sprintf(str, "N_to_C_%s", FunctGroupArray[fgIndex].name);
+						snprintf(str, sizeof(str), "N_to_C_%s", FunctGroupArray[fgIndex].name);
 						Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].addRatioTracers[0][c_id], 2, FunctGroupArray[fgIndex].diagTol, 0, 0);
 					}
 				}
@@ -540,9 +535,9 @@ void Build_EPI_NameList(MSEBoxModel *bm) {
 					if (FunctGroupArray[fgIndex].numCohorts > 1) {
 
 						for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohorts; cohort++) {
-							sprintf(str, "%s%d_%s", FunctGroupArray[fgIndex].name, cohort + 1, bm->contaminantStructure[contamIndex]->contaminant_name);
+							snprintf(str, sizeof(str), "%s%d_%s", FunctGroupArray[fgIndex].name, cohort + 1, bm->contaminantStructure[contamIndex]->contaminant_name);
 							Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].contaminantTracers[cohort][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);
-                            sprintf(str, "%s%d_Prop_%s", FunctGroupArray[fgIndex].name, cohort + 1, bm->contaminantStructure[contamIndex]->contaminant_name);
+                            snprintf(str, sizeof(str), "%s%d_Prop_%s", FunctGroupArray[fgIndex].name, cohort + 1, bm->contaminantStructure[contamIndex]->contaminant_name);
                             Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].contamPropTracers[cohort][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);
                             
                             fprintf(bm->logFile, "Added %s%d_Prop_%s with index %d\n", FunctGroupArray[fgIndex].name, cohort + 1, bm->contaminantStructure[contamIndex]->contaminant_name, index);
@@ -550,9 +545,9 @@ void Build_EPI_NameList(MSEBoxModel *bm) {
 
 						}
 					} else {
-						sprintf(str, "%s_%s", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name);
+						snprintf(str, sizeof(str), "%s_%s", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name);
 						Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].contaminantTracers[0][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);
-                        sprintf(str, "%s_Prop_%s", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name);
+                        snprintf(str, sizeof(str), "%s_Prop_%s", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name);
                         Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].contamPropTracers[0][contamIndex], 0, FunctGroupArray[fgIndex].diagTol, 0, 1);
                         
                         fprintf(bm->logFile, "Added %s_Prop_%s with index %d\n", FunctGroupArray[fgIndex].name, bm->contaminantStructure[contamIndex]->contaminant_name, index);
@@ -682,8 +677,8 @@ void Build_Diagnostic_NameList(MSEBoxModel *bm) {
 		if (FunctGroupArray[fgIndex].isVertebrate == FALSE) {
 			if (FunctGroupArray[fgIndex].isProducer) {
 
-				sprintf(name, "%sProdn", FunctGroupArray[fgIndex].name);
-				sprintf(longName, "%s production", FunctGroupArray[fgIndex].name);
+				snprintf(name, sizeof(name), "%sProdn", FunctGroupArray[fgIndex].name);
+				snprintf(longName, sizeof(longName), "%s production", FunctGroupArray[fgIndex].name);
 
 				Add_Diagnostic_Tracer(bm, diagIndex++, name, longName, "mg N m-3 d-1", 0, 2, &FunctGroupArray[fgIndex].prodnTracers[0], 0,
 						FunctGroupArray[fgIndex].diagTol == 2 ? 2 : 0, 0);
@@ -696,8 +691,8 @@ void Build_Diagnostic_NameList(MSEBoxModel *bm) {
 		if (FunctGroupArray[fgIndex].isVertebrate == FALSE) {
 			if (FunctGroupArray[fgIndex].isGrazer) {
 
-				sprintf(name, "%sGrazing", FunctGroupArray[fgIndex].name);
-				sprintf(longName, "%s grazing", FunctGroupArray[fgIndex].name);
+				snprintf(name,  sizeof(name), "%sGrazing", FunctGroupArray[fgIndex].name);
+				snprintf(longName, sizeof(longName), "%s grazing", FunctGroupArray[fgIndex].name);
 
 				Add_Diagnostic_Tracer(bm, diagIndex++, name, longName, "mg N m-3 d-1", 0, 2, &FunctGroupArray[fgIndex].GrazingTracers[0], 0,
 						FunctGroupArray[fgIndex].diagTol == 2 ? 2 : 0, 0);
@@ -716,8 +711,8 @@ void Build_Diagnostic_NameList(MSEBoxModel *bm) {
 		if (FunctGroupArray[fgIndex].isVertebrate == TRUE) {
 			for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
 
-				sprintf(name, "%s%d_Growth", FunctGroupArray[fgIndex].name, cohort + 1);
-				sprintf(longName, "Growth of age class %d %s", cohort + 1, FunctGroupArray[fgIndex].name);
+				snprintf(name, sizeof(name), "%s%d_Growth", FunctGroupArray[fgIndex].name, cohort + 1);
+				snprintf(longName, sizeof(longName), "Growth of age class %d %s", cohort + 1, FunctGroupArray[fgIndex].name);
 				Add_Diagnostic_Tracer(bm, diagIndex++, name, longName, "mg N d-1", 0, 2, &FunctGroupArray[fgIndex].GrowthTracers[cohort], 0,
 						FunctGroupArray[fgIndex].diagTol, 0);
 
@@ -730,16 +725,16 @@ void Build_Diagnostic_NameList(MSEBoxModel *bm) {
 		if (FunctGroupArray[fgIndex].isVertebrate == TRUE) {
 			for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
 
-				sprintf(name, "%s%d_Eat", FunctGroupArray[fgIndex].name, cohort + 1);
-				sprintf(longName, "Consumption of age class %d %s", cohort + 1, FunctGroupArray[fgIndex].name);
+				snprintf(name, sizeof(name), "%s%d_Eat", FunctGroupArray[fgIndex].name, cohort + 1);
+				snprintf(longName, sizeof(longName), "Consumption of age class %d %s", cohort + 1, FunctGroupArray[fgIndex].name);
 				Add_Diagnostic_Tracer(bm, diagIndex++, name, longName, "mg N m-3 d-1", 0, 2, &FunctGroupArray[fgIndex].EatTracers[cohort], 0,
 						FunctGroupArray[fgIndex].diagTol, 0);
 
 			}
 
 			/* Add the Spawn Size */
-			sprintf(name, "%s_SpwnSze", FunctGroupArray[fgIndex].name);
-			sprintf(longName, "%s average size spawning", FunctGroupArray[fgIndex].name);
+			snprintf(name, sizeof(name), "%s_SpwnSze", FunctGroupArray[fgIndex].name);
+			snprintf(longName, sizeof(longName), "%s average size spawning", FunctGroupArray[fgIndex].name);
 			Add_Diagnostic_Tracer(bm, diagIndex++, name, longName, "mg N", 0, 2, &FunctGroupArray[fgIndex].SpawnSizeTracer, 0, FunctGroupArray[fgIndex].diagTol,
 					0);
 		}

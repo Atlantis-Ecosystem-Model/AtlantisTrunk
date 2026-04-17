@@ -1,5 +1,5 @@
 /**
- *  File:           atlantisutil.c
+ *  File:           atAssessTierSetup.c
  *  Author:         Beth Fulton
  *  Code to allocate and free the RBCstructure data structures.
  *
@@ -169,7 +169,7 @@ int Tier_Assessment_Allocate(MSEBoxModel *bm) {
 		bm->RBCestimation.RBCspeciesArray[groupIndex].LenComp = Util_Alloc_Init_5D_Int(nLen, 4, nYears, bm->K_num_sexes, bm->K_num_fisheries, 0);        /* Generated length composition data */
 		bm->RBCestimation.RBCspeciesArray[groupIndex].LFss = Util_Alloc_Init_4D_Int(4, nYears, bm->K_num_sexes, bm->K_num_fisheries, 0);
         
-        bm->RBCestimation.RBCspeciesArray[groupIndex].mirrored_fleet = Util_Alloc_Init_1D_Int(bm->K_num_fisheries, 0.0);
+        bm->RBCestimation.RBCspeciesArray[groupIndex].mirrored_fleet = Util_Alloc_Init_1D_Int(bm->K_num_fisheries, 0);
 
 		/* Assessment specifications */
 		bm->RBCestimation.RBCspeciesArray[groupIndex].Ageing_error = Util_Alloc_Init_1D_Double(AccumAge+1, 0.0);     /* Aging error matrix. dimensions 0..AccumAge (SS data file) */
@@ -180,7 +180,7 @@ int Tier_Assessment_Allocate(MSEBoxModel *bm) {
 		bm->RBCestimation.RBCspeciesArray[groupIndex].Start_RetInflect = Util_Alloc_Init_1D_Double(bm->K_num_fisheries, 0.0);
 		bm->RBCestimation.RBCspeciesArray[groupIndex].Start_RetSlope = Util_Alloc_Init_1D_Double(bm->K_num_fisheries, 0.0);
         
-        bm->RBCestimation.RBCspeciesArray[groupIndex].Sel_Pattern = Util_Alloc_Init_1D_Int(bm->K_num_fisheries, 0.0);
+        bm->RBCestimation.RBCspeciesArray[groupIndex].Sel_Pattern = Util_Alloc_Init_1D_Int(bm->K_num_fisheries, 0);
 
 		bm->RBCestimation.RBCspeciesArray[groupIndex].Tier3_Linf = Util_Alloc_Init_1D_Double(bm->K_num_sexes, 0.0);       /* Linf input for tier 3 (from table 1 in Neil's tier 3 document) */
 		bm->RBCestimation.RBCspeciesArray[groupIndex].Tier3_k = Util_Alloc_Init_1D_Double(bm->K_num_sexes, 0.0);          /* k input for tier 3 */
@@ -583,27 +583,19 @@ int Tier_Assessment_Free(MSEBoxModel *bm) {
         i_free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].Ia);
         free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].Future_catchprop);
         
-        printf("Doing %s assess free step1\n", FunctGroupArray[groupIndex].groupCode);
-        
         free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].CvLA0);
         free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].CvLAmax);
         free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].Fecund);
-        
-        printf("Doing %s assess free step1\n", FunctGroupArray[groupIndex].groupCode);
         
         free3d(bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge);
         free4d(bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge);
         free3d(bm->RBCestimation.RBCspeciesArray[groupIndex].Mzero);
         free5d(bm->RBCestimation.RBCspeciesArray[groupIndex].Mnat);
         
-        printf("Doing %s assess free step1\n", FunctGroupArray[groupIndex].groupCode);
-        
         free3d(bm->RBCestimation.RBCspeciesArray[groupIndex].WtLen);
         free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].Wtlen_a);
         free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].Wtlen_b);
         
-        printf("Doing %s assess free step1\n", FunctGroupArray[groupIndex].groupCode);
-
         free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].VBLinf);
         free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].VBk);
         free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].VBt0);
@@ -1406,8 +1398,8 @@ int Tier_Assessment_Setup(MSEBoxModel *bm) {
             //fprintf(bm->logFile, "n: %d, LoLenBin: %e bin_start: %e bin_size: %e\n", n, bm->RBCestimation.RBCspeciesArray[groupIndex].LoLenBin[n], FunctGroupArray[groupIndex].speciesParams[allometic_bin_start_id], FunctGroupArray[groupIndex].speciesParams[allometic_bin_size_id]);
 		}
         
+        Nfleet = (int)(bm->RBCestimation.RBCspeciesParam[groupIndex][NumFisheries_id]);
         if (bm->useMultispAssess) {
-            Nfleet = bm->RBCestimation.RBCspeciesParam[groupIndex][NumFisheries_id];
             for (m = 0; m < Nfleet; m++) {
                 mid = bm->RBCestimation.speciesRPFleetToMetier[m][groupIndex];  // metier for this fishery
                 bm->RBCestimation.speciesMetierToRPFleet[groupIndex][mid] = m;
@@ -1432,7 +1424,7 @@ int Tier_Assessment_Setup(MSEBoxModel *bm) {
 		tot_nf = 0;
 		totTAC = 0.0;
 		for (n = 0; n < bm->K_num_fisheries; n++){
-            if(!FunctGroupArray[groupIndex].isTAC || (bm->TACamt[groupIndex][nf][now_id] < no_quota)) {
+            if(FunctGroupArray[groupIndex].isTAC || (bm->TACamt[groupIndex][n][now_id] < no_quota)) {
                 totTAC += bm->TACamt[groupIndex][n][now_id];
             }
             if ((int)(bm->SP_FISHERYprms[groupIndex][n][assess_nf_id]) > tot_nf) {

@@ -57,14 +57,38 @@ void bioirrig(MSEBoxModel *bm, double ***newwc, double ***newsed) {
 
 		if (bp->type != BOUNDARY && bp->type != LAND) {
 
+            if (!_finite(newwc[24][0][Salinity_i])) {
+                printf("Time: %e Salinity in bottom water is nan - while doing box %d in bioirrig\n", bm->dayt, b);
+                fflush(stdout);
+                fflush(stderr);
+            }
+            
 			/* Diffusion */
 			dissol_diff(bm, bp, sm, newwc[b], newsed[b]);
+            
+            if (!_finite(newwc[24][0][Salinity_i])) {
+                printf("Time: %e Salinity in bottom water is nan - while doing bioirrig B\n", bm->dayt);
+                fflush(stdout);
+                fflush(stderr);
+            }
 
 			/* Exchange */
 			exchange(bm, bp, sm, newwc[b], newsed[b]);
+            
+            if (!_finite(newwc[24][0][Salinity_i])) {
+                printf("Time: %e Salinity in bottom water is nan - while doing bioirrig C\n", bm->dayt);
+                fflush(stdout);
+                fflush(stderr);
+            }
 
 			/* Injection */
 			injection(bm, bp, sm, newwc[b], newsed[b]);
+            
+            if (!_finite(newwc[24][0][Salinity_i])) {
+                printf("Time: %e Salinity in bottom water is nan - while doing bioirrig D\n", bm->dayt);
+                fflush(stdout);
+                fflush(stderr);
+            }
 
 		}
 	}
@@ -102,15 +126,17 @@ void dissol_diff(MSEBoxModel *bm, Box *bp, SedModel *sm, double **newwc, double 
 
 		/* Collect tracer values for each layer */
 		/* FIX - does porosity matter here? */
-		for (k = tk; k < bp->sm.nz; k++)
-			c[k] = newsed[k][n];
+        for (k = tk; k < bp->sm.nz; k++) {
+            c[k] = newsed[k][n];
+        }
 
 		/* Calculate diffusion */
 		diffusion1d(sm->nz - tk, &c[tk], &sm->cellz[tk], &sm->dissol_kz[tk], &sm->gridz[tk], bm->dt, bm->a_sed);
 
 		/* Store new values */
-		for (k = tk; k < bp->sm.nz; k++)
-			newsed[k][n] = c[k];
+        for (k = tk; k < bp->sm.nz; k++) {
+            newsed[k][n] = c[k];
+        }
 
 	}
 
@@ -142,8 +168,9 @@ void exchange(MSEBoxModel *bm, Box *bp, SedModel *sm, double **newwc, double **n
 	}
 
 	/* Distribute exchange over sediment layers */
-	for (k = tk; k < sm->nz; k++)
-		rate[k] *= erate / sum;
+    for (k = tk; k < sm->nz; k++) {
+        rate[k] *= erate / sum;
+    }
 
 	/* Loop over tracers */
 	for (n = 0; n < bm->ntracer; n++) {
@@ -202,13 +229,16 @@ void exchange(MSEBoxModel *bm, Box *bp, SedModel *sm, double **newwc, double **n
 				 * equations, requiring a matrix inversion to solve -
 				 * effort which does not seem warranted here.
 				 */
+                double orig_wc = newwc[0][n];
+                double orig_sed = newsed[k][n];
 				/* Volume of pore water */
 				double pvol = sm->porosity[k] * sm->volume[k] + small_num;
 				/* Constants in exponential formula */
 				double ek = rate[k] * (1.0 / wvol + 1.0 / pvol);
-				double ce = (newwc[0][n] * wvol + newsed[k][n] * pvol) / (wvol + pvol);
+				double ce = (orig_wc * wvol + orig_sed * pvol) / (wvol + pvol);
 				/* New water column concentration */
-				double cw = ce + decay_exact(newwc[0][n] - ce, ek, bm->dt);
+                double decay_amt = decay_exact(newwc[0][n] - ce, ek, bm->dt);
+				double cw = ce + decay_amt;
 				/* New sediment value */
 				double cs = newsed[k][n] - (wvol / pvol) * (cw - newwc[0][n]);
 
@@ -217,10 +247,11 @@ void exchange(MSEBoxModel *bm, Box *bp, SedModel *sm, double **newwc, double **n
 				newsed[k][n] = cs;
 
 				/**
-				 if((bm->current_box == bm->checkbox) && (!strcmp(bm->tinfo[n].name, "NH3") || !strcmp(bm->tinfo[n].name, "NO3")))
-				 fprintf(bm->logFile, "Time: %e box %d new bioirrig2 %s newwc[0]: %e newsed[%d]: %e\n",
-				 bm->dayt, bm->current_box, bm->tinfo[n].name, newwc[0][n], k, newsed[k][n]);
-				 **/
+				 //if((bm->current_box == bm->checkbox) && (!strcmp(bm->tinfo[n].name, "NH3") || !strcmp(bm->tinfo[n].name, "NO3")))
+                if (!_finite(newwc[0][Salinity_i])) {
+                    fprintf(bm->logFile, "Time: %e new bioirrig2 %s newwc: %e sed layer %d newsed: %e as cw: %e ce: %e decay_amt: %e orig_wc: %e wvol: %e orig_sed: %e pvol: %e rate: %e, ek: %e\n", bm->dayt, bm->tinfo[n].name, newwc[0][n], k, newsed[k][n], cw, ce, decay_amt, orig_wc, wvol, orig_sed, pvol, rate[k], ek);
+                }
+                /*/
 
 			}
 		}

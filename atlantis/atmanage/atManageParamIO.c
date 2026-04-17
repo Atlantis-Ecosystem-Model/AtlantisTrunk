@@ -43,7 +43,7 @@ void ReadPrescribedEffortDistributionXML(MSEBoxModel *bm, char *fileName, xmlNod
 	/* Read in the data for each functional group.*/
 	for (fisheryIndex = 0; fisheryIndex < bm->K_num_fisheries; fisheryIndex++) {
 
-		sprintf(errorString, "Effort/PrescribedEffortDistribution/%s", FisheryArray[fisheryIndex].fisheryCode);
+		snprintf(errorString, sizeof(errorString), "Effort/PrescribedEffortDistribution/%s", FisheryArray[fisheryIndex].fisheryCode);
 		fisheryNode = Util_XML_Get_Node(ATLANTIS_FISHERY_ATTRIBUTE, attributeNode, FisheryArray[fisheryIndex].fisheryCode);
 		if (fisheryNode == NULL)
 			quit("%s fishery attribute group not found.\n", errorString);
@@ -51,7 +51,7 @@ void ReadPrescribedEffortDistributionXML(MSEBoxModel *bm, char *fileName, xmlNod
 		if (verbose > 1)
 			printf(" FisheryArray[fisheryIndex].fisheryCode = %s\n", FisheryArray[fisheryIndex].fisheryCode);
 		for (season = 1; season <= 4; season++) {
-			sprintf(str, "season%d", season);
+			snprintf(str, sizeof(str), "season%d", season);
 			if (Util_XML_Read_Array_Double(ATLANTIS_TEMPORAL_ATTRIBUTE, fileName, errorString, fisheryNode, proportion_check, str, &values, bm->nbox) == FALSE) {
 				quit("Error: Unable to find parameter '%s/%s' in input file %s\n", errorString,
 						str, fileName);
@@ -108,7 +108,7 @@ void readPortXMLData(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *p
 	char errorString[STRLEN];
 	char *nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/%s", nodeName, paramName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramName);
 
 	if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, errorString, parent, no_checking, paramName, &values, bm->K_num_ports) == FALSE) {
 		quit("Error: Unable to find parameter '%s' in input file %s\n", errorString, fileName);
@@ -136,14 +136,14 @@ void readBiMonthlyXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
 		if (FunctGroupArray[guild].isFished == TRUE) {
 
-			sprintf(errorString, "TAC_Parameters/BiMonthlyTAC/%s", FunctGroupArray[guild].groupCode);
+			snprintf(errorString, sizeof(errorString), "TAC_Parameters/BiMonthlyTAC/%s", FunctGroupArray[guild].groupCode);
 
 			speciesNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeGroup, FunctGroupArray[guild].groupCode);
 			if (speciesNode == NULL)
 				quit("readBiMonthlyXML - %s attribute group not found.\n", errorString);
 			for (region = 0; region < bm->K_num_reg; region++) {
 
-				sprintf(str, "region%d", region + 1);
+				snprintf(str, sizeof(str), "region%d", region + 1);
 
 				if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, errorString, speciesNode, proportion_check, str, &values, 6) == FALSE) {
 					quit("Error: Unable to find parameter '%s/%s' in input file %s\n", errorString, str, fileName);
@@ -165,7 +165,7 @@ void readRegionalTACXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 	char errorString[STRLEN];
 	char *nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/RegionalTAC", nodeName);
+	snprintf(errorString, sizeof(errorString), "%s/RegionalTAC", nodeName);
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, "RegionalTAC");
 	if (attributeGroup == NULL)
 		quit("readRegionalTACXML - %s attribute group not found.\n", errorString);
@@ -195,7 +195,7 @@ void readBasketTACXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 	char *nodeName =  Util_Get_Node_Name(parent);
 
 
-	sprintf(errorString, "%s/BasketTAC", nodeName);
+	snprintf(errorString, sizeof(errorString), "%s/BasketTAC", nodeName);
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, "BasketTAC");
 	if (attributeGroup == NULL)
 		quit("BasketTAC - %s attribute group not found.\n", errorString);
@@ -242,7 +242,7 @@ void readCompanionSpeciesXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent)
 
     printf("Doing readCompanionSpeciesXML\n");
     
-	sprintf(errorString, "%s/CompanionSpecies", nodeName);
+	snprintf(errorString, sizeof(errorString), "%s/CompanionSpecies", nodeName);
 
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, "CompanionSpecies");
 	if (attributeGroup == NULL)
@@ -286,15 +286,15 @@ static void Read_Fishery_Companion_Catch_XML(MSEBoxModel *bm, char *fileName, xm
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].isFished == TRUE) {
 
-            sprintf(errorString, "Companion_Parameters/co_sp_catch/%s", FunctGroupArray[guild].groupCode);
+            snprintf(errorString, sizeof(errorString), "Companion_Parameters/co_sp_catch/%s", FunctGroupArray[guild].groupCode);
             speciesNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeNode, FunctGroupArray[guild].groupCode);
             if (speciesNode == NULL)
                 quit("Companion_Parameters/co_sp_catch/%s species attribute group not found.\n", FunctGroupArray[guild].groupCode);
 
             for (co_sp = 0; co_sp < FunctGroupArray[guild].speciesParams[max_co_sp_id]; co_sp++) {
 
-                sprintf(str, "companion%d", co_sp + 1);
-                sprintf(errorString, "co_sp_catch/%s/%s", FunctGroupArray[guild].groupCode, str);
+                snprintf(str, sizeof(str), "companion%d", co_sp + 1);
+                snprintf(errorString, sizeof(errorString), "co_sp_catch/%s/%s", FunctGroupArray[guild].groupCode, str);
 
                 if (Util_XML_Read_Array_Double(ATLANTIS_COMPANION_ATTRIBUTE, fileName, errorString, speciesNode, no_checking, str, &values, bm->K_num_fisheries) == FALSE) {
                     quit("Error: Unable to find parameter '%s/%s' in input file %s\n", errorString, str, fileName);
@@ -328,7 +328,7 @@ void readEffortChangeXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, cha
 	char errorString[STRLEN];
 	char *nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/%s", nodeName, paramName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramName);
 
 	attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, paramName);
 	if (attributeNode == NULL)
@@ -371,7 +371,7 @@ void readCellMPAStatusXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 	char errorString[STRLEN];
 	char *nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/CellMPAStatus", nodeName);
+	snprintf(errorString, sizeof(errorString), "%s/CellMPAStatus", nodeName);
 
 	attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, "CellMPAStatus");
 	if (attributeNode == NULL)
@@ -425,7 +425,7 @@ void readMPAEndangeredXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 	char errorString[STRLEN];
 	char *nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/MPAEndangered", nodeName);
+	snprintf(errorString, sizeof(errorString), "%s/MPAEndangered", nodeName);
 
 
 	attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, "MPAEndangered");
@@ -462,7 +462,7 @@ void readMPAOverFishedXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 	char errorString[STRLEN];
 	char *nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/MPAOverFished", nodeName);
+	snprintf(errorString, sizeof(errorString), "%s/MPAOverFished", nodeName);
 
 	attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, "MPAOverFished");
 	if (attributeNode == NULL)
@@ -502,7 +502,7 @@ void readPopulationChangeXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent,
 	char errorString[STRLEN];
 	char *nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/%s", nodeName, paramName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramName);
 
 	attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, paramName);
 	if (attributeNode == NULL)
@@ -516,7 +516,7 @@ void readPopulationChangeXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent,
 
 		counter = (int) bm->Port_info[index][POP_num_changes_id];
 
-		sprintf(str, "port%d", index + 1);
+		snprintf(str, sizeof(str), "port%d", index + 1);
 		if(Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, errorString, attributeNode, no_checking, str, &values, counter) == FALSE){
 			quit("Error: Unable to find parameter '%s/%s' in input file %s\n", errorString, str, fileName);
 		}
@@ -950,7 +950,7 @@ void readSeaonalFisheryXML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode)
 	xmlNodePtr groupingNode;
 	double *values = 0;
 	char errorString[STRLEN];
-	sprintf(errorString, "%s/Seasonal_Fishery_Parameters", (char *)rootnode->name);
+	snprintf(errorString, sizeof(errorString), "%s/Seasonal_Fishery_Parameters", (char *)rootnode->name);
 
 	groupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, rootnode, "Seasonal_Fishery_Parameters");
 	if (groupingNode == NULL)
@@ -1158,7 +1158,7 @@ void readContaminantFisheryXML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootn
     char varStr[STRLEN*2];
     double *values = 0;
     char errorString[STRLEN];
-    sprintf(errorString, "%s/Fishery_Contaminant_Parameters", (char *)rootnode->name);
+    snprintf(errorString, sizeof(errorString), "%s/Fishery_Contaminant_Parameters", (char *)rootnode->name);
  
     groupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, rootnode, "Fishery_Contaminant_Parameters");
     if (groupingNode == NULL)
@@ -1179,7 +1179,7 @@ void readContaminantFisheryXML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootn
     bm->contam_fishery_closure_option = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "contam_fishery_closure_option");
 
     for(cIndex = 0; cIndex < bm->num_contaminants; cIndex++){
-        sprintf(varStr, "%s_fishery_thresh_level", bm->contaminantStructure[cIndex]->contaminant_name);
+        snprintf(varStr, sizeof(varStr), "%s_fishery_thresh_level", bm->contaminantStructure[cIndex]->contaminant_name);
         bm->contaminantStructure[cIndex]->fishery_thresh_level = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, varStr);
     }
 }

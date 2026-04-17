@@ -96,11 +96,11 @@ void init_SolarData(MSEBoxModel *bm, FILE *fp, PhyPropertyData *propInput, char 
 	strcpy(propInput->fname[0], buf);
 	propInput->variableName = c_alloc1d(BMSLEN);
 	strcpy(propInput->variableName, variableName);
-	sprintf(buf, "%s_rewind", shortName);
+	snprintf(buf, sizeof(buf), "%s_rewind", shortName);
 	readkeyprm_i(fp, buf, &propInput->rewind);
 
     if(propInput->rewind == FALSE) {  // Just inc case looking for swr_rewind and its Solar_radiation_rewind
-        sprintf(buf, "Solar_radiation_rewind");
+        snprintf(buf, sizeof(buf), "Solar_radiation_rewind");
         readkeyprm_i(fp, buf, &propInput->rewind);
     }
 

@@ -115,6 +115,9 @@ static FILE *specificmortfp;
 static FILE *mortppfp;
 static FILE *specificmortppfp;
 
+static FILE *industmortfp;
+static FILE *stressmortfp;
+
 /* The diet check output file */
 static FILE *predPropCheckfp;
 static FILE *dietCheckfp;
@@ -150,6 +153,8 @@ static FILE * Init_MacrophyteBiom_File(MSEBoxModel *bm);
 static FILE * Init_AgeBiom_File(MSEBoxModel *bm);
 static FILE * Init_AnnualAgeBiom_File(MSEBoxModel *bm);
 static FILE * Init_DetailedDietCheck_File(MSEBoxModel *bm);
+static FILE * Init_IndustMortEst_File(MSEBoxModel *bm);
+static FILE * Init_StressMortEst_File(MSEBoxModel *bm);
 
 static void Update_Diets_Output(MSEBoxModel *bm);
 
@@ -387,8 +392,8 @@ void Calculate_Box_Biomass(MSEBoxModel *bm, FILE *llogfp, int ij, int nreg, int 
 		 beyond dynamic numbers used for prey elsewhere in the code */
 		nid = bm->DIN_id;
 		if(isDiagnostic == TRUE){
-			bm->diagnosticBiom[sp] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
-		}else{
+			bm->diagnosticBiom[nid] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;  // Intentional overload storing all nutrients in final slot
+		} else {
 			bm->totbiom[nid] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
 			if (isInitPops == TRUE) {
 				bm->initreg_prop[nid][nreg] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
@@ -406,7 +411,7 @@ void Calculate_Box_Biomass(MSEBoxModel *bm, FILE *llogfp, int ij, int nreg, int 
 		pid = NO3_i;
 		nid = bm->DIN_id;
 		if(isDiagnostic == TRUE){
-			bm->diagnosticBiom[sp] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
+			bm->diagnosticBiom[sp] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area; // Intentional overload storing all nutrients in final slot
 		}else{
 			bm->totbiom[nid] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
 
@@ -535,7 +540,7 @@ void Calculate_Box_Biomass(MSEBoxModel *bm, FILE *llogfp, int ij, int nreg, int 
 								break;
 							case AGE_STRUCTURED_BIOMASS: /* intentional follow through */
 							case BIOMASS:
-								for(n = 0; n < FunctGroupArray[sp].numCohorts; n++){
+								for(n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++){
 									pid = FunctGroupArray[sp].totNTracers[n];
 									/* Calculate the biomass of this group in this cell */
 									biomass = bm->boxes[ij].ice.tr[k][pid] * bm->boxes[ij].ice.dz[k] * bm->boxes[ij].area;
@@ -570,7 +575,8 @@ void Calculate_Box_Biomass(MSEBoxModel *bm, FILE *llogfp, int ij, int nreg, int 
 
 	if(bm->terrestrial_on){
 		if(bm->boxes[ij].type == LAND){
-			/* The land layer */
+            /* The land layer - 2D only so all k set to 0 */
+            k = 0;
 			for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 				if(FunctGroupArray[sp].speciesParams[flag_id]){
 					if (FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
@@ -644,8 +650,9 @@ void Calculate_Box_Biomass(MSEBoxModel *bm, FILE *llogfp, int ij, int nreg, int 
 										}
 
 										/* Starting YOY */
-										if (n < FunctGroupArray[sp].numGeneTypes)
-											tot_yoy[sp][stock_id] += (FunctGroupArray[sp].boxPopRatio[ij][k][0][0] * (bm->boxes[ij].tr[0][sn] + bm->boxes[ij].tr[0][rn]) * nums);
+                                        if (n < FunctGroupArray[sp].numGeneTypes) {
+                                            tot_yoy[sp][stock_id] += (FunctGroupArray[sp].boxPopRatio[ij][k][0][0] * (bm->boxes[ij].tr[0][sn] + bm->boxes[ij].tr[0][rn]) * nums);
+                                        }
 									}
 
 								}
@@ -788,7 +795,7 @@ void Check_Layer_Initial_Biomass(MSEBoxModel *bm){
 
 								if(biomass != 0){
 									fprintf(stderr, "WARN: Data for group %s in box %d, sediment layer %d in your initial conditions file. There are only %d sediment layers in this box. Please check and updated your initial conditions file.\n\n",
-										FunctGroupArray[sp].groupCode,  b, k, bm->boxes[b].nz);
+										FunctGroupArray[sp].groupCode,  b, k, bm->boxes[b].sm.nz);
 								}
 							}
 
@@ -1144,6 +1151,17 @@ void Open_Ecology_Output_Files(MSEBoxModel *bm) {
 	specificmortppfp = Init_SpecificPredMortEst_File(bm);
     predPropCheckfp = Init_PredPropCheck_File(bm);
 	/* Mortality estimates - simple overall estimates */
+    
+    /* Industry mortality - if industries active *
+    if(bm->flagindustry_on) {
+        industmortfp = Init_IndustMortEst_File(bm);
+    
+        // Stress mortality
+        stressmortfp = Init_StressMortEst_File(bm);
+    }
+    */
+
+    /* Diet checks */
 	dietCheckfp = Init_DietCheck_File(bm);
     
     if(bm->flagdietcheck)
@@ -1290,7 +1308,7 @@ static FILE * Init_VirginBiom_File(MSEBoxModel *bm) {
     }
     
 	/** Create filename **/
-	sprintf(fname, "%sBiomIndx.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sBiomIndx.txt", bm->startfname);
 
     /** Create file **/
     if ( (fid=Util_fopen(bm, fname, "w")) == NULL ) {
@@ -1307,21 +1325,21 @@ static FILE * Init_VirginBiom_File(MSEBoxModel *bm) {
 
 		if (sp == bm->K_num_tot_sp || (sp < bm->K_num_tot_sp && (FunctGroupArray[sp].isDetritus == TRUE
 				|| (FunctGroupArray[sp].isDetritus == FALSE && (int) (FunctGroupArray[sp].speciesParams[flag_id]))))) {
-			if(sp < bm->K_num_tot_sp ){
+			if (sp < bm->K_num_tot_sp ) {
 #ifdef PRINT_AGE_STRUCTURED
-				if(FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED_BIOMASS){
+				i f(FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED_BIOMASS) {
 					for(n = 0; n < FunctGroupArray[sp].numCohorts; n++){
 						fprintf(fid, " %s-%d", FunctGroupArray[sp].groupCode, n);
 					}
-				}else{
+				} else {
 					fprintf(fid, " %s", FunctGroupArray[sp].groupCode);
 				}
 #else
-					fprintf(fid, " %s", FunctGroupArray[sp].groupCode);
+                fprintf(fid, " %s", FunctGroupArray[sp].groupCode);
 
 #endif
 
-			}else{
+			} else {
 				fprintf(fid, " %s", FunctGroupArray[sp].groupCode);
 			}
 		}
@@ -1365,11 +1383,6 @@ static void Write_VirginBiomass(FILE *fid, MSEBoxModel *bm) {
     double this_biom = 0;
     double num_rec = 0.0;
 
-#ifdef PRINT_AGE_STRUCTURED
-	int n;
-#endif
-
-
 	if (verbose > 1)
         printf( "Write total biomass information\n");
 
@@ -1384,13 +1397,13 @@ static void Write_VirginBiomass(FILE *fid, MSEBoxModel *bm) {
 		if (sp == bm->K_num_tot_sp || (sp < bm->K_num_tot_sp && (FunctGroupArray[sp].isDetritus == TRUE
 				|| (FunctGroupArray[sp].isDetritus == FALSE && (int) (FunctGroupArray[sp].speciesParams[flag_id]))))) {
 			if(sp < bm->K_num_tot_sp ){
+                
 #ifdef PRINT_AGE_STRUCTURED
-
 				if(FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED_BIOMASS){
 					for(n = 0; n < FunctGroupArray[sp].numCohorts; n++){
 						fprintf(fid, " %f", bm->totagepop[sp][n] * bm->X_CN * mg_2_tonne);
 					}
-				}else{
+				} else {
 					fprintf(fid, " %f", bm->totfishpop[sp] * bm->X_CN * mg_2_tonne);
 				}
 #else
@@ -1398,7 +1411,7 @@ static void Write_VirginBiomass(FILE *fid, MSEBoxModel *bm) {
 
 #endif
 
-			}else{
+			} else {
 				fprintf(fid, " %f", bm->totfishpop[sp] * bm->X_CN * mg_2_tonne);
 			}
 		}
@@ -1469,7 +1482,7 @@ static FILE * Init_Regional_Biomass_File(MSEBoxModel *bm) {
 	int sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sBiomReg.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sBiomReg.txt", bm->startfname);
 
     /** Create file **/
     if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
@@ -1569,7 +1582,7 @@ static FILE * Init_YOY_File(MSEBoxModel *bm) {
 	int sp, flag_sp, stock;
 
 	/** Create filename **/
-	sprintf(fname, "%sYOY.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sYOY.txt", bm->startfname);
 
     /** Create file **/
     if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
@@ -1636,7 +1649,7 @@ static FILE * Init_SSB_File(MSEBoxModel *bm) {
 	int sp, flag_sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sSSB.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sSSB.txt", bm->startfname);
 
     /** Create file **/
     if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
@@ -1727,7 +1740,7 @@ static FILE * Init_MortEst_File(MSEBoxModel *bm) {
 	int sp, flag_sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sMort.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sMort.txt", bm->startfname);
 
     /** Create file **/
     if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
@@ -1833,7 +1846,7 @@ FILE * Init_SpecificMortEst_File(MSEBoxModel *bm)
     int sp, flag_sp, cohort, stock;
 
     /** Create filename **/
-    sprintf(fname,"%sSpecificMort.txt",bm->startfname);
+    snprintf(fname, sizeof(fname),"%sSpecificMort.txt",bm->startfname);
     printf("Creating %s\n",fname);
 
     /** Create file **/
@@ -1948,7 +1961,7 @@ static FILE * Init_SpecificPredMortEst_File(MSEBoxModel *bm)
     int sp, flag_sp;
 
     /** Create filename **/
-    sprintf(fname,"%sSpecificPredMort.txt",bm->startfname);
+    snprintf(fname, sizeof(fname),"%sSpecificPredMort.txt",bm->startfname);
     printf("Creating %s\n",fname);
 
     /** Create file **/
@@ -2021,7 +2034,7 @@ static FILE * Init_PredPropCheck_File(MSEBoxModel *bm) {
     int totnum = bm->K_num_tot_sp;
     
     /** Create filename **/
-    sprintf(fname, "%sPredPropCheck.txt", bm->startfname);
+    snprintf(fname, sizeof(fname), "%sPredPropCheck.txt", bm->startfname);
     
     /** Create file **/
     if ((fid = Util_fopen(bm, fname, "w")) == NULL)
@@ -2106,7 +2119,7 @@ static FILE * Init_MortPerPredEst_File(MSEBoxModel *bm) {
 	int sp, flag_sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sMortPerPred.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sMortPerPred.txt", bm->startfname);
 
     /** Create file **/
     if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
@@ -2233,6 +2246,144 @@ static void Write_MortPerPred(FILE *fid, MSEBoxModel *bm) {
 	return;
 }
 
+/****************************************************//**
+*
+*    \brief This routine outputs mortality due to
+*    industry activity - including ship strikes.
+*
+*/
+static FILE * Init_IndustMortEst_File(MSEBoxModel *bm) {
+    FILE *fid;
+    char fname[BMSLEN];
+    int totnum = bm->K_num_tot_sp;
+    int sp, flag_sp;
+    
+    /** Create filename **/
+    sprintf(fname,"%sIndustMort.txt",bm->startfname);
+    printf("Creating %s\n",fname);
+    
+    /** Create file **/
+    if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
+        quit("initIndustMortFile: Can't open %s\n",fname);
+    
+    /** Column definitions **/
+    fprintf(fid,"Time");
+    for (sp=0; sp<totnum; sp++) {
+        flag_sp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
+        if (flag_sp && FunctGroupArray[sp].isCollisionRisk) {
+            fprintf(fid, " %s", FunctGroupArray[sp].groupCode);
+        }
+    }
+    fprintf(fid,"\n");
+    
+    /* Return file pointer */
+    return(fid);
+}
+
+
+/**************************************************************************//**
+*
+*    \brief Routine to write out the industry induced mortality data
+*
+*****************************************************************************/
+static void Write_IndustryMort(FILE *fid, MSEBoxModel *bm)
+{
+    int sp = 0, flag_sp = 0, stock = 0, cohort = 0;
+    int totnum = bm->K_num_tot_sp;
+    long double tot_dead = 0.0;
+    
+    if ( verbose > 1)
+        fprintf(stderr,"Write industry mortality estimates\n");
+    
+    // Write output
+    fprintf(fid,"%e", bm->dayt);
+    
+    for (sp=0; sp<totnum; sp++) {
+        flag_sp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
+        if (flag_sp && FunctGroupArray[sp].isCollisionRisk) {
+            tot_dead = 0.0;
+            for(cohort=0; cohort<FunctGroupArray[sp].numCohortsXnumGenes; cohort++) {
+                for(stock=0; stock<FunctGroupArray[sp].numStocks; stock++){
+                    tot_dead += bm->calcTrackedMort[sp][cohort][stock][finalIndust_id];
+                }
+            }
+            fprintf(fid," %LE", tot_dead);
+        }
+    }
+    fprintf(fid,"\n");
+    
+    return;
+}
+
+/****************************************************//**
+*
+*    \brief This routine outputs mortality due to
+*    disease/stress created by industrial activty - including dredging.
+*
+*/
+static FILE * Init_StressMortEst_File(MSEBoxModel *bm) {
+    FILE *fid;
+    char fname[BMSLEN];
+    int totnum = bm->K_num_tot_sp;
+    int sp, flag_sp;
+    
+    /** Create filename **/
+    sprintf(fname,"%sStressMort.txt",bm->startfname);
+    printf("Creating %s\n",fname);
+    
+    /** Create file **/
+    if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
+        quit("initStressMortFile: Can't open %s\n",fname);
+    
+    /** Column definitions **/
+    fprintf(fid,"Time");
+    for (sp=0; sp<totnum; sp++) {
+        flag_sp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
+        if (flag_sp) {
+            fprintf(fid, " %s", FunctGroupArray[sp].groupCode);
+        }
+    }
+    fprintf(fid,"\n");
+    
+    /* Return file pointer */
+    return(fid);
+}
+
+
+/**************************************************************************//**
+*
+*    \brief Routine to write out the stress induced mortality data
+*
+*****************************************************************************/
+static void Write_StressMort(FILE *fid, MSEBoxModel *bm)
+{
+    int sp = 0, flag_sp = 0, stock = 0, cohort = 0;
+    int totnum = bm->K_num_tot_sp;
+    long double tot_dead = 0.0;
+    
+    if ( verbose > 1)
+        fprintf(stderr,"Write stress mortality estimates\n");
+    
+    // Write output
+    fprintf(fid,"%e", bm->dayt);
+    
+    for (sp=0; sp<totnum; sp++) {
+        flag_sp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
+        if (flag_sp) {
+            tot_dead = 0.0;
+            for(cohort=0; cohort<FunctGroupArray[sp].numCohortsXnumGenes; cohort++) {
+                for(stock=0; stock<FunctGroupArray[sp].numStocks; stock++){
+                    tot_dead += bm->calcTrackedMort[sp][cohort][stock][finalStress_id];
+                }
+            }
+            fprintf(fid," %LE", tot_dead);
+        }
+    }
+    fprintf(fid,"\n");
+    
+    return;
+}
+
 
 /****************************************************//**
  *
@@ -2304,7 +2455,7 @@ static FILE * Init_DietCheck_File(MSEBoxModel *bm) {
     int totnum = bm->K_num_tot_sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sDietCheck.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sDietCheck.txt", bm->startfname);
 
 	/** Create file **/
 	if ((fid = Util_fopen(bm, fname, "w")) == NULL)
@@ -2338,7 +2489,7 @@ static FILE * Init_DetailedDietCheck_File(MSEBoxModel *bm) {
     int totnum = bm->K_num_tot_sp;
     
     /** Create filename **/
-    sprintf(fname, "%sDetailedDietCheck.txt", bm->startfname);
+    snprintf(fname, sizeof(fname), "%sDetailedDietCheck.txt", bm->startfname);
     
     /** Create file **/
     if ((fid = Util_fopen(bm, fname, "w")) == NULL)
@@ -2448,14 +2599,14 @@ static void Write_DetailedDietCheck(FILE *fid, MSEBoxModel *bm) {
                     
                     /* Sediment layers */
                     for (k = 0; k < bm->sednz; k++) {
-                        fprintf(fid,"%e %s %d %d %d", bm->dayt, FunctGroupArray[sp].groupCode, cohort, b, -1*(k+1));  // So sediment layers come out as -1, -2.... -n+1 etc
+                        fprintf(fid,"%e %s %d %d %d", bm->dayt, FunctGroupArray[sp].groupCode, cohort, b, -1*(k+1));  // So sediment layers come out as -1, -2.... -n etc
                         /* Write natural mortality values */
                         if (bm->flagdietcheck == 2) {
                             totdiet = 0.0;
                             for (prey=0; prey<totnum; prey++) {
                                 flag_spprey = (int) (FunctGroupArray[prey].speciesParams[flag_id]);
                                 if (flag_spprey) {
-                                    totdiet += bm->totDiet[b][k][sp][cohort][prey];
+                                    totdiet += bm->totDiet[b][bm->wcnz+k][sp][cohort][prey];
                                 }
                             }
                             if (!totdiet) totdiet = small_num;
@@ -2517,7 +2668,7 @@ FILE * Init_Migration_File(MSEBoxModel *bm)
     char fname[STRLEN];
 
     /** Create filename **/
-    sprintf(fname,"%sMigration.txt",bm->startfname);
+    snprintf(fname, sizeof(fname),"%sMigration.txt",bm->startfname);
 
     /** Create file **/
     if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
@@ -2672,7 +2823,7 @@ FILE * Init_MigrationDump_File(MSEBoxModel *bm)
     char fname[STRLEN];
     
     /** Create filename **/
-    sprintf(fname,"%sMigrationArray.txt",bm->startfname);
+    snprintf(fname, sizeof(fname),"%sMigrationArray.txt",bm->startfname);
     
     /** Create file **/
     if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
@@ -2740,7 +2891,7 @@ FILE *Init_Size_Data_File(MSEBoxModel *bm){
 	char fname[STRLEN];
 
 	/** Create filename **/
-	sprintf(fname,"%sVertSize.txt",bm->startfname);
+	snprintf(fname, sizeof(fname),"%sVertSize.txt",bm->startfname);
 	printf("Creating %s\n",fname);
 
 	/** Create file **/
@@ -2822,60 +2973,6 @@ void Write_Size_Data_File(FILE *fid, MSEBoxModel *bm){
 	fprintf(fid,"\n");
 }
 
-void Write_Size_At_Age_Data_File(FILE *fid, MSEBoxModel *bm){
-    
-    int b, k, sp, n;
-    double DENsum, RNsum, SNsum, biomassSum;
-    int den, sn, rn;
-    
-    /* Write time */
-    fprintf(fid,"%e", bm->dayt);
-    
-    for(sp = 0; sp < bm->K_num_tot_sp; sp++){
-        if ( (int)(FunctGroupArray[sp].speciesParams[flag_id])){
-            
-            if(FunctGroupArray[sp].num_migrate){
-                
-                if(FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED){
-                    DENsum = 0;
-                    RNsum = 0;
-                    SNsum = 0;
-                    
-                    for(n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++){
-                        sn = FunctGroupArray[sp].structNTracers[n];
-                        rn = FunctGroupArray[sp].resNTracers[n];
-                        den = FunctGroupArray[sp].NumsTracers[n];
-                        for (b=0; b<bm->nbox; b++) {
-                            if (bm->boxes[b].type != BOUNDARY) {
-                                for (k=0; k<bm->boxes[b].nz; k++) {
-                                    
-                                    DENsum += bm->boxes[b].tr[k][den];
-                                    SNsum = SNsum + (bm->boxes[b].tr[k][sn] * bm->boxes[b].tr[k][den]);
-                                    RNsum = RNsum + (bm->boxes[b].tr[k][rn] * bm->boxes[b].tr[k][den]);
-                                }
-                            }
-                        }
-                    }
-                    if(DENsum > 0){
-                        /* Normalise the Sn and Rn values*/
-                        SNsum = SNsum / DENsum;
-                        RNsum = RNsum / DENsum;
-                    }else{
-                        SNsum = 0;
-                        RNsum= 0;
-                    }
-                    biomassSum = DENsum * (SNsum + RNsum)* bm->X_CN * mg_2_tonne;
-                    fprintf(fid, " %e", DENsum);
-                    fprintf(fid, " %e", SNsum);
-                    fprintf(fid, " %e", RNsum);
-                    fprintf(fid, " %e", biomassSum);
-                }
-            }
-        }
-    }
-    fprintf(fid,"\n");
-}
-
 void Output_Size_Data(MSEBoxModel *bm)
 {
 	/* migration data */
@@ -2896,7 +2993,7 @@ static FILE * Init_MacrophyteBiom_File(MSEBoxModel *bm) {
 	int sp, cohort;
 
 	/** Create filename **/
-	sprintf(fname, "%sSeagrassBiomIndx.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sSeagrassBiomIndx.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -2957,7 +3054,7 @@ static FILE * Init_AgeBiom_File(MSEBoxModel *bm) {
 	int sp, cohort;
 
 	/** Create filename **/
-	sprintf(fname, "%sAgeBiomIndx.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sAgeBiomIndx.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -3017,7 +3114,7 @@ static FILE * Init_AnnualAgeBiom_File(MSEBoxModel *bm) {
     int sp, cohort, this_cohort, i;
     
     /** Create filename **/
-    sprintf(fname, "%sAnnualAgeBiomIndx.txt", bm->startfname);
+    snprintf(fname, sizeof(fname), "%sAnnualAgeBiomIndx.txt", bm->startfname);
     printf("Creating %s\n", fname);
     
     /** Create file **/
@@ -3089,7 +3186,7 @@ static FILE * Init_BoxLight_File(MSEBoxModel *bm) {
 	int b;
 
 	/** Create filename **/
-	sprintf(fname, "%sBoxLight.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sBoxLight.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/
@@ -3144,7 +3241,7 @@ static FILE * Init_BoxBiomass_File(MSEBoxModel *bm) {
 	int sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sBoxBiomass.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sBoxBiomass.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
     /** Create file **/

@@ -130,7 +130,7 @@ void Read_PSS_Change(MSEBoxModel *bm, FILE *pfp) {
 		keyprm_verbose = 1;
 
 		/* Read the number of changes */
-		sprintf(str, "pss%d_numchanges", s);
+		snprintf(str, sizeof(str), "pss%d_numchanges", s);
 		readkeyprm_i(pfp, str, &bm->pss[s].numPssChanges);
 
 		if(bm->pss[s].numPssChanges > 0){
@@ -147,11 +147,11 @@ void Read_PSS_Change(MSEBoxModel *bm, FILE *pfp) {
 
 				/* Read the psschange list (pss - point source/sink) */
 
-				sprintf(str, "pss%d_change%d", s, i);
+				snprintf(str, sizeof(str), "pss%d_change%d", s, i);
 				readkeyprm_iarray_checked(pfp, integer_check, str, &bm->pss[s].pssChange[i], &counter, bm->pss[s].ts.nv - 1);
 
 				/* Read the rest of the nutrient change parameters */
-				sprintf(str, "pss%d_mult%d", s, i);
+				snprintf(str, sizeof(str), "pss%d_mult%d", s, i);
 				readkeyprm_darray_checked(pfp, no_checking, str, &bm->pss[s].pssMult[i], &counter, bm->pss[s].ts.nv - 1);
 
 				for (k = 0; k < bm->pss[s].ts.nv - 1; k++) {
@@ -161,14 +161,14 @@ void Read_PSS_Change(MSEBoxModel *bm, FILE *pfp) {
 						quit("pss_mult values must be >0 for point sources that are being scaled.\n");
 				}
 
-				sprintf(str, "pss%d_period%d", s, i);
+				snprintf(str, sizeof(str), "pss%d_period%d", s, i);
 				readkeyprm_iarray_checked(pfp, no_checking, str, &bm->pss[s].pssPeriod[i], &counter, bm->pss[s].ts.nv - 1);
 				for (k = 0; k < bm->pss[s].ts.nv - 1; k++) {
 					if (bm->pss[s].pssChange[i][k] && bm->pss[s].pssPeriod[i][k] <= 0)
 						quit("pss_period values must be >0 for point sources that are being scaled.\n");
 				}
 
-				sprintf(str, "pss%d_start%d", s, i);
+				snprintf(str, sizeof(str), "pss%d_start%d", s, i);
 				readkeyprm_iarray_checked(pfp, no_checking, str, &bm->pss[s].pssStart[i], &counter, bm->pss[s].ts.nv - 1);
 			}
 		}
@@ -184,6 +184,7 @@ void initPhysics(MSEBoxModel *bm) {
 	int i, this_nz;
 	int counter = 0;
 	static int called = 0;
+    double base_cell_vol = 0.0;
 	FILE *pfp;
 	char buf[BMSLEN];
 	char *reflect = "edge_type";
@@ -191,11 +192,18 @@ void initPhysics(MSEBoxModel *bm) {
 	char *eddy_S2 = "eddy_S2";
 	char *eddy_S3 = "eddy_S3";
 	char *eddy_S4 = "eddy_S4";
-    double base_cell_vol; // Need to get average volume of the surface layer - needed in calculating some initial larval stuff
+    char *ship_channels = "ship_channels";
+    char *ship_mixing = "ship_mixing_rate";
+    char *vessel_size = "vessel_size";
+    char *dredge_path = "dredge_path";
+    char *dscalar = "decay_scalar";
+    char *lndreclaim = "land_reclaim";
 
 	/* Create local vectors */
 	double *bnd_type = alloc1d(bm->nbox);
 	double *eddy_S = alloc1d(bm->nbox);
+    double *ship_info = alloc1d(bm->K_num_vessel_sizes);
+    double *dcay_scalar = alloc1d(bm->nbox);
 
 	/* Create the physics module structure */
 	allocatePhysicsModule(bm);
@@ -229,7 +237,7 @@ void initPhysics(MSEBoxModel *bm) {
 	readkeyprm_i(pfp, "include_atmosphere", &bm->include_atmosphere);
 
 	if(bm->include_atmosphere){
-		/* SGet atmospheric concentrations */
+		/* Get atmospheric concentrations */
 		readkeyprm_d(pfp, "atmospheric_NH", &bm->atmospheric_NH);
 		readkeyprm_d(pfp, "atmospheric_NO", &bm->atmospheric_NO);
 		readkeyprm_d(pfp, "atmospheric_F", &bm->atmospheric_F);
@@ -238,6 +246,18 @@ void initPhysics(MSEBoxModel *bm) {
 		readkeyprm_d(pfp, "atmospheric_P", &bm->atmospheric_P);
 		readkeyprm_d(pfp, "atmospheric_Si", &bm->atmospheric_Si);
 	}
+    
+    readkeyprm_i(pfp, "include_outgas", &bm->include_outgas);
+    
+    if (bm->include_outgas) {
+        readkeyprm_d(pfp, "outgas_prop", &bm->outgas_prop);
+        readkeyprm_d(pfp, "outgas_NH", &bm->outgas_NH);
+        readkeyprm_d(pfp, "outgas_NO", &bm->outgas_NO);
+        readkeyprm_d(pfp, "outgas_O2", &bm->outgas_O2);
+        readkeyprm_d(pfp, "outgas_CO2", &bm->outgas_CO2);
+        readkeyprm_d(pfp, "BGC_bound_scalar", &bm->BGC_bound_scalar);
+    } else
+        bm->BGC_bound_scalar = 1.0;
     
     readkeyprm_i(pfp, "mix_deep_O2", &bm->mix_deep_O2);
 
@@ -266,9 +286,15 @@ void initPhysics(MSEBoxModel *bm) {
 
     /* Read sediment related parameters if necessary */
 	if (bm->sednz > 0) {
+        /* Read in flag as to whether maintain sediment layer thickness or not */
+        readkeyprm_i(pfp, "maintain_sedlayer", &bm->maintain_sedlayer);
+        if(bm->maintain_sedlayer && (bm->sednz > 1))
+            quit("Should only really use maintain_sedlayer if there is only 1 sediment layer. You have %d layers so please set maintain_sedlayer to 0 in force.prm\n", bm->sednz);
+        
 		/* Read maximum and minimum sediment layer thickness */
 		readkeyprm_d(pfp, "maxseddz", &bm->maxseddz);
 		readkeyprm_d(pfp, "minseddz", &bm->minseddz);
+        readkeyprm_d(pfp, "stress_silt_thresh", &bm->stress_silt_thresh);
 
 		for (b = 0; b < bm->nbox; b++) {
 			bm->boxes[b].sm.maxdz = bm->maxseddz;
@@ -303,162 +329,256 @@ void initPhysics(MSEBoxModel *bm) {
 		bm->biooxprofile = (char)tolower((int)buf[0]);
 		//TODO: Put in error checking here.
 
-		/* Read coefficient used to set baseline temperature for the model
-		 */
-		readkeyprm_d(pfp, "baseline_temp", &bm->baseline_temp);
-
-		/* Read coefficient used to set amplitude of temperature variation for the model
-		 */
-		readkeyprm_d(pfp, "temp_ampltiude", &bm->temp_amplitude);
-
-		/* Read switch indicating whether or not to constrain water depth
-		 * to a min value of 1m.
-		 */
-		//TODO: Add error checking for flag value. Should use the same function for all
-		// switch inputs
-		readkeyprm_i(pfp, "constrain_wc", &bm->constrain_wc);
-
-		/* Read vertical upwelling mixing rate */
-		readkeyprm_d(pfp, "mix_injection", &bm->mix_injection);
-
-		/* Read seasonal vertical upwelling mixing coefficient */
-		readkeyprm_d(pfp, "mix_season_kz", &bm->mix_season_kz);
-
-		/* Read switch indicating whether or not deep ocean mixing occurs
-		 */
-		readkeyprm_i(pfp, "mix_deep", &bm->mix_deep);
-
-		/* Read depth for deep ocean mixing */
-		readkeyprm_d(pfp, "mix_deep_depth", &bm->mix_deep_depth);
-
-		/* Read switch indicating whether or not to use point sources
-		 */
-		readkeyprm_i(pfp, "injection", &bm->injection);
-
-		/* Read switch indicating whether or not to use atmospheric exchange model
-		 */
-		readkeyprm_i(pfp, "atmospherics", &bm->atmospherics);
-
-		/* Read switch indicating whether or not to use settling model
-		 */
-		readkeyprm_i(pfp, "settling", &bm->settling);
-
-		/* Read switch indicating whether or not to use bioturbation model
-		 * or not	 */
-		readkeyprm_i(pfp, "bioirrigation", &bm->bioirrigation);
-
-		/* Read switch indicating whether or not to use bioturbation model
-		 */
-		readkeyprm_i(pfp, "bioturbation", &bm->bioturbation);
-
-		/* Read switch indicating whether or not to use horizontal diffusion model
-		 */
-		readkeyprm_i(pfp, "horiz_diffusion", &bm->horiz_diffusion);
-
-		/* Read switch indicating whether or not to use vertical diffusion model
-		 */
-		readkeyprm_i(pfp, "vert_diffusion", &bm->vert_diffusion);
-
-		/* Read switch indicating whether or not to use forced vertical mixing model
-		 */
-		readkeyprm_i(pfp, "vert_mix", &bm->vert_mix);
-
-		/* Read switch indicating whether or not to use transport model
-		 */
-		readkeyprm_i(pfp, "advect_diffusion", &bm->advect_diffusion);
+        /* Read switch indicating whether or not to use bioturbation model or not */
+        readkeyprm_i(pfp, "bioirrigation", &bm->bioirrigation);
         
-        /* Read switch indicating whether or not to use fill_zero_exchange flag and associated triggering threshold
-		 */
-		readkeyprm_i(pfp, "fill_zero_exchange", &bm->fill_zero_exchange);
-        if(bm->fill_zero_exchange) {
-            readkeyprm_i(pfp, "use_fill_horizmix", &bm->use_fill_horizmix);
-            readkeyprm_d(pfp, "flush_threshold", &bm->flush_threshold);
+        /* Read switch indicating whether or not to use bioturbation model */
+        readkeyprm_i(pfp, "bioturbation", &bm->bioturbation);
+        
+        /* Read switch indicating whether or not to use resuspension model */
+        readkeyprm_i(pfp, "resuspension", &bm->resuspension);
+        
+        /* Read switch indicating whether or not to use dynamic stress calculations */
+        readkeyprm_i(pfp, "dynamic_stress", &bm->dynamic_stress);
+        
+
+        /* Calculate initial sediment parameters such as
+         * porosity and critical shear stress.
+         */
+        for (b = 0; b < bm->nbox; b++) {
+            // Get the index of the top layer
+            k = bm->boxes[b].sm.topk;
+            
+            //TODO: Fix strange code.
+            if (bm->boxes[b].sm.porosity[k] > 0.0)
+                k = 0;
+            else
+                sedprops(bm);
         }
-		/* Read switch indicating whether or not to use resuspension model
-		 */
-		readkeyprm_i(pfp, "resuspension", &bm->resuspension);
+        
+        /* Read switch indicating whether or not to use decay model in sediments */
+        readkeyprm_i(pfp, "decay_sed", &bm->decay_sed);
+        
+        /* Read scalar for decay in sediments */
+        readkeyprm_d(pfp, "decay_sed_scale", &bm->decay_sed_scale);
+        
+    }
+    
+    /* Read switch indicating whether or not to use decay model in water column */
+    readkeyprm_i(pfp, "decay_wc", &bm->decay_wc);
+		
+    /* Read coefficient used to set baseline temperature for the model
+     */
+    readkeyprm_d(pfp, "baseline_temp", &bm->baseline_temp);
 
-		/* Read switch indicating whether or not to use decay model in water column
-		 */
-		readkeyprm_i(pfp, "decay_wc", &bm->decay_wc);
+    /* Read coefficient used to set amplitude of temperature variation for the model
+     */
+    readkeyprm_d(pfp, "temp_ampltiude", &bm->temp_amplitude);
 
-		/* Read switch indicating whether or not to use decay model in sediments
-		 */
-		readkeyprm_i(pfp, "decay_sed", &bm->decay_sed);
+    /* Read switch indicating whether or not to constrain water depth
+     * to a min value of 1m.
+     */
+    //TODO: Add error checking for flag value. Should use the same function for all
+    // switch inputs
+    readkeyprm_i(pfp, "constrain_wc", &bm->constrain_wc);
 
-		/* Read scalar for decay in sediments
-		 */
-		readkeyprm_d(pfp, "decay_sed_scale", &bm->decay_sed_scale);
+    /* Read vertical upwelling mixing rate */
+    readkeyprm_d(pfp, "mix_injection", &bm->mix_injection);
 
-		/* Read switch indicating whether or not to scale exchanges
-		 */
-		readkeyprm_i(pfp, "scale_transport", &bm->scale_transport);
+    /* Read seasonal vertical upwelling mixing coefficient */
+    readkeyprm_d(pfp, "mix_season_kz", &bm->mix_season_kz);
 
-		/* Read coefficient used in constant scaling of exchanges
-		 */
-		readkeyprm_d(pfp, "prcnt_exchange", &bm->prcnt_exchange);
+    /* Read switch indicating whether or not deep ocean mixing occurs */
+    readkeyprm_i(pfp, "mix_deep", &bm->mix_deep);
 
-		/* Read coefficient used in area corrected scaling of exchanges
-		 */
-		readkeyprm_d(pfp, "ka_exchange", &bm->ka_exchange);
+    /* Read depth for deep ocean mixing */
+    readkeyprm_d(pfp, "mix_deep_depth", &bm->mix_deep_depth);
 
-		/* Read switch indicating whether or not flows (exchanges) can cascade down slopes
-		 */
-		readkeyprm_i(pfp, "cascade_flows", &bm->cascade_flows);
+    /* Read switch indicating whether or not to use point sources */
+    readkeyprm_i(pfp, "injection", &bm->injection);
 
-		/* Read in switches identifying boundaries as standard, absorptive or reflective */
-		counter = bm->nbox;
-		readkeyprm_darray(pfp, reflect, &bnd_type, &counter);
-		for (b = 0; b < bm->nbox; b++) {
-			bm->boxes[b].edge_type = (int) (bnd_type[b]);
-		}
+    /* Read switch indicating whether or not to use atmospheric exchange model */
+    readkeyprm_i(pfp, "atmospherics", &bm->atmospherics);
 
-		/* Get seasonal eddy info */
-		bm->eddy_seasonal = (double **) alloc2d(4, bm->nbox);
-		readkeyprm_darray(pfp, eddy_S1, &eddy_S, &counter);
-		for (b = 0; b < bm->nbox; b++) {
-			bm->eddy_seasonal[b][0] = eddy_S[b];
-		}
-		readkeyprm_darray(pfp, eddy_S2, &eddy_S, &counter);
-		for (b = 0; b < bm->nbox; b++) {
-			bm->eddy_seasonal[b][1] = eddy_S[b];
-		}
-		readkeyprm_darray(pfp, eddy_S3, &eddy_S, &counter);
-		for (b = 0; b < bm->nbox; b++) {
-			bm->eddy_seasonal[b][2] = eddy_S[b];
-		}
-		readkeyprm_darray(pfp, eddy_S4, &eddy_S, &counter);
-		for (b = 0; b < bm->nbox; b++) {
-			bm->eddy_seasonal[b][3] = eddy_S[b];
-		}
+    /* Read switch indicating whether or not to use settling model */
+    readkeyprm_i(pfp, "settling", &bm->settling);
 
-		/* Read coefficient used in scaling of vertical exchanges by eddies
-		 */
-		readkeyprm_d(pfp, "eddy_mixscale", &bm->eddy_mixscale);
+    /* Read switch indicating whether or not to use horizontal diffusion model */
+    readkeyprm_i(pfp, "horiz_diffusion", &bm->horiz_diffusion);
 
-		/* Number of gradial nutrient changes that will take place.
-		 */
+    /* Read switch indicating whether or not to use vertical diffusion model */
+    readkeyprm_i(pfp, "vert_diffusion", &bm->vert_diffusion);
 
-		readkeyprm_i(pfp, "nutrientchange", &bm->nutrientChange);
-		readkeyprm_i(pfp, "pulsechange", &bm->pulsechange);
+    /* Read switch indicating whether or not to use forced vertical mixing model */
+    readkeyprm_i(pfp, "vert_mix", &bm->vert_mix);
 
-		if (bm->nutrientChange) {
-			Read_PSS_Change(bm, pfp);
-		}
-		/* Calculate initial sediment parameters such as
-		 * porosity and critical shear stress.
-		 */
-		for (b = 0; b < bm->nbox; b++) {
-			// Get the index of the top layer
-			k = bm->boxes[b].sm.topk;
+    /* Read switch indicating whether or not to use transport model */
+    readkeyprm_i(pfp, "advect_diffusion", &bm->advect_diffusion);
+        
+    /* Read switch indicating whether or not to use fill_zero_exchange
+     flag and associated triggering threshold */
+    readkeyprm_i(pfp, "fill_zero_exchange", &bm->fill_zero_exchange);
+    if(bm->fill_zero_exchange) {
+        readkeyprm_i(pfp, "use_fill_horizmix", &bm->use_fill_horizmix);
+        readkeyprm_d(pfp, "flush_threshold", &bm->flush_threshold);
+    }
 
-			//TODO: Fix strange code.
-			if (bm->boxes[b].sm.porosity[k] > 0.0)
-				k = 0;
-			else
-				sedprops(bm);
-		}
-	}
+    /* Read switch indicating whether or not to scale exchanges */
+    readkeyprm_i(pfp, "scale_transport", &bm->scale_transport);
+
+    /* Read coefficient used in constant scaling of exchanges */
+    readkeyprm_d(pfp, "prcnt_exchange", &bm->prcnt_exchange);
+
+    /* Read coefficient used in area corrected scaling of exchanges */
+    readkeyprm_d(pfp, "ka_exchange", &bm->ka_exchange);
+
+    /* Read switch indicating whether or not flows (exchanges) can cascade down slopes */
+    readkeyprm_i(pfp, "cascade_flows", &bm->cascade_flows);
+
+    /* Read in switches identifying boundaries as standard, absorptive or reflective */
+    counter = bm->nbox;
+    readkeyprm_darray(pfp, reflect, &bnd_type, &counter);
+    for (b = 0; b < bm->nbox; b++) {
+        bm->boxes[b].edge_type = (int) (bnd_type[b]);
+    }
+    
+    /* Read in box specific decay scalar */
+    readkeyprm_darray(pfp, dscalar, &dcay_scalar, &counter);
+    for (b = 0; b < bm->nbox; b++) {
+        bm->boxes[b].decay_scalar = dcay_scalar[b];
+    }
+
+    /* Get seasonal eddy info */
+    bm->eddy_seasonal = (double **) alloc2d(4, bm->nbox);
+    readkeyprm_darray(pfp, eddy_S1, &eddy_S, &counter);
+    for (b = 0; b < bm->nbox; b++) {
+        bm->eddy_seasonal[b][0] = eddy_S[b];
+    }
+    readkeyprm_darray(pfp, eddy_S2, &eddy_S, &counter);
+    for (b = 0; b < bm->nbox; b++) {
+        bm->eddy_seasonal[b][1] = eddy_S[b];
+    }
+    readkeyprm_darray(pfp, eddy_S3, &eddy_S, &counter);
+    for (b = 0; b < bm->nbox; b++) {
+        bm->eddy_seasonal[b][2] = eddy_S[b];
+    }
+    readkeyprm_darray(pfp, eddy_S4, &eddy_S, &counter);
+    for (b = 0; b < bm->nbox; b++) {
+        bm->eddy_seasonal[b][3] = eddy_S[b];
+    }
+
+    /* Read coefficient used in scaling of vertical exchanges by eddies */
+    readkeyprm_d(pfp, "eddy_mixscale", &bm->eddy_mixscale);
+
+    /* Number of gradial nutrient changes that will take place. */
+    readkeyprm_i(pfp, "nutrientchange", &bm->nutrientChange);
+	readkeyprm_i(pfp, "pulsechange", &bm->pulsechange);
+
+    if (bm->nutrientChange) {
+        Read_PSS_Change(bm, pfp);
+    }
+
+    /* Catastrophic events parameters */
+    readkeyprm_i(pfp, "flag_catastrophe", &bm->flag_catastrophe);    
+    if ( bm->flag_catastrophe ) {
+        readkeyprm_d(pfp, "catastrophic_duration", &bm->catastrophic_duration);
+    }
+    
+    /* Read in simple industries forcing - really only shipping for now */
+    if (bm->flagindustry_on == simple_industry_model) {
+        
+        /* Read in location and type (small, large etc) of shipping channels */
+        counter = bm->nbox;
+        readkeyprm_darray(pfp, ship_channels, &bnd_type, &counter);
+        for (b = 0; b < bm->nbox; b++) {
+            bm->boxes[b].channel_type = (int) (bnd_type[b]);
+        }
+        //Setup_Channel_info(bm);
+        
+        /* Dredge time steps */
+        readkeyprm_i(pfp, "dredge_dt", &bm->dredge_dt);
+        
+        /* Now find max dredge period to cover the path */
+        counter = bm->nbox;
+        readkeyprm_darray(pfp, dredge_path, &bnd_type, &counter);
+        bm->dredge_period = 0;
+        for (b = 0; b < bm->nbox; b++) {
+            bm->boxes[b].dredge_path = (int) (bnd_type[b]);
+            if (bm->dredge_period < (bm->boxes[b].dredge_path * bm->dredge_dt )) {
+                bm->dredge_period = bm->boxes[b].dredge_path * bm->dredge_dt;
+            }
+        }
+        bm->dredge_started = -1;
+        
+        /* Read in rate of excavation of dredge */
+        readkeyprm_d(pfp, "dredge_rate", &bm->dredge_rate);
+
+        /* Read in area excavated each day dredged */
+        readkeyprm_d(pfp, "dredge_area", &bm->dredge_area);
+        
+        /* Read in mass per cm2 of dredge material */
+        readkeyprm_d(pfp, "dredge_fines_mass", &bm->dredge_fines_mass);
+
+        /* Read in particle size of dredge material */
+        readkeyprm_d(pfp, "dredge_fines_psize", &bm->dredge_fines_psize);
+        bm->entrained_psize = bm->dredge_fines_psize;
+        
+        /* Read in smotehr decay coefficient */
+        readkeyprm_d(pfp, "smother_coefft", &bm->smother_coefft);
+
+        /* Read in smotehr decay coefficient */
+        readkeyprm_d(pfp, "smother_thresh", &bm->smother_thresh);
+        
+        for (b = 0; b < bm->nbox; b++) {
+            bm->boxes[b].land.ship_transits = Util_Alloc_Init_1D_Int(bm->K_num_vessel_sizes, 0);
+            bm->boxes[b].land.new_ship_num = Util_Alloc_Init_1D_Int(bm->K_num_vessel_sizes, 0);
+            bm->boxes[b].land.ship_num = Util_Alloc_Init_1D_Int(bm->K_num_vessel_sizes, 0);
+        }
+        
+        bm->ship_id = Util_Alloc_Init_1D_Int(bm->K_num_vessel_sizes, 0);
+        //Setup_Ship_IDs(bm, bm->ships); // Sort time series ids
+
+        bm->ship_mixing_rate = Util_Alloc_Init_1D_Double(bm->K_num_vessel_sizes, 0);
+        bm->vessel_size = Util_Alloc_Init_1D_Double(bm->K_num_vessel_sizes, 0);
+        
+        counter = bm->K_num_vessel_sizes;
+        readkeyprm_darray(pfp, ship_mixing, &ship_info, &counter);
+        for (b = 0; b < bm->K_num_vessel_sizes; b++) {
+            bm->ship_mixing_rate[b] = (int) (ship_info[b]);
+        }
+        counter = bm->K_num_vessel_sizes;
+        readkeyprm_darray(pfp, vessel_size, &ship_info, &counter);
+        for (b = 0; b < bm->K_num_vessel_sizes; b++) {
+            bm->vessel_size[b] = (int) (ship_info[b]);
+        }
+        
+        /* Read in ship strike mortality scalar - weighting on likelihood of ship strike causing mortality */
+        readkeyprm_d(pfp, "strike_mort_scalar", &bm->strike_mort_scalar);
+
+        counter = bm->nbox;
+        readkeyprm_darray(pfp, ship_mixing, &ship_info, &counter);
+        for (b = 0; b < bm->K_num_vessel_sizes; b++) {
+            bm->ship_mixing_rate[b] = (int) (ship_info[b]);
+        }
+
+    }
+    
+    bm->flag_reclaim_land = FALSE;
+    if(bm->terrestrial_on) {
+        /* Read in land reclamation */
+        readkeyprm_darray(pfp, lndreclaim, &dcay_scalar, &counter);
+        for (b = 0; b < bm->nbox; b++) {
+            bm->boxes[b].land.day_reclaim = dcay_scalar[b];
+            
+            if (lndreclaim[b] < bm->tstop)
+                bm->flag_reclaim_land = TRUE;
+        }
+        
+        /* Read in reclaimed land height */
+        readkeyprm_d(pfp, "reclaim_land_dz", &bm->reclaim_land_dz);
+       
+
+    }
 
 	/* For nutrients set initial bottom values so can have remixing */
 
@@ -466,6 +586,7 @@ void initPhysics(MSEBoxModel *bm) {
 	// then loop through each box.
     base_cell_vol = 0.0;
 	for (b = 0; b < bm->nbox; b++) {
+	    bm->boxes[b].land.ship_mix = 1.0;  // So initialised even if no ships present
 		for (i = 0; i < bm->ntracer; i++) {
 
 			if (bm->mix_deep && (bm->mix_deep_depth > bm->boxes[b].botz)) {
@@ -532,6 +653,8 @@ void initPhysics(MSEBoxModel *bm) {
 	/* Free local vectors */
 	free1d(bnd_type);
 	free1d(eddy_S);
+    free1d(ship_info);
+    free1d(dcay_scalar);
 
 	/* close parameter file */
 	fclose(pfp);
@@ -544,20 +667,39 @@ void physics(MSEBoxModel *bm, double ***newwctr, double ***newsedtr, FILE *llogf
 
 	int tracerIndex;
     
-    /* Add source/sink terms for this time */
+    /* If using simple industry models apply effects now *
+    if (bm->flagindustry_on == simple_industry_model) {
+        Do_Simple_Shipping(bm, newwctr, newsedtr);
+        Do_Simple_Dredging(bm, newwctr, newsedtr);
+    }
+    */
+    
+    /* Do any land reclamation *
+    if (bm->flag_reclaim_land) {
+        Do_Land_Reclaimation(bm, newwctr, newsedtr);
+    }
+    */
+    
+	/* Add source/sink terms for this time */
 	if (bm->injection == 1)
 		sourceSink(bm, newwctr, llogfp);
-    
+
     /* Handle light from input forcing files*/
     solarIrradiance(bm, newwctr, llogfp);
-
+    
     /* Gas exchange with atmosphere */
-	if (bm->atmospherics == 1)
-		gasExchange(bm, newwctr);
+    if (bm->atmospherics == 1) {
+        gasExchange(bm, newwctr);
+    }
     
     /* Decay in water column and sediments */
-	if (bm->decay_wc == 1 || bm->decay_sed == 1)
-		decayBM(bm, newwctr, newsedtr);
+    if (bm->decay_wc == 1 || bm->decay_sed == 1) {
+        decayBM(bm, newwctr, newsedtr);
+    }
+
+    if (!_finite(newwctr[24][0][Salinity_i])) {
+        printf("Time: %e Salinity in bottom water is nan - E\n", bm->dayt);
+    }
 
     /* Resuspension, sediments.
 	 * This should be done before settling so that coarse
@@ -565,26 +707,30 @@ void physics(MSEBoxModel *bm, double ***newwctr, double ***newsedtr, FILE *llogf
 	 * out again and are not transported elsewhere in
 	 * the model by the transport process below
 	 */
-	if (bm->resuspension == 1)
-		resuspendBM(bm, newwctr, newsedtr, llogfp);
+    if (bm->resuspension == 1) {
+        resuspendBM(bm, newwctr, newsedtr, llogfp);
+    }
 
     /* Settling, water column. This routine
 	 * calls the deposit() routine to
 	 * add material to the sediments.
 	 */
-	if (bm->settling == 1)
-		settleBMwc(bm, newwctr, newsedtr, llogfp);
-    
+    if (bm->settling == 1) {
+        settleBMwc(bm, newwctr, newsedtr, llogfp);
+    }
+     
     /* FIX - Compaction, sediments */
 
 	/* Bioirrigation */
-	if (bm->bioirrigation == 1)
-		bioirrig(bm, newwctr, newsedtr);
-
+    if (bm->bioirrigation == 1) {
+        bioirrig(bm, newwctr, newsedtr);
+    }
+    
     /* Bioturbation - only do it if switched on */
-	if (bm->bioturbation == 1)
-		bioturb(bm, newwctr, newsedtr);
-
+    if (bm->bioturbation == 1){
+        bioturb(bm, newwctr, newsedtr);
+    }
+    
     /* FIX - There may be other non-biological processes,
 	 * such as pressure gradient driven flows, which cause
 	 * diffusion and exchange - see Ian Websters summary
@@ -595,12 +741,14 @@ void physics(MSEBoxModel *bm, double ***newwctr, double ***newsedtr, FILE *llogf
 	 * in the transport model, but if all else fails in fine
 	 * estuarine boxes use this rather than panic.
 	 */
-	if (bm->horiz_diffusion == 1)
-		hdiffBMwc(bm, newwctr, llogfp);
+    if (bm->horiz_diffusion == 1) {
+        hdiffBMwc(bm, newwctr, llogfp);
+    }
     
     /* Horizontal diffusion to fill holes in transport models. */
-    if (bm->fill_zero_exchange == 1)
+    if (bm->fill_zero_exchange == 1) {
         filler_hdiffBMwc(bm, newwctr, llogfp);
+    }
     
     /* Vertical diffusion within water column.
 	 * This process should be done after all other non-forced
@@ -609,8 +757,9 @@ void physics(MSEBoxModel *bm, double ***newwctr, double ***newsedtr, FILE *llogf
 	 * have a chance to be smeared out before the next
 	 * time step.
 	 */
-	if (bm->vert_diffusion == 1)
-		vdiffBMwc(bm, newwctr);
+    if (bm->vert_diffusion == 1) {
+        vdiffBMwc(bm, newwctr);
+    }
     
     /* Vertical mixing. This is forced mixing to compensate for
 	 * the lack of vertical mixing and exchange in some sets
@@ -621,7 +770,6 @@ void physics(MSEBoxModel *bm, double ***newwctr, double ***newsedtr, FILE *llogf
         if (bm->use_VertMixfiles) {
              tracerForcingBM(bm, newwctr, newsedtr, &(bm->VertMixinput));
         }
-        
 		vertical_mixing(bm, newwctr);
     }
 
@@ -630,8 +778,9 @@ void physics(MSEBoxModel *bm, double ***newwctr, double ***newsedtr, FILE *llogf
 	 * to be done.
 	 */
 
-	if (bm->advect_diffusion == 1)
-		transportBM(bm, newwctr, llogfp);
+    if (bm->advect_diffusion == 1) {
+        transportBM(bm, newwctr, llogfp);
+    }
 
     /* Temperature forcing in the water column.
 	 */
@@ -671,8 +820,9 @@ void physics(MSEBoxModel *bm, double ***newwctr, double ***newsedtr, FILE *llogf
 	Ecology_Apply_Environ_Scalars(bm, newwctr, newsedtr);
     
     /* Update eddy values */
-	if(bm->use_eddy_NC == FALSE)
-		Eddy_Strength_Update(bm);
+    if(bm->use_eddy_NC == FALSE) {
+        Eddy_Strength_Update(bm);
+    }
     
     /* Saturation check - make sure everything
 	 is still in whack before continuing */
@@ -734,6 +884,39 @@ void Eddy_Strength_Update(MSEBoxModel *bm) {
 
 
 
+/*********************************************************************//**
+Routines to do sanity check on tracers after fluxes 
+*
+void Tracer_Sanity_Check(MSEBoxModel *bm, double ***newwc, double ***newsed) {
+    int b, n, k ;
+    
+    for (b = 0; b < bm->nbox; b++) {
+        
+        // Water column tracers
+        for (n = 0; n < bm->ntracer; n++) {
+            if (bm->tinfo[n].inwc) {
+                for (k = 0; k < bm->boxes[b].nz; k++) {
+                    if (newwc[b][k][n] < 0.0) {
+                        newwc[b][k][n] = bm->min_pool;
+                    }
+                }
+            }
+        
+        
+            if( bm->tinfo[n].insed ) {
+                for (k = 0; k < bm->boxes[b].sm.nz; k++) {
+                    if (newsed[b][k][n] < 0.0) {
+                        newsed[b][k][n] = bm->min_pool;
+                    }
+                }
+            }
+        }
+        
+    }
+    
+    return;
+}
+*/
 /*********************************************************************//**
 Routines to spit out value of specific group (or DIN if 
 which_check == bm->K_num_tot_sp) to help track conservation of mass

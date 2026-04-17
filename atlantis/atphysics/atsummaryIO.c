@@ -42,7 +42,7 @@ int createBMSummaryDataFile(char *destFolder, char *name, MSEBoxModel *bm) {
 	int fid;
     char fileName[BMSLEN];
 
-	sprintf(fileName, "%s%s", destFolder, name);
+	snprintf(fileName, sizeof(fileName), "%s%s", destFolder, name);
 
 	/* Set netCDF error handling */
 	ncopts = NC_VERBOSE | NC_FATAL;

@@ -60,15 +60,29 @@ void Max_Flux_Check(MSEBoxModel *bm, int callerid, int *fluxsp, int *fluxid, int
 				switch (FunctGroupArray[fgIndex].groupAgeType) {
 				case AGE_STRUCTURED:
 					for (n = 0; n < FunctGroupArray[fgIndex].numCohortsXnumGenes; n++) {
+
+                        /* Biomass checks */
 						valcheck = (FunctGroupArray[fgIndex].grow[n][SN_id] + FunctGroupArray[fgIndex].grow[n][RN_id])
 								* VERTinfo[fgIndex][n][DEN_id] / bm->cell_vol;
 						if (fabs(valcheck) > maxflux) {
 							ans = FunctGroupArray[fgIndex].totNTracers[n];
 							maxflux = valcheck;
 							flux_sp = fgIndex;
-							fluxnum = WC;
+							fluxnum = WC; // Our should this be growth_id ?
 							fcnum = n;
 						}
+                        
+                        /* Biomass check 2 - never used as first check will trip it so don't both doing the test
+                        if (fabs(valcheck) > maxflux) {
+                            ans = -fgIndex;
+                            maxflux = valcheck;
+                            flux_sp = fgIndex;
+                            fluxnum = growth_id;
+                            fcnum = n;
+                        }
+                         */
+                        
+                        /* Death check */
 						valcheck = (FunctGroupArray[fgIndex].dead[n] + (double)FunctGroupArray[fgIndex].preyEaten[n][WC]) * (VERTinfo[fgIndex][n][SN_id]
 								+ VERTinfo[fgIndex][n][RN_id]) / bm->cell_vol;
 						if (fabs(valcheck) > maxflux) {
@@ -76,15 +90,6 @@ void Max_Flux_Check(MSEBoxModel *bm, int callerid, int *fluxsp, int *fluxid, int
 							maxflux = valcheck;
 							flux_sp = fgIndex;
 							fluxnum = death_id;
-							fcnum = n;
-						}
-						valcheck = (FunctGroupArray[fgIndex].grow[n][SN_id] + FunctGroupArray[fgIndex].grow[n][RN_id])
-								* VERTinfo[fgIndex][n][DEN_id] / bm->cell_vol;
-						if (fabs(valcheck) > maxflux) {
-							ans = -fgIndex;
-							maxflux = valcheck;
-							flux_sp = fgIndex;
-							fluxnum = growth_id;
 							fcnum = n;
 						}
 					}
@@ -114,11 +119,13 @@ void Max_Flux_Check(MSEBoxModel *bm, int callerid, int *fluxsp, int *fluxid, int
 		if (fabs(localWCFlux[NO3_i]) > maxflux) {
 			ans = NO3_i;
 			maxflux = localWCFlux[NO3_i];
+            fluxnum = WC;
 			flux_sp = bm->K_num_tot_sp;
 		}
 		if (fabs(localWCFlux[DON_i]) > maxflux) {
 			ans = DON_i;
 			maxflux = localWCFlux[DON_i];
+            fluxnum = WC;
 			flux_sp = bm->K_num_tot_sp;
 		}
 		break;
@@ -182,15 +189,26 @@ void Max_Flux_Check(MSEBoxModel *bm, int callerid, int *fluxsp, int *fluxid, int
 								"Currently no age structured groups allowed inside the sediments (at least in maxflux) - if this is allowed now recode this fluxcheck\n");
 					} else {
 						for (n = 0; n < FunctGroupArray[fgIndex].numCohortsXnumGenes; n++) {
+                            /* Growth check 1 */
 							valcheck = (FunctGroupArray[fgIndex].grow[n][SN_id] + FunctGroupArray[fgIndex].grow[n][RN_id])
 									* VERTinfo[fgIndex][n][DEN_id] / bm->cell_vol;
 							if (fabs(valcheck) > maxflux) {
-								ans = FunctGroupArray[fgIndex].totNTracers[0];
+								ans = FunctGroupArray[fgIndex].totNTracers[n]; // was 0
 								maxflux = valcheck;
 								flux_sp = fgIndex;
-								fluxnum = WC;
-								fcnum = 0;
+								fluxnum = WC; // Should this be growth_id?
+								fcnum = n; // was 0
 							}
+                            /* Growth check 2 - as above this is not used so don't waste time doing the check
+                            if (fabs(valcheck) > maxflux) {
+                                ans = -fgIndex;
+                                maxflux = valcheck;
+                                flux_sp = fgIndex;
+                                fluxnum = growth_id;
+                                fcnum = n;
+                            }
+                             */
+                            /* Death check */
 							valcheck = (FunctGroupArray[fgIndex].dead[n] + (double)FunctGroupArray[fgIndex].preyEaten[n][WC]) * (VERTinfo[fgIndex][n][SN_id]
 									+ VERTinfo[fgIndex][n][RN_id]) / bm->cell_vol;
 							if (fabs(valcheck) > maxflux) {
@@ -198,15 +216,6 @@ void Max_Flux_Check(MSEBoxModel *bm, int callerid, int *fluxsp, int *fluxid, int
 								maxflux = valcheck;
 								flux_sp = fgIndex;
 								fluxnum = death_id;
-								fcnum = n;
-							}
-							valcheck = (FunctGroupArray[fgIndex].grow[n][SN_id] + FunctGroupArray[fgIndex].grow[n][RN_id])
-									* VERTinfo[fgIndex][n][DEN_id] / bm->cell_vol;
-							if (fabs(valcheck) > maxflux) {
-								ans = -fgIndex;
-								maxflux = valcheck;
-								flux_sp = fgIndex;
-								fluxnum = growth_id;
 								fcnum = n;
 							}
 						}
@@ -565,7 +574,7 @@ void Print_Flux(MSEBoxModel *bm, int level_id, double ***spSPinfo, int qnancheck
 							fprintf(llogfp, "%s-%d (%s-%d) N epiflux: %.20e\n", FunctGroupArray[fgIndex].fullName, n, FunctGroupArray[fgIndex].groupCode, n,
 									localEPIFlux[FunctGroupArray[fgIndex].totNTracers[n]]);
 						}
-					}else{
+					} else {
 						fprintf(llogfp, "%s (%s) N epiflux: %.20e\n", FunctGroupArray[fgIndex].fullName, FunctGroupArray[fgIndex].groupCode,
 								localEPIFlux[FunctGroupArray[fgIndex].totNTracers[0]]);
 					}
@@ -873,6 +882,9 @@ void Print_Eat_Diagnostics(MSEBoxModel *bm, FILE *llogfp, int guild, HABITAT_TYP
         break;
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
+        break;
+    default:
+        quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
         break;
 	}
 

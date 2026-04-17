@@ -85,14 +85,15 @@ static int Read_Run_Parameters(MSEBoxModel *bm, char *filename);
 int Util_Read_Run_XML(MSEBoxModel *bm, char *fileName) {
 
 	char biologyfile[120];
-	char *convertedXMLFileName = (char *)malloc(sizeof(char) * strlen(fileName) + 1);
+    int fileSize = sizeof(char) * strlen(fileName) + 1;
+	char *convertedXMLFileName = (char *)malloc(fileSize);
 
 	strcpy(biologyfile, bm->runprmIfname);
 
 	/* Check to see if we are reading in an XML file or a prm file */
 	if (strstr(biologyfile, ".xml") == NULL) {
 		/* Build the converted filename */
-		sprintf(convertedXMLFileName, "%s", biologyfile);
+		snprintf(convertedXMLFileName, fileSize, "%s", biologyfile);
 		*(strstr(convertedXMLFileName, ".prm")) = '\0';
 		strcat(convertedXMLFileName, ".xml");
 
@@ -101,7 +102,7 @@ int Util_Read_Run_XML(MSEBoxModel *bm, char *fileName) {
 		/* Convert the input file to XML */
 		Convert_Run_To_XML(bm, biologyfile, convertedXMLFileName);
 	} else {
-		sprintf(convertedXMLFileName, "%s", biologyfile);
+		snprintf(convertedXMLFileName, sizeof(convertedXMLFileName), "%s", biologyfile);
 	}
 
 	Read_Run_Parameters(bm, convertedXMLFileName);
@@ -131,7 +132,14 @@ static int Read_Run_Parameters(MSEBoxModel *bm, char *fileName) {
 	bm->flagecon_on = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flagecon_on");
 	bm->flag_fisheries_on = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flag_fisheries_on");
     bm->flag_migration_on = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flag_migration_on");
-	bm->flag_skip_biol = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flag_skip_biol");
+	
+    bm->flagindustry_on = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flagindustry_on");
+    
+    if(bm->flagindustry_on == simple_industry_model) {
+        bm->K_num_vessel_sizes = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "K_num_vessel_sizes");;
+    }
+    
+    bm->flag_skip_biol = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flag_skip_biol");
 	bm->flag_skip_phys = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flag_skip_phys");
 	bm->check_dups = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "check_dups");
 
@@ -365,6 +373,9 @@ static int Read_Run_Parameters(MSEBoxModel *bm, char *fileName) {
 	bm->K_num_markets = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "K_num_markets");
     bm->K_num_basket = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "K_num_basket");
 
+    if(!bm->K_num_basket)
+        bm->K_num_basket = 1;
+    
 	dt_scale = (int) (floor((86400 / bm->dt) + 0.5));
 	bm->K_num_catchqueue *= dt_scale;
 	if (bm->K_num_catchqueue < 1)

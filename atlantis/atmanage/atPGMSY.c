@@ -104,7 +104,7 @@ static FILE * Init_PGMSY_File(MSEBoxModel *bm) {
     char fname[STRLEN];
 
     /** Create filename **/
-    sprintf(fname, "%sPGMSY.txt", bm->startfname);
+    snprintf(fname, sizeof(fname), "%sPGMSY.txt", bm->startfname);
 
     /** Create file **/
     if ((fid = Util_fopen(bm, fname, "w")) == NULL)

@@ -104,8 +104,8 @@ void Amoeba(MSEBoxModel *bm, int assessing, int sp, double dayt, char* speciesna
 	for (j = 0; j < ndim; j++) {
 		for (sum = 0.0, i = 0; i < mpts; i++) {   // Note added the sum to be in line with Numerical Recipes
 			sum += p[i][j];
-			psum[j] = sum;
 		}
+        psum[j] = sum;
 	}
 
 	for (;;) {
@@ -125,18 +125,18 @@ void Amoeba(MSEBoxModel *bm, int assessing, int sp, double dayt, char* speciesna
 					inhi = i;
 			}
 		}
-		rtol = 2.0 * fabs(y[ihi] - y[ilo]) / (fabs(y[ihi]) + fabs(y[ilo] + small_num));
+		rtol = 2.0 * fabs(y[ihi] - y[ilo]) / (fabs(y[ihi]) + fabs(y[ilo]) + small_num);
 
 		/* Compute the fractional range from the highest to lowest
 		 and return if satisfactory */
 		if (rtol < ftol) {
-			// First version just had break here, but the book has content so adding that again here
+			// First version just had break here, but the book has additional content so adding that again here
 			// to be in line with Numerical Recipes. Maybe add an if (!assessing) test here so consistent with old approach?
 
 			// If returning, put best point and value in slot 1
-			SWAP(y[i],y[ilo]);
+			SWAP(y[0],y[ilo]); 
 			for(i=0; i<ndim; i++){
-				SWAP(p[0][i],p[ilo][i]);
+				SWAP(p[1][i],p[ilo][i]);
 			}
 			break;
 		}
@@ -500,10 +500,11 @@ void Prod_Calc(MSEBoxModel *bm,int ndim, int sp, int nchrt, int YrMax, double pr
 		/* Constant (estimated) q */
 
 		avgq = 0;
-		for (Yr = 0; Yr < YrMax + 1; Yr++)
-			avgq += NEst[Yr][est_q_id];
+        for (Yr = 0; Yr < YrMax + 1; Yr++) {
+            avgq += NEst[Yr][est_q_id];
+        }
 
-		avgq /= YrMax;
+		avgq /= ((double)(YrMax + 1.0));
 
 		q = exp(avgq); /* Take the exponent as NEst[Yr][est_q_id] are logged ratios */
 		qinc = 1.0;
@@ -525,7 +526,7 @@ void Prod_Calc(MSEBoxModel *bm,int ndim, int sp, int nchrt, int YrMax, double pr
 	step1 = (p + 1.0);
 	step2 = ((p + 1.0) / (p + small_num));
 	step3 = pow(step1, step2);
-	NEst[YrMax][est_msy_id] = (r * K) / (step3 = small_num);
+	NEst[YrMax][est_msy_id] = (r * K) / (step3 + small_num);
 
 	return;
 }

@@ -29,7 +29,7 @@ void External_Box_Ecology(MSEBoxModel *bm, int b, double dt, FILE *llogfp) {
         Growth_increment, old_Growth, prop_year_elapsed;
     int species, cohort, mid, Time_Spawn_sp, time_elapsed;
     //int pid;
-    double dt_step = (bm->dt / 86400.0) / 365.0; // Divide by 365.0 because old_age is in years, and dt_step is in days, so need to divide dt_step to get it into years.
+    double dt_step = (bm->dt / 86400.0) / 365.0; // Divide by 365.0 because old_age is in years, and dt_step is in days, so need to divide divide dt by seconds in a day (to get to days) and then days in a year to get it into years.
     // Work on the MIGRATION array and only when box zero executing
     if (!b) {
         
@@ -154,8 +154,8 @@ void External_Box_Ecology(MSEBoxModel *bm, int b, double dt, FILE *llogfp) {
                                         
                                         /*
                                         if(bm->debug == debug_external){
-                                            fprintf(bm->logFile, "growth Kbert: %e, linf: %e, Length: %e, Kbert: %e, tzero: %e ",
-                                                Kbert, linf, Length,Kbert, tzero);
+                                            fprintf(bm->logFile, "growth Kbert: %e, linf: %e, Length: %e, tzero: %e ",
+                                                Kbert, linf, Length, tzero);
                                             fprintf(bm->logFile, "li_a: %e, lengthgrowth: %e, li_b: %e with ", li_a, lengthgrowth, li_b);
                                         }
                                         */

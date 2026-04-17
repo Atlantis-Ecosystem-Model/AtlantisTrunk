@@ -234,7 +234,7 @@ double Assess_Get_Physical_Sampled_Value(MSEBoxModel *bm, int sample, int b) {
 		quit("Get_Physical_Sampled_Value attempting to sample physical property %d that isn't sampled\n", sample);
 	}
 
-	/* Not 100% sure this is correct - dividing by the sampleingsize */
+	/* TODO: Not 100% sure this is correct - dividing by the sampleingsize */
 	return samplephys[sample - 2][zone][sample_id] / (phys_samplingsize * bm->annual_sample);
 }
 
@@ -256,7 +256,7 @@ double Assess_Get_Process_Sampled_Value(MSEBoxModel *bm, int sample, int b){
 	int zone;
 
 	if(sample > 3){
-		quit("Assess_Get_Process_Sampled_Value attempting to sample physical property %d that isn't sampled\n", sample);
+		quit("Assess_Get_Process_Sampled_Value attempting to sample property %d that isn't sampled\n", sample);
 	}
 
 	zone = bm->boxes[b].zone - 1;
@@ -271,7 +271,7 @@ double Assess_Get_Biomass_Sampled_Value(MSEBoxModel *bm, int sample, int b){
 	int zone;
 
 	if(sample > (bm->K_num_tot_sp)){
-		quit("Assess_Get_Process_Sampled_Value attempting to sample physical property %d that isn't sampled\n", sample);
+		quit("Assess_Get_Process_Sampled_Value attempting to sample species property %d that isn't sampled\n", sample);
 	}
 
 	zone = bm->boxes[b].zone - 1;

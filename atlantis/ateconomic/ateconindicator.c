@@ -251,10 +251,7 @@ double EconIndCalc(MSEBoxModel *bm, int nf, int ns, int econind_id, int ecolharv
 void Dynamic_Econ_Indicators(MSEBoxModel *bm, int nf, int ns, FILE *llogfp) {
     int flagfcmpa, ij, tierid, sp;
     //int do_debug;
-	double totMPA, numMPA, gear_change, numTAC, tier, reswork, fuel_cost_scalar, fuel_cost, capital_cost, gear_cost, fixed_cost, var_cost, revenue, gvp,
-			current_catch, cost, trade_extent, numexchange, prop_olease, prop_tlease, lease_cost, quota_avail, invest, big_expenditure, fuel_intercept,
-			in_quota, trend_coefft, month_coefft, auto_coefft, resid, unload_cost, catch_in_hold, maxlease_cost = 0, minrevenue, tax_revenue, quota, catch_count,
-			dv_sum, dvprice;
+	double totMPA, numMPA, gear_change, numTAC, tier, reswork, fuel_cost_scalar, fuel_cost, capital_cost, gear_cost, fixed_cost, var_cost, revenue, gvp, current_catch, cost, trade_extent, numexchange, prop_olease, prop_tlease, lease_cost, quota_avail, invest, big_expenditure, fuel_intercept, in_quota, trend_coefft, month_coefft, auto_coefft, resid, unload_cost, catch_in_hold, maxlease_cost = 0, minrevenue, tax_revenue, quota, catch_count, dv_sum, dvprice, local_deemed_value;
 
 	int key_id = 0; // As only one economic property time series thus far - FIX make this read from array if get multiple time series
 	double totcatch = bm->SUBFLEET_ECONprms[nf][ns][yield_ind_id];
@@ -481,14 +478,16 @@ void Dynamic_Econ_Indicators(MSEBoxModel *bm, int nf, int ns, FILE *llogfp) {
 			}
 
 			/* Deemed values */
+            local_deemed_value = 0.0;
 			if (catch_count > quota) {
 				dvprice = bm->SP_FISHERYprms[sp][nf][deemprice_id];
 				current_catch = bm->QuotaAlloc[nf][ns][sp][cummonthcatch_id];
 				dv_sum += dvprice * current_catch;
+                local_deemed_value = dvprice * current_catch;
 			}
 
 			/* Save the dv_sum for writing to output file */
-			bm->QuotaAlloc[nf][ns][sp][deemed_value_id] += dv_sum;
+			bm->QuotaAlloc[nf][ns][sp][deemed_value_id] += local_deemed_value;
 
 			/* Magnitude of trading extent */
 			prop_olease = bm->QuotaAlloc[nf][ns][sp][permolease_id];
@@ -542,11 +541,10 @@ void Dynamic_Econ_Indicators(MSEBoxModel *bm, int nf, int ns, FILE *llogfp) {
 	bm->SUBFLEET_ECONprms[nf][ns][minrev_ind_id] = minrevenue;
 
 	/* Revenue per day */
-	bm->SUBFLEET_ECONprms[nf][ns][revenue_ind_id] = revenue / (bm->SUBFLEET_ECONprms[nf][ns][CurrentEffort_id] + small_num);
+	bm->SUBFLEET_ECONprms[nf][ns][rev_effort_ind_id] = revenue / (bm->SUBFLEET_ECONprms[nf][ns][CurrentEffort_id] + small_num);
 
 	if (revenue < -1000000000.0) {
-		fprintf(llogfp, "Revenue weirdness for %s-%d - revenue: %e, gvp: %e, lease_cost: %e, cost: %e\n", FisheryArray[nf].fisheryCode, ns, revenue, gvp,
-				lease_cost, cost);
+		fprintf(llogfp, "Revenue weirdness for %s-%d - revenue: %e, gvp: %e, lease_cost: %e, cost: %e\n", FisheryArray[nf].fisheryCode, ns, revenue, gvp, lease_cost, cost);
 	}
 
 	/* Revenue per ton landed - to avoid weirdness associated with small numbers assume minimum of one tonne
@@ -555,7 +553,6 @@ void Dynamic_Econ_Indicators(MSEBoxModel *bm, int nf, int ns, FILE *llogfp) {
 	if (bm->SUBFLEET_ECONprms[nf][ns][CurrentCatch_id] < 1.0)
 		bm->SUBFLEET_ECONprms[nf][ns][CurrentCatch_id] = 1.0;
 	bm->SUBFLEET_ECONprms[nf][ns][rev_land_ind_id] = revenue / (bm->SUBFLEET_ECONprms[nf][ns][CurrentCatch_id] + small_num);
-	;
 
 	/* Return on investment - profit / total investment (costs and capital dollars put into it) */
 	big_expenditure = bm->SUBFLEET_ECONprms[nf][ns][newboat_id] * bm->SUBFLEET_ECONprms[nf][ns][newboat_cost_id] + bm->SUBFLEET_ECONprms[nf][ns][switchboat_id]

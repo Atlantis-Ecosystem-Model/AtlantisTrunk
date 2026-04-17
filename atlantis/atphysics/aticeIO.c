@@ -795,11 +795,11 @@ void Ice_Read_Time_Series(MSEBoxModel *bm, char *name, char *tsname, char *t_uni
 		fprintf(stderr, "Reading %s Time Series\n", tsname);
 
 	/* Get the number of time series */
-	sprintf(keyn, "n%sts", tsname);
+	snprintf(keyn, sizeof(keyn), "n%sts", tsname);
 	readkeyprm_i(fp, keyn, &nnts);
 
 	/* Get the type of time series */
-	sprintf(keyn, "type%sts", tsname);
+	snprintf(keyn, sizeof(keyn), "type%sts", tsname);
 	readkeyprm_i(fp, keyn, &typts);
 
 	/* Allocate memory for list of time series */
@@ -812,7 +812,7 @@ void Ice_Read_Time_Series(MSEBoxModel *bm, char *name, char *tsname, char *t_uni
 		char buf[MAXLINELEN];
 
 		/* Ice Data */
-		sprintf(key, "%sts%d.data", tsname, i);
+		snprintf(key, sizeof(key), "%sts%d.data", tsname, i);
 
 		fprintf(stderr, "Loading %s for class %d\n", key, fts[i].iceclass);
 
@@ -834,7 +834,7 @@ void Ice_Read_Time_Series(MSEBoxModel *bm, char *name, char *tsname, char *t_uni
 		}
 
 		/* Ice Depth Data */
-		sprintf(key, "%sts%d.depth_data", tsname, i);
+		snprintf(key, sizeof(key), "%sts%d.depth_data", tsname, i);
 
 		readkeyprm_s(fp, key, buf);
 		tsRead(bm->inputFolder, buf, &fts[i].depthts);
@@ -910,17 +910,17 @@ void ice_cdf_init(MSEBoxModel *bm) {
 	bm->iceinput.depthName = c_alloc1d(BMSLEN);
    // bm->iceinput.use_resets  = i_alloc1d(bm->iceinput.nFiles);
     
-	sprintf(bm->iceinput.depthName, "total_depth");
+	snprintf(bm->iceinput.depthName, BMSLEN, "total_depth");
 
 
 	for(i=0; i<bm->K_num_ice_classes; i++){
-		sprintf(bm->iceinput.variableName[i], "Ice_Class%d", i + 1);
+		snprintf(bm->iceinput.variableName[i], BMSLEN, "Ice_Class%d", i + 1);
 	}
 
 	/* Read the list of files */
 	for (i = 0; i < ntsIce; i++) {
 		char key[BMSLEN];
-		sprintf(key, "Ice%d.name", i);
+		snprintf(key, sizeof(key), "Ice%d.name", i);
 		//printf("key = %s\n", key);
 		readkeyprm_s(fp, key, bm->iceinput.fname[i]);
         

@@ -46,11 +46,12 @@ static FILE * Init_Performance_Measures_File(MSEBoxModel *bm);
  * \brief  This sets up names of fisheries management performance indices
  */
 void Set_Manage_Index_Names(MSEBoxModel *bm) {
-
-	sprintf(manageindxNAME[mgmtstability_id], "%s", "mgmtStability");
-	sprintf(manageindxNAME[mgmtaccess_id], "%s", "mgmtAccess");
-	sprintf(manageindxNAME[mgmtcost_id], "%s", "mgmtCost");
-	sprintf(manageindxNAME[frstindx_id], "%s", "1stindx");
+    int paramLen = 20;
+    
+	snprintf(manageindxNAME[mgmtstability_id], paramLen, "%s", "mgmtStability");
+	snprintf(manageindxNAME[mgmtaccess_id], paramLen, "%s", "mgmtAccess");
+	snprintf(manageindxNAME[mgmtcost_id], paramLen, "%s", "mgmtCost");
+	snprintf(manageindxNAME[frstindx_id], paramLen, "%s", "1stindx");
 
 	return;
 }
@@ -143,7 +144,7 @@ FILE * Init_Performance_Measures_File(MSEBoxModel *bm) {
 	int sp;
 
 	/** Create filename **/
-	sprintf(fname, "%sHarvestIndx.txt", bm->startfname);
+	snprintf(fname, sizeof(fname), "%sHarvestIndx.txt", bm->startfname);
 	printf("Creating %s\n", fname);
 
 	/** Create file **/
@@ -166,7 +167,7 @@ FILE * Init_Performance_Measures_File(MSEBoxModel *bm) {
 	return (fid);
 }
 /**
- * \brief Write out the harvest and management performance indicies.
+ * \brief Write out the harvest and management performance indices.
  */
 void Write_Performance_Measures(FILE *fid, MSEBoxModel *bm) {
 	int sp, nf;

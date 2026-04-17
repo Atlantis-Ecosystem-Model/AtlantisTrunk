@@ -44,7 +44,7 @@ int createBMDietDataFile(char *destFolder, char *name, MSEBoxModel *bm) {
     int fid;
     char fileName[BMSLEN];
     
-    sprintf(fileName, "%s%s", destFolder, name);
+    snprintf(fileName, sizeof(fileName), "%s%s", destFolder, name);
     /* Set netCDF error handling */
     ncopts = NC_VERBOSE | NC_FATAL;
     
@@ -93,7 +93,7 @@ void writeBMDietInfo(int fid, MSEBoxModel *bm) {
     int vid;
     int cohort, prey;
     
-    sprintf(unitstr, "t km-2 day-1");
+    snprintf(unitstr, sizeof(unitstr), "t km-2 day-1");
     
     /* set netCDF data type */
     dt = NC_DOUBLE;
@@ -116,9 +116,9 @@ void writeBMDietInfo(int fid, MSEBoxModel *bm) {
         if (sp == bm->which_check) {
             for (cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes * FunctGroupArray[sp].numStocks; cohort++) {
                 for (prey=0; prey < bm->K_num_tot_sp; prey++) {
-                    sprintf(ann_name, "%s%d_Diet_%s", FunctGroupArray[sp].groupCode, cohort+1, FunctGroupArray[prey].groupCode);
-                    sprintf(ann_longname, "Total consumption of %s by %s age %d at this location", FunctGroupArray[prey].name, FunctGroupArray[sp].name, cohort+1);
-                    sprintf(unitstr, "Tonnes");
+                    snprintf(ann_name, sizeof(ann_name), "%s%d_Diet_%s", FunctGroupArray[sp].groupCode, cohort+1, FunctGroupArray[prey].groupCode);
+                    snprintf(ann_longname, sizeof(ann_longname), "Total consumption of %s by %s age %d at this location", FunctGroupArray[prey].name, FunctGroupArray[sp].name, cohort+1);
+                    snprintf(unitstr, sizeof(unitstr), "Tonnes");
                 
                     /* Define the variable */
                     //if (verbose > 1)
@@ -196,7 +196,7 @@ void writeBMDietData(int fid, int dump, MSEBoxModel *bm) {
         if (sp == bm->which_check) {
             for (cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes * FunctGroupArray[sp].numStocks; cohort++) {
                 for (prey=0; prey < bm->K_num_tot_sp; prey++) {
-                    sprintf(strname, "%s%d_Diet_%s", FunctGroupArray[sp].groupCode, cohort+1, FunctGroupArray[prey].groupCode);
+                    snprintf(strname, sizeof(strname), "%s%d_Diet_%s", FunctGroupArray[sp].groupCode, cohort+1, FunctGroupArray[prey].groupCode);
 
                     /* Get water column data from model storage */
                     for (b = 0; b < bm->nbox; b++) {

@@ -159,40 +159,40 @@ void init_from_meco_dump(char* fname, tr2ex* e)
     /* create mapping bm -> meco */
     /* count cells */
     for (k = 0, xyz_index = 0; k < nk; ++k) {
-	for (j = 0, xy_index = 0; j < nj; ++j) {
-	    for (i = 0; i < ni; ++i, xy_index++, xyz_index++) {
-	        /* Set flag */
-	        if(!isnan(validu[xyz_index])){
-		  // if (!(flag[xyz_index] & (SOLID|OUTSIDE))) {
-		  dpoint p = {xc[xy_index], yc[xy_index]};
-		  int b = xy2b(e, &p);
-		  int kk = (b >= 0) ? kk = z2k(e, b, 0, -zc[k]) : -1;
-		  if (kk >= 0)
-		     e->boxes[b].cells[kk].nmecocells++;
-		  flag[xyz_index] = 1;
-	        }
-		else flag[xyz_index] = 0;
-	    }
-	}
-	if (k == 0) meco->zgrid[k] = 0;
-	else meco->zgrid[k] = (zc[k] + zc[k-1])/2;
+        for (j = 0, xy_index = 0; j < nj; ++j) {
+            for (i = 0; i < ni; ++i, xy_index++, xyz_index++) {
+                /* Set flag */
+                if(!isnan(validu[xyz_index])){
+              // if (!(flag[xyz_index] & (SOLID|OUTSIDE))) {
+              dpoint p = {xc[xy_index], yc[xy_index]};
+              int b = xy2b(e, &p);
+              int kk = (b >= 0) ? z2k(e, b, 0, -zc[k]) : -1;
+              if (kk >= 0)
+                 e->boxes[b].cells[kk].nmecocells++;
+              flag[xyz_index] = 1;
+                }
+            else flag[xyz_index] = 0;
+            }
+        }
+        if (k == 0) meco->zgrid[k] = 0;
+        else meco->zgrid[k] = (zc[k] + zc[k-1])/2;
     }
 
     /* allocate memory */
     for (i = 0; i < e->nb; ++i) {
-	box* b = &e->boxes[i];
-	for (j = 0; j < b->nlayers; ++j) {
-	    cell* c = &e->boxes[i].cells[j];
-	    int n = c->nmecocells;
-	    if (n > 0)
-		c->mecocells = malloc(n * sizeof(mecocell));
-	    else if (!c->is_boundary) {
-		warn("error: BM cell (b,k) = (%d,%d) contains 0 MECO cells\n", i, j);
-		//quit_later = 1;
-	    } else
-		c->mecocells = NULL;
-	    c->nmecocells = 0;
-	}
+        box* b = &e->boxes[i];
+        for (j = 0; j < b->nlayers; ++j) {
+            cell* c = &e->boxes[i].cells[j];
+            int n = c->nmecocells;
+            if (n > 0)
+            c->mecocells = malloc(n * sizeof(mecocell));
+            else if (!c->is_boundary) {
+            warn("error: BM cell (b,k) = (%d,%d) contains 0 MECO cells\n", i, j);
+            //quit_later = 1;
+            } else
+            c->mecocells = NULL;
+            c->nmecocells = 0;
+        }
     }
     if (quit_later)
 	exit(0);
@@ -210,7 +210,7 @@ void init_from_meco_dump(char* fname, tr2ex* e)
 		    // if (!(flag[xyz_index] & (SOLID|OUTSIDE))) {
 		    dpoint p = {xc[xy_index], yc[xy_index]};
 		    int b = xy2b(e, &p);
-		    int kk = (b >= 0) ? kk = z2k(e, b, 0, -zc[k]) : -1;
+		    int kk = (b >= 0) ? z2k(e, b, 0, -zc[k]) : -1;
 		    if (kk >= 0) {
 		       cell* c = &e->boxes[b].cells[kk];
 		       mecocell* mc = &c->mecocells[c->nmecocells];
@@ -428,11 +428,11 @@ void create_exchange_dump(FILE* f, tr2ex* e)
     for (i = 0; i < e->ntracers; ++i) {
 	trinfo* t = &e->tracers[i];
 	char buf[512];
-	sprintf(buf, "tracer%d.name", i);
+	snprintf(buf, sizeof(buf), "tracer%d.name", i);
 	NC_put_att_text(fname, fid, NC_GLOBAL, buf, t->name);
-	sprintf(buf, "tracer%d.scale", i);
+	snprintf(buf, sizeof(buf), "tracer%d.scale", i);
 	NC_put_att_double(fname, fid, NC_GLOBAL, buf, 1, &t->scale);
-	sprintf(buf, "tracer%d.weight", i);
+	snprintf(buf, sizeof(buf), "tracer%d.weight", i);
 	NC_put_att_double(fname, fid, NC_GLOBAL, buf, 1, &t->weight);
     }
 

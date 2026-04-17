@@ -106,9 +106,12 @@ void Port_Growth(MSEBoxModel *bm, FILE *llogfp) {
 
 	for (porti = 0; porti < bm->K_num_ports; porti++) {
 
+        flagfishhere = 1;
+        
 		/* Check if currently active - only interested in active ports */
 		if ((bm->dayt < bm->Port_info[porti][port_start_id]) || (bm->dayt > bm->Port_info[porti][port_end_id]))
 			flagfishhere = 0;
+        
 		if (!flagfishhere)
 			continue;
 
@@ -272,8 +275,10 @@ void Update_Vessel_Numbers(MSEBoxModel *bm, FILE *llogfp) {
 				tot_net_return0 += net_return[nf][ns][immed_id];
 
 				/* Check for most profitable subfleet as new boats (if any) will enter here */
-				if (tot_marg_rent[nf][ns] > max_marg_rent)
-					best_subfleet[nf] = ns;
+                if (tot_marg_rent[nf][ns] > max_marg_rent){
+                    best_subfleet[nf] = ns;
+                    max_marg_rent = tot_marg_rent[nf][ns];
+                }
 			}
 
 			avg_net_return1 = tot_net_return1 / (bm->FISHERYprms[nf][nsubfleets_id] + small_num);
@@ -361,7 +366,7 @@ void Update_Vessel_Numbers(MSEBoxModel *bm, FILE *llogfp) {
 				/* Supplementing gear */
 				if ((rndnum < p_flexgear) || (rndnum < p_supp)) {
 					rndnum2 = drandom(0.0, bm->prop_supp) * bm->SUBFLEET_ECONprms[nf][ns][nboat_id];
-					num_moving = (int) (min(1.0, floor(rndnum2)));
+					num_moving = (int) (min(1.0, floor(rndnum2)));  // Curently capped at 1 boat a month moving.... could set ghis to max to allow more
 					boats_free[nf][ns] += num_moving;
 
 					fprintf(llogfp, "Time: %e %d boats supplementing from %s-%d (num_moving; %d, boats_free: %d)\n", bm->dayt, num_moving,
@@ -428,7 +433,7 @@ void Update_Vessel_Numbers(MSEBoxModel *bm, FILE *llogfp) {
 				bank_vault = bm->SUBFLEET_ECONprms[nf][ns][lasttot_cash_id];
 				if (!debt_lost && (bank_vault < bm->shorecost) && (bm->dayt > 364.0)) {
 					rndnum2 = drandom(0.0, 1.0) * bm->SUBFLEET_ECONprms[nf][ns][nboat_id];
-					debt_lost = (int) (min(1.0, floor(rndnum2)));
+					debt_lost = (int) (min(1.0, floor(rndnum2))); // Again allowing 1 vessel at a time... if want more then use max
 					num_moving += debt_lost;
 
 					fprintf(llogfp, "Time: %e %d boats leaving %s-%d as bank vault dry (num_moving = %d)\n", bm->dayt, debt_lost, FisheryArray[nf].fisheryCode,
@@ -565,7 +570,7 @@ void Update_Vessel_Numbers(MSEBoxModel *bm, FILE *llogfp) {
 					}
 
 					/* Otherwise switch boats to best alternative compatible fleet */
-					if ((this_fishery > -1) || (this_subfleet > -1)) {
+					if ((this_fishery > -1) && (this_subfleet > -1)) {
 						bm->SUBFLEET_ECONprms[this_fishery][this_subfleet][nboat_id] += boats_free[nf][ns];
 						bm->FISHERYprms[this_fishery][nvessel_id] += boats_free[nf][ns];
 						bm->SUBFLEET_ECONprms[this_fishery][this_subfleet][switchboat_id] += boats_free[nf][ns];
@@ -692,7 +697,7 @@ void Update_Vessel_Numbers(MSEBoxModel *bm, FILE *llogfp) {
 
 		/* Check of fishery uses the port and that the port is active */
 		for (porti = 0; porti < bm->K_num_ports; porti++) {
-			if (bm->Port_Fishery[nf][porti] && ((bm->dayt < bm->Port_info[porti][port_start_id]) || (bm->dayt > bm->Port_info[porti][port_end_id]))) {
+			if (bm->Port_Fishery[nf][porti] && ((bm->dayt > bm->Port_info[porti][port_start_id]) && (bm->dayt < bm->Port_info[porti][port_end_id]))) {
 				portweight[porti]++;
 				totportweight++;
 			}
@@ -706,9 +711,9 @@ void Update_Vessel_Numbers(MSEBoxModel *bm, FILE *llogfp) {
 		for (porti = 0; porti < bm->K_num_ports; porti++) {
 			/* Find weight for market 0 as just assume weight for other market = 1 - value for market 0 */
 			if (bm->Port_info[porti][prime_market_id])
-				marketwgt = 0;
+				marketwgt = 1.0;  //Used to be 0
 			else
-				marketwgt = 1;
+				marketwgt = 0.0;  //Used to be 1
 			totmarketwgt += marketwgt * (portweight[porti] / (totportweight + small_num));
 
 			if (do_debug) {
@@ -1235,9 +1240,9 @@ void Consolidate_Allowed_Catches(MSEBoxModel *bm, FILE *llogfp) {
 
 						/* Accounting for catch already taken */
 						//totallowedcatch -= bm->TotCumCatch[sp][nf][bm->thisyear];
-						totallowedcatch -= (Harvest_Get_TotCumCatch(sp, nf, bm->thisyear) + bm->TotOldCumCatch[sp][nf]);
-
-						totallowedcatch -= totCumCatch;
+                        totCumCatch = Harvest_Get_TotCumCatch(sp, nf, bm->thisyear);
+						totallowedcatch -= (totCumCatch + bm->TotOldCumCatch[sp][nf]);
+						
 						if (totallowedcatch < 0.0)
 							totallowedcatch = 0.0;
 					}

@@ -58,7 +58,7 @@ int createBMDataFile(char *destFolder, char *name, MSEBoxModel *bm, int dtype) {
 	int fid;
 	char fileName[BMSLEN];
 
-	sprintf(fileName, "%s%s", destFolder, name);
+	snprintf(fileName, sizeof(fileName), "%s%s", destFolder, name);
 	/* Set netCDF error handling */
 	ncopts = NC_VERBOSE | NC_FATAL;
 
@@ -743,7 +743,8 @@ void readBMTracerData(int fid, int dump, MSEBoxModel *bm) {
 			/* If the stress tracer then store in box stress attribute */
 			if (strcmp(bm->tinfo[i].name, "Stress") == 0) {
 				if (bm->sedtr[b][0][i] > 0) {
-					bm->boxes[b].stress = bm->sedtr[b][0][i];
+					bm->boxes[b].stress = bm->sedtr[b][0][i];                    
+                    bm->boxes[b].init_stress = bm->sedtr[b][0][i];
 					bm->supplied_stress = 1;
 				}
 			}

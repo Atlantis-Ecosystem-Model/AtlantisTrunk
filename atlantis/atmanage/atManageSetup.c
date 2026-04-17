@@ -348,7 +348,7 @@ void Manage_Init(MSEBoxModel *bm, FILE *llogfp) {
 	strcpy(fisheriesfile, bm->fishprmIfname);
 
 	/* Build the converted filename */
-	sprintf(convertedXMLFileName, "%s", bm->ncOfname);
+	snprintf(convertedXMLFileName, sizeof(convertedXMLFileName), "%s", bm->ncOfname);
 	*(strstr(convertedXMLFileName, ".nc")) = '\0';
 	strcat(convertedXMLFileName, "_management.xml");
 
@@ -553,6 +553,7 @@ void Manage_Init(MSEBoxModel *bm, FILE *llogfp) {
 
 	for (i = 0; i < nfleets; i++) {
 		count_it = 0;
+        bm->FISHERYprms[i][flagMFCdisplace_id] = 0;
 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 			if (FunctGroupArray[sp].isFished == TRUE) {
 				if (bm->FISHERYtarget[i][sp]) {
@@ -561,6 +562,9 @@ void Manage_Init(MSEBoxModel *bm, FILE *llogfp) {
 					//fprintf(llogfp, "%s is target of %s\n", FunctGroupArray[sp].groupCode, FisheryArray[i].fisheryCode);
 				}
 			}
+            if((bm->SP_FISHERYprms[sp][i][flagF_id] > 0 ) && bm->flagdisplace) {
+                bm->FISHERYprms[i][flagMFCdisplace_id] = 1; // mFC fishery and displace effort on
+            }
 		}
 		bm->FISHERYprms[i][ntargets_id] = count_it;
 	}

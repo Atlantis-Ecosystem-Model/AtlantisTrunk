@@ -346,7 +346,7 @@ void Do_PGMSY_R(MSEBoxModel *bm, int year, FILE *llogfp) {
     int idR = 0;
 
     /* Create directory */
-    sprintf(dirname, "%s/MultispeciesAssessment_sim_%d_year_%d", bm->destFolder, bm->RBCestimation.sim, year);
+    snprintf(dirname, sizeof(dirname), "%s/MultispeciesAssessment_sim_%d_year_%d", bm->destFolder, bm->RBCestimation.sim, year);
     ret = mkdir(dirname, 0777);  //Was S_IRWXU but was failing to allow file creation
     
     if (ret == -1) {
@@ -388,7 +388,7 @@ void Do_PGMSY_R(MSEBoxModel *bm, int year, FILE *llogfp) {
     /* Commands to run PGMSY */
     printf("Running PGMSY.R - filename: %s\n", bm->RAssessRscriptName[idR]);
     
-    sprintf(R_ScriptName,"Rscript %s", bm->RAssessRscriptName[idR]);
+    snprintf(R_ScriptName, sizeof(R_ScriptName), "Rscript %s", bm->RAssessRscriptName[idR]);
     system(R_ScriptName);  // Actual call to run PGMSY in R
 
     /* Read output back into RBCestimation */

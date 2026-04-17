@@ -40,7 +40,7 @@ double Get_Deemed_Value_Scale(MSEBoxModel *bm, int sp, int nf) {
 double Get_Expected_Profit(MSEBoxModel *bm, int nf, int ns, int sp, int month, int ntarg, double ExpEffort, char *checkName, int do_debug, FILE *llogfp) {
 	double ExpCatch, ExpExposure, ans, calcTax = 0, DVscale, DVprice = 0;
 	double TripLength = bm->SUBFLEET_ECONprms[nf][ns][max_trip_length_id];
-	double TripCost = bm->SUBFLEET_ECONprms[nf][ns][pereffort_cost_ind_id];;
+	double TripCost = bm->SUBFLEET_ECONprms[nf][ns][pereffort_cost_ind_id];
 
 	/* the expected catch is set to the historic catch read in from the input file initially then calculated later */
 	ExpCatch = bm->BlackBook[nf][ns][sp][month][expect_id];
@@ -54,7 +54,7 @@ double Get_Expected_Profit(MSEBoxModel *bm, int nf, int ns, int sp, int month, i
 	/*
 	 if(do_debug){
 	 fprintf(llogfp,"Time: %e %s-%d on %s TemporalBycatchAvoid: %d, ExpExposure: %e, spconcern: %e, month: %d, Blackbook_bycatch: %e\n",
-	 bm->dayt, FisheryArray[nf].fisheryCode, ns, FunctGroupArray[sp].groupCode, bm->TemporalBycatchAvoid, ExpExposure, bm->SP_prms[spp_id][spconcern_id], month, bm->BlackBook[nf][ns][sp][month][bycatch_id]);
+	 bm->dayt, FisheryArray[nf].fisheryCode, ns, FunctGroupArray[sp].groupCode, bm->TemporalBycatchAvoid, ExpExposure, FunctGroupArray[sp].speciesParams[sp_concern_id], month, bm->BlackBook[nf][ns][sp][month][bycatch_id]);
 	 }
 	 */
 
@@ -75,8 +75,7 @@ double Get_Expected_Profit(MSEBoxModel *bm, int nf, int ns, int sp, int month, i
 			/* CPUE based and put ntargets in as trip cost not born by one species individually, but have tax at
 			 species specific level
 			 */
-			ans = (bm->SP_FISHERYprms[sp][nf][saleprice_id] * ExpCatch / (ExpEffort + small_num)) - TripCost / ntarg - calcTax * ExpExposure / (ExpEffort
-					+ small_num);
+			ans = (bm->SP_FISHERYprms[sp][nf][saleprice_id] * ExpCatch / (ExpEffort + small_num)) - TripCost / ntarg - calcTax * ExpExposure / (ExpEffort + small_num);
 		} else {
 			/* Maybe more sensible to sum up total expected value here (minus tax) and then take trip cost off for the entire trip below after done the sum */
 			ans = bm->SP_FISHERYprms[sp][nf][saleprice_id] * ExpCatch + ExpExposure * (DVprice - calcTax);
@@ -85,12 +84,11 @@ double Get_Expected_Profit(MSEBoxModel *bm, int nf, int ns, int sp, int month, i
 
 	if (do_debug) {
 		//if(bm->dayt > bm->checkstart){
-		fprintf(
-				llogfp,
-				"Time: %e %s %s %s ans: %e, ExpCatch: %e, TripLength: %e price: %e, ExpEffort: %e, TripCost: %e, DVprice: %e, tax: %e (FixedMinTax_id: %e, tax_id: %e), ExpExposure: %e, ans %e \n",
+		fprintf(llogfp,
+				"Time: %e %s %s %s ans: %e, ExpCatch: %e, TripLength: %e price: %e, ExpEffort: %e, TripCost: %e, DVprice: %e, tax: %e (FixedMinTax_id: %e, tax_id: %e), ExpExposure: %e\n",
 				bm->dayt, FisheryArray[nf].fisheryCode, FunctGroupArray[sp].groupCode, checkName, ans, ExpCatch, TripLength,
 				bm->SP_FISHERYprms[sp][nf][saleprice_id], ExpEffort, TripCost, DVprice, calcTax, bm->SP_FISHERYprms[sp][nf][FixedMinTax_id],
-				bm->SP_FISHERYprms[sp][nf][tax_id], ExpExposure, ans);
+				bm->SP_FISHERYprms[sp][nf][tax_id], ExpExposure);
 	}
 
 	if (ans < 0)

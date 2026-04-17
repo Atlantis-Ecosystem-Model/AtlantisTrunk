@@ -457,7 +457,7 @@ void Ecology_Init(MSEBoxModel *bm, FILE *llogfp) {
 	//bm->external_mortality = TRUE;
 
 	if(bm->track_contaminants){
-		Allocate_Contaiminants(bm);
+		Allocate_Contaminants(bm);
 	}
 	printf("Initialise biology\n");
 
@@ -473,14 +473,14 @@ void Ecology_Init(MSEBoxModel *bm, FILE *llogfp) {
 	/* Check to see if we are reading in an XML file or a prm file */
 	if(strstr(biologyfile, ".xml") == NULL){
 		/* Build the converted filename */
-		sprintf(convertedXMLFileName, "%s", biologyfile);
+		snprintf(convertedXMLFileName, sizeof(convertedXMLFileName), "%s", biologyfile);
 		*(strstr(convertedXMLFileName, ".prm")) = '\0';
 		strcat(convertedXMLFileName, ".xml");
 
 		/* Convert the input file to XML */
 		Convert_Biol_To_XML(bm, biologyfile, convertedXMLFileName);
 	}else{
-		sprintf(convertedXMLFileName, "%s", biologyfile);
+		snprintf(convertedXMLFileName, sizeof(convertedXMLFileName), "%s", biologyfile);
 	}
 
 	printf("Start reading biological parameters from %s.\n", biologyfile);
@@ -492,8 +492,9 @@ void Ecology_Init(MSEBoxModel *bm, FILE *llogfp) {
     
    /* Read migration parameters from the csv file **********************************/
     if(bm->flag_migration_on == TRUE){
-        //csv file step
+        //csv file step - check for csv
         if (strcmp(bm->migrationIfname, "") == 0) {
+            printf("No migraiton csv - please add as detailed in Usage message\n");
             Util_Usage(1);
         }
         
@@ -515,8 +516,9 @@ void Ecology_Init(MSEBoxModel *bm, FILE *llogfp) {
  	/* Check the data read in was valid */
 	Check_Input_Data(bm, llogfp);
 
-	if (verbose > 1)
-		printf("Determine maximum biological settings\n");
+    if (verbose > 1) {
+        printf("Determine maximum biological settings\n");
+    }
 
 	/* set the population tracking flag*/
 	bm->need_pops = 0;
@@ -1047,8 +1049,13 @@ void Ecology_Init(MSEBoxModel *bm, FILE *llogfp) {
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		if (FunctGroupArray[sp].isVertebrate == TRUE) {
 			if (((int) (FunctGroupArray[sp].speciesParams[flagrecruit_id]) == ts_recruit) || ((int) (FunctGroupArray[sp].speciesParams[flagstocking_id] > 0))) {
-				check_for_ts++;
-				break;
+                
+                if ((int) (FunctGroupArray[sp].speciesParams[flagrecruit_id]) == multiple_ts_recruit)  {
+                    // Do not check if using - as loaded elsewhere
+                } else {
+                    check_for_ts++;
+                    break;
+                }
 			}
 		}
 	}
@@ -1081,12 +1088,12 @@ void Ecology_Init(MSEBoxModel *bm, FILE *llogfp) {
     }
     
     /* Set up the indexing for the linear mortality scalar timeseries */
-	Setup_Linear_Mortality_Indicies(bm);
+	Setup_Linear_Mortality_Indices(bm);
 
 	/* Do the same for the changes in size */
-	Setup_Change_Indicies(bm, bm->tsSizeChange, size_scale_id);
-	Setup_Change_Indicies(bm, bm->tsGrowthRateChange, mum_scale_id);
-	Setup_Change_Indicies(bm, bm->tsFSPBChange, FSPB_scale_id);
+	Setup_Change_Indices(bm, bm->tsSizeChange, size_scale_id);
+	Setup_Change_Indices(bm, bm->tsGrowthRateChange, mum_scale_id);
+	Setup_Change_Indices(bm, bm->tsFSPBChange, FSPB_scale_id);
 	for(sp = 0; sp < bm->K_num_tot_sp; sp++){
 		// No longer just vertebrates so do for all
         for(cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++){
@@ -1202,12 +1209,14 @@ void Ecology_Init(MSEBoxModel *bm, FILE *llogfp) {
  *
  */
 void Ecology_Set_Index_Name_ID(MSEBoxModel *bm) {
-	sprintf(bm->ecolindxNAME[PDratio_id], "%s", "PelDemRatio");
-	sprintf(bm->ecolindxNAME[FPFVratio_id], "%s", "PiscivPlankRatio");
-	sprintf(bm->ecolindxNAME[InfEpi_id], "%s", "InfEpiRatio");
-	sprintf(bm->ecolindxNAME[DivCount_id], "%s", "DivCount");
-	sprintf(bm->ecolindxNAME[BSSslope_id], "%s", "BSSslope");
-	sprintf(bm->ecolindxNAME[coverindx_id], "%s", "HabitCover");
+    int paramlen = 20;
+	
+    snprintf(bm->ecolindxNAME[PDratio_id], paramlen, "%s", "PelDemRatio");
+	snprintf(bm->ecolindxNAME[FPFVratio_id], paramlen, "%s", "PiscivPlankRatio");
+	snprintf(bm->ecolindxNAME[InfEpi_id], paramlen, "%s", "InfEpiRatio");
+	snprintf(bm->ecolindxNAME[DivCount_id], paramlen, "%s", "DivCount");
+	snprintf(bm->ecolindxNAME[BSSslope_id], paramlen, "%s", "BSSslope");
+	snprintf(bm->ecolindxNAME[coverindx_id], paramlen, "%s", "HabitCover");
 
 	return;
 }
@@ -1226,6 +1235,7 @@ void Ecology_Set_Index_Name_ID(MSEBoxModel *bm) {
  */
 void Set_Tracer_Index(MSEBoxModel* bm, FILE *llogfp) {
 	int ij, id;
+    int bufVar = 50;
 	int numLayers = 2 * numwcvar + numepivar;
 
 	if (verbose > 0)
@@ -1248,7 +1258,7 @@ void Set_Tracer_Index(MSEBoxModel* bm, FILE *llogfp) {
 		*(trnamelist[ij].index) = id;
 
 		/* set flag values in wc and sm tracers */
-		sprintf(Varname[id], "%s %s", trnamelist[ij].name, "in wc");
+		snprintf(Varname[id], bufVar, "%s %s", trnamelist[ij].name, "in wc");
 
 		if (verbose > 1) {
 			fprintf(llogfp, "Found %s, %d\n", Varname[id], id);
@@ -1260,7 +1270,7 @@ void Set_Tracer_Index(MSEBoxModel* bm, FILE *llogfp) {
 		Bioflag[id] = trnamelist[ij].Bio;
         Contamflag[id] = trnamelist[ij].Contam;
 
-		sprintf(Varname[id + numwcvar], "%s %s", trnamelist[ij].name, "in sm");
+		snprintf(Varname[id + numwcvar], bufVar, "%s %s", trnamelist[ij].name, "in sm");
 
 		Fluxflag[id + numwcvar] = trnamelist[ij].Flux;
 		Tolflag[id + numwcvar] = trnamelist[ij].Tol;
@@ -1279,6 +1289,7 @@ void Set_Tracer_Index(MSEBoxModel* bm, FILE *llogfp) {
  */
 void Set_Epiben_Index(MSEBoxModel* bm, FILE *llogfp) {
 	int ij, id;
+    int bufVar = 50;
 
 	if (verbose > 0)
 		fprintf(llogfp, "Set epibenthic ids\n");
@@ -1290,7 +1301,7 @@ void Set_Epiben_Index(MSEBoxModel* bm, FILE *llogfp) {
 			quit("Set_Epiben_Index: Can't find variable '%s'\n", epinamelist[ij].name);
 		*(epinamelist[ij].index) = id;
 
-		sprintf(Varname[id + 2 * numwcvar], "%s %s", epinamelist[ij].name, "in epi");
+		snprintf(Varname[id + 2 * numwcvar], bufVar, "%s %s", epinamelist[ij].name, "in epi");
 
 		//	if (verbose > 1)
 		//	fprintf(llogfp, "Found %s, %d\n", Varname[id + 2 * numwcvar], id);
@@ -1313,6 +1324,7 @@ void Set_Epiben_Index(MSEBoxModel* bm, FILE *llogfp) {
  */
 void Set_Land_Index(MSEBoxModel* bm, FILE *llogfp) {
 	int ij, id;
+    int bufVar = 50;
 
 	if (verbose > 0)
 		fprintf(llogfp, "Set land ids\n");
@@ -1324,7 +1336,7 @@ void Set_Land_Index(MSEBoxModel* bm, FILE *llogfp) {
 			quit("Set_Land_Index: Can't find variable '%s'\n", landnamelist[ij].name);
 		*(landnamelist[ij].index) = id;
 
-		sprintf(Varname[id + 2 * numwcvar + numepivar], "%s %s", landnamelist[ij].name, "in land");
+		snprintf(Varname[id + 2 * numwcvar + numepivar], bufVar, "%s %s", landnamelist[ij].name, "in land");
 
 		if (verbose > 1)
 			fprintf(bm->logFile, "Found %s, %d\n", landnamelist[ij].name, id);
@@ -2249,8 +2261,9 @@ void Ecology_Free(MSEBoxModel *bm) {
 
 	Tracer_Array_Free(bm);
 	Epi_Tracer_Array_Free(bm);
-	if(bm->terrestrial_on == TRUE)
-		Land_Tracer_Array_Free(bm);
+    if(bm->terrestrial_on == TRUE) {
+        Land_Tracer_Array_Free(bm);
+    }
 
 	printf("Freeing the home range structures\n");
 	Free_HomeRange_Structures(bm);
@@ -2687,6 +2700,10 @@ void Check_Input_Data(MSEBoxModel *bm, FILE *llogfp) {
 
 	// Used to do Check_Migration_Data() but that has been moved to where MIGRATION is initialised
 
+    if (verbose > 1) {
+        printf("Check_Input_Data\n");
+    }
+    
 	// Copy recruit_hdistrib to all gene types
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		for (ngene = 0; ngene < FunctGroupArray[sp].numGeneTypes; ngene++) {
@@ -2699,6 +2716,8 @@ void Check_Input_Data(MSEBoxModel *bm, FILE *llogfp) {
 			}
 		}
 	}
+    
+    return;
 
 }
 
@@ -3137,12 +3156,14 @@ static void Setup_Invade(MSEBoxModel *bm) {
 
 	/* Maximum distance */
 	maxdist = 0.0;
+    nb = bm->InvaderEntryBox;
 	for (b = 0; b < bm->nbox; b++) {
 		xdiff = bm->boxes[b].inside.x - bm->boxes[nb].inside.x;
 		ydiff = bm->boxes[b].inside.y - bm->boxes[nb].inside.y;
 		dist_step1 += sqrt(xdiff * xdiff + ydiff * ydiff);
-		if (dist_step1 > maxdist)
-			maxdist = dist_step1;
+        if (dist_step1 > maxdist) {
+            maxdist = dist_step1;
+        }
 	}
 
 	/* Find time to saturation - maximum distance from Entry box that is in the model domain */
@@ -3284,7 +3305,7 @@ static void Setup_HomeRanges(MSEBoxModel *bm, FILE *llogfp) {
 									for (nij = 0; nij < bm->boxes[b].nconn; nij++) {
 										chkbox = bm->boxes[b].ibox[nij];
 
-										fprintf(llogfp, "In %d checking %d\n", ij, chkbox);
+										//fprintf(llogfp, "In %d checking %d\n", ij, chkbox);
 
 										/* Check if a boundary box */
 										if (bm->boxes[chkbox].type != BOUNDARY) {
@@ -3295,8 +3316,7 @@ static void Setup_HomeRanges(MSEBoxModel *bm, FILE *llogfp) {
 														- bm->boxes[chkbox].inside.x) + (bm->boxes[start_box].inside.y - bm->boxes[chkbox].inside.y)
 														* (bm->boxes[start_box].inside.y - bm->boxes[chkbox].inside.y));
 
-												fprintf(llogfp, "%s dist: %e vs rad: %e\n", FunctGroupArray[sp].groupCode, dist,
-														FunctGroupArray[sp].speciesParams[homerangerad_id]);
+												//fprintf(llogfp, "%s dist: %e vs rad: %e\n", FunctGroupArray[sp].groupCode, dist, FunctGroupArray[sp].speciesParams[homerangerad_id]);
 
 												if (dist < FunctGroupArray[sp].speciesParams[homerangerad_id]) {
 													/* Check if in appropriate depth range */
@@ -3304,8 +3324,7 @@ static void Setup_HomeRanges(MSEBoxModel *bm, FILE *llogfp) {
 													if (((-1.0 * bm->boxes[chkbox].botz) > FunctGroupArray[sp].speciesParams[mindepth_id]) && ((-1.0 * bm->boxes[chkbox].botz) <= FunctGroupArray[sp].speciesParams[maxtotdepth_id])) {
 														/* For no-overlap case check whether home-range already exists in this cell */
 
-														fprintf(llogfp, "%s overlap: %e and chkbox-homrange-n: %d\n", FunctGroupArray[sp].groupCode,
-																FunctGroupArray[sp].speciesParams[rangeoverlap_id], bm->boxes[chkbox].HomeRangeInfo[sp].n);
+														//fprintf(llogfp, "%s overlap: %e and chkbox-homrange-n: %d\n", FunctGroupArray[sp].groupCode, FunctGroupArray[sp].speciesParams[rangeoverlap_id], bm->boxes[chkbox].HomeRangeInfo[sp].n);
 
 														if (FunctGroupArray[sp].speciesParams[rangeoverlap_id] == 0) {
 															if (bm->boxes[chkbox].HomeRangeInfo[sp].n == 0) {
@@ -3313,7 +3332,7 @@ static void Setup_HomeRanges(MSEBoxModel *bm, FILE *llogfp) {
 																new_checked++;
 															}
 
-															fprintf(llogfp, "new_checked: %d\n", new_checked);
+															//fprintf(llogfp, "new_checked: %d\n", new_checked);
 
 														} else {
 															/* For overlapping case then connection fine regardless */
@@ -3435,11 +3454,11 @@ static void Setup_HomeRanges(MSEBoxModel *bm, FILE *llogfp) {
 						totarea = 0;
 						for (ij = 0; ij < bm->nbox; ij++) {
 							for (nij = 0; nij < bm->boxes[ij].HomeRangeInfo[sp].n; nij++) {
-								if (bm->boxes[ij].HomeRangeInfo[sp].ids[rij] == idnum) {
+								if (bm->boxes[ij].HomeRangeInfo[sp].ids[nij] == idnum) {
 									totarea += bm->boxes[ij].area;
 
 									//fprintf(llogfp,"Box-%d (vs Box-%d) - homerange: %d (vs %d), boxarea: %e, totarea: %e\n",
-									//	b, ij, idnum, bm->boxes[ij].HomeRangeInfo[sp].ids[rij], bm->boxes[ij].area, totarea);
+									//	b, ij, idnum, bm->boxes[ij].HomeRangeInfo[sp].ids[nij], bm->boxes[ij].area, totarea);
 								}
 							}
 						}
@@ -3610,8 +3629,7 @@ void Check_Migration_Data(MSEBoxModel *bm, int speciesIndex, int stageIndex)
 	// Check thge migration information.
 	for (qid = 0; qid < counter; qid++) {
 		if (MIGRATION[speciesIndex].StartDay_Prm[stageIndex][qid] > MIGRATION[speciesIndex].EndDay_Prm[stageIndex][qid]) {
-			sprintf(
-					str,
+			snprintf(str, sizeof(str),
 					"atBiology checkMigraionData(): you have %s leaving one year and returning the next. Note those beginning outside model domain not accounted for yet - need to add code for this.\n",
 					FunctGroupArray[speciesIndex].groupCode);
 			warn(str);
@@ -3711,7 +3729,7 @@ int Ecology_Read_Larval_Matrix(MSEBoxModel *bm) {
 			if (FunctGroupArray[sp].recruitType == larval_dispersal) {
 
 				/* Read in the data*/
-				sprintf(variableName, "%s_Connnectivity", FunctGroupArray[sp].groupCode);
+				snprintf(variableName, sizeof(variableName), "%s_Connnectivity", FunctGroupArray[sp].groupCode);
 				fprintf(bm->logFile, "Searching for %s in file %s\n", variableName, netcdfFileName);
 				sp_vid = ncvarid(fid, variableName);
 				if (sp_vid < 0)

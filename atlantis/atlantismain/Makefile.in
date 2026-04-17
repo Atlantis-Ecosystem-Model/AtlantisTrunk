@@ -418,9 +418,8 @@ atlantisMergeddir = $(includedir)/atlantismain
 atlantisMerged_SOURCES = atlantismain.c atlantisboxmodel.h
 atlantisMerged_LDADD = -latlantisutil -latassess -latphysics \
 	-latecology -lateconomic -latmanage -latharvest \
-	-latimplementation -latphysics -latConvertAtlantis \
-	-latlantisutil -lsjwlib -latSS3Link $(am__append_9) \
-	$(am__append_13) $(am__append_17)
+	-latimplementation -latConvertAtlantis -lsjwlib -latSS3Link \
+	$(am__append_9) $(am__append_13) $(am__append_17)
 SVNWCPATH = -D'ATLANTIS_WCPATH="$(shell svn info  ../| grep URL | sed  's/URL: //g')"'
 SVNWCDATE = -D'ATLANTIS_WCDATE="$(shell svn info  ../| grep "Last Changed Date:" | sed  's/Last Changed Date: //g')"'
 #SVNDEV = -D'ATLANTIS_REVISION="$(shell svn info  ../| grep "Last Changed Rev:" | sed  's/Last Changed Rev: //g')"'

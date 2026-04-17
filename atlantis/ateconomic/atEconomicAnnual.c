@@ -129,7 +129,7 @@ void Annual_Effort_Schedule(MSEBoxModel *bm, FILE *llogfp) {
 	if (bm->hist_only && ((bm->dayt + 7.0) > bm->hist_only_timeout)) {
 		bm->hist_only = 0;
 		for (nf = 0; nf < bm->K_num_fisheries; nf++) {
-			for (ns = 0; ns < bm->FISHERYprms[ns][nsubfleets_id]; ns++) {
+			for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) {
 				bm->SUBFLEET_ECONprms[nf][ns][flexweight_id] = bm->SUBFLEET_ECONprms[nf][ns][flexweight_orig_id];
 			}
 		}
@@ -244,7 +244,7 @@ void Initialise_Annual_Effort(MSEBoxModel *bm, FILE *llogfp) {
 						/* If can't catch the group skip ahead */
 						if (!bm->SP_FISHERYprms[sp][nf][q_id])
 							continue;
-						bm->SUBFLEET_ECONprms[nf][ns][AnnualCatch_id] = bm->QuotaAlloc[nf][ns][sp][cumboatcatch_id];
+						bm->SUBFLEET_ECONprms[nf][ns][AnnualCatch_id] += bm->QuotaAlloc[nf][ns][sp][cumboatcatch_id];
 						bm->QuotaAlloc[nf][ns][sp][cumboatcatch_id] = 0; // Reset annual total catch
 						bm->QuotaAlloc[nf][ns][sp][spexpectcatch_id] = 0;
 						bm->QuotaAlloc[nf][ns][sp][within_id] = 0;
@@ -810,13 +810,12 @@ void Stocastic_Effort_Allocation(MSEBoxModel *bm, int nf, int ns, int *not_bound
 		}
 
 		/* Interim expected catches - as planned effort * historical CPUE per month - for finding new target species
-		 so don't include bycatch incentives here (as will end up targetting the wrong things!)
-		 */
+		 so don't include bycatch incentives here (as will end up targetting the wrong things!) */
 		expectedCatch = 0;
 		for (month = 0; month < 12; month++) {
 			expectedCatch
 					+= bm->EffortSchedule[nf][ns][month][expect_id] * bm->BlackBook[nf][ns][sp][month][expect_id]
-							/ (bm->EffortSchedule[nf][ns][bm->MofY][hist_id] + small_num);
+							/ (bm->EffortSchedule[nf][ns][month][hist_id] + small_num);  // Denominator previously used MofY not month
 		}
 		bm->QuotaAlloc[nf][ns][sp][spexpectcatch_id] = expectedCatch;
 	}
@@ -1045,9 +1044,9 @@ void Do_EconArray_Rescaling(MSEBoxModel *bm) {
                 }
             }
             for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-                bm->QuotaAlloc[nf][ns][sp][permolease_id] += bm->CatchReScale[sp];
-                bm->QuotaAlloc[nf][ns][sp][templease_id] += bm->CatchReScale[sp];
-                bm->QuotaAlloc[nf][ns][sp][owned_id] += bm->CatchReScale[sp];
+                bm->QuotaAlloc[nf][ns][sp][permolease_id] *= bm->CatchReScale[sp];
+                bm->QuotaAlloc[nf][ns][sp][templease_id] *= bm->CatchReScale[sp];
+                bm->QuotaAlloc[nf][ns][sp][owned_id] *= bm->CatchReScale[sp];
             }
         }
     }

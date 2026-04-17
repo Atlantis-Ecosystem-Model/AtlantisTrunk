@@ -457,6 +457,7 @@ void Vertebrate_Reproduction(MSEBoxModel *bm, int wclayer, int maxdeep, int tota
                     KWRR_sp = KWSR_sp * FunctGroupArray[species].X_RS[cohort];
                 }
                 
+                FunctGroupArray[species].speciesParams[suckler_contam_today_id] = 1;  // Only zeroed if recruits actively arriving
                 if (recruits_arrive) {
                     /* Update sizes of smallest age class - calculate new sn and rn */
                     for(ngene = 0; ngene < sp_numGeneTypes; ngene++){
@@ -469,11 +470,13 @@ void Vertebrate_Reproduction(MSEBoxModel *bm, int wclayer, int maxdeep, int tota
                                                 
                         if(bm->track_contaminants && bm->flag_contamMaternalTransfer){
                             Apply_Settler_Contaminants(bm, species, cohort, starting_num, new_num, EMBRYO[species].next_recruit);
+                            FunctGroupArray[species].speciesParams[suckler_contam_today_id] = 0; // As getting transfer at birth so don't double up
                         }
 
                         // Also check if any den active for puroposes of updating the local pools
-                        if((EMBRYO[species].recruitSPden[ngene] > 0) || (lostden_zero[ngene] != 0.0))
+                        if((EMBRYO[species].recruitSPden[ngene] > 0) || (lostden_zero[ngene] != 0.0)){
                             active_den[cohort] = 1;
+                        }
                         
                         /**
                         //if (do_debug && (bm->which_check == species) && (EMBRYO[species].recruitSPden[ngene] > 0) ) {
@@ -1734,7 +1737,7 @@ void Recruit_Migration(MSEBoxModel *bm, int species, int wclayer, int stock_id, 
     int larval_queue_extension = FunctGroupArray[species].speciesParams[larval_queue_extension_id];
     //int cohort_recruit_entry = FunctGroupArray[species].speciesParams[cohort_recruit_entry_id];
     
-    fprintf(bm->logFile, "Time: %e %s box%d-%d (vs first_box %d, top_layer %d) numGeneTypes: %d Recruit_Migration recruitType: %d num_in_queue: %d externalReproducer: %d\n",  bm->dayt, FunctGroupArray[species].groupCode, bm->current_box, bm->current_layer, bm->first_box, bm->top_layer, sp_numGeneTypes, FunctGroupArray[species].recruitType, MIGRATION[species].num_in_queue, FunctGroupArray[species].externalReproducer);
+    //fprintf(bm->logFile, "Time: %e %s box%d-%d (vs first_box %d, top_layer %d) numGeneTypes: %d Recruit_Migration recruitType: %d num_in_queue: %d externalReproducer: %d\n",  bm->dayt, FunctGroupArray[species].groupCode, bm->current_box, bm->current_layer, bm->first_box, bm->top_layer, sp_numGeneTypes, FunctGroupArray[species].recruitType, MIGRATION[species].num_in_queue, FunctGroupArray[species].externalReproducer);
 
     if((FunctGroupArray[species].externalReproducer && (FunctGroupArray[species].recruitType != external_spawn_local_recruit)) || (FunctGroupArray[species].recruitType == external_recruit)) {
         if ((bm->current_box == bm->first_box) && (bm->current_layer == bm->top_layer)) {
@@ -2843,12 +2846,12 @@ void Get_Latest_Additions(MSEBoxModel *bm, int wclayer, int species, int maxstoc
 
 	} else {
 		for ( ngene = 0; ngene < sp_numGeneTypes; ngene++ ){
-			bm->tempPopRatio[stock_id][species][cohort][0] += coming_SPden[ngene];
+			bm->tempPopRatio[stock_id][species][ngene][0] += coming_SPden[ngene]; //Used to say cohort for tempPopRatio
 
-			if((!_finite(bm->tempPopRatio[stock_id][species][cohort][0])) || (species == bm->which_check)){
+			if((!_finite(bm->tempPopRatio[stock_id][ngene][cohort][0])) || (species == bm->which_check)){
 				fprintf(llogfp,"Time: %e %s-%d in Box%d-%d (ngene %d) has tempPopRatio %e for stock %d subclass %d as dennow: %e\n",
 						bm->dayt, FunctGroupArray[species].groupCode, cohort, ngene, bm->current_box, bm->current_layer,
-						bm->tempPopRatio[stock_id][species][cohort][0], stock_id, 0, coming_SPden[ngene]);
+						bm->tempPopRatio[stock_id][species][ngene][0], stock_id, 0, coming_SPden[ngene]);
 			}
 
 		}
@@ -3096,12 +3099,12 @@ void Update_Age_Distrib(MSEBoxModel *bm, int species, int stock_id, int sp_ddepe
 										s_id = bm->group_stock[species][ij][k];
 
 										if(!stock_done[s_id]){
-											for (b = 0; b < classize; b++) {
-												bm->tempPopRatio[s_id][species][cohort][k] += (FunctGroupArray[species].boxPopRatio[ij][k][cohort][b-1] * MIGRATION[species].DEN[cohort][qid]);
+											for (b = 1; b < classize; b++) {
+												bm->tempPopRatio[s_id][species][cohort][b] += (FunctGroupArray[species].boxPopRatio[ij][k][cohort][b-1] * MIGRATION[species].DEN[cohort][qid]);
 												if(rec_related)
-													recVERTpopratio[stock_id][species][cohort][k] += (FunctGroupArray[species].boxPopRatio[ij][k][cohort][b-1] * MIGRATION[species].DEN[cohort][qid]);
+													recVERTpopratio[stock_id][species][cohort][b] += (FunctGroupArray[species].boxPopRatio[ij][k][cohort][b-1] * MIGRATION[species].DEN[cohort][qid]);
 
-												if((!_finite(FunctGroupArray[species].boxPopRatio[ij][k][cohort][b])) || (!_finite(bm->tempPopRatio[s_id][species][cohort][k]))){
+												if((!_finite(FunctGroupArray[species].boxPopRatio[ij][k][cohort][b])) || (!_finite(bm->tempPopRatio[s_id][species][cohort][b]))){
 													quit("tempPopRatio for %s-%d in box%d-%d is NAN for stock_id %d as boxPopRatio[%d] %e, MIGRATIONden[%d]: %e\n",
 															FunctGroupArray[species].groupCode, cohort, ij, k, s_id, b-1, FunctGroupArray[species].boxPopRatio[ij][k][cohort][b-1],
 															qid, MIGRATION[species].DEN[cohort][qid]);
@@ -4937,7 +4940,7 @@ void Find_Final_Invert_Recruit_Distribtuion(MSEBoxModel *bm, int species, int ng
 						//pid = FunctGroupArray[species].cohort_stage[cohort];
                         
 						/* Recruit while outside the model */
-						if ((MIGRATION[species].Return_Now[mid] >= thisday) && (MIGRATION[species].Leave_Now[qid] <= thisday)) {
+						if ((MIGRATION[species].Return_Now[mid] >= thisday) && (MIGRATION[species].Leave_Now[mid] <= thisday)) {
 							recruit_outside = 1;
 						}
 					}
@@ -5200,16 +5203,17 @@ void Update_Invert_Cohorts(MSEBoxModel *bm, int species, int stock_id, int maxst
 					if (!k) {
 						/* If first slice of the ageclass then may have entrants from
 						 the Migration array to consider */
-                        bm->tempPopRatio[stock_id][species][cohort][k] = bm->tempPopRatio[stock_id][species][cohort][k];
                         for (qid = MIGRATION[species].num_in_queue_done; qid < MIGRATION[species].num_in_queue; qid++) {
                             bm->tempPopRatio[stock_id][species][cohort][k] += MIGRATION[species].aging[cohort][qid];
                         }
                         bm->tempPopRatio[stock_id][species][cohort][k] /= (this_totsum + small_num);
-					} else
-						bm->tempPopRatio[stock_id][species][cohort][k] /= (this_totsum + small_num);
-
-					if (bm->tempPopRatio[stock_id][species][cohort][k] > maxvalue)
-						maxvalue = bm->tempPopRatio[stock_id][species][cohort][k];
+                    } else {
+                        bm->tempPopRatio[stock_id][species][cohort][k] /= (this_totsum + small_num);
+                    }
+                    
+                    if (bm->tempPopRatio[stock_id][species][cohort][k] > maxvalue) {
+                        maxvalue = bm->tempPopRatio[stock_id][species][cohort][k];
+                    }
 				}
 
 				/* Re-adjust (if necessary) - assuming that very populus

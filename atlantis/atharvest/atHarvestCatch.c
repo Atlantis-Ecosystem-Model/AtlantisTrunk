@@ -91,10 +91,6 @@ int Get_Catch(MSEBoxModel *bm, int sp, int chrt, int stage, int nf, int do_debug
 
 	/* imposed time series catch */
 	} else if (flagimposecatch) {
-
-		if (do_debug) {
-			fprintf(llogfp, "Calculate Catch - Time: %e, %s-%d (%d) box%d-%d %s flagimposecatch: %d, boxkey_id: %d\n", bm->dayt, FunctGroupArray[sp].groupCode, chrt, tscatchid[sp], bm->current_box, bm->current_layer, FisheryArray[nf].fisheryCode, flagimposecatch, boxkey_id);
-		}
 		*loadFC = Get_Imposed_Catch(bm, sp, chrt, stage, nf, do_debug, vert_scale, Biom, boxkey_id, mpa_losses, llogfp);
 
 		/* To avoid handing around a pointer set SPtoFC = loadFC here */
@@ -223,15 +219,17 @@ double Get_Fishing_Mortality(MSEBoxModel *bm, int sp, int chrt, int stage, int n
 			quit("Get_Fishing_Mortality. Group %s, Fishery %s, Shouldn't be in here for impacted only groups. Some parameters including mFC_start_age_id and mFC_end_age_id will be undefined.\n", FunctGroupArray[sp].groupCode, FisheryArray[nf].fisheryCode);
 
 	}
-            
-	if(do_debug){
+    
+    /*
+    if(do_debug){
 		fprintf(llogfp,"Get_Fishing_Mortality - Time: %e %s %s origmFC: %e, mFC_scale: %e, mFC: %e)\n",
 			bm->dayt, FisheryArray[nf].fisheryCode, FunctGroupArray[sp].groupCode, bm->SP_FISHERYprms[sp][nf][mFC_id] / 86400.0, bm->SP_FISHERYprms[sp][nf][mFC_scale_id], mFC);
 	}
+    */
 
 	/* Get scenario scalars */
 	if (bm->flagchangeF){
-		mFC_scale = Get_Fishery_Group_Change_Scale(bm, nf,sp, mFC_num_changes_id, mFC_num_changes_id, mFCchange[sp]);
+		mFC_scale = Get_Fishery_Group_Change_Scale(bm, nf,sp, bm->flagchangeF, mFC_num_changes_id, mFCchange[sp]);
 	}else{
 		mFC_scale = 1.0;
 	}
@@ -288,12 +286,14 @@ double Get_Fishing_Mortality(MSEBoxModel *bm, int sp, int chrt, int stage, int n
 	/* Apply fishing mortality */
 	SPtoFC = mFC * mpa_scale * mFC_scale * Displace_rescale * Biom * sel;
 
+    /*
 	if(do_debug){
-		fprintf(llogfp,"Time: %e, %d-%d %s-%d %s SPtoFC orig: %e (with mFC: %e mFC-param: %e, mFCscal_prm: %e, and Biom: %e, mpa_scale:%e, mFC_scale: %e, sel: %e)\n",
+		fprintf(llogfp,"Time: %e, %d-%d %s-%d %s SPtoFC orig: %e (with mFC: %e mFC-param: %e, mFCscal_prm: %e, and Biom: %e, mpa_scale:%e, mFC_scale: %e, sel: %e, Displace_rescale: %e)\n",
 			bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[sp].groupCode,
-			chrt, FisheryArray[nf].fisheryCode, SPtoFC, mFC, bm->SP_FISHERYprms[sp][nf][mFC_id] / 86400.0, bm->SP_FISHERYprms[sp][nf][mFC_scale_id], Biom, mpa_scale, mFC_scale, sel);
+			chrt, FisheryArray[nf].fisheryCode, SPtoFC, mFC, bm->SP_FISHERYprms[sp][nf][mFC_id] / 86400.0, bm->SP_FISHERYprms[sp][nf][mFC_scale_id], Biom, mpa_scale, mFC_scale, sel, Displace_rescale);
 	}
-
+    */
+    
 	return SPtoFC;
 }
 
@@ -770,7 +770,7 @@ double Get_Swept_Area(MSEBoxModel *bm, int nf, double *gear_change_scale) {
 
 	double swept_area, SWEPT_scale;
 	/* Calculate swept_area */
-	SWEPT_scale = Get_Fishery_Change_Scale(bm, nf, flagchangeSWEPT_id, flagchangeSWEPT_id, SWEPTchange);
+	SWEPT_scale = Get_Fishery_Change_Scale(bm, nf, flagchangeSWEPT_id, SWEPT_num_changes_id, SWEPTchange);
 	swept_area = bm->FISHERYprms[nf][swept_area_id];
 
 	(*gear_change_scale) *= SWEPT_scale;
@@ -849,7 +849,7 @@ double Harvest_How_Much_Fishery_Access(MSEBoxModel *bm, int species, int cohort,
     } else if (flagF) {
         if( bm->flag_sel_with_mFC) {
             sel = Get_Selectivity(bm, species, stage, nf, li, sel_curve, 0.0, 0.0);
-            ans = 1.0;
+            ans = sel;
         } else {
             ans = 1.0;
             

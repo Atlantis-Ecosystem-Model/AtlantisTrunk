@@ -405,16 +405,16 @@ int ConvertUnixToDos(FILE* ipInF, FILE* ipOutF, CFlag *ipFlag, char *progname) {
 	return RetVal;
 }
 
-int Convert_File_Format(char *fileName, char *tempFileName) {
+int Convert_File_Format(char *fileName, char *tempFileName, int lenStr) {
 
 	CFlag *pFlag;
 	FILE *inputFile;
 	FILE *outputFile;
 
 #ifdef _WIN32
-	sprintf(tempFileName, "TempFile_%d.txt", _getpid());
+	snprintf(tempFileName, lenStr, "TempFile_%d.txt", _getpid());
 #else
-	sprintf(tempFileName, "TempFile_%d.txt", getpid());
+	snprintf(tempFileName, lenStr, "TempFile_%d.txt", getpid());
 #endif
 
 	if ((inputFile = fopen(fileName, "r")) == NULL)

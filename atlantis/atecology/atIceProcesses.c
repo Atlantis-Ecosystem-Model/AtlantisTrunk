@@ -317,8 +317,8 @@ void Box_Ice_Q10(MSEBoxModel *bm, Box *pBox, int ice_layer, FILE *llogfp)
 			if (FunctGroupArray[sp].isVertebrate == FALSE && FunctGroupArray[sp].speciesParams[flag_id] == TRUE) {
 				for (cohort = 0; cohort < FunctGroupArray[sp].numCohorts; cohort++) {
 
-                    FunctGroupArray[sp].scaled_C[cohort] = FunctGroupArray[sp].scaled_C[cohort] * FunctGroupArray[sp].Tcorr * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr * FunctGroupArray[sp].PolluteCorr;
-					FunctGroupArray[sp].scaled_mum[cohort] = FunctGroupArray[sp].scaled_mum[cohort] * FunctGroupArray[sp].Tcorr * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr * FunctGroupArray[sp].PolluteCorr;
+                    FunctGroupArray[sp].scaled_C[cohort] = FunctGroupArray[sp].SP_C[cohort] * FunctGroupArray[sp].Tcorr * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr * FunctGroupArray[sp].PolluteCorr;
+					FunctGroupArray[sp].scaled_mum[cohort] = FunctGroupArray[sp].mum[cohort] * FunctGroupArray[sp].Tcorr * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr * FunctGroupArray[sp].PolluteCorr;
 
 					if(!(_finite(FunctGroupArray[sp].scaled_C[cohort]))){
 						quit("SP_C is not finite for species %s cohort %d\n", FunctGroupArray[sp].groupCode, cohort);
@@ -441,16 +441,16 @@ void Ice_PrimaryProduction(MSEBoxModel *bm, FILE *llogfp, int sp_id, int micro_c
 			/ (FunctGroupArray[sp_id].speciesParams[KN_id] + NH)) * (1.0 + FunctGroupArray[sp_id].speciesParams[KN_id] / DIN);
 
 	if (lim_case != one_nut_lim)
-		uptakeSi = sp_grow * X_SiN;
+		uptakeSi = sp_grow * bm->X_SiN;
 	else
 		uptakeSi = 0.0;
 
 	if (micro_case)
-		uptakeFe = sp_grow * X_FeN;
+		uptakeFe = sp_grow * bm->X_FeN;
 	else
 		uptakeFe = 0.0;
 
-	/* Cap nutrient uptake to what is available */
+	/* Cap nutrient uptake to what is available - this intentionally a max as it is rescaling the NH uptake based on which is the least limitign of the limiting nutients */
 	scale_uptake = 1.0;
 	if (uptakeNH > NH)
 		scale_uptake = NH / uptakeNH;
@@ -552,7 +552,7 @@ double Get_Ice_Vertebrate_Habitat_Rating(MSEBoxModel *bm, int guildcase, int sta
 			ice_dependent++;
 		}
 
-		tot_ice = 0.0;
+		tot_ice = 0.0; // Local total for ice of that class across layers in the box
 		for(z=0; z<bm->icenz; z++){
 			tot_ice += bm->boxes[boxin].ice.ice_classes[z][i];
 		}

@@ -45,7 +45,7 @@ void readZoneXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *param
 	char *nodeName;
 
 	nodeName =  Util_Get_Node_Name(parent);
-	if(Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, nodeName, parent,  no_checking, paramName, &values, bm->nfzones) == FALSE){
+	if(Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, nodeName, parent, no_checking, paramName, &values, bm->nfzones) == FALSE){
 		quit("ERROR: Cannot read parameter %s in input file %s\n", paramName, fileName);
 	}
 
@@ -95,13 +95,15 @@ void readAssessFlagXML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 	/* Minimum patchy sampling record increment */
 	bm->minfreq = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, integer_check, "minfreq");
 
-	if (bm->minfreq < bm->tassessinc)
-		bm->minfreq = bm->tassessinc;
 	if (bm->minfreq > bm->tassessinc)
 		bm->minfreq = bm->tassessinc;
     
 	/* Maximum patchy sampling record increment */
 	bm->maxfreq = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, integer_check, "maxfreq");
+    
+    if (bm->maxfreq < bm->tassessinc)
+        bm->maxfreq = bm->tassessinc;
+    
 	/* Whether doing ecosystem assessments or not */
 	bm->flagecosysassess = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, binary_check, "flagecosysassess");
 	/* Whether have observer data or not */
@@ -447,7 +449,7 @@ void readDetritusXML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
 		if (FunctGroupArray[guild].isDetritus == TRUE) {
 			groupNode = Util_XML_Get_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeNode, FunctGroupArray[guild].groupCode);
-			if (attributeNode == NULL)
+			if (groupNode == NULL)
 				quit("Detritus_Input/Discard_Fate/%s attribute group not found.\n", FunctGroupArray[guild].groupCode);
 
 			DiscardFate[index][WC] = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupNode, no_checking, "WC");
@@ -562,7 +564,7 @@ void readRAssessFlagXML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
         bm->NumRAssessScriptNames = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, integer_check, "NumRAssessScriptNames");
         bm->RAssessRscriptName = c_alloc2d(BMSLEN, bm->NumRAssessScriptNames);
         for (nf = 0; nf < bm->NumRAssessScriptNames; nf ++) {
-            sprintf(nameString, "RAssessRscriptName%d", nf);
+            snprintf(nameString, sizeof(nameString), "RAssessRscriptName%d", nf);
             Util_XML_Get_Value_String(fileName, ATLANTIS_ATTRIBUTE, 1, groupingNode, nameString, bm->RAssessRscriptName[nf]);
         }
         
@@ -668,12 +670,12 @@ int readModelAssessmentParameters(MSEBoxModel *bm, char *filename) {
 
 /******************************************** Parameters for tiered assessments *************************************************/
 
-xmlNodePtr getParentNode(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *nodeName, char *errorString) {
+xmlNodePtr getParentNode(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *nodeName, char *errorString, int errorBuf) {
 
 	char *parentNodeName = Util_Get_Node_Name(parent);
 	xmlNodePtr attributeGroup;
 
-	sprintf(errorString, "%s/%s", parentNodeName, nodeName);
+	snprintf(errorString, errorBuf, "%s/%s", parentNodeName, nodeName);
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, nodeName);
 	if (attributeGroup == NULL)
 		quit("readGroupAssessTierXMLData - %s attribute group not found.\n", errorString);
@@ -730,15 +732,15 @@ void readStockAgeAssessTierXMLData(MSEBoxModel *bm, char *fileName, xmlNodePtr a
             quit("%s/%s species attribute group not found.\n", errorString, FunctGroupArray[guild].groupCode);
             
         for (ns = 0; ns < bm->K_num_sexes; ns++) {
-            sprintf(str, "%s", sexStrings[ns]);
-            sprintf(eString, "%s/%s/%s\n", errorString, FunctGroupArray[guild].groupCode, str);
+            snprintf(str, sizeof(str), "%s", sexStrings[ns]);
+            snprintf(eString, sizeof(eString), "%s/%s/%s\n", errorString, FunctGroupArray[guild].groupCode, str);
                 
             sexNode = Util_XML_Get_Node(ATLANTIS_SEX_ATTRIBUTE, speciesNode, str);
             if (sexNode == NULL)
                 quit("%s gender attribute group not found.\n", eString);
                 
             for (nstock = 0; nstock < nloop; nstock++) {
-                sprintf(str, "stock%d", nstock+1);
+                snprintf(str, sizeof(str), "stock%d", nstock+1);
         
                 if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, eString, sexNode, checkType, str, &values, length) == FALSE) {
                     quit("Error: Unable to find parameter '%s/%s/%s' in input file %s\n", errorString, FunctGroupArray[guild].groupCode, str, fileName);
@@ -755,8 +757,10 @@ void readStockAgeAssessTierXMLData(MSEBoxModel *bm, char *fileName, xmlNodePtr a
         // Copy to other stocks
         if ((bm->assess_share_params) && (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)) {
             for (nstock = nloop; nstock < bm->RBCestimation.RBCspeciesParam[guild][NumRegions_id]; nstock++) {
-            	for (index = 0; index < length; index++) {
-            		array[nstock][ns][index] = array[0][ns][index];
+                for (ns = 0; ns < bm->K_num_sexes; ns++) {
+                    for (index = 0; index < length; index++) {
+                        array[nstock][ns][index] = array[0][ns][index];
+                    }
             	}
             }
         }
@@ -786,8 +790,8 @@ void readStockAssessTierXMLData(MSEBoxModel *bm, char *fileName, xmlNodePtr attr
             quit("%s/%s species attribute group not found.\n", errorString, FunctGroupArray[guild].groupCode);
 
         for (nstock = 0; nstock < nloop; nstock++) {
-            sprintf(str, "stock%d", nstock+1);
-            sprintf(eString, "%s/%s/%s\n", errorString, FunctGroupArray[guild].groupCode, str);
+            snprintf(str, sizeof(str), "stock%d", nstock+1);
+            snprintf(eString, sizeof(eString), "%s/%s/%s\n", errorString, FunctGroupArray[guild].groupCode, str);
             
             if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, eString, speciesNode, checkType, str, &values, length) == FALSE) {
                 quit("Error: Unable to find parameter '%s/%s/%s' in input file %s\n", errorString, FunctGroupArray[guild].groupCode, str, fileName);
@@ -880,7 +884,7 @@ void Fill_TACmult(MSEBoxModel *bm){
 		/* Set up the indexing on the names in the forcing file */
 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 			if ((FunctGroupArray[sp].speciesParams[flag_id] == TRUE) && ((FunctGroupArray[sp].isImpacted == TRUE) || (FunctGroupArray[sp].speciesParams[sp] == TRUE))) {
-				sprintf(str, "%s", FunctGroupArray[sp].groupCode);
+				snprintf(str, sizeof(str), "%s", FunctGroupArray[sp].groupCode);
 				for (b = 0; b < bm->tsTACmult->nv; b++) {
 					if (strcmp(str, bm->tsTACmult->varname[b]) == 0){
 						scale_index = b;
@@ -974,7 +978,7 @@ void readKeyTierParamXML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
     bm->RBCestimation.LagPeriod = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "LagPeriod");
     bm->RBCestimation.GradientWindow = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "GradientWindow");
     bm->RBCestimation.GradientPeriod = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "GradientPeriod");
-    bm->RBCestimation.GradientPeriod = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "GradientBuffer");
+    bm->RBCestimation.GradientBuffer = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "GradientBuffer");
     bm->RBCestimation.UseCategory = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseCategory");
     bm->RBCestimation.UseClosest = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseClosest");
     bm->RBCestimation.UseTriggerMgmt = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseTriggerMgmt");
@@ -1147,7 +1151,7 @@ void readTierAssessmentManagementXML(MSEBoxModel *bm, char *fileName, xmlNodePtr
         bm->NumRAssessScriptNames = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, integer_check, "NumRAssessScriptNames");
         bm->RAssessRscriptName = c_alloc2d(BMSLEN, bm->NumRAssessScriptNames);
         for (nf = 0; nf < bm->NumRAssessScriptNames; nf ++) {
-            sprintf(nameString, "RAssessRscriptName%d", nf);
+            snprintf(nameString, sizeof(nameString), "RAssessRscriptName%d", nf);
             Util_XML_Get_Value_String(fileName, ATLANTIS_ATTRIBUTE, 1, groupingNode, nameString, bm->RAssessRscriptName[nf]);
         }
         
@@ -1165,25 +1169,22 @@ void readTierAssessmentManagementXML(MSEBoxModel *bm, char *fileName, xmlNodePtr
 	if (childGroupingNode == NULL)
 		quit("readTierAssessmentManagementXML: CVs attribute group not found in input file %s.\n", fileName);
     
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "DiscardCV", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "DiscardCV", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].DiscCV, no_checking, errorString,
-                                   (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].DiscCV, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
 
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CatchCV", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CatchCV", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CatchCV, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CatchCV, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
 
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "EffortCV", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "EffortCV", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].EffortCV, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].EffortCV, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
     
     
@@ -1191,130 +1192,116 @@ void readTierAssessmentManagementXML(MSEBoxModel *bm, char *fileName, xmlNodePtr
 	if (childGroupingNode == NULL)
 		quit("readTierAssessmentManagementXML: CPUE attribute group not found in input file %s.\n", fileName);
 
-	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUECV", errorString);
+	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUECV", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CPUEcv, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CPUEcv, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
 
-	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUEvar", errorString);
+	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUEvar", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CPUEvar, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CPUEvar, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
-	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUEcorr", errorString);
+	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUEcorr", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CPUEcorr, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CPUEcorr, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
     
     /*
-     attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUEqmu", errorString);
+     attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUEqmu", errorString, sizeof(errorString));
      for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
      if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-        readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CPUEqmu, no_checking, errorString, bm->K_num_fisheries);
+        readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CPUEqmu, no_checking, errorString,  bm->K_num_fisheries);
      }
      
-     attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUEpow", errorString);
+     attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUEpow", errorString, sizeof(errorString));
      for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
      if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-        readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CPUEpow, no_checking, errorString, bm->K_num_fisheries);
+        readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CPUEpow, no_checking, errorString,  bm->K_num_fisheries);
      }
      */
     
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "PGMSY_q", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "PGMSY_q", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].PGMSY_q, no_checking, errorString,
-                    (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].PGMSY_q, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
     }
     
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "PGMSY_sel_lsm", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "PGMSY_sel_lsm", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].PGMSY_sel_lsm, no_checking, errorString,
-                    (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].PGMSY_sel_lsm, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
     }
 
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "PGMSY_sel_sigma", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "PGMSY_sel_sigma", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].PGMSY_sel_sigma, no_checking, errorString,
-                    (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].PGMSY_sel_sigma, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
     }
     
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "PGMSY_sel_curve", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "PGMSY_sel_curve", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].PGMSY_selcurve, no_checking, errorString,
-                    (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].PGMSY_selcurve, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
     }
     
     childGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "StartSS");
 	if (childGroupingNode == NULL)
 		quit("readTierAssessmentManagementXML: StartSS attribute group not found in input file %s.\n", fileName);
 
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Start_SelInflect", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Start_SelInflect", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Start_SelInflect, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Start_SelInflect, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
 
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Start_SelWidth", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Start_SelWidth", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Start_SelWidth, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Start_SelWidth, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
     
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Start_RetInflect", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Start_RetInflect", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Start_RetInflect, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Start_RetInflect, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
     
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Start_RetSlope", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Start_RetSlope", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Start_RetSlope, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Start_RetSlope, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
  
     childGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Varadj");
 	if (childGroupingNode == NULL)
 		quit("readTierAssessmentManagementXML: Varadj attribute group not found in input file %s.\n", fileName);
     
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Varadj_CPUE", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Varadj_CPUE", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Varadj_CPUE, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Varadj_CPUE, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
  
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Varadj_discard", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Varadj_discard", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Varadj_discard, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Varadj_discard, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
  
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Varadj_length", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Varadj_length", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Varadj_length, no_checking, errorString,
             		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
     
-    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Varadj_age", errorString);
+    attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Varadj_age", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Varadj_age, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Varadj_age, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
 	}
     
 	/** assessment specifications */
@@ -1389,25 +1376,22 @@ void readTierAssessmentManagementXML(MSEBoxModel *bm, char *fileName, xmlNodePtr
 	Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, Tier3_matlen_id);
 	Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, Tier3_maxF_id);
 
-	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Tier3_Linf", errorString);
+	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Tier3_Linf", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Tier3_Linf, no_checking, errorString,
-				bm->K_num_sexes);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Tier3_Linf, no_checking, errorString, bm->K_num_sexes);
 	}
 
-	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Tier3_k", errorString);
+	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Tier3_k", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Tier3_k, no_checking, errorString,
-				bm->K_num_sexes);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Tier3_k, no_checking, errorString, bm->K_num_sexes);
 	}
 
-	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Tier3_t0", errorString);
+	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Tier3_t0", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Tier3_t0, no_checking, errorString,
-				bm->K_num_sexes);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Tier3_t0, no_checking, errorString, bm->K_num_sexes);
 	}
 
 	// tier 4
@@ -1445,28 +1429,27 @@ void readTierAssessmentManagementXML(MSEBoxModel *bm, char *fileName, xmlNodePtr
 	Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, Tier5sel_id);
 	Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, Tier5q_id);
     
-	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Tier5_Bstart", errorString);
+	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Tier5_Bstart", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Tier5_Bstart, no_checking, errorString, 3);
 	}
 
-	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Tier5_r", errorString);
+	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "Tier5_r", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Tier5_r, no_checking, errorString, 3);
 	}
 
 	/** age related **/
-    attributeGroup = getParentNode(bm, fileName, groupingNode, "Ageing_error", errorString);
+    attributeGroup = getParentNode(bm, fileName, groupingNode, "Ageing_error", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
-            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Ageing_error, no_checking, errorString,
-            		(int)bm->RBCestimation.RBCspeciesParam[guild][AccumAge_id]);
+            readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Ageing_error, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][AccumAge_id]);
 	}
     
     dummy = Util_Alloc_Init_1D_Double(bm->nbox, 0.0);
-    attributeGroup = getParentNode(bm, fileName, groupingNode, "RegStructure", errorString);
+    attributeGroup = getParentNode(bm, fileName, groupingNode, "RegStructure", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0){
             readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, dummy, no_checking, errorString, bm->nbox);
@@ -1480,13 +1463,13 @@ void readTierAssessmentManagementXML(MSEBoxModel *bm, char *fileName, xmlNodePtr
 
     /** Life history related - need for SS parameterisation **/
     // by sex, stock and age
-	attributeGroup = getParentNode(bm, fileName, groupingNode, "Mzero", errorString);
+	attributeGroup = getParentNode(bm, fileName, groupingNode, "Mzero", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readStockAgeAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Mzero, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][MaxAge_id]);
     }
     
-	attributeGroup = getParentNode(bm, fileName, groupingNode, "MeanLenAge", errorString);
+	attributeGroup = getParentNode(bm, fileName, groupingNode, "MeanLenAge", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
          if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
              if (!bm->RBCestimation.RBCspeciesParam[guild][flagLAdirect_id])
@@ -1494,7 +1477,7 @@ void readTierAssessmentManagementXML(MSEBoxModel *bm, char *fileName, xmlNodePtr
     }
     
     /*
-	attributeGroup = getParentNode(bm, fileName, groupingNode, "SigmaLenAge", errorString);
+	attributeGroup = getParentNode(bm, fileName, groupingNode, "SigmaLenAge", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             if (bm->RBCestimation.RBCspeciesParam[guild][flagSLAdirect_id] > 0)
@@ -1503,55 +1486,55 @@ void readTierAssessmentManagementXML(MSEBoxModel *bm, char *fileName, xmlNodePtr
     */
     
     // by sex and stock
-	attributeGroup = getParentNode(bm, fileName, groupingNode, "CvLA0", errorString);
+	attributeGroup = getParentNode(bm, fileName, groupingNode, "CvLA0", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readStockAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CvLA0, no_checking, errorString, bm->K_num_sexes);
     }
 
-	attributeGroup = getParentNode(bm, fileName, groupingNode, "CvLAmax", errorString);
+	attributeGroup = getParentNode(bm, fileName, groupingNode, "CvLAmax", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readStockAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CvLAmax, no_checking, errorString, bm->K_num_sexes);
     }
 
-    attributeGroup = getParentNode(bm, fileName, groupingNode, "Wtlen_a", errorString);
+    attributeGroup = getParentNode(bm, fileName, groupingNode, "Wtlen_a", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readStockAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Wtlen_a, no_checking, errorString, bm->K_num_sexes);
     }
 
-	attributeGroup = getParentNode(bm, fileName, groupingNode, "Wtlen_b", errorString);
+	attributeGroup = getParentNode(bm, fileName, groupingNode, "Wtlen_b", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readStockAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Wtlen_b, no_checking, errorString, bm->K_num_sexes);
     }
 
-	attributeGroup = getParentNode(bm, fileName, groupingNode, "VBLinf", errorString);
+	attributeGroup = getParentNode(bm, fileName, groupingNode, "VBLinf", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readStockAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].VBLinf, no_checking, errorString, bm->K_num_sexes);
     }
 
-    attributeGroup = getParentNode(bm, fileName, groupingNode, "VBk", errorString);
+    attributeGroup = getParentNode(bm, fileName, groupingNode, "VBk", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readStockAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].VBk, no_checking, errorString, bm->K_num_sexes);
     }
 
-    attributeGroup = getParentNode(bm, fileName, groupingNode, "VBt0", errorString);
+    attributeGroup = getParentNode(bm, fileName, groupingNode, "VBt0", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readStockAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].VBt0, no_checking, errorString, bm->K_num_sexes);
     }
 
-    attributeGroup = getParentNode(bm, fileName, groupingNode, "Fecund", errorString);
+    attributeGroup = getParentNode(bm, fileName, groupingNode, "Fecund", errorString, sizeof(errorString));
     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
        if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readStockAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Fecund, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][MaxAge_id]);
     }
     
-    attributeGroup = getParentNode(bm, fileName, groupingNode, "SSMort", errorString);
+    attributeGroup = getParentNode(bm, fileName, groupingNode, "SSMort", errorString, sizeof(errorString));
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
             readStockAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].SSMort, no_checking, errorString, bm->K_num_sexes);

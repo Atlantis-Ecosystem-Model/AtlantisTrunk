@@ -1,6 +1,6 @@
 /**
  *	\file
- *	\brief This file contains function associated with loading the phyiochem group information.
+ *	\brief This file contains function associated with loading the physiochem group information.
  * \ingroup atEcology
  *
  * Revisions:
@@ -81,10 +81,12 @@ void Ecology_Assign_Physio_Chem(MSEBoxModel *bm, FILE *llogfp)
 	PhysioChemArray = (PhysioChemStruct *)malloc(sizeof(PhysioChemStruct) * (size_t)bm->K_num_physiochem);
 
     Add_Phyio_Chem_Tracer(bm, llogfp, i++, "NH3", &NH3_i, 0, 1, 0, NULL, Ammonium_ROC);
-	if(bm->flagIsEstuary)
-		Add_Phyio_Chem_Tracer(bm, llogfp, i++, "SED", &SED_i, 0, 1, 0, NULL, NULL);
-    if(bm->flagpassivetracer)
+    if(bm->flagIsEstuary) {
+        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "SED", &SED_i, 0, 1, 0, NULL, NULL);
+    }
+    if(bm->flagpassivetracer) { // Intentionally overloading SED_i tracer
         Add_Phyio_Chem_Tracer(bm, llogfp, i++, "SED", &SED_i, 0, 0, 0, NULL, NULL);
+    }
     Add_Phyio_Chem_Tracer(bm, llogfp, i++, "NO3", &NO3_i, 0, 1, 0, NULL, Nitrate_ROC);
     Add_Phyio_Chem_Tracer(bm, llogfp, i++, "DON", &DON_i, 0, 1, 0, NULL, DON_ROC);
     Add_Phyio_Chem_Tracer(bm, llogfp, i++, "MicroNut", &MicroNut_i, 0, 1, 0, NULL, Micronutrient_ROC);
@@ -102,7 +104,7 @@ void Ecology_Assign_Physio_Chem(MSEBoxModel *bm, FILE *llogfp)
 		pH_i = -1;
 	}
 
-	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Denitrifiction", &Denitrification_i, 1, 0, 0, NULL, NULL);
+	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Denitrification", &Denitrification_i, 1, 0, 0, NULL, NULL);
 	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Nitrification", &Nitrification_i, 1, 0, 0, NULL, NULL);
 	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Chl_a", &Chl_a_i, 1, 0, 0, NULL, NULL);
 	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Stress", &Stress_i, 1, 0, 0, NULL, NULL);

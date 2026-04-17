@@ -92,6 +92,10 @@
 #define sample_id 0
 #define attrib_id 1
 
+/* Biomass and abundance samplwes for size bin reporting id */
+#define bioindex_id 0
+#define abundindex_id 1
+
 /* Assessment and fisheries data storage */
 #define commerical_id 0
 #define survey_id 1

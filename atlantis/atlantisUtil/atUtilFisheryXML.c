@@ -34,7 +34,6 @@ SpeciesParamStruct FisheryParamsArray[numFisheryParams] =
 				{ "FisheryEnd", tEnd_id, "_tEnd$", no_checking, 1.0, -1 },
 				{ "FisheryManageStart", start_manage_id, "_start_manage$", no_checking, 1.0, -1 },
 				{ "FisheryManageEnd", end_manage_id, "_end_manage$", no_checking, 1.0, -1 },
-				{ "EffortCaps", cap_id, "_cap$", no_checking, 86400.0, -1 },
 
 				{ "SelectivityChangeFlag", flagchangeSEL_id, "_changeSEL$", binary_check, 1.0, -1 },
 				{ "CoverageChangeFlag", flagchangeP_id, "_changeP$", binary_check, 1.0, -1 },
@@ -96,8 +95,8 @@ SpeciesParamStruct FisheryParamsArray[numFisheryParams] =
 
 				{ "CPUEThresh", CPUE_effort_thresh_id, "CPUEthresh$", no_checking, 1.0, -1 },
 				{ "CPUEscale", CPUE_effort_scale_id, "CPUEscale$", no_checking, 1.0, -1 },
-				{ "EffortCaps", cap_id, "_cap$", integer_check, 1.0, -1 },
-
+                { "EffortCaps", cap_id, "_cap$", no_checking, 1.0, -1 },
+        
 				{ "LandCatch", landallTAC_sp_id, "_landallTAC_sp$", binary_check, 1.0, -1 },
 				{ "MaxNumGroups", max_num_sp_id, "_max_num_sp$", integer_check, 1.0, -1 },
 
@@ -250,7 +249,7 @@ void Util_XML_Read_Fishery_Param(MSEBoxModel *bm, char *fileName, xmlNodePtr par
 		printf("Read fisheries parameters '%s'\n", FisheryParamsArray[index].tag);
 
 	nodeName =  Util_Get_Node_Name(parent);
-	sprintf(errorString, "%s/%s", nodeName, FisheryParamsArray[index].tag);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, FisheryParamsArray[index].tag);
 
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, FisheryParamsArray[index].tag);
 	if (attributeGroup == NULL)
@@ -275,7 +274,7 @@ void Util_XML_Read_Fishery_Param_Int(MSEBoxModel *bm, char *fileName, xmlNodePtr
 	char errorString[STRLEN];
 	char *nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/%s", nodeName, paramName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramName);
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, paramName);
 	if (attributeGroup == NULL)
 		quit("readFisheryGroupParamXML - %s attribute group not found.\n", errorString);
@@ -308,7 +307,7 @@ void Util_XML_Read_Fishery_Param_Double(MSEBoxModel *bm, char *fileName, xmlNode
 	char errorString[STRLEN];
 	char *nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/%s", nodeName, paramName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramName);
 
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, paramName);
 	if (attributeGroup == NULL)
@@ -338,7 +337,7 @@ void Util_XML_Read_Fished_Group_Param(MSEBoxModel *bm, char *fileName, xmlNodePt
 	char errorString[STRLEN];
 	char *nodeName =  Util_Get_Node_Name(parent);
 
-	sprintf(errorString, "%s/%s", nodeName, paramName);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramName);
 
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, paramName);
 	if (attributeGroup == NULL)
@@ -374,7 +373,7 @@ void Util_XML_Read_Impacted_Group_Param(MSEBoxModel *bm, char *fileName, xmlNode
 
 
 	index = Util_XML_Get_Fishery_Param_Index(FisheryGroupParamsArray, numGroupFisheryParams, paramID);
-	sprintf(errorString, "%s/%s", nodeName, FisheryGroupParamsArray[index].tag);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, FisheryGroupParamsArray[index].tag);
 
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, FisheryGroupParamsArray[index].tag);
 	if (attributeGroup == NULL)
@@ -412,7 +411,7 @@ void Util_XML_Read_Fishery_Group_Param(MSEBoxModel *bm, char *fileName, xmlNodeP
 
 	index = Util_XML_Get_Fishery_Param_Index(FisheryGroupParamsArray, numGroupFisheryParams, paramID);
 
-	sprintf(errorString, "%s/%s", nodeName, FisheryGroupParamsArray[index].tag);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, FisheryGroupParamsArray[index].tag);
 
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, FisheryGroupParamsArray[index].tag);
 	if (attributeGroup == NULL)
@@ -454,7 +453,7 @@ void Util_XML_Read_Change_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr att
 
 	for (index = 0; index < 3; index++) {
 
-		sprintf(errorString, "%s/%s", nodeName, paramStr[index]);
+		snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramStr[index]);
 		groupNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, attributeGroup, paramStr[index]);
 		if (groupNode == NULL) {
 			quit("Util_XML_Read_Change_Values attributeNode not found %s\n", errorString);
@@ -496,7 +495,7 @@ void Util_XML_Read_Change_Fished_Groups(MSEBoxModel *bm, char *fileName, xmlNode
 			check = no_checking;
 		}
 
-		sprintf(errorString, "%s/%s", nodeName, paramStr[index]);
+		snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, paramStr[index]);
 		groupNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, attributeGroup, paramStr[index]);
 		if (groupNode == NULL) {
 			quit("Util_XML_Read_Change_Fished_Groups attributeNode not found %s\n", errorString);
@@ -505,10 +504,10 @@ void Util_XML_Read_Change_Fished_Groups(MSEBoxModel *bm, char *fileName, xmlNode
 		for (speciesIndex = 0; speciesIndex < bm->K_num_tot_sp; speciesIndex++) {
 
 			if (FunctGroupArray[speciesIndex].isImpacted == TRUE) {
-				counter = 1;
 				counter = 0;
-				for (i = 0; i < bm->K_num_fisheries; i++)
-					counter = max ( counter,(int) bm->SP_FISHERYprms[speciesIndex][i][paramID] );
+                for (i = 0; i < bm->K_num_fisheries; i++) {
+                    counter = max ( counter,(int) bm->SP_FISHERYprms[speciesIndex][i][paramID] );
+                }
 
 				if(counter > 0){
 					if (Util_XML_Read_Array_Double(ATLANTIS_GROUP_ATTRIBUTE, fileName, errorString, groupNode, check, FunctGroupArray[speciesIndex].groupCode, &values,
@@ -540,7 +539,7 @@ void Util_XML_Read_Vert_Fishery_Param(MSEBoxModel *bm, char *fileName, xmlNodePt
 
 	index = Util_XML_Get_Fishery_Param_Index(FisheryGroupParamsArray, numGroupFisheryParams, paramID);
 
-	sprintf(errorString, "%s/%s", nodeName, FisheryGroupParamsArray[index].tag);
+	snprintf(errorString, sizeof(errorString), "%s/%s", nodeName, FisheryGroupParamsArray[index].tag);
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, FisheryGroupParamsArray[index].tag);
 	if (attributeGroup == NULL)
 		quit("Util_XML_Read_Vert_Fishery_Param - %s attribute group not found.\n", errorString);

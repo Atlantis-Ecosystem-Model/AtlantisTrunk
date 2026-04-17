@@ -173,12 +173,12 @@ void Ecology_Read_LinearMortality_TS(MSEBoxModel *bm, char *key, TimeSeries **ts
  * \brief Setup the links between the variables defined in the linear mortality time series file
  * and each of the functional groups. The resulting indices are stored in the bm->Sp_prms array.
  */
-void Setup_Linear_Mortality_Indicies(MSEBoxModel *bm) {
+void Setup_Linear_Mortality_Indices(MSEBoxModel *bm) {
 	int b, sp;
 	char str[50];
     
     if (verbose > 1)
-        printf("Doing Setup_Linear_Mortality_Indicies\n");
+        printf("Doing Setup_Linear_Mortality_Indices\n");
 
     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		if (FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED || FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED_BIOMASS) {
@@ -197,22 +197,22 @@ void Setup_Linear_Mortality_Indicies(MSEBoxModel *bm) {
                     printf("Doing Setup Linear_Mortality step juv for %s with tslinearMort->nv: %d\n", FunctGroupArray[sp].groupCode, bm->tslinearMort->nv);
 
                 
-				sprintf(str, "juv_%s", FunctGroupArray[sp].groupCode);
+				snprintf(str, sizeof(str), "juv_%s", FunctGroupArray[sp].groupCode);
 				for (b = 0; b < bm->tslinearMort->nv; b++) {
 					if (strcmp(str, bm->tslinearMort->varname[b]) == 0) {
 						FunctGroupArray[sp].cohortSpeciesParams[juv_id][mL_scale_id] = b;
-						//fprintf(bm->logFile, "%s - bm->SP_prms[%d][jmL_scale_id] = %d\n",str, sp, (int)FunctGroupArray[sp].cohortSpeciesParams[juv_id][mL_scale_id]);
+                        break;
 					}
 				}
 
                 if (verbose > 1)
                     printf("Doing Setup Linear_Mortality step adult for %s with tslinearMort->nv: %d\n", FunctGroupArray[sp].groupCode, bm->tslinearMort->nv);
 
-                sprintf(str, "adult_%s", FunctGroupArray[sp].groupCode);
+                snprintf(str, sizeof(str), "adult_%s", FunctGroupArray[sp].groupCode);
 				for (b = 0; b < bm->tslinearMort->nv; b++) {
 					if (strcmp(str, bm->tslinearMort->varname[b]) == 0) {
 						FunctGroupArray[sp].cohortSpeciesParams[adult_id][mL_scale_id] = b;
-						//fprintf(bm->logFile, "%s - bm->SP_prms[%d][mL_scale_id] = %d\n",str, sp, (int)FunctGroupArray[sp].cohortSpeciesParams[adult_id][mL_scale_id]);
+                        break;
 					}
 				}
 
@@ -225,7 +225,7 @@ void Setup_Linear_Mortality_Indicies(MSEBoxModel *bm) {
 				for (b = 0; b < bm->tslinearMort->nv; b++) {
 					if (strcmp(FunctGroupArray[sp].groupCode, bm->tslinearMort->varname[b]) == 0) {
 						FunctGroupArray[sp].cohortSpeciesParams[0][mL_scale_id] = b;
-						//fprintf(bm->logFile, "Biomass pool %s- bm->SP_prms[sp][mL_scale_id] = %d\n", FunctGroupArray[sp].groupCode, (int)FunctGroupArray[sp].cohortSpeciesParams[0][mL_scale_id]);
+                        break;
 					}
 				}
 			}
@@ -233,7 +233,7 @@ void Setup_Linear_Mortality_Indicies(MSEBoxModel *bm) {
 	}
     
     if (verbose > 1)
-        printf("Finishing Setup_Linear_Mortality_Indicies\n");
+        printf("Finishing Setup_Linear_Mortality_Indices\n");
 
     return;
 }
@@ -257,7 +257,7 @@ void Ecology_Read_Size_Change_TS(MSEBoxModel *bm, char *key, TimeSeries **ts, ch
 
 
 /**************************************************************************//**
- *	\brief Reads a list of time series of growth rate chanegs from a ts file.
+ *	\brief Reads a list of time series of growth rate changes from a ts file.
  *
  *	@param bm Pointer to box model
  *	@param key Pointer to name of series to read
@@ -298,12 +298,12 @@ void Ecology_Read_FSPB_TS(MSEBoxModel *bm, char *key, TimeSeries **ts,
  * \brief Setup the links between the variables defined in the time series file
  * and each of the functional groups. The resulting indices are stored in the bm->Sp_prms array.
  */
-void Setup_Change_Indicies(MSEBoxModel *bm, TimeSeries *ts, int index) {
+void Setup_Change_Indices(MSEBoxModel *bm, TimeSeries *ts, int index) {
 	int b, sp, n;
 	char str[50];
     
     //if(verbose)
-    //    printf("Doing Setup_Change_Indicies\n");
+    //    printf("Doing Setup_Change_Indices\n");
 
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		for(n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++){
@@ -316,11 +316,11 @@ void Setup_Change_Indicies(MSEBoxModel *bm, TimeSeries *ts, int index) {
 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 			if (FunctGroupArray[sp].isVertebrate == TRUE) {
 				for(n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++){
-					sprintf(str, "%s_%d", FunctGroupArray[sp].groupCode, n);
+					snprintf(str, sizeof(str), "%s_%d", FunctGroupArray[sp].groupCode, n);
 					for (b = 0; b < ts->nv; b++) {
 						if (strcmp(str, ts->varname[b]) == 0){
 							bm->scaling_indices[index][sp][n] = b;
-							fprintf(bm->logFile,  "bm->scaling_indices[%d][%s][%d] = %d\n",index, FunctGroupArray[sp].groupCode, n, bm->scaling_indices[index][sp][n]);
+                            break;
 						}
 					}
 				}
@@ -372,7 +372,7 @@ static void Scale_Growth_Rate(MSEBoxModel *bm){
  * 	This function will read in the value that should be added to the FSPB value for each
  * 	vertebrate cohort from the supplied TS file.
  *
- * 	The index of each cohort for each vertebrate is set in Setup_Change_Indicies which is called from initBiology().
+ * 	The index of each cohort for each vertebrate is set in Setup_Change_Indices which is called from initBiology().
  *
  * 	This will set the value in the bm->scaled_FSPB array with the value in bm->FSPB + the value read in.
  *
@@ -484,6 +484,7 @@ void Ecology_Read_pCO2_TS(MSEBoxModel *bm, char *key, TimeSeries **ts,
 	for(b=0; b<(*ts)->nv; b++){
 		if(strcmp("pCO2",(*ts)->varname[b]) == 0){
 			bm->pCO2_id = b;
+            break;
 		}
 	}
 	if(bm->pCO2_id < 0)
