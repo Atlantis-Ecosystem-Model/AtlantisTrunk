@@ -10,8 +10,11 @@ body:
         Please use the fields below to describe the bug.
         We will need this information to reproduce and fix any issues. Thanks
 
-        We are also happy to accept contributions from our users. So if you have a solution to the
-        bug consider contributing. For more details see [here](https://github.com/andybeet/testatlantis/blob/main/CONTRIBUTING.md).
+        Additional online resources for helping troubleshoot problems are:
+        * The Atlantis [wiki](https://atlantis-ecosystem-model.github.io/atlantis-wiki/)
+        * The Atlantis [manual](https://atlantis-ecosystem-model.github.io/AtlantisManual/)
+
+        We are also happy to accept contributions from our users. So if you have a solution to the bug consider contributing. For more details see [here](https://github.com/andybeet/testatlantis/blob/main/CONTRIBUTING.md).
   - type: textarea
     id: codeversion
     attributes:
@@ -46,7 +49,7 @@ body:
     id: issues
     attributes:
       label: Is this a duplicate issue?
-      description: Have you searched the [issues](https://github.com//Atlantis-Ecosystem-Model/AtlantisTrunk/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug) to ensure this is not a duplicate?
+      description: Have you searched the list of open [issues](https://github.com//Atlantis-Ecosystem-Model/AtlantisTrunk/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug) to ensure this is not a duplicate?
       options:
         - label: I have searched the existing data.
           required: true
