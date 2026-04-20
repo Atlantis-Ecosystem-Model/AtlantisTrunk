@@ -25,6 +25,6 @@ If this is a relatively large or complex change, kick off the discussion by expl
 Assign at least 2 reviewers: 
 
 * one of which should be a maintainer, 
-* the others should be familiar with the subject changes.
+* the others should be familiar with the subject changes. Please add these under the `assignees` field
 
 Please detail the process reviewers will need to follow to properly test these changes. It is especially helpful to identify the exact code needed to conduct a local build/review/test and to specify any aspects of the testing that may not be obvious.
