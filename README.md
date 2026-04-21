@@ -1,5 +1,5 @@
 # Atlantis
-<img width="320" height="330" alt="Atlantis_1" src="https://github.com/user-attachments/assets/4d2d9337-03f4-4f34-a4d2-48ad4c78ff86" />
+<img width="120" height="130" alt="Atlantis_1" src="https://github.com/user-attachments/assets/4d2d9337-03f4-4f34-a4d2-48ad4c78ff86" />
 
 Atlantis current release [Atlantis v3.6721](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/releases/tag/3.6721)
 
