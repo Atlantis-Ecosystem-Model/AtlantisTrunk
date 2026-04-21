@@ -758,6 +758,7 @@ int main(int argc, char *argv[]) {
 	Textfile_Dump(&bm, logfp);
 
 	/* Close the log file */
+	fprintf(logfp, "Atlantis Done \n");
 	fclose(logfp);
 
 	logfp = 0;
