@@ -42,7 +42,7 @@ WARN += -Warray-bounds
 
 # Needed for Docker (uncomment if commented out)
 WARN += -Wno-error=unused-but-set-variable
-WARN += -Wno-error=misleading-indentation
+#WARN += -Wno-error=misleading-indentation
 WARN += -Wno-error=implicit-function-declaration
 
 # Comment out to run Docker - needed on Mac
@@ -117,3 +117,6 @@ R_HOME = /Library/Frameworks/R.framework/Resources
 AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
 LIBS += -L$(R_BASE)/lib -lR
 endif
+
+#fetching repo version from git
+AM_CFLAGS += -DRELEASE_VERSION=\"$(RELEASE_VERSION)\"
