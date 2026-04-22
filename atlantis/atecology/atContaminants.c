@@ -755,7 +755,7 @@ int Species_Contaminant_Uptake(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
 
     /* Grab the level in the water column or the sediment */
     cLevel = tracerArray[bm->contaminantStructure[cIndex]->contaminant_tracer];
-    if(cLevel > bm->min_pool){
+    if(cLevel > bm->min_pool_cont){
         //fprintf(bm->logFile, "time %e, box %d, layer %d, cLevel = %e\n", bm->dayt, bm->current_box, bm->current_layer, cLevel);
         for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 
@@ -1058,7 +1058,7 @@ int Group_Transfer_Contaminant(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
                 this_num = tracerArray[FunctGroupArray[toGuild].NumsTracers[toCohort]];
                 min_num = 1.0 / (this_num + small_num);
             } else {
-                min_num = bm->min_pool;  // Just using this as a proxy for a small number here
+                min_num = bm->min_pool_cont;  // Just using this as a proxy for a small number here
             }
 
             
