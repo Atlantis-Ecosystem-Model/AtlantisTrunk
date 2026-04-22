@@ -1,4 +1,4 @@
-void Allocate_Contaiminants(MSEBoxModel *bm);
+void Allocate_Contaminants(MSEBoxModel *bm);
 void Free_Contaminants(MSEBoxModel *bm);
 void Init_Contaminants(MSEBoxModel *bm);
 

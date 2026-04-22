@@ -91,15 +91,9 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 
-# Comment out to run Docker - needed on Mac
-#WARN += -Wno-error=pointer-bool-conversion
-#WARN += -Wno-nullability-completeness
-#WARN += -Wno-nonnull
-
 # if using clang then turn this on and use the Wconditional-uninitialized warning.
 #CC = clang
 #WARN += -Wconditional-uninitialized
-
 #WARN += -Wformat
 #WARN += -Wno-pointer-arith
 #WARN += -Wstrict-prototypes
@@ -114,37 +108,24 @@ host_triplet = @host@
 #WARN += -Wno-missing-variable-declarations
 #WARN += -Wno-float-equal
 #WARN += -Wmaybe-uninitialized
-
 #WARN += -Wno-unused-but-set-variable
 #WARN += -Wno-error=unused-variable
 #-Wswitch-default
 #WARN += -fprofile-arcs -ftest-coverage
 @GCC_GE_730_TRUE@am__append_1 = -Wno-format-overflow
-@BROKER_LINK_ENABLED_TRUE@am__append_2 = -D BROKER_LINK_ENABLED -I$(top_srcdir)/atbrokerlink/include
-@BROKER_LINK_ENABLED_FALSE@am__append_3 = -pedantic  -std=c99
-@LINK_ENABLED_TRUE@am__append_4 = -D LINK_ENABLED -I$(top_srcdir)/atlink/include $(shell pkg-config --cflags libcsoap)
-@CLAM_LINK_ENABLED_TRUE@am__append_5 = -D CLAM_LINK_ENABLED -I$(top_srcdir)/atCLAMLink/include
-
-#if SS3_LINK_ENABLED
-#AM_CFLAGS += -D SS3_LINK_ENABLED -I$(top_srcdir)/atSS3Link/include
-#endif
-@RASSESS_LINK_ENABLED_TRUE@am__append_6 = -D RASSESS_LINK_ENABLED \
-@RASSESS_LINK_ENABLED_TRUE@	-I$(R_BASE)/include \
-@RASSESS_LINK_ENABLED_TRUE@	-I/usr/share/R/include
-@RASSESS_LINK_ENABLED_TRUE@am__append_7 = -L$(R_BASE)/lib -lR
 bin_PROGRAMS = atlantisMerged$(EXEEXT)
-@BROKER_LINK_ENABLED_TRUE@am__append_8 = -L$(top_srcdir)/atbrokerlink
-@BROKER_LINK_ENABLED_TRUE@am__append_9 = -lbrokerlink -lzmq -lprotobuf-c
-@BROKER_LINK_ENABLED_TRUE@am__append_10 = -I$(top_srcdir)/abrokerlink/include
-@BROKER_LINK_ENABLED_TRUE@am__append_11 = $(top_srcdir)/atbrokerlink/libbrokerlink.a
-@LINK_ENABLED_TRUE@am__append_12 = -L$(top_srcdir)/atbrokerlink
-@LINK_ENABLED_TRUE@am__append_13 = -latlink -lcsoap -lnanohttp
-@LINK_ENABLED_TRUE@am__append_14 = -I$(top_srcdir)/abrokerlink/include
-@LINK_ENABLED_TRUE@am__append_15 = $(top_srcdir)/atbrokerlink/libbrokerlink.a
-@CLAM_LINK_ENABLED_TRUE@am__append_16 = -L$(top_srcdir)/atCLAMLink
-@CLAM_LINK_ENABLED_TRUE@am__append_17 = -latCLAMLink
-@CLAM_LINK_ENABLED_TRUE@am__append_18 = -I$(top_srcdir)/atCLAMLink/include
-@CLAM_LINK_ENABLED_TRUE@am__append_19 = $(top_srcdir)/atCLAMLink/libatCLAMLink.a
+@BROKER_LINK_ENABLED_TRUE@am__append_2 = -L$(top_srcdir)/atbrokerlink
+@BROKER_LINK_ENABLED_TRUE@am__append_3 = -lbrokerlink -lzmq -lprotobuf-c
+@BROKER_LINK_ENABLED_TRUE@am__append_4 = -I$(top_srcdir)/abrokerlink/include
+@BROKER_LINK_ENABLED_TRUE@am__append_5 = $(top_srcdir)/atbrokerlink/libbrokerlink.a
+@LINK_ENABLED_TRUE@am__append_6 = -L$(top_srcdir)/atbrokerlink
+@LINK_ENABLED_TRUE@am__append_7 = -latlink -lcsoap -lnanohttp
+@LINK_ENABLED_TRUE@am__append_8 = -I$(top_srcdir)/abrokerlink/include
+@LINK_ENABLED_TRUE@am__append_9 = $(top_srcdir)/atbrokerlink/libbrokerlink.a
+@CLAM_LINK_ENABLED_TRUE@am__append_10 = -L$(top_srcdir)/atCLAMLink
+@CLAM_LINK_ENABLED_TRUE@am__append_11 = -latCLAMLink
+@CLAM_LINK_ENABLED_TRUE@am__append_12 = -I$(top_srcdir)/atCLAMLink/include
+@CLAM_LINK_ENABLED_TRUE@am__append_13 = $(top_srcdir)/atCLAMLink/libatCLAMLink.a
 subdir = atlantismain
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -289,7 +270,7 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
-LIBS = @LIBS@ $(am__append_7)
+LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
@@ -386,41 +367,16 @@ DEFINES = -D PROJ4 -D REPLICATE_OLD_RESULTS -D BETH_LOG_FILE_SIZE
 #-D ORIGINAL_GROUP_ORDER
 GCCVERSION = $(shell gcc --version | grep ^gcc | sed 's/^.* //g')
 #-Wconversion
-
-#WARN += -Wno-error
-#WARN += -Werror
-
-# Comment out for Mac
-#WARN += -Wformat-overflow
-
-# Needed for Docker (uncomment if commented out)
 WARN = -Wall -Wextra -Wno-unused-parameter -Wuninitialized \
-	-Warray-bounds -Wno-error=unused-but-set-variable \
-	-Wno-error=misleading-indentation \
-	-Wno-error=implicit-function-declaration $(am__append_1)
-AM_CFLAGS = $(DEFINES) $(INCLUDE) $(DBG) $(OPT) $(EF) $(PG) $(WARN) \
-	$(am__append_2) $(am__append_3) $(am__append_4) \
-	$(am__append_5) $(am__append_6)
-
-# For the R links
-# A working R installation is required.
-# R must have been built with the '--enable-R-shlib' option enabled to provide the R shared library
-# Ensure the R_HOME environment variable is set appropriately
-#
-# R_HOME = $(shell R RHOME)
-# on Ubuntu Linux
-# R_HOME = /usr/lib/R
-# R_BASE = /usr/lib/R
-# on OS X
-@RASSESS_LINK_ENABLED_TRUE@R_BASE = /Library/Frameworks/R.framework/Resources
-@RASSESS_LINK_ENABLED_TRUE@R_HOME = /Library/Frameworks/R.framework/Resources
+	-Warray-bounds $(am__append_1)
+AM_CFLAGS = $(DEFINES) $(INCLUDES) $(DBG) $(OPT) $(EF) $(PG) $(WARN)
 atlantisMergeddir = $(includedir)/atlantismain
 atlantisMerged_SOURCES = atlantismain.c atlantisboxmodel.h
 atlantisMerged_LDADD = -latlantisutil -latassess -latphysics \
 	-latecology -lateconomic -latmanage -latharvest \
 	-latimplementation -latphysics -latConvertAtlantis \
-	-latlantisutil -lsjwlib -latSS3Link $(am__append_9) \
-	$(am__append_13) $(am__append_17)
+	-latlantisutil -lsjwlib -latSS3Link $(am__append_3) \
+	$(am__append_7) $(am__append_11)
 SVNWCPATH = -D'ATLANTIS_WCPATH="$(shell svn info  ../| grep URL | sed  's/URL: //g')"'
 SVNWCDATE = -D'ATLANTIS_WCDATE="$(shell svn info  ../| grep "Last Changed Date:" | sed  's/Last Changed Date: //g')"'
 #SVNDEV = -D'ATLANTIS_REVISION="$(shell svn info  ../| grep "Last Changed Rev:" | sed  's/Last Changed Rev: //g')"'
@@ -431,7 +387,7 @@ LIBDIRS = -L$(top_srcdir)/atassess -L$(top_srcdir)/atecology \
 	-L$(top_srcdir)/atharvest -L$(top_srcdir)/atimplementation \
 	-L$(top_srcdir)/atphysics -L$(top_srcdir)/ConvertAtlantis \
 	-L$(top_srcdir)/sjwlib -L$(top_srcdir)/atSS3Link \
-	$(am__append_8) $(am__append_12) $(am__append_16)
+	$(am__append_2) $(am__append_6) $(am__append_10)
 atlantisMerged_DEPENDENCIES = $(top_srcdir)/atassess/libatassess.a \
 	$(top_srcdir)/atphysics/libatphysics.a \
 	$(top_srcdir)/atecology/libatecology.a \
@@ -442,8 +398,8 @@ atlantisMerged_DEPENDENCIES = $(top_srcdir)/atassess/libatassess.a \
 	$(top_srcdir)/ConvertAtlantis/libatConvertAtlantis.a \
 	$(top_srcdir)/atlantisUtil/libatlantisutil.a \
 	$(top_srcdir)/sjwlib/libsjwlib.a \
-	$(top_srcdir)/atSS3Link/libatSS3Link.a $(am__append_11) \
-	$(am__append_15) $(am__append_19)
+	$(top_srcdir)/atSS3Link/libatSS3Link.a $(am__append_5) \
+	$(am__append_9) $(am__append_13)
 atlantisMerged_LDFLAGS = $(LIBDIRS) $(shell pkg-config --libs libxml-2.0)
 atlantisMerged_INCLUDES = -I$(top_srcdir)/atassess/include \
 	-I$(top_srcdir)/atecology/include \
@@ -457,8 +413,8 @@ atlantisMerged_INCLUDES = -I$(top_srcdir)/atassess/include \
 	-I$(top_srcdir)/ConvertAtlantis/include \
 	-I$(top_srcdir)/sjwlib/include \
 	-I$(top_srcdir)/atSS3Link/includee -I. \
-	-I$(top_srcdir)/atlantismain $(am__append_10) $(am__append_14) \
-	$(am__append_18)
+	-I$(top_srcdir)/atlantismain $(am__append_4) $(am__append_8) \
+	$(am__append_12)
 
 #if SS3_LINK_ENABLED
 #LIBDIRS += -L$(top_srcdir)/atSS3Link
@@ -833,6 +789,50 @@ uninstall-am: uninstall-binPROGRAMS uninstall-library_includeHEADERS \
 
 .PRECIOUS: Makefile
 
+
+#WARN += -Wno-error
+#WARN += -Werror
+
+# Needed for Mac
+@OS_MACOS_TRUE@	WARN += -Wformat-overflow
+@OS_MACOS_TRUE@	WARN += -Wno-error=pointer-bool-conversion
+@OS_MACOS_TRUE@	WARN += -Wno-nullability-completeness
+@OS_MACOS_TRUE@	WARN += -Wno-nonnull
+
+# Needed for Docker (uncomment if commented out)
+@OS_LINUX_TRUE@	WARN += -Wno-error=unused-but-set-variable
+@OS_LINUX_TRUE@	WARN += -Wno-error=misleading-indentation
+@OS_LINUX_TRUE@	WARN += -Wno-error=implicit-function-declaration
+
+@BROKER_LINK_ENABLED_TRUE@	AM_CFLAGS +=  -D BROKER_LINK_ENABLED -I$(top_srcdir)/atbrokerlink/include
+@BROKER_LINK_ENABLED_FALSE@	AM_CFLAGS += -pedantic  -std=c99
+
+@LINK_ENABLED_TRUE@	AM_CFLAGS += -D LINK_ENABLED -I$(top_srcdir)/atlink/include $(shell pkg-config --cflags libcsoap)
+
+@CLAM_LINK_ENABLED_TRUE@	AM_CFLAGS += -D CLAM_LINK_ENABLED -I$(top_srcdir)/atCLAMLink/include
+
+#if SS3_LINK_ENABLED
+#	AM_CFLAGS += -D SS3_LINK_ENABLED -I$(top_srcdir)/atSS3Link/include
+#endif
+
+@RASSESS_LINK_ENABLED_TRUE@	AM_CFLAGS += -D RASSESS_LINK_ENABLED
+
+# NOTE: nested if statments
+# For the R links
+# A working R installation is required.
+# R must have been built with the '--enable-R-shlib' option enabled to provide the R shared library
+# Ensure the R_HOME environment variable is set appropriately
+#
+# R_HOME = $(shell R RHOME)
+# on Ubuntu Linux
+@OS_LINUX_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_HOME = /usr/lib/R
+@OS_LINUX_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_BASE = /usr/lib/R
+# on OS X
+@OS_MACOS_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_BASE = /Library/Frameworks/R.framework/Resources
+@OS_MACOS_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_HOME = /Library/Frameworks/R.framework/Resources
+
+@RASSESS_LINK_ENABLED_TRUE@	AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
+@RASSESS_LINK_ENABLED_TRUE@	LIBS += -L$(R_BASE)/lib -lR
 
 atlantismain.o:   .FORCE
 
