@@ -87,9 +87,6 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@BROKER_LINK_ENABLED_TRUE@am__append_1 = atbrokerlink
-@LINK_ENABLED_TRUE@am__append_2 = atlink
-@CLAM_LINK_ENABLED_TRUE@am__append_3 = atCLAMLink
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -156,9 +153,7 @@ am__define_uniq_tagged_files = \
   unique=`for i in $$list; do \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
-DIST_SUBDIRS = ConvertAtlantis atassess atecology ateconomic \
-	atlantisUtil atharvest atmanage atimplementation atphysics \
-	sjwlib atSS3Link atbrokerlink atlink atCLAMLink atlantismain
+DIST_SUBDIRS = $(SUBDIRS)
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/config.h.in compile \
 	config.guess config.sub depcomp install-sh missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -313,14 +308,22 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+
+# Automake Options: Use 'foreign' to relax GNU standards compliance.
 AUTOMAKE_OPTIONS = foreign
 
+# --- 1. CORE SUBDIRECTORIES ---
+# These directories are built unconditionally.
+
 #if SS3_LINK_ENABLED
-#SUBDIRS += atSS3Link
+#	SUBDIRS += atSS3Link
 #endif
+
+# --- 3. MAIN EXECUTABLE DIRECTORY ---
+# The main program directory is typically built last.
 SUBDIRS = ConvertAtlantis atassess atecology ateconomic atlantisUtil \
 	atharvest atmanage atimplementation atphysics sjwlib atSS3Link \
-	$(am__append_1) $(am__append_2) $(am__append_3) atlantismain
+	atlantismain
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -800,6 +803,15 @@ uninstall-am:
 
 .PRECIOUS: Makefile
 
+
+# --- 2. CONDITIONAL LINKING SUBDIRECTORIES ---
+# These directories are added only if their respective feature flags are enabled (usually via configure).
+
+@BROKER_LINK_ENABLED_TRUE@	SUBDIRS += atbrokerlink
+
+@LINK_ENABLED_TRUE@	SUBDIRS += atlink
+
+@CLAM_LINK_ENABLED_TRUE@	SUBDIRS += atCLAMLink
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
