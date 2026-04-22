@@ -45,7 +45,6 @@ Developed by [Dr. Beth Fulton](https://people.csiro.au/F/B/Beth-Fulton.aspx) at 
 |  | English Channel |  |  |  | <http://dx.doi.org/10.1016/j.ecss.2016.10.016> |
 |  | Lake Victoria |  |  |  | <http://dx.doi.org/10.1016/j.envsoft.2016.09.019> |
 | NGOC | Northern Gulf of California | Mexico | [Hem Nalini Morzaria-Luna](https://github.com/hmorzaria) | NA | NA |
-|  |  |  |  |  |  |
-|  |  |  |  |  |  |
+
 
 [CSIRO](https://research.csiro.au/atlantis/home/usage-to-date/) documents many of these models, their intended uses, and the types of questions the model is being used to address.
