@@ -18,7 +18,10 @@ What types of changes does your code introduce? Put an `x` in the boxes that app
 
 ### Further comments
 
-If this is a relatively large or complex change, kick off the discussion by explaining why you chose the solution you did and what alternatives you considered, etc...
+If this is a New Feature, Breaking change, or a bug fix, the Atlantis Manual will need to be updated to reflect these changes. 
+Now would be a good time to create an issue in the [Atlantis Manual](https://github.com/Atlantis-Ecosystem-Model/AtlantisManual) repo and begin documenting your changes.
+
+- [ ] I've created an issue
 
 ### Reviewer instructions:
 
