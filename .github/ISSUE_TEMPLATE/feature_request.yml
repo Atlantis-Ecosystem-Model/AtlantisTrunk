@@ -1,0 +1,44 @@
+name: Feature Request
+description: Suggest an idea to help us improve
+title: "[Feature]: "
+labels: "feature"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Thanks for taking the time to fill out this feature request report!** We kindly ask that you search
+        the current issues to see if an issue [already exists](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/issues?q=is%3Aissue%20state%3Aopen%20label%3Afeature) for your feature. We are also happy to accept contributions from our users. For more details see [here](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/blob/main/CONTRIBUTING.md).
+
+  - type: textarea
+    attributes:
+      label: Description
+      description: What is your conceptual idea?
+      value: |
+        <!--- Describe your feature here. If you are able, please add pseudo code to describe how you might implement this feature. This will help the developers --->
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: References
+      description: Please point to publications (if applicable) or define equations to help explain your request
+      value: |
+        <!--- List any references that highlight your request --->
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Connection to code
+      description: Describe how this might connect to the current code
+      value: |
+        <!--- How might your request integrate into the current code? How does it relate to existing features? Include implementation details. Would it involve another flag, another option for a current flag etc?  --->
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Trade offs
+      description: Is this request a trade off/alternative for an existing feature or an addition?
+      value: |
+        <!--- If this is an alternative for an existing feature, please describe conditions that you wouldn't want to lose by incorporating this feature --->
+    validations:
+      required: true
+

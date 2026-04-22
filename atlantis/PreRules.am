@@ -37,23 +37,25 @@ WARN += -Warray-bounds
 #WARN += -Wno-error
 #WARN += -Werror
 
-# Comment out for Mac
-#WARN += -Wformat-overflow
+# Needed for Mac
+if OS_MACOS
+	WARN += -Wformat-overflow
+	WARN += -Wno-error=pointer-bool-conversion
+	WARN += -Wno-nullability-completeness
+	WARN += -Wno-nonnull
+endif
 
 # Needed for Docker (uncomment if commented out)
-WARN += -Wno-error=unused-but-set-variable
-#WARN += -Wno-error=misleading-indentation
-WARN += -Wno-error=implicit-function-declaration
+if OS_LINUX
+	WARN += -Wno-error=unused-but-set-variable
+	WARN += -Wno-error=misleading-indentation
+	WARN += -Wno-error=implicit-function-declaration
+endif
 
-# Comment out to run Docker - needed on Mac
-#WARN += -Wno-error=pointer-bool-conversion
-#WARN += -Wno-nullability-completeness
-#WARN += -Wno-nonnull
 
 # if using clang then turn this on and use the Wconditional-uninitialized warning.
 #CC = clang
 #WARN += -Wconditional-uninitialized
-
 #WARN += -Wformat
 #WARN += -Wno-pointer-arith
 #WARN += -Wstrict-prototypes
@@ -68,7 +70,6 @@ WARN += -Wno-error=implicit-function-declaration
 #WARN += -Wno-missing-variable-declarations
 #WARN += -Wno-float-equal
 #WARN += -Wmaybe-uninitialized
-
 #WARN += -Wno-unused-but-set-variable
 #WARN += -Wno-error=unused-variable
 #-Wswitch-default
@@ -79,29 +80,30 @@ if GCC_GE_730
 endif
 
 
-AM_CFLAGS = $(DEFINES) $(INCLUDE) $(DBG) $(OPT) $(EF) $(PG) $(WARN)
+AM_CFLAGS = $(DEFINES) $(INCLUDES) $(DBG) $(OPT) $(EF) $(PG) $(WARN)
 
 if BROKER_LINK_ENABLED
-AM_CFLAGS +=  -D BROKER_LINK_ENABLED -I$(top_srcdir)/atbrokerlink/include
+	AM_CFLAGS +=  -D BROKER_LINK_ENABLED -I$(top_srcdir)/atbrokerlink/include
 else
-AM_CFLAGS += -pedantic  -std=c99
+	AM_CFLAGS += -pedantic  -std=c99
 endif
 
 if LINK_ENABLED
-AM_CFLAGS += -D LINK_ENABLED -I$(top_srcdir)/atlink/include $(shell pkg-config --cflags libcsoap)
+	AM_CFLAGS += -D LINK_ENABLED -I$(top_srcdir)/atlink/include $(shell pkg-config --cflags libcsoap)
 endif
 
 if CLAM_LINK_ENABLED
-AM_CFLAGS += -D CLAM_LINK_ENABLED -I$(top_srcdir)/atCLAMLink/include
+	AM_CFLAGS += -D CLAM_LINK_ENABLED -I$(top_srcdir)/atCLAMLink/include
 endif
 
 #if SS3_LINK_ENABLED
-#AM_CFLAGS += -D SS3_LINK_ENABLED -I$(top_srcdir)/atSS3Link/include
+#	AM_CFLAGS += -D SS3_LINK_ENABLED -I$(top_srcdir)/atSS3Link/include
 #endif
 
 if RASSESS_LINK_ENABLED
-AM_CFLAGS += -D RASSESS_LINK_ENABLED
+	AM_CFLAGS += -D RASSESS_LINK_ENABLED
 
+# NOTE: nested if statments
 # For the R links
 # A working R installation is required.
 # R must have been built with the '--enable-R-shlib' option enabled to provide the R shared library
@@ -109,13 +111,18 @@ AM_CFLAGS += -D RASSESS_LINK_ENABLED
 #
 # R_HOME = $(shell R RHOME)
 # on Ubuntu Linux
-# R_HOME = /usr/lib/R
-# R_BASE = /usr/lib/R
+if OS_LINUX
+	R_HOME = /usr/lib/R
+	R_BASE = /usr/lib/R
+endif
 # on OS X
-R_BASE = /Library/Frameworks/R.framework/Resources
-R_HOME = /Library/Frameworks/R.framework/Resources
-AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
-LIBS += -L$(R_BASE)/lib -lR
+if OS_MACOS
+	R_BASE = /Library/Frameworks/R.framework/Resources
+	R_HOME = /Library/Frameworks/R.framework/Resources
+endif
+
+	AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
+	LIBS += -L$(R_BASE)/lib -lR
 endif
 
 #fetching repo version from git

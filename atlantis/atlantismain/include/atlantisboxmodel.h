@@ -1689,7 +1689,8 @@ typedef enum {
 	//flaglocalrecruit_id,
 	flagbearlive_id,
 	flagmother_id,
-    flag_contam_distrib_id,
+	//flag_contam_distrib_id,  // Moved to a general param or the entire model
+	suckler_contam_today_id,   // WTo track those born "today' so don't hit them with contaminants during buirth and suckling
 	E1orig_id,
 	E2orig_id,
 	E3orig_id,
@@ -3236,6 +3237,8 @@ typedef struct {
 	double mindz; /**< Minimum layer thickness */
 	int ntr; /**< number of tracers */
 
+  double decay_scalar;
+
 	/**@name
 	 * These values may change during a run, and are read
 	 * and written by readBMphysData() and writeBMphysData()
@@ -3999,7 +4002,18 @@ typedef struct {
     
     //double **speciesMort;
 
+    /* Frequency distribution so can reallocate contaminated fish - not doing this as need to store distribution per box and that is all way too complicated and SLOW even doing proportional transfers */
+    //double ***ContamFreqDistrib;  /* A distribution per species per age class - [sp][age][x] where x has contam level as 0 entry and count of fish at that level as entry 1 */
+    //int *ContamBinSize; /* Number of bins in the array being used */
+    
+    /* Migrant contaminant transfer - will keep a distribution for this */
+    int max_num_bins;
+    
 }ContaminantStructure;
+
+/* Options in the frequency distribution array */
+#define contam_level_in_bin 0
+#define num_contam_fish 1
 
 /* List of contaminant model options */
 #define no_contam_interact 0
@@ -4837,6 +4851,9 @@ typedef struct {
     int contam_fishery_closure_period;
     int contam_fishery_closure_option;
     
+    //int max_contam_bins; /* For tracking contaminan redistribution */
+    //int flag_contam_distrib_model; /* 0 if simple, 1 if tracks a distribution - TODO: Was too complicated and slow. removed and rethink */
+  
     double contam_sig_uptake_const;
     double contam_tau;
     
