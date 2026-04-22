@@ -25,5 +25,6 @@ If this is a New Feature, Breaking change, or a bug fix, the Atlantis Manual wil
 Now would be a good time to create an issue in the [Atlantis Manual](https://github.com/Atlantis-Ecosystem-Model/AtlantisManual) repo and begin documenting your changes.
 
 - [ ] I've created an issue
+- [ ] This is NA
 
 
