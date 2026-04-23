@@ -124,3 +124,6 @@ endif
 	AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
 	LIBS += -L$(R_BASE)/lib -lR
 endif
+
+#fetching repo version from git
+AM_CFLAGS += -DRELEASE_VERSION=\"$(RELEASE_VERSION)\"

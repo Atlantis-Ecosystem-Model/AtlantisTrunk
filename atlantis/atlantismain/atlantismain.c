@@ -2104,9 +2104,9 @@ FILE * initLogFile(MSEBoxModel *bm) {
 
 	bm->logFile = fp;
 
-	fprintf(fp, "#\n#Atlantis2 Updated to Version %s\n#\n#\n", ATLANTIS_REVISION);
-	fprintf(fp, "#\n#Atlantis path %s\n#\n#\n", ATLANTIS_WCPATH);
-	fprintf(fp, "#\n#Atlantis SVN Last Change Date %s\n\n", ATLANTIS_WCDATE);
+        #ifdef RELEASE_VERSION
+             fprintf(fp,"Git release version: %s\n", RELEASE_VERSION);
+        #endif
 
 
 	/* File title */
