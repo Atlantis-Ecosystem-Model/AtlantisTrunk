@@ -4622,7 +4622,6 @@ typedef struct {
 	 */
 	/*@{*/
 	double min_pool; /**< Minimum size of a pool before it was ignored as negligible */
-	double min_pool_cont; /**< Minimum size of a pool before it was ignored as negligible */
 	double min_dens;
 	double max_depth; /**< The seward depth boundary of the model layers */
 	/*@}*/
@@ -4856,6 +4855,8 @@ typedef struct {
   
     double contam_sig_uptake_const;
     double contam_tau;
+    double min_pool_cont; /**< Minimum size of a pool before it was ignored as negligible */
+	
     
     double *ContamClosed;
     ContaminantStructure **contaminantStructure;
