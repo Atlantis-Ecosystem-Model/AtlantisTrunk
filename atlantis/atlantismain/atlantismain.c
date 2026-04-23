@@ -1893,8 +1893,8 @@ void AllocateArrayMemory(MSEBoxModel *bm, FILE *llogfp) {
 	bm->recruit_hdistrib = Util_Alloc_Init_3D_Double(bm->K_num_tot_sp, bm->nbox, bm->K_num_max_genetypes, 0.0);
 	bm->recruit_hdistrib_orig = Util_Alloc_Init_3D_Double(bm->K_num_tot_sp, bm->nbox, bm->K_num_max_genetypes, 0.0);
 	bm->refuge_status = Util_Alloc_Init_3D_Double(2, bm->nbox, bm->K_num_tot_sp, 1.0);
-    bm->turbid_effect = Util_Alloc_Init_4D_Double(2, bm->wcnz, bm->nbox, bm->K_num_tot_sp, 1.0);
-    bm->scaling_indices = Util_Alloc_Init_3D_Int(bm->K_num_max_cohort * bm->K_num_max_genetypes * bm->K_num_max_stages, bm->K_num_tot_sp, num_scaling_indicies, -1);
+  bm->turbid_effect = Util_Alloc_Init_4D_Double(2, bm->wcnz, bm->nbox, bm->K_num_tot_sp, 1.0);
+  bm->scaling_indices = Util_Alloc_Init_3D_Int(bm->K_num_max_cohort * bm->K_num_max_genetypes * bm->K_num_max_stages, bm->K_num_tot_sp, num_scaling_indicies, -1);
 
 	bm->HABITATlike = Util_Alloc_Init_3D_Double(bm->K_num_cover_types, 2, bm->K_num_tot_sp, 0);
 	if(bm->ice_on == TRUE){

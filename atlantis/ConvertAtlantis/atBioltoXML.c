@@ -2519,7 +2519,6 @@ void createToleranceXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "RelTol", "Relative tolerance of the adaptive differentiation scheme", "mg N m-3", XML_TYPE_FLOAT, "0.1");
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "Flux_tol", "Tolerance of mass balance assumption per cell", "", XML_TYPE_FLOAT, "0.1");
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "min_pool", "Minimum pool size", "", XML_TYPE_FLOAT, "0.00000001");
-	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "min_pool_cont", "Minimum pool size", "", XML_TYPE_FLOAT, "0.00000001");
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "min_dens", "Minimum density of top predators and fish", "", XML_TYPE_FLOAT, "0.0001");
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "min_channel_depth", "Minimum depth of estuarine channels", "", XML_TYPE_FLOAT, "0.0001");
 }
@@ -3543,7 +3542,9 @@ void createContaminantsXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr 
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_contam_distrib", "Whether contaminants track an average or a distreibution", "", XML_TYPE_FLOAT,"0");
 
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "biopools_dodge_contam", "Flag to turn on whetehr biomass pool groups can dodge contaminants..", "", XML_TYPE_BOOLEAN,"0");
-    
+
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "min_pool_cont", "Minimum contaminant pool size", "", XML_TYPE_FLOAT, "0.00000001");
+        
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "contam_tau", "Tau coefficient", "", XML_TYPE_FLOAT, "1");
 
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "contam_sig_uptake_const", "Sigmoid uptake function coefficient", "", XML_TYPE_FLOAT, "1");
