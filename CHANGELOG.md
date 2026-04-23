@@ -6,7 +6,14 @@ As changed, removed or added.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.6721.1 - Unreleased] - 2026-01-13
+## [3.6721.1] - 2026-04-21 
+### Added
+Created md file with a table listing Atlantis models in use, location, and contact person
+GitHub actions to build and run SETAS when a pull request is triggered
+Templates for bug reporting, feature requests and pull requests that standardize content for maintainers and reviewers. 
+
+### Changed
+In atlantis/PreRules.am‎ refactors the code to detect the underlying OS and then "turn" on the appropriate flag
 
 ### Removed 
 Extra printfs in atUtils.c used for debugging 

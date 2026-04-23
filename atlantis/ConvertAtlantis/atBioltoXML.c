@@ -3542,7 +3542,9 @@ void createContaminantsXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr 
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_contam_distrib", "Whether contaminants track an average or a distreibution", "", XML_TYPE_FLOAT,"0");
 
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "biopools_dodge_contam", "Flag to turn on whetehr biomass pool groups can dodge contaminants..", "", XML_TYPE_BOOLEAN,"0");
-    
+
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "min_pool_cont", "Minimum contaminant pool size", "", XML_TYPE_FLOAT, "0.00000001");
+        
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "contam_tau", "Tau coefficient", "", XML_TYPE_FLOAT, "1");
 
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "contam_sig_uptake_const", "Sigmoid uptake function coefficient", "", XML_TYPE_FLOAT, "1");
