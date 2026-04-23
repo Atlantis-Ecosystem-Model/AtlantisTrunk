@@ -803,7 +803,7 @@ void setupMSEBoxModel(int argc, char *argv[], MSEBoxModel *bm) {
 	/* Process arguments - where specified output filename used as basis for all output netcdf file names */
 	if (argc < 16){
 		if(argc == 2){
-			quit("Atlantis version %s\n", ATLANTIS_REVISION);
+			quit("Atlantis version %s\n", RELEASE_VERSION);
 		}
 		Util_Usage(1);
 
