@@ -6,14 +6,19 @@ As changed, removed or added.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.6721.1] - 2026-04-21 
+## [3.6722] - 2026-04-23 - Commit 4f6c3d7
+
 ### Added
 Created md file with a table listing Atlantis models in use, location, and contact person
 GitHub actions to build and run SETAS when a pull request is triggered
 Templates for bug reporting, feature requests and pull requests that standardize content for maintainers and reviewers. 
+Parameter min_pool_cont for the Contaminant module, which sets the threshold for minimum contaminant concentration. This addition decouples min_pool a global parameter from the contaminant submodule. Need to add min_pool_cont as a parameter if using track_contaminants 
+Instructions to add new features or bug fixes to the user manual. The documentation should be updated directly after the feature or bug is incorporated in a new release
+Code to identify the Git release and return the release version
 
 ### Changed
 In atlantis/PreRules.am‎ refactors the code to detect the underlying OS and then "turn" on the appropriate flag
+Readme and CHANGELOG are updated
 
 ### Removed 
 Extra printfs in atUtils.c used for debugging 
