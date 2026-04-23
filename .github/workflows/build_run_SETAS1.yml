@@ -45,7 +45,7 @@ jobs:
           TZ=America/New_York &&
           ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &&
           apt-get update && 
-          apt-get install  -yq build-essential autoconf libnetcdf-dev libxml2-dev libproj-dev subversion valgrind dos2unix gawk nano r-base &&
+          apt-get install  -yq build-essential autoconf libnetcdf-dev libxml2-dev libproj-dev subversion valgrind dos2unix gawk nano r-base git &&
           cd atlantis && aclocal && autoheader && autoconf && automake -a && ./configure --enable-rassesslink && make && make install &&
           echo 'Now run the model!' &&
           cd ../example &&
