@@ -29,6 +29,8 @@ jobs:
           echo "CURRENT_BRANCH = $MY_BRANCH" >> $GITHUB_ENV
           echo "MY BRANCH: $MY_BRANCH"
           echo "CURRENT_BRANCH: $GITHUB_ENV"
+          RELEASE_NUM=$(git describe --tags 2>/dev/null)
+          echo "VERSION RELEASE: $RELEASE_NUM"
         shell: bash
 
 
@@ -49,7 +51,8 @@ jobs:
           cd atlantis && aclocal && autoheader && autoconf && automake -a && ./configure --enable-rassesslink && make && make install &&
           echo 'Now run the model!' &&
           cd ../example &&
-          atlantisMerged -i INIT_VMPA_Jan2015.nc 0 -o outputSETAS.nc -r VMPA_setas_run_fishing_F_Trunk.prm -f VMPA_setas_force_fish_Trunk.prm -p VMPA_setas_physics.prm -b VMPA_setas_biol_fishing_Trunk.prm -m SETas_Migrations.csv -h VMPA_setas_harvest_F_Trunk.prm  -s SETasGroupsDem.csv -q SETasFisheries.csv -d testFolder 2>out.txt 
+          atlantisMerged -i INIT_VMPA_Jan2015.nc 0 -o outputSETAS.nc -r VMPA_setas_run_fishing_F_Trunk.prm -f VMPA_setas_force_fish_Trunk.prm -p VMPA_setas_physics.prm -b VMPA_setas_biol_fishing_Trunk.prm -m SETas_Migrations.csv -h VMPA_setas_harvest_F_Trunk.prm  -s SETasGroupsDem.csv -q SETasFisheries.csv -d testFolder 2>out.txt
+          git describe --tags 2>/dev/null
           "
         shell: bash
 
