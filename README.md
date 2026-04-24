@@ -1,6 +1,17 @@
 # Atlantis
 <img width="120" height="130" alt="Atlantis_1" src="https://github.com/user-attachments/assets/4d2d9337-03f4-4f34-a4d2-48ad4c78ff86" />
 
+Atlantis is software for modelling marine ecosystem including spatial and temporal dynamics. More information on it can be found at the links below or at [Atlantis_example_and_instructions](https://github.com/Atlantis-Ecosystem-Model/Atlantis_example_and_instructions/)
+
+**Attention!**
+>Atlantis is a living piece of software. If you would like to know more please go to the [Atlantis research page](https://research.csiro.au/atlantis) or  <a href="mailto:atlantis@csiro.au?subject=Atlantis%20InQuiry">email the developers</a>.
+
+>To get the msot out of Atlantis it is strongly recommended you register with the developers so we can support yuou and connect you with the user community. To do that <a href="mailto:atlantis@csiro.au?subject=Atlantis%20InQuiry">email the developers</a>. If the link doesn't autoconnect to email for you please check if you have a pop-up blocker turned on in your browser. Alternatively, right click on the text "email to developers" and select the option "copy email". The manual is available from the links below and the old wiki will move here in coming months.
+
+#### License ####
+This project is licensed under the CSIRO open-source License - see the [LICENSE.md](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/blob/main/LICENSE.md) file for details. The softwware is free to use but it is nice to still register with the developers so they have an idea of who they are supporting. When you send the email, please be sure that the email contains your name, affiliation and a quick line on why you are interested. This is important for us to provide you the best possible support - it will not affect access, which is free of charge regardless.
+
+
 Atlantis current release [Atlantis v3.6721](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/releases/tag/3.6721)
 #### Version numbering: atlantis_major_release.atlantis_version
 Atlantis major release represents a significant change in the code, often not backwards compatible 
