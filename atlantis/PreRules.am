@@ -100,27 +100,26 @@ endif
 #	AM_CFLAGS += -D SS3_LINK_ENABLED -I$(top_srcdir)/atSS3Link/include
 #endif
 
-if RASSESS_LINK_ENABLED
-	AM_CFLAGS += -D RASSESS_LINK_ENABLED
 
-# NOTE: nested if statments
 # For the R links
 # A working R installation is required.
 # R must have been built with the '--enable-R-shlib' option enabled to provide the R shared library
 # Ensure the R_HOME environment variable is set appropriately
 #
 # R_HOME = $(shell R RHOME)
-# on Ubuntu Linux
+
 if OS_LINUX
-	R_HOME = /usr/lib/R
-	R_BASE = /usr/lib/R
-endif
-# on OS X
-if OS_MACOS
-	R_BASE = /Library/Frameworks/R.framework/Resources
-	R_HOME = /Library/Frameworks/R.framework/Resources
+R_BASE = /usr/lib/R
+R_HOME = /usr/lib/R
 endif
 
-	AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
-	LIBS += -L$(R_BASE)/lib -lR
+if OS_MACOS
+R_BASE = /Library/Frameworks/R.framework/Resources
+R_HOME = /Library/Frameworks/R.framework/Resources
+endif
+
+if RASSESS_LINK_ENABLED
+AM_CFLAGS += -D RASSESS_LINK_ENABLED
+AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
+LIBS += -L$(R_BASE)/lib -lR
 endif
