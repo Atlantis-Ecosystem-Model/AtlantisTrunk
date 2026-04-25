@@ -78,6 +78,7 @@ void Free_Contaminants(MSEBoxModel *bm) {
         free(bm->contaminantStructure[cIndex]->sp_ContamScalar);
         free(bm->contaminantStructure[cIndex]->sp_maternal_transfer);
         free(bm->contaminantStructure[cIndex]->sp_suckling_transfer);
+        
         printf("About to free bm->instantDoseMortality\n");
         free(bm->contaminantStructure[cIndex]->sp_instantDoseMortality);
         free4d(bm->contaminantStructure[cIndex]->sp_maxDoseToDate);
@@ -89,6 +90,17 @@ void Free_Contaminants(MSEBoxModel *bm) {
         free(bm->contaminantStructure[cIndex]->sp_Cy);
 
         //free2d(bm->contaminantStructure[cIndex]->speciesMort);
+
+        free(bm->contaminantStructure[cIndex]->sp_L);
+        free(bm->contaminantStructure[cIndex]->sp_A);
+        free(bm->contaminantStructure[cIndex]->sp_B);
+        free(bm->contaminantStructure[cIndex]->sp_L_r);
+        free(bm->contaminantStructure[cIndex]->sp_A_r);
+        free(bm->contaminantStructure[cIndex]->sp_B_r);
+
+        free(bm->contaminantStructure[cIndex]->sp_avoid);
+        free(bm->contaminantStructure[cIndex]->sp_K_avoid);
+
 	}
 
     printf("About to free bm->contaminantStructure\n");
@@ -103,7 +115,7 @@ void Free_Contaminants(MSEBoxModel *bm) {
  *
  *
  */
-void Allocate_Contaiminants(MSEBoxModel *bm) {
+void Allocate_Contaminants(MSEBoxModel *bm) {
 
     int cIndex;
     int max_chrt = bm->K_num_max_genetypes * bm->K_num_max_cohort;
@@ -147,18 +159,19 @@ void Allocate_Contaiminants(MSEBoxModel *bm) {
 		bm->contaminantStructure[cIndex]->sp_point = Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, max_chrt, bm->K_num_tot_sp, 0.0);
 
 		bm->contaminantStructure[cIndex]->sp_GrowthThresh = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-    bm->contaminantStructure[cIndex]->sp_GrowthEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+        bm->contaminantStructure[cIndex]->sp_GrowthEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
     
-    bm->contaminantStructure[cIndex]->sp_ReprodThresh = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+        bm->contaminantStructure[cIndex]->sp_ReprodThresh = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
 
-    bm->contaminantStructure[cIndex]->sp_instantDoseMortality = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0);
+        bm->contaminantStructure[cIndex]->sp_instantDoseMortality = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0);
 		bm->contaminantStructure[cIndex]->sp_maxDoseToDate = Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, max_chrt, bm->K_num_tot_sp, 0.0);
 		bm->contaminantStructure[cIndex]->sp_MoveEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-    bm->contaminantStructure[cIndex]->sp_ReprodEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+        bm->contaminantStructure[cIndex]->sp_ReprodEffect = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
 
 		bm->contaminantStructure[cIndex]->sp_TimeToLD50 = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
 		bm->contaminantStructure[cIndex]->sp_Cx = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
 		bm->contaminantStructure[cIndex]->sp_Cy = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+        
 		bm->contaminantStructure[cIndex]->sp_L = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
 		bm->contaminantStructure[cIndex]->sp_A = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
 		bm->contaminantStructure[cIndex]->sp_B = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
@@ -166,13 +179,16 @@ void Allocate_Contaiminants(MSEBoxModel *bm) {
 		bm->contaminantStructure[cIndex]->sp_A_r = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
 		bm->contaminantStructure[cIndex]->sp_B_r = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
 
-    bm->contaminantStructure[cIndex]->sp_avoid = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
-    bm->contaminantStructure[cIndex]->sp_K_avoid = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+        bm->contaminantStructure[cIndex]->sp_avoid = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
+        bm->contaminantStructure[cIndex]->sp_K_avoid = Util_Alloc_Init_1D_Double(bm->K_num_tot_sp, 0.0);
 
-		//bm->contaminantStructure[cIndex]->speciesMort = Util_Alloc_Init_2D_Double(3, bm->K_num_tot_sp, 0.0);
+		//bm->contaminantStructure[cIndex]->speciesMort = Util_Alloc_Init_2D_Double(3, bm->K_num_tot_sp, 0.0);        
+        //bm->contaminantStructure[cIndex]->ContamFreqDistrib= Util_Alloc_Init_3D_Double(bm->max_contam_bins, max_chrt, bm->K_num_tot_sp, 0.0);
 
 	}
 	Init_Contaminants(bm);
+    
+    return;
 }
 /**
  * Initialise the contaminants.
@@ -180,15 +196,14 @@ void Allocate_Contaiminants(MSEBoxModel *bm) {
  *
  */
 void Init_Contaminants(MSEBoxModel *bm) {
-
 	int found = FALSE;
 	int cIndex, tracerIndex;
 
 	/* Check that the netcdf files are provided for the contaminant tracers */
 
 	if (bm->use_forceTracers) {
-
 		for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
+            found = FALSE;
 			/* Check each forcing tracers */
 			for (tracerIndex = 0; tracerIndex < bm->numForceTracers; tracerIndex++) {
 				if (strcmp(bm->forceTracerInput[tracerIndex].variableName, bm->contaminantStructure[cIndex]->contaminant_name) == 0) {
@@ -197,14 +212,15 @@ void Init_Contaminants(MSEBoxModel *bm) {
 			}
 
 			if (found == FALSE) {
-				quit("You have defined a contaminant tracer '%s' but you have provided no forcing files for this tracer. See the wiki for more information. \n",
-						bm->contaminantStructure[cIndex]->contaminant_name);
+				quit("You have defined a contaminant tracer '%s' but you have provided no forcing files for this tracer. See the wiki for more information. \n", bm->contaminantStructure[cIndex]->contaminant_name);
 
 			}
 		}
 	} else {
 		quit("You have defined some contaminant tracers but you have provided no forcing files. You need to provide forcing data for each contaminant tracer. See the wiki for more information. \n");
 	}
+    
+    return;
 }
 
 /**************************************************************************************************************************************************************
@@ -285,7 +301,7 @@ void Move_Vert_Contaminated(MSEBoxModel *bm, int sp, int cohort, double ****this
     num_contam = Util_Alloc_Init_2D_Double(bm->wcnz, bm->nbox, 0.0);
     localcontam = Util_Alloc_Init_3D_Double(bm->num_contaminants, bm->wcnz, bm->nbox, 0.0);
     num_contam_moved = Util_Alloc_Init_3D_Double(bm->num_contaminants, bm->wcnz, bm->nbox, 0.0);
-
+    
     for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
         cid = bm->contaminantStructure[cIndex]->contaminant_tracer;
         pid = FunctGroupArray[sp].contamPropTracers[cohort][cIndex];
@@ -301,7 +317,7 @@ void Move_Vert_Contaminated(MSEBoxModel *bm, int sp, int cohort, double ****this
                     // Number of contaminanted that must have moved
                     localcontam[ij][k][cIndex] = bm->boxes[ij].tr[k][cid];
                     if (diffden[ij][k] < 0.0) {
-                        num_contam_moved[ij][k][cIndex] = floor(bm->boxes[bm->current_box].tr[bm->current_layer][pid] * -1.0 * diffden[ij][k]);
+                        num_contam_moved[ij][k][cIndex] = floor(bm->boxes[ij].tr[k][pid] * -1.0 * diffden[ij][k]);  // Used to say current_box, current_layer but tha makes no sense as calling from mvoement code so would always be final layer of final box.
                     }
                 }
             }
@@ -330,7 +346,7 @@ void Move_Vert_Contaminated(MSEBoxModel *bm, int sp, int cohort, double ****this
 
                             // Adjust local proportion
                             new_num_in_box = bm->boxes[ij].tr[clayer][pid] * this_currentden[sp][cohort][clayer][ij] + num_possible;
-                            bm->boxes[ij].tr[clayer][pid] = new_num_in_box / (bm->boxes[ij].tr[k][den] + small_num);
+                            bm->boxes[ij].tr[clayer][pid] = new_num_in_box / (bm->boxes[ij].tr[clayer][den] + small_num);  // Denominator used to say layer k not clayer, but that does not make sense as should be recieving layer as recalcualting proportion contaminanted in that layer not the old layer they left.
 
                             //fprintf(bm->logFile, "Time %e box%d-%d %s %d %s has after move prop: %e with new_num_in_box %e den: %e\n", bm->dayt, ij, clayer, FunctGroupArray[sp].groupCode, cohort, bm->contaminantStructure[cIndex]->contaminant_name, bm->boxes[ij].tr[clayer][pid], new_num_in_box, bm->boxes[ij].tr[k][den]);
 
@@ -739,7 +755,7 @@ int Species_Contaminant_Uptake(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
 
     /* Grab the level in the water column or the sediment */
     cLevel = tracerArray[bm->contaminantStructure[cIndex]->contaminant_tracer];
-    if(cLevel > bm->min_pool){
+    if(cLevel > bm->min_pool_cont){
         //fprintf(bm->logFile, "time %e, box %d, layer %d, cLevel = %e\n", bm->dayt, bm->current_box, bm->current_layer, cLevel);
         for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 
@@ -925,7 +941,7 @@ int Group_Transfer_Contaminant(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
 
 	int cIndex, pid, this_habitat;
 	double *tracerArray;
-  double cGroupLevel = 0, transfer, totalBiomass, amt_exchanged, toGuild_totalBiomass = 0.0, prop_exchanged, propContam, min_num, this_num;
+  double cGroupLevel = 0, transfer = 0, totalBiomass, amt_exchanged, toGuild_totalBiomass = 0.0, prop_exchanged, propContam, min_num, this_num;
 	int isGlobal = (FunctGroupArray[toGuild].diagTol == 2 && it_count == 1);
 
 	/* If the amount transfered is zero don't do anything
@@ -1042,7 +1058,7 @@ int Group_Transfer_Contaminant(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
                 this_num = tracerArray[FunctGroupArray[toGuild].NumsTracers[toCohort]];
                 min_num = 1.0 / (this_num + small_num);
             } else {
-                min_num = bm->min_pool;  // Just using this as a proxy for a small number here
+                min_num = bm->min_pool_cont;  // Just using this as a proxy for a small number here
             }
 
             
@@ -1607,9 +1623,9 @@ int Calculate_Species_Contaminant_Effects(MSEBoxModel *bm, int box, int clayer, 
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
         break;
-	default:
-		abort();
-		break;
+    default:
+        quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
+        break;
 	}
 
     for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
@@ -1817,7 +1833,7 @@ void ContaminantMigrationIn(MSEBoxModel *bm, int sp, int cohort, int mid, double
     double base_contam, this_half_life, final_contam;
     double day_start = (double)(MIGRATION[sp].Leave_Now[mid]);
     double day_end = bm->dayt;
-    double time_step = day_start - day_end;
+    double time_step = day_end - day_start;
 
     for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
         base_contam = MIGRATION[sp].contam[cohort][mid][cIndex];
@@ -1998,7 +2014,7 @@ void Get_Settler_Contaminants(MSEBoxModel *bm, int wclayer, int sp, int ngene, i
     }
 }
 
-/* Now update contaminant scofres for recruits */
+/* Now update contaminant scores for recruits */
 void Apply_Settler_Contaminants(MSEBoxModel *bm, int sp, int cohort, double starting_num, double new_num, int qid){
     int cIndex, cid;
     double old_contam, diff_num;
@@ -2020,13 +2036,13 @@ void Apply_Settler_Contaminants(MSEBoxModel *bm, int sp, int cohort, double star
  */
 void Get_Suckling_Contaminants(MSEBoxModel *bm, int sp, int ad_cohort, int juv_cohort) {
     int cIndex, ad_cid, juv_cid;
-    double milk_transfer_rate, cGroupLevel, this_Contam;
+    double milk_transfer_rate, cGroupLevel, this_Contam = 0.0;
     
     for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
         milk_transfer_rate = bm->contaminantStructure[cIndex]->sp_suckling_transfer[sp];
         ad_cid = FunctGroupArray[sp].contaminantTracers[ad_cohort][cIndex];
         cGroupLevel = bm->boxes[bm->current_box].tr[bm->current_layer][ad_cid];
-        this_Contam += (cGroupLevel * milk_transfer_rate); // As local transfer from mother to neonate at point of birth (to save book keeping)
+        this_Contam = (cGroupLevel * milk_transfer_rate); // As local transfer from mother to neonate at point of birth (to save book keeping)
         bm->boxes[bm->current_box].tr[bm->current_layer][ad_cid] -= this_Contam;
         // Add to juvenile
         juv_cid = FunctGroupArray[sp].contaminantTracers[juv_cohort][cIndex];
@@ -2079,7 +2095,7 @@ void Contaminant_Init_Contact_Record(MSEBoxModel *bm){
     int sp, cohort;
 
     /** Create filename **/
-    sprintf(fname, "%sContamContact.txt", bm->startfname);
+    snprintf(fname, sizeof(fname), "%sContamContact.txt", bm->startfname);
 
     if(verbose){
       printf("Doing Contaminant_Init_Contact_Record for file %s\n", fname);
@@ -2152,11 +2168,11 @@ void Check_Contam_Totals(MSEBoxModel *bm) {
     
     for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
         
-        /**/
+        /**
         //if (strcmp(bm->contaminantStructure[cIndex]->contaminant_name, "Phenanthrene") == 0) {
             fprintf(bm->logFile, "Time %e %s has total_input: %e\n", bm->dayt, bm->contaminantStructure[cIndex]->contaminant_name, bm->forceTracerInput[cIndex].total_input);
         //}
-        /**/
+        **/
         
         if(!bm->forceTracerInput[cIndex].total_input) {
             continue;  // Nothing to do so skip ahead

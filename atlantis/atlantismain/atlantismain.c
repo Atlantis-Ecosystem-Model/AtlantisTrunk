@@ -758,6 +758,7 @@ int main(int argc, char *argv[]) {
 	Textfile_Dump(&bm, logfp);
 
 	/* Close the log file */
+	fprintf(logfp, "Atlantis Done \n");
 	fclose(logfp);
 
 	logfp = 0;
@@ -1892,8 +1893,8 @@ void AllocateArrayMemory(MSEBoxModel *bm, FILE *llogfp) {
 	bm->recruit_hdistrib = Util_Alloc_Init_3D_Double(bm->K_num_tot_sp, bm->nbox, bm->K_num_max_genetypes, 0.0);
 	bm->recruit_hdistrib_orig = Util_Alloc_Init_3D_Double(bm->K_num_tot_sp, bm->nbox, bm->K_num_max_genetypes, 0.0);
 	bm->refuge_status = Util_Alloc_Init_3D_Double(2, bm->nbox, bm->K_num_tot_sp, 1.0);
-    bm->turbid_effect = Util_Alloc_Init_4D_Double(2, bm->wcnz, bm->nbox, bm->K_num_tot_sp, 1.0);
-    bm->scaling_indices = Util_Alloc_Init_3D_Int(bm->K_num_max_cohort * bm->K_num_max_genetypes * bm->K_num_max_stages, bm->K_num_tot_sp, num_scaling_indicies, -1);
+  bm->turbid_effect = Util_Alloc_Init_4D_Double(2, bm->wcnz, bm->nbox, bm->K_num_tot_sp, 1.0);
+  bm->scaling_indices = Util_Alloc_Init_3D_Int(bm->K_num_max_cohort * bm->K_num_max_genetypes * bm->K_num_max_stages, bm->K_num_tot_sp, num_scaling_indicies, -1);
 
 	bm->HABITATlike = Util_Alloc_Init_3D_Double(bm->K_num_cover_types, 2, bm->K_num_tot_sp, 0);
 	if(bm->ice_on == TRUE){
@@ -2103,9 +2104,9 @@ FILE * initLogFile(MSEBoxModel *bm) {
 
 	bm->logFile = fp;
 
-	fprintf(fp, "#\n#Atlantis2 Updated to Version %s\n#\n#\n", ATLANTIS_REVISION);
-	fprintf(fp, "#\n#Atlantis path %s\n#\n#\n", ATLANTIS_WCPATH);
-	fprintf(fp, "#\n#Atlantis SVN Last Change Date %s\n\n", ATLANTIS_WCDATE);
+        #ifdef RELEASE_VERSION
+             fprintf(fp,"Git release version: %s\n", RELEASE_VERSION);
+        #endif
 
 
 	/* File title */

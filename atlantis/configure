@@ -653,6 +653,12 @@ ac_func_c_list=
 ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
+OS_FREEBSD_FALSE
+OS_FREEBSD_TRUE
+OS_MACOS_FALSE
+OS_MACOS_TRUE
+OS_LINUX_FALSE
+OS_LINUX_TRUE
 GCC_GE_730_FALSE
 GCC_GE_730_TRUE
 LIBOBJS
@@ -6665,11 +6671,11 @@ if test x$ac_prog_cxx_stdcxx = xno
 then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $CXX option to enable C++11 features" >&5
 printf %s "checking for $CXX option to enable C++11 features... " >&6; }
-if test ${ac_cv_prog_cxx_cxx11+y}
+if test ${ac_cv_prog_cxx_11+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
-  ac_cv_prog_cxx_cxx11=no
+  ac_cv_prog_cxx_11=no
 ac_save_CXX=$CXX
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -6711,11 +6717,11 @@ if test x$ac_prog_cxx_stdcxx = xno
 then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $CXX option to enable C++98 features" >&5
 printf %s "checking for $CXX option to enable C++98 features... " >&6; }
-if test ${ac_cv_prog_cxx_cxx98+y}
+if test ${ac_cv_prog_cxx_98+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
-  ac_cv_prog_cxx_cxx98=no
+  ac_cv_prog_cxx_98=no
 ac_save_CXX=$CXX
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -7314,6 +7320,41 @@ else
 fi
 
 
+# identify the OS and the chip
+# This macro sets several shell variables, most importantly $host_os,
+# which contains a canonical name for the OS (e.g., linux-gnu, darwin, freebsd).
+
+# Define a conditional flag for Linux
+ if case "$host_os" in *linux*) true ;; *) false ;; esac; then
+  OS_LINUX_TRUE=
+  OS_LINUX_FALSE='#'
+else
+  OS_LINUX_TRUE='#'
+  OS_LINUX_FALSE=
+fi
+
+
+# Define a conditional flag for macOS (Darwin)
+ if case "$host_os" in *darwin*) true ;; *) false ;; esac; then
+  OS_MACOS_TRUE=
+  OS_MACOS_FALSE='#'
+else
+  OS_MACOS_TRUE='#'
+  OS_MACOS_FALSE=
+fi
+
+
+# Define a conditional flag for FreeBSD
+ if case "$host_os" in *freebsd*) true ;; *) false ;; esac; then
+  OS_FREEBSD_TRUE=
+  OS_FREEBSD_FALSE='#'
+else
+  OS_FREEBSD_TRUE='#'
+  OS_FREEBSD_FALSE=
+fi
+
+
+
 
 ac_config_files="$ac_config_files Makefile ConvertAtlantis/Makefile atassess/Makefile atecology/Makefile ateconomic/Makefile atlantisUtil/Makefile atlantismain/Makefile atlantismain/atlantisMerged.pc atlink/Makefile atbrokerlink/Makefile atCLAMLink/Makefile atSS3Link/Makefile atmanage/Makefile atharvest/Makefile atimplementation/Makefile atphysics/Makefile sjwlib/Makefile"
 
@@ -7489,6 +7530,18 @@ printf %s "checking that generated files are newer than configure... " >&6; }
 printf "%s\n" "done" >&6; }
 if test -z "${GCC_GE_730_TRUE}" && test -z "${GCC_GE_730_FALSE}"; then
   as_fn_error $? "conditional \"GCC_GE_730\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${OS_LINUX_TRUE}" && test -z "${OS_LINUX_FALSE}"; then
+  as_fn_error $? "conditional \"OS_LINUX\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${OS_MACOS_TRUE}" && test -z "${OS_MACOS_FALSE}"; then
+  as_fn_error $? "conditional \"OS_MACOS\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${OS_FREEBSD_TRUE}" && test -z "${OS_FREEBSD_FALSE}"; then
+  as_fn_error $? "conditional \"OS_FREEBSD\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

@@ -552,18 +552,22 @@ void Manage_Init(MSEBoxModel *bm, FILE *llogfp) {
 	}
 
 	for (i = 0; i < nfleets; i++) {
-		count_it = 0;
-		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-			if (FunctGroupArray[sp].isFished == TRUE) {
-				if (bm->FISHERYtarget[i][sp]) {
-					count_it++;
+      count_it = 0;
+      bm->FISHERYprms[i][flagMFCdisplace_id] = 0;
+      for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+            if (FunctGroupArray[sp].isFished == TRUE) {
+                  if (bm->FISHERYtarget[i][sp]) {
+                        count_it++;
+                        //fprintf(llogfp, "%s is target of %s\n", FunctGroupArray[sp].groupCode, FisheryArray[i].fisheryCode);
+                  }
+            }
+            if((bm->SP_FISHERYprms[sp][i][flagF_id] > 0 ) && bm->flagdisplace) {
+                  bm->FISHERYprms[i][flagMFCdisplace_id] = 1; // mFC fishery and displace effort on
+            }
+      }
+      bm->FISHERYprms[i][ntargets_id] = count_it;
+}
 
-					//fprintf(llogfp, "%s is target of %s\n", FunctGroupArray[sp].groupCode, FisheryArray[i].fisheryCode);
-				}
-			}
-		}
-		bm->FISHERYprms[i][ntargets_id] = count_it;
-	}
 
 	for (i = 0; i < nfleets; i++) {
 		for (guild = 0; guild < bm->K_num_tot_sp; guild++) {

@@ -1034,6 +1034,9 @@ void Copy_WC_Tracers(MSEBoxModel *bm, double *localWCTracers, double *localWCFlu
             //localWCTracers[i] = 0.0; Moved outside the if so it's initialised
 		} else {
 			localWCTracers[i] = bm->boxes[bm->current_box].tr[bm->current_layer][i];
+		  //printf("printing tracer\n");
+		  //printf("WC - %d, box: %d, layer: %d, %s - bm->atEcologyModule->localTracer[i] = %.20e, fluxFlag = %d\n",i, bm->current_box, bm->current_layer, Varname[i], localWCTracers[i], Fluxflag[i]);
+            
 		}
 
 		/**

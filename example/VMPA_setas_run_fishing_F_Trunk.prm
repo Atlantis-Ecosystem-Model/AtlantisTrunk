@@ -13,6 +13,7 @@ flag_multiyr_migs  0   # Flag indicating whether multi-year (> 1 yr long) migrat
 flag_migration_on  1   # Flag indicating whether any migrations active
 
 flagenviro_warn 0      # Flag indicating whether warning messages about spawn and movement being environmentally constrained are activated
+trackWind 0
 
 debug_it	  0
 checkbox      0        # Give detailed logged output for this box
@@ -39,7 +40,7 @@ debug         0        # 0=debuging off, 1=debug fishing, 2=debug discards, 3=de
 
 title      SE Tasmania model with constant forced fishing and base level fishing pressure on FMM increased 2000 fold
 dt         	12 hour     # 12 hour time step
-tstop       3 day     # Stop time after the given period 15000 5000
+tstop       30 day     # Stop time after the given period 15000 5000
 toutstart  	0 day       # Output start time
 toutinc    	0.5 day     # Write output with this periodicity
 toutfinc   	1 day     # Write fisheries output with this periodicity

@@ -15,7 +15,9 @@ stamp-h1
 autom4te.cache/
 *atlantisMerged
 *atlantisMerged.pc
+atlantis/.DS_Store
 .DS_Store
 Trunk2025.xcworkspace/xcuserdata/ful083.xcuserdatad/UserInterfaceState.xcuserstate
-Trunk2025.xcworkspace/xcuserdata/ful083.xcuserdatad/UserInterfaceState.xcuserstate
 .Rproj.user/
+*.Rproj
+example/outputFolder/
