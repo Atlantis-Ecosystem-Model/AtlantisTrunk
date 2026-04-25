@@ -457,7 +457,7 @@ void Ecology_Init(MSEBoxModel *bm, FILE *llogfp) {
 	//bm->external_mortality = TRUE;
 
 	if(bm->track_contaminants){
-		Allocate_Contaiminants(bm);
+		Allocate_Contaminants(bm);
 	}
 	printf("Initialise biology\n");
 
