@@ -177,7 +177,7 @@ void Populate_RAssessFile(FILE *fp, MSEBoxModel *bm, int groupIndex){
 void RAssessSurvey(MSEBoxModel *bm, FILE *llogfp) {
     int springSurvey = 0;
     int sp, cohort, bb, b, den, sn, rn, k;
-    double sample_num, survey_num, q, avail, swept_area, rawwgt, rawlngth, rawn, this_wgt;
+    double sample_num, survey_num, q, avail, rawwgt, rawlngth, rawn;
     int fishery_id = bm->RAssessFisheryID;
 
     if (bm->TofY == bm->RAssessSpringSurveyDay) {
@@ -188,7 +188,8 @@ void RAssessSurvey(MSEBoxModel *bm, FILE *llogfp) {
     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
         if (FunctGroupArray[sp].isTAC > 1) {
             
-            printf("Doing RAssess Survey for %s\n", FunctGroupArray[sp].groupCode);
+          fprintf(bm->logFile, "Doing RAssess survey (springSurvey = %d) for %s\n",springSurvey, FunctGroupArray[sp].groupCode);
+          fflush(bm->logFile);
             
             for (cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++) {
                 for (bb = 0; bb < bm->nsbox; bb++) {
@@ -198,27 +199,33 @@ void RAssessSurvey(MSEBoxModel *bm, FILE *llogfp) {
                     sn = FunctGroupArray[sp].structNTracers[cohort];
                     rn = FunctGroupArray[sp].resNTracers[cohort];
                 
-                    // Just use max size as do mixing in movement so undless sedentary then all same size anyways
-                    for (k = 0; k < bm->boxes[b].nz; k++){
-                        this_wgt = (bm->boxes[b].tr[k][sn] + bm->boxes[b].tr[k][rn]);
-                        if (this_wgt > rawwgt) {
-                            rawwgt = this_wgt;
-                        }
+                    // Just use max size as do mixing in movement so unless sedentary then all same size anyways
+                    rawwgt = 0.0;
+                    rawn = 0.0;		
+                    for (k=0; k < bm->boxes[b].nz; k++) {
+                      rawn += bm->boxes[b].tr[k][den];
+                      if ((bm->boxes[b].tr[k][sn] + bm->boxes[b].tr[k][rn]) > rawwgt) {
+                        rawwgt = bm->boxes[b].tr[k][sn] + bm->boxes[b].tr[k][rn];
+                      }
                     }
-                
-                    rawlngth = Get_Length(bm, rawwgt, sp);
+                    
+                    // This sampling method needs checking, i.e adding error to weight
+                    rawlngth = Ecology_Get_Size(bm, sp, rawwgt, cohort);
                     avail = bm->SP_FISHERYprms[sp][fishery_id][avail_id];
                     q = Selectivity(bm, rawlngth, fishery_id, avail, 0, bm->logFile);  // Also accounts for availability
-                    swept_area = bm->FISHERYprms[fishery_id][swept_area_id] / (bm->boxes[b].area * bm->boxes[b].botz);
-                    rawn = bm->boxes[b].tr[k][den];
                     sample_num = Assess_Add_Error(bm, flagcount, rawn, k_avgcount, k_varcount);
-                    survey_num = sample_num * q * swept_area;
+                    survey_num = sample_num * q;
                 
                     if (springSurvey) {
                         FunctGroupArray[sp].RAssessSpringSurvey[cohort][b] = survey_num;
+                        FunctGroupArray[sp].RAssessSpringSurveySize[cohort][b] = rawwgt;
                     } else {
                         FunctGroupArray[sp].RAssessAutumnSurvey[cohort][b] = survey_num;
+                        FunctGroupArray[sp].RAssessAutumnSurveySize[cohort][b] = rawwgt;
                     }
+                    
+                    fprintf(bm->logFile, "RAssess Survey: survey_num = %e, rawwgt = %e for ageclass = %d in box = %d\n", survey_num, rawwgt, cohort, b);
+                    fflush(bm->logFile);
                 }
             }
         }

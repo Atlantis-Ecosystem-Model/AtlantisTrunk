@@ -840,7 +840,8 @@ int Util_Read_Functional_Group_XML(MSEBoxModel *bm, char *fileName, FILE *llogfp
             FunctGroupArray[i].X_RS = Util_Alloc_Init_1D_Double(FunctGroupArray[i].numCohortsXnumGenes, 0.0);
             FunctGroupArray[i].RAssessSpringSurvey = Util_Alloc_Init_2D_Double(bm->nbox, FunctGroupArray[i].numCohortsXnumGenes, 0.0);
             FunctGroupArray[i].RAssessAutumnSurvey = Util_Alloc_Init_2D_Double(bm->nbox, FunctGroupArray[i].numCohortsXnumGenes, 0.0);
-                
+            FunctGroupArray[i].RAssessSpringSurveySize = Util_Alloc_Init_2D_Double(bm->nbox, FunctGroupArray[i].numCohortsXnumGenes, 0.0);
+            FunctGroupArray[i].RAssessAutumnSurveySize = Util_Alloc_Init_2D_Double(bm->nbox, FunctGroupArray[i].numCohortsXnumGenes, 0.0);
             FunctGroupArray[i].min_wgt = Util_Alloc_Init_1D_Double(FunctGroupArray[i].numCohortsXnumGenes, 0.0);
             FunctGroupArray[i].max_wgt = Util_Alloc_Init_1D_Double(FunctGroupArray[i].numCohortsXnumGenes, 0.0);
             FunctGroupArray[i].rolling_wgt = Util_Alloc_Init_2D_Double(bm->K_rolling_cap_num + 1, FunctGroupArray[i].numCohortsXnumGenes, 0.0);
@@ -1289,6 +1290,8 @@ void Free_Functional_Group_Memory(MSEBoxModel *bm) {
 			free4d(FunctGroupArray[i].boxPopRatio);
             free2d(FunctGroupArray[i].RAssessSpringSurvey);
             free2d(FunctGroupArray[i].RAssessAutumnSurvey);
+            free2d(FunctGroupArray[i].RAssessSpringSurveySize);
+            free2d(FunctGroupArray[i].RAssessAutumnSurveySize);
             free1d(FunctGroupArray[i].min_wgt);
             free1d(FunctGroupArray[i].max_wgt);
             free2d(FunctGroupArray[i].rolling_wgt);
