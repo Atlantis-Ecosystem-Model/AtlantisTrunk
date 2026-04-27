@@ -227,74 +227,208 @@ void RAssessSurvey(MSEBoxModel *bm, FILE *llogfp) {
     return;
 }
            
-/** Reading in the file defining the TAC. Has an assumed format of
+/** Reading in the file defining the TAC or Effort. 
+
+The TAC file should have the following format
  
- TAC
- XX
+ fishery_id TAC
+ ID XX
  
- where XX is the value of the TAC e.g.
+ where ID is the index of fisheries as in fishery.csv file
+ and XX is the value of the TAC e.g.
  
- TAC
- 10000
+ fishery_id TAC
+ 0 2e+07       
+ 1 0e+00          
+ 2 0e+00        
+ 3 0e+00   
+ 
+ The Effort file should have the following format matching the parameters needed for effortmodel = 3
+ meff and effort are the same value for each box per fishery
+ 
+ box	fishery_id	Effort_hdistrib1	Effort_hdistrib2	Effort_hdistrib3	Effort_hdistrib4	meff1	meff2	meff3	meff4	effort
+ 0	1	0	0	0	0	1	1	0	1.3	20000
+ 1	1	0.2	0.2	0.2	0.2	1	1	0	1.3	20000
+ 2	1	0.3	0.3	0.3	0.3	1	1	0	1.3	20000
+ 0	3	0	0	0	0	1	1	0	2	5000
+ 1	3	0.2	0.2	0.2	0.2	1	1	0	2	5000
+ 2	3	0.3	0.3	0.3	0.3	1	1	0	2	5000
+ 
  */
+
 void Read_RAssess_output(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
-    char outname[STRLEN];
-    char ch;
-    FILE *fp;
-    char *valueStr;
-    char buffer[STRLEN];
-    char seps[] = " ,\t";
-    int size = 100;  // TODO: Set this to sensible value
-    int buflen = 200;
-    double *values = (double *) malloc((size_t)size * sizeof(double));
-    char *line_buf = NULL;
-    size_t line_buf_size = 0;
-    size_t line_size;
-    
-    if(verbose) {
-        printf("Read_RAssess_output: reading results back in for %s\n", FunctGroupArray[species].groupCode);
-    }
-
-    /** Create filename - was _Rassess.out**/
-    sprintf(outname,"%s_%s",FunctGroupArray[species].groupCode, bm->RAssessRoutName);
-    
-    if ((fp = Open_Input_File(bm->destFolder,outname, "rt")) == NULL) {
-        quit("Cannot open R generated output file %s\n", outname);
-    }
-    
-    // Get the first line of the file
-    line_size = getline(&line_buf, &line_buf_size, fp);
-    /*
-    if(line_size > 2) {
-        quit("Error in %s - expected header row not present\n", outname);
-    }
-    */
-    
-    // Read in data lines
-    /* Loop for all lines */
-    fseek(fp, 0L, 0);
-    while (fgets(buffer, buflen, fp) != NULL) {
-        ch = buffer[0];
-
-        if (ch == '\n')
-            continue;
-
-        if (strcmp(buffer, "TAC") == 0){
-            // Do nothing as header row
-        } else {
-            valueStr = strtok(buffer, seps);
-            if(strlen(valueStr) != 0) {
-                bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = atof(valueStr);
-            }
-        }
-    }
-    fprintf(bm->logFile, "%s RAssessTAC set to %e\n", FunctGroupArray[species].groupCode, bm->RBCestimation.RBCspeciesParam[species][RBCest_id]);
-    fflush(bm->logFile);
-    
-    free1d(values);
+  char outname[STRLEN];
+  FILE *fp;
+  char buffer[STRLEN];
+  
+  
+  sprintf(outname, "%s_%s",
+          FunctGroupArray[species].groupCode,
+          bm->RAssessRoutName);
+  
+  if ((fp = Open_Input_File(bm->destFolder, outname, "rt")) == NULL) {
+    quit("Cannot open R generated TAC output file %s\n", outname);
+  }
+  
+  /* Read header line */
+  if (fgets(buffer, sizeof(buffer), fp) == NULL) {
+    fprintf(llogfp,
+            "ERROR-RAssess: Empty R generated TAC output file %s\n",
+            outname);
+    fflush(llogfp);
     fclose(fp);
+    quit("Error: empty R generated TAC output file %s\n", outname);
+  }
+  
+  
 
-    return;
+  /* If header includes "TAC" the TAC values are read in */
+  if (strstr(buffer, "TAC") != NULL) {
+    int fishery_id;
+    double tac_val;
+    double total_tac = 0.0;
+    
+    fprintf(llogfp,
+            "RAssess: TAC format detected in %s for species %s\n",
+            outname,
+            FunctGroupArray[species].groupCode);
+  
+  
+  while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+    if (buffer[0] == '\n' || buffer[0] == '\0') {
+      continue;
+    }
+    
+    /* Checking format and input of the output file */
+    if (sscanf(buffer, "%d%lf", &fishery_id, &tac_val) != 2) {
+      fprintf(llogfp,
+              "WARNING-RAssess: Skipping malformed TAC line in %s: %s\n", outname, buffer);
+      fflush(llogfp);
+      continue;
+    }
+    
+    if (fishery_id < 0 || fishery_id >= bm->K_num_fisheries) {
+      fprintf(llogfp,
+              "WARNING-RAssess: Fishery index %d out of range in %s (valid range 0-%d)\n",
+              fishery_id, outname, bm->K_num_fisheries - 1);
+      fflush(llogfp);
+      continue;
+    }
+    
+    if (tac_val < 0.0) {
+      fprintf(llogfp,
+              "WARNING-RAssess: Negative TAC value %.3f for species %s, fishery %d in %s\n",
+              tac_val,
+              FunctGroupArray[species].groupCode,
+              fishery_id,
+              outname);
+    }
+    /* Read TAC into array that is used to scale mFC and Effort */
+    bm->TACamt[species][fishery_id][now_id] = tac_val;
+    total_tac += tac_val;
+    
+    fprintf(llogfp,
+            "RAssess: Updated TAC for species %s, fishery %d to %.3f for year %d\n",
+            FunctGroupArray[species].groupCode, fishery_id, tac_val, year);
+  }
+  
+  /* Store total TAC across fisheries for this species */
+  bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = total_tac;
+  
+  fprintf(llogfp,
+          "RAssess: %s total TAC across fisheries set to %.3f\n",
+          FunctGroupArray[species].groupCode, total_tac);
+  
+  } else if (strstr(buffer, "Effort") != NULL || strstr(buffer, "effort") != NULL) {
+    
+    int b, fishery_id;
+    double Effort_hdistrib1, Effort_hdistrib2;
+    double Effort_hdistrib3, Effort_hdistrib4;
+    double meff1, meff2, meff3, meff4;
+    double effort;
+    
+    fprintf(llogfp,
+            "RAssess: Effort format detected in %s for species %s\n",
+            outname,
+            FunctGroupArray[species].groupCode);
+    
+    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+      if (buffer[0] == '\n' || buffer[0] == '\0') {
+        continue;
+      }
+      
+      if (sscanf(buffer, "%d%d%lf%lf%lf%lf%lf%lf%lf%lf%lf",
+                 &b, &fishery_id,
+                 &Effort_hdistrib1, &Effort_hdistrib2,
+                 &Effort_hdistrib3, &Effort_hdistrib4,
+                 &meff1, &meff2, &meff3, &meff4,
+                 &effort) != 11) {
+                 
+                 fprintf(llogfp,
+                         "WARNING-RAssess: Skipping malformed effort line in %s: %s",
+                         outname, buffer);
+        fflush(llogfp);
+        continue;
+      }
+      
+      if (b < 0 || b >= bm->nbox) {
+        fprintf(llogfp,
+                "WARNING-RAssess: Box index %d out of range in %s "
+                "(valid range 0-%d)\n",
+                b, outname, bm->nbox - 1);
+        fflush(llogfp);
+        continue;
+      }
+      
+      if (fishery_id < 0 || fishery_id >= bm->K_num_fisheries) {
+        fprintf(llogfp,
+                "WARNING-RAssess: Fishery index %d out of range in %s "
+                "(valid range 0-%d)\n",
+                fishery_id, outname, bm->K_num_fisheries - 1);
+        fflush(llogfp);
+        continue;
+      }
+      
+      bm->Effort_hdistrib[b][fishery_id][0] = Effort_hdistrib1;
+      bm->Effort_hdistrib[b][fishery_id][1] = Effort_hdistrib2;
+      bm->Effort_hdistrib[b][fishery_id][2] = Effort_hdistrib3;
+      bm->Effort_hdistrib[b][fishery_id][3] = Effort_hdistrib4;
+      
+      mEff[fishery_id][0] = meff1;
+      mEff[fishery_id][1] = meff2;
+      mEff[fishery_id][2] = meff3;
+      mEff[fishery_id][3] = meff4;
+      
+      bm->FISHERYprms[fishery_id][EffortLevel_id] = effort;
+      
+      fprintf(llogfp,
+              "RAssess: Updated effort for box %d, fishery %d: "
+              "hdistrib for seasons 1-4 = (%.3f %.3f %.3f %.3f) "
+              "meff for seasons 1-4 = (%.3f %.3f %.3f %.3f) effort = %.3f\n",
+              b,
+              fishery_id,
+              Effort_hdistrib1,
+              Effort_hdistrib2,
+              Effort_hdistrib3,
+              Effort_hdistrib4,
+              meff1,
+              meff2,
+              meff3,
+              meff4,
+              effort);
+    }
+  } else {
+    fprintf(llogfp,
+            "RAssess: No TAC or Effort found in header of %s for species %s. "
+            "No values were read.\n",
+            outname,
+            FunctGroupArray[species].groupCode);
+  }
+  
+  fflush(llogfp);
+  fclose(fp);
+  
+  return;
 }
 
 
