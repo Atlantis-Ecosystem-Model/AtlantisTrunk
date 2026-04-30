@@ -45,7 +45,7 @@ void Do_RAssess(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
     }
     
     // Reuse SS data generation code
-    GenData(bm, species, year);
+    //GenData(bm, species, year); // Not working for RAssess parameterization
     
     // Create and Popuate RAssessFile
     if(!bm->RAssess_initiated[species]) {
@@ -89,89 +89,92 @@ FILE * Init_RAssess_File(MSEBoxModel *bm, int species) {
 }
 
 /* Write RAssess input file */
-void Populate_RAssessFile(FILE *fp, MSEBoxModel *bm, int groupIndex){
-    int cohort, istock, isex, r, b, nf, this_age;
-    int iyr = (int)(bm->dayt/365.0);
-    int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[groupIndex][NumRegions_id]);
-    int this_year = (int)(bm->dayt/365.0) + bm->RAssessRefYear - 1;  // Assumes that as happens on Day 365 it would count first year as RefYear + 1 so need to -1 to get it to RefYear
-    double catchnum, discardnum, totlandings, catchsize, catchlen, counter1, counter2, this_size, this_length,
-        numspring, numautumn, calcM;
-
-    for (cohort = 0; cohort < FunctGroupArray[groupIndex].numCohortsXnumGenes; cohort++) {
-        this_age = cohort * FunctGroupArray[groupIndex].ageClassSize;
-        fprintf(fp,"%d%s", this_year, bm->RassessColDelimiter); // calendar year - could be model year if needed
-        fprintf(fp,"%d%s", this_age, bm->RassessColDelimiter); // age – in years
-        
-        // TODO: Talk to RAssess about implications of cohort being multipe years
-        
-        catchnum = 0.0;
-        discardnum = 0.0;
-        totlandings = 0.0;
-        catchsize = 0.0;
-        counter1 = 0.0;
-        counter2 = 0.0;
-        this_size = 0.0;
-        this_length = 0.0;
-        
-        for (istock = 0; istock < FunctGroupArray[groupIndex].numStocks; istock++){
-            for (isex = 0; isex < bm->K_num_sexes; isex++){
-                this_size += bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[istock][isex][cohort][iyr] * 1000.0; // convert weight to g from kg
-                this_length += bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[istock][isex][cohort];
-                counter1 += 1.0;
-            }
-        }
-        this_size /= counter1;
-        this_length /= counter1;
-        
-        for (nf = 0; nf < bm->K_num_fisheries; nf++) {
-            for (r = 0; r < Nregions; r++) {
-                totlandings += bm->RBCestimation.RBCspeciesArray[groupIndex].CatchData[nf][r][iyr] / 1000.0;  // As going kg to tonnes
-            }
-            for (b = 0; b < bm->nbox; b++) {
-                catchnum += FunctGroupArray[groupIndex].SizeNumCaught[cohort][nf][b]; //
-                discardnum += FunctGroupArray[groupIndex].SizeNumDiscard[cohort][nf][b];
-                catchsize += FunctGroupArray[groupIndex].SizeCaught[cohort][nf][b];
-                counter2 += 1.0;
-            }
-        }
-        catchsize /= counter2;
-        catchlen = Get_Length(bm, catchsize, groupIndex);
-        
-        numspring = 0.0;
-        numautumn = 0.0;
-        for (b = 0; b < bm->nbox; b++) {
-            numspring += FunctGroupArray[groupIndex].RAssessSpringSurvey[cohort][b];
-            numautumn += FunctGroupArray[groupIndex].RAssessAutumnSurvey[cohort][b];
-        }
-        
-        fprintf(fp,"%f%s", catchnum + discardnum, bm->RassessColDelimiter);  // total catch (in numbers at age)
-        fprintf(fp,"%f%s", catchlen, bm->RassessColDelimiter); // mean length at age in the catch in cm
-        fprintf(fp,"%f%s", catchsize, bm->RassessColDelimiter); // mean weight at age in the catch in grams
-        fprintf(fp,"%f%s", numspring, bm->RassessColDelimiter); // area swept abundance by age
-        fprintf(fp,"%f%s", this_size, bm->RassessColDelimiter); // weight at age, in grams
-        fprintf(fp,"%f%s", this_length, bm->RassessColDelimiter); // length at age in cm
-        fprintf(fp,"%f%s", FunctGroupArray[groupIndex].scaled_FSPB[cohort], bm->RassessColDelimiter); // proportion mature by age
-        fprintf(fp,"%f%s", numautumn, bm->RassessColDelimiter); // area swept abundance by age
-        
-        if(bm->RAssessFixedM) {
-            // If a parameter setting
-            fprintf(fp,"%f%s", FunctGroupArray[groupIndex].speciesParams[assess_nat_mort_id], bm->RassessColDelimiter);
-        } else {
-            // If using dynamic value
-            calcM = 0.0;
-            for (istock = 0; istock < FunctGroupArray[groupIndex].numStocks; istock++){
-                calcM += (bm->calcTrackedMort[groupIndex][cohort][istock][finalM1_id] + bm->calcTrackedMort[groupIndex][cohort][istock][finalM2_id]);
-            }
-            fprintf(fp,"%f%s", calcM, bm->RassessColDelimiter);
-        }
-        
-        fprintf(fp,"%f", totlandings);  // In tonnes
-        fprintf(fp,"\n");
-    }
-    fflush(fp);
+void Populate_RAssessFile(FILE *fp, MSEBoxModel *bm, int species){
+  int cohort, this_age, b, nf;
+  int this_year = (int)(bm->dayt/365.0) + bm->RAssessRefYear - 1; 
+  double catchnum, discardnum, catchsize, catchlen, counter1, this_size, this_length, numspring, numautumn, calcM; 
+  
+  
+  for (cohort = 0; cohort < FunctGroupArray[species].numCohortsXnumGenes; cohort++) {
     
-    return;
+    this_age = cohort * FunctGroupArray[species].ageClassSize;
+    fprintf(fp,"%d%s", this_year, bm->RassessColDelimiter); // calendar year - could be model year if needed
+    fprintf(fp,"%d%s", this_age, bm->RassessColDelimiter); // age – in years
+    
+    // TODO: Talk to RAssess about implications of cohort being multipe years
+    
+    catchnum = 0.0;
+    discardnum = 0.0;
+    catchsize = 0.0;
+    catchlen = 0.0;
+    counter1 = 0.0;
+    this_size = 0.0;
+    this_length = 0.0;
+
+    
+    for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+      for (b = 0; b < bm->nbox; b++) {
+        catchnum += FunctGroupArray[species].SizeNumCaught[cohort][nf][b]; //Numbers caught
+        discardnum += FunctGroupArray[species].SizeNumDiscard[cohort][nf][b]; //Numbers discarded
+        catchsize += FunctGroupArray[species].SizeCaught[cohort][nf][b]; //Biomass caught
+      }
+    }
+    if (catchnum > 0.0) {
+      catchsize /= catchnum;
+    } else {
+      catchsize = 0.0;
+    }
+    
+    catchlen = Ecology_Get_Size(bm, species, catchsize, cohort);
+    catchsize = catchsize * bm->X_CN * mg_2_g; //mg_2_g (0.02) includes wet weight
+    
+    numspring = 0.0;
+    numautumn = 0.0;
+    for (b = 0; b < bm->nbox; b++) {
+      numspring += FunctGroupArray[species].RAssessSpringSurvey[cohort][b];
+      numautumn += FunctGroupArray[species].RAssessAutumnSurvey[cohort][b];
+      
+      if (FunctGroupArray[species].RAssessSpringSurveySize[cohort][b] > 0.0) {
+        this_size += FunctGroupArray[species].RAssessSpringSurveySize[cohort][b];
+        counter1 += 1.0;
+      }
+    }
+    
+    if (counter1 > 0.0) {
+      this_size /= counter1;
+    } else {
+      this_size = 0.0;
+    }
+    
+    this_length = Ecology_Get_Size(bm, species, this_size, cohort);
+    this_size = this_size * bm->X_CN * mg_2_g;
+    
+    fprintf(fp,"%f%s", catchnum + discardnum, bm->RassessColDelimiter);  // total catch (in numbers at age)
+    fprintf(fp,"%f%s", catchlen, bm->RassessColDelimiter); // mean length at age in the catch in cm
+    fprintf(fp,"%f%s", catchsize, bm->RassessColDelimiter); // mean weight at age in the catch in grams
+    fprintf(fp,"%f%s", numspring, bm->RassessColDelimiter); // area swept abundance by age
+    fprintf(fp,"%f%s", this_size, bm->RassessColDelimiter); // weight at age, in grams
+    fprintf(fp,"%f%s", this_length, bm->RassessColDelimiter); // length at age in cm
+    fprintf(fp,"%f%s", FunctGroupArray[species].scaled_FSPB[cohort], bm->RassessColDelimiter); // proportion mature by age
+    fprintf(fp,"%f%s", numautumn, bm->RassessColDelimiter); // area swept abundance by age
+    
+    if(bm->RAssessFixedM) {
+      // If a parameter setting
+      fprintf(fp,"%f%s", FunctGroupArray[species].speciesParams[assess_nat_mort_id], bm->RassessColDelimiter);
+    } else {
+      // If using dynamic value
+      calcM = 0.0;
+      fprintf(fp,"%f%s", calcM, bm->RassessColDelimiter);
+    }
+    
+    fprintf(fp,"%f", catchsize*catchnum/1e+6);  // Landings in tonnes
+    fprintf(fp,"\n");
+  }
+  fflush(fp);
+  
+  return;
 }
+
 
 /* Do survey data collection for purposes of RAssess estimate */
 void RAssessSurvey(MSEBoxModel *bm, FILE *llogfp) {
