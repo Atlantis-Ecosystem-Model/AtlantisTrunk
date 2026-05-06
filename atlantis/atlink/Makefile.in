@@ -274,6 +274,7 @@ PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 RANLIB = @RANLIB@
+RELEASE_VERSION = @RELEASE_VERSION@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -359,7 +360,10 @@ GCCVERSION = $(shell gcc --version | grep ^gcc | sed 's/^.* //g')
 #-Wconversion
 WARN = -Wall -Wextra -Wno-unused-parameter -Wuninitialized \
 	-Warray-bounds $(am__append_1)
-AM_CFLAGS = $(DEFINES) $(INCLUDES) $(DBG) $(OPT) $(EF) $(PG) $(WARN)
+
+#fetching repo version from git
+AM_CFLAGS = $(DEFINES) $(INCLUDES) $(DBG) $(OPT) $(EF) $(PG) $(WARN) \
+	-DRELEASE_VERSION=\"$(RELEASE_VERSION)\"
 lib_LIBRARIES = libatlink.a
 libatlink_adir = $(includedir)/atlink
 libatlink_a_SOURCES = atComms.c atlinkconversion.o atlinkexport.c atlinkimport.c atComms.h atlink.h atLinkModule.h
