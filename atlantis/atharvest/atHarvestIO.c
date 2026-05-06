@@ -388,7 +388,7 @@ FILE * initDisplacedEffortFile(MSEBoxModel *bm) {
     int nf;
 
     /** Create filename **/
-    sprintf(fname, "%sDisplaceEffort.txt", bm->startfname);
+    sprintf(fname, "%sDetailedEffort.txt", bm->startfname);
     printf("Creating %s\n", fname);
 
     /** Create file **/
