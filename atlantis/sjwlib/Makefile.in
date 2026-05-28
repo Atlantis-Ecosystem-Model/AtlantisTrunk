@@ -91,15 +91,9 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 
-# Comment out to run Docker - needed on Mac
-#WARN += -Wno-error=pointer-bool-conversion
-#WARN += -Wno-nullability-completeness
-#WARN += -Wno-nonnull
-
 # if using clang then turn this on and use the Wconditional-uninitialized warning.
 #CC = clang
 #WARN += -Wconditional-uninitialized
-
 #WARN += -Wformat
 #WARN += -Wno-pointer-arith
 #WARN += -Wstrict-prototypes
@@ -114,24 +108,11 @@ host_triplet = @host@
 #WARN += -Wno-missing-variable-declarations
 #WARN += -Wno-float-equal
 #WARN += -Wmaybe-uninitialized
-
 #WARN += -Wno-unused-but-set-variable
 #WARN += -Wno-error=unused-variable
 #-Wswitch-default
 #WARN += -fprofile-arcs -ftest-coverage
 @GCC_GE_730_TRUE@am__append_1 = -Wno-format-overflow
-@BROKER_LINK_ENABLED_TRUE@am__append_2 = -D BROKER_LINK_ENABLED -I$(top_srcdir)/atbrokerlink/include
-@BROKER_LINK_ENABLED_FALSE@am__append_3 = -pedantic  -std=c99
-@LINK_ENABLED_TRUE@am__append_4 = -D LINK_ENABLED -I$(top_srcdir)/atlink/include $(shell pkg-config --cflags libcsoap)
-@CLAM_LINK_ENABLED_TRUE@am__append_5 = -D CLAM_LINK_ENABLED -I$(top_srcdir)/atCLAMLink/include
-
-#if SS3_LINK_ENABLED
-#AM_CFLAGS += -D SS3_LINK_ENABLED -I$(top_srcdir)/atSS3Link/include
-#endif
-@RASSESS_LINK_ENABLED_TRUE@am__append_6 = -D RASSESS_LINK_ENABLED \
-@RASSESS_LINK_ENABLED_TRUE@	-I$(R_BASE)/include \
-@RASSESS_LINK_ENABLED_TRUE@	-I/usr/share/R/include
-@RASSESS_LINK_ENABLED_TRUE@am__append_7 = -L$(R_BASE)/lib -lR
 subdir = sjwlib
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -313,7 +294,7 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
-LIBS = @LIBS@ $(am__append_7)
+LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
@@ -327,6 +308,7 @@ PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 RANLIB = @RANLIB@
+RELEASE_VERSION = @RELEASE_VERSION@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -410,34 +392,12 @@ DEFINES = -D PROJ4 -D REPLICATE_OLD_RESULTS -D BETH_LOG_FILE_SIZE
 #-D ORIGINAL_GROUP_ORDER
 GCCVERSION = $(shell gcc --version | grep ^gcc | sed 's/^.* //g')
 #-Wconversion
-
-#WARN += -Wno-error
-#WARN += -Werror
-
-# Comment out for Mac
-#WARN += -Wformat-overflow
-
-# Needed for Docker (uncomment if commented out)
 WARN = -Wall -Wextra -Wno-unused-parameter -Wuninitialized \
-	-Warray-bounds -Wno-error=unused-but-set-variable \
-	-Wno-error=misleading-indentation \
-	-Wno-error=implicit-function-declaration $(am__append_1)
-AM_CFLAGS = $(DEFINES) $(INCLUDE) $(DBG) $(OPT) $(EF) $(PG) $(WARN) \
-	$(am__append_2) $(am__append_3) $(am__append_4) \
-	$(am__append_5) $(am__append_6)
+	-Warray-bounds $(am__append_1)
 
-# For the R links
-# A working R installation is required.
-# R must have been built with the '--enable-R-shlib' option enabled to provide the R shared library
-# Ensure the R_HOME environment variable is set appropriately
-#
-# R_HOME = $(shell R RHOME)
-# on Ubuntu Linux
-# R_HOME = /usr/lib/R
-# R_BASE = /usr/lib/R
-# on OS X
-@RASSESS_LINK_ENABLED_TRUE@R_BASE = /Library/Frameworks/R.framework/Resources
-@RASSESS_LINK_ENABLED_TRUE@R_HOME = /Library/Frameworks/R.framework/Resources
+#fetching repo version from git
+AM_CFLAGS = $(DEFINES) $(INCLUDES) $(DBG) $(OPT) $(EF) $(PG) $(WARN) \
+	-DRELEASE_VERSION=\"$(RELEASE_VERSION)\"
 h_sources = $(top_srcdir)/sjwlib/include/datafile.h \
 $(top_srcdir)/sjwlib/include/gridlib.h \
 $(top_srcdir)/sjwlib/include/mapproj.h \
@@ -932,6 +892,50 @@ uninstall-am: uninstall-libLIBRARIES uninstall-library_includeHEADERS \
 
 .PRECIOUS: Makefile
 
+
+#WARN += -Wno-error
+#WARN += -Werror
+
+# Needed for Mac
+@OS_MACOS_TRUE@	WARN += -Wformat-overflow
+@OS_MACOS_TRUE@	WARN += -Wno-error=pointer-bool-conversion
+@OS_MACOS_TRUE@	WARN += -Wno-nullability-completeness
+@OS_MACOS_TRUE@	WARN += -Wno-nonnull
+
+# Needed for Docker (uncomment if commented out)
+@OS_LINUX_TRUE@	WARN += -Wno-error=unused-but-set-variable
+@OS_LINUX_TRUE@	WARN += -Wno-error=misleading-indentation
+@OS_LINUX_TRUE@	WARN += -Wno-error=implicit-function-declaration
+
+@BROKER_LINK_ENABLED_TRUE@	AM_CFLAGS +=  -D BROKER_LINK_ENABLED -I$(top_srcdir)/atbrokerlink/include
+@BROKER_LINK_ENABLED_FALSE@	AM_CFLAGS += -pedantic  -std=c99
+
+@LINK_ENABLED_TRUE@	AM_CFLAGS += -D LINK_ENABLED -I$(top_srcdir)/atlink/include $(shell pkg-config --cflags libcsoap)
+
+@CLAM_LINK_ENABLED_TRUE@	AM_CFLAGS += -D CLAM_LINK_ENABLED -I$(top_srcdir)/atCLAMLink/include
+
+#if SS3_LINK_ENABLED
+#	AM_CFLAGS += -D SS3_LINK_ENABLED -I$(top_srcdir)/atSS3Link/include
+#endif
+
+@RASSESS_LINK_ENABLED_TRUE@	AM_CFLAGS += -D RASSESS_LINK_ENABLED
+
+# NOTE: nested if statments
+# For the R links
+# A working R installation is required.
+# R must have been built with the '--enable-R-shlib' option enabled to provide the R shared library
+# Ensure the R_HOME environment variable is set appropriately
+#
+# R_HOME = $(shell R RHOME)
+# on Ubuntu Linux
+@OS_LINUX_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_HOME = /usr/lib/R
+@OS_LINUX_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_BASE = /usr/lib/R
+# on OS X
+@OS_MACOS_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_BASE = /Library/Frameworks/R.framework/Resources
+@OS_MACOS_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_HOME = /Library/Frameworks/R.framework/Resources
+
+@RASSESS_LINK_ENABLED_TRUE@	AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
+@RASSESS_LINK_ENABLED_TRUE@	LIBS += -L$(R_BASE)/lib -lR
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
