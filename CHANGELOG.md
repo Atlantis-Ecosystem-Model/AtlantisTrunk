@@ -6,7 +6,7 @@ As changed, removed, or added.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.6722] - 2026-05-22 - Commit 
+## [3.6722] - 2026-05-22 - Commit [94ccf9b](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/commit/94ccf9b9b32f3465182d17645646d2c31446d95e)
 
 ### Added
 - Created md file with a table listing Atlantis models in use, location, and contact person
