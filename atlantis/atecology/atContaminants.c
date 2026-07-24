@@ -1995,43 +1995,15 @@ void Get_Settler_Contaminants(MSEBoxModel *bm, int wclayer, int sp, int ngene, i
     int cohort = (int)(floor(drandom(start_n, end_n))); // Find a random adult cohort to use
     
    
-   /* --- DEBUG PRINT --- */
-   /*if (bm != NULL && bm->logFile != NULL) {
-     fprintf(bm->logFile, "[DEBUG_ENTRY] Entered Get_Settler_Contaminants safely.\n");
-     fprintf(bm->logFile, "[DEBUG_ENTRY] sp index: %d, max total sp: %d\n", sp, bm->K_num_tot_sp);
-     
-     // Check if species data exists at all
-     if (FunctGroupArray[sp].speciesParams == NULL) {
-       fprintf(bm->logFile, "[DEBUG_ENTRY] CRITICAL ERROR: speciesParams array is NULL for sp=%d!\n", sp);
-     } else {
-       fprintf(bm->logFile, "[DEBUG_ENTRY] speciesParams pointer is valid.\n");
-     }
-     fflush(bm->logFile);
-   } */
-   
+  
    // Explicitly separate assignment to see exactly which line creates the segmentation fault
    flagmother = (int) (FunctGroupArray[sp].speciesParams[flagmother_id]);
-   
-/* if (bm != NULL && bm->logFile != NULL) {
-     fprintf(bm->logFile, "[DEBUG_ENTRY] flagmother parsed successfully: %d\n", flagmother);
-     fflush(bm->logFile);
-   }*/
    
    start_n = FunctGroupArray[sp].speciesParams[age_mat_id];
    end_n = (double)FunctGroupArray[sp].numCohortsXnumGenes;
    
- /*  if (bm != NULL && bm->logFile != NULL) {
-     fprintf(bm->logFile, "[DEBUG_ENTRY] start_n=%f, end_n=%f. Evaluating drandom next...\n", start_n, end_n);
-     fflush(bm->logFile);
- } */
-   
    cohort = (int)(floor(drandom(start_n, end_n)));
-   
-/*   if (bm != NULL && bm->logFile != NULL) {
-     fprintf(bm->logFile, "[DEBUG_ENTRY] drandom passed! Selected cohort: %d\n", cohort);
-     fflush(bm->logFile);
-} */
-   
+
    // Fix applied here just in case
    if (cohort >= FunctGroupArray[sp].numCohortsXnumGenes) {
      cohort = FunctGroupArray[sp].numCohortsXnumGenes - 1;
