@@ -60,7 +60,8 @@ void init_forceMoveEntries(MSEBoxModel *bm, FILE *fp) {
         
         /* Read in the names of the tracers */
         readkeyprm_sarray(fp, "MoveGroupCodes", &buf, &size);
-        bm->forceMoveEntryInput = (PhyPropertyData *) malloc(sizeof(PhyPropertyData) * (long unsigned int)bm->numForceMoveEntries);
+        /* Replace malloc with calloc */
+        bm->forceMoveEntryInput = (PhyPropertyData *) calloc(bm->numForceMoveEntries, sizeof(PhyPropertyData));
         
         /* Now read in the files for each tracer */
         for (tracerIndex = 0; tracerIndex < bm->numForceMoveEntries; tracerIndex++) {
