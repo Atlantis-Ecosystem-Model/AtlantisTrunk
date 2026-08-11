@@ -6,6 +6,34 @@ As changed, removed, or added.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Commit [3102097](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/commit/310209784bb56e44980f9be6a0fc87410cb6f036)
+
+### Changed
+- Updated ReactiveAtlantisToolExample.R in the model example so it runs without having to change paths
+
+### Removed 
+
+### Added
+- Explicit definitions of variables in atContaminants.c which were triggering an intermittent memory loss and segmentation fault in the SETas model, flagmother = (int) (FunctGroupArray[sp].speciesParams[flagmother_id]) 
+start_n = FunctGroupArray[sp].speciesParams[age_mat_id];
+   end_n = (double)FunctGroupArray[sp].numCohortsXnumGenes;
+- Replace malloc with calloc in atForcedMovement.c which was triggering an intermittent segmentation fault in the SETas model
+        bm->forceMoveEntryInput = (PhyPropertyData *) calloc(bm->numForceMoveEntries, sizeof(PhyPropertyData));
+
+## Commit [cf96dbb](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/commit/cf96dbbb4ac7b2f3342d0caa997031f8fdaf3e29)
+
+### Changed
+- Defined temp_sensitive_sp=0, salt_sensitive_sp=0, mignum_actual=0.0, and int rij, rangeid, rocstage = -1, thiscase1 = 0, thiscase2 = 0, adstage, sp_Migrate_Years, stagger_return = 0, agec;
+in function Ecology_Total_Verts_And_Migration in atmovement.c to correct segmentation fault
+- Moved /* Actual numbers returning - corrected for losses while away */
+                        mignum_actual = MIGRATION[sp].survival[qid] * mignum; to right before mignum_actual is used for the first time
+
+### Removed 
+
+### Added
+- if (stock_id < 0) {stock_id = 0;} so stock id would be defined before bing used as it was causing a memory loss
+
+
 ## [3.6722] - 2026-05-22 - Commit [94ccf9b](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/commit/94ccf9b9b32f3465182d17645646d2c31446d95e)
 
 ### Added
