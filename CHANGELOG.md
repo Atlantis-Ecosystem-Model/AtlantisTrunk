@@ -14,11 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed 
 
 ### Added
-- Explicit definitions of variables in atContaminants.c which were triggering an intermittent memory loss and segmentation fault in the SETas model, flagmother = (int) (FunctGroupArray[sp].speciesParams[flagmother_id]) 
-start_n = FunctGroupArray[sp].speciesParams[age_mat_id];
-   end_n = (double)FunctGroupArray[sp].numCohortsXnumGenes;
-- Replace malloc with calloc in atForcedMovement.c which was triggering an intermittent segmentation fault in the SETas model
-        bm->forceMoveEntryInput = (PhyPropertyData *) calloc(bm->numForceMoveEntries, sizeof(PhyPropertyData));
+- Explicitly defined `flagmother`, `start_n`, and `end_n` in `Get_Settler_Contaminants` (atContaminants.c) to address an intermittent SETas segfault.
+- Replaced `malloc` with `calloc` for `bm->forceMoveEntryInput` allocation (atForcedMovement.c) to avoid uninitialized memory.
 
 ## Commit [cf96dbb](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/commit/cf96dbbb4ac7b2f3342d0caa997031f8fdaf3e29)
 
