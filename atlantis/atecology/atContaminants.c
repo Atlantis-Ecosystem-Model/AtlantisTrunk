@@ -1994,7 +1994,19 @@ void Get_Settler_Contaminants(MSEBoxModel *bm, int wclayer, int sp, int ngene, i
     double end_n = (double)FunctGroupArray[sp].numCohortsXnumGenes;
     int cohort = (int)(floor(drandom(start_n, end_n))); // Find a random adult cohort to use
     
+   
+  
+    // Clamp cohort index to valid range (defensive against boundary values)
+   // Fix applied here just in case
+   if (cohort >= FunctGroupArray[sp].numCohortsXnumGenes) {
+     cohort = FunctGroupArray[sp].numCohortsXnumGenes - 1;
+   }
+   if (cohort < 0) {
+     cohort = 0;
+   }
     if (flagmother > 0) {
+      
+      
         for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
             maternal_transfer_rate = bm->contaminantStructure[cIndex]->sp_maternal_transfer[sp];
             cid = FunctGroupArray[sp].contaminantTracers[cohort][cIndex];

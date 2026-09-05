@@ -853,19 +853,19 @@ void Store_Min_Max_Avg(MSEBoxModel *bm, int sp) {
  */
 void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp) {
 	int ij, k, n, qrt, next_qrt, sp, flagmother, flagsp, /*spjmin, spjmax, spamin = 0, spamax,*/
-    age_mat, sp_ddepend_move, day_part, sn, rn, den, mig_done, spmigrate, spmigrate_done, bearlive, stage, flagimposecatch, stock_id = -1, spupdatemig, do_debug, recalc_needed, decdis, sp_feed_while_spawn, sp_spawn_now, flagchannel, desired_chrt, nf, flagcontract_sp, qid, lid, ngene, spawn_period, spawn_date, bcohort, temp_sensitive_sp, salt_sensitive_sp, update_larval_distrib, updated_already, test_day, cells_checked, cells_impacted, DR_id, DL_id;
+    age_mat, sp_ddepend_move, day_part, sn, rn, den, mig_done, spmigrate, spmigrate_done, bearlive, stage, flagimposecatch, stock_id = -1, spupdatemig, do_debug, recalc_needed, decdis, sp_feed_while_spawn, sp_spawn_now, flagchannel, desired_chrt, nf, flagcontract_sp, qid, lid, ngene, spawn_period, spawn_date, bcohort, temp_sensitive_sp=0, salt_sensitive_sp=0, update_larval_distrib, updated_already, test_day, cells_checked, cells_impacted, DR_id, DL_id;
 	double ldayt = bm->t / 86400.0;
 	//double migtemp = 86400.0 / dt;
 	int maxij = bm->K_num_stocks_per_sp;
 	int overall_checkday = (int) (floor(bm->dayt));
     int this_flag_recruit, is_maternal_raised = 0;
-	double clear, E1_sp, spSpeed, this_HowFar, vertdistrib, mignum, mignum_actual, spawnmove, totmig, midpoint, FSMG_grow, migtime, oldden, totdenom = 0, maxstock, min_spawntemp_sp, max_spawntemp_sp, temp_effect, finalmig, avgsn, avgrn, dynsn, dynrn, min_O2_sp, current_enviro, min_spawnsalt_sp, max_spawnsalt_sp, salt_effect, o2_effect, contract_sp, oldsn, oldrn, this_tot_biom, pH_scale, orig_newden, check_day, stagger_scalar, noise_effect, light_effect, K_salt_const_sp, K_o2_const_sp, numScalar_final, growth_period, den_diff, start_n, end_n;
+	double clear, E1_sp, spSpeed, this_HowFar, vertdistrib, mignum, mignum_actual=0.0, spawnmove, totmig, midpoint, FSMG_grow, migtime, oldden, totdenom = 0, maxstock, min_spawntemp_sp, max_spawntemp_sp, temp_effect, finalmig, avgsn, avgrn, dynsn, dynrn, min_O2_sp, current_enviro, min_spawnsalt_sp, max_spawnsalt_sp, salt_effect, o2_effect, contract_sp, oldsn, oldrn, this_tot_biom, pH_scale, orig_newden, check_day, stagger_scalar, noise_effect, light_effect, K_salt_const_sp, K_o2_const_sp, numScalar_final, growth_period, den_diff, start_n, end_n;
     double numScalar, K_temp_const_sp = 0.0;
     // double step1, step2;  OLD WAY OF DOING AGE - DEPRECATE
     double ReturnPeriod;
     double IBoxProp;
 	int enviro_depend = 0, sp_enviro_depend = 0, check_done = 0, is_suitable = 0;
-    int rij, rangeid, rocstage = -1, thiscase1, thiscase2, adstage, sp_Migrate_Years, stagger_return, agec;
+    int rij, rangeid, rocstage = -1, thiscase1 = 0, thiscase2 = 0, adstage, sp_Migrate_Years, stagger_return = 0, agec;
     double nbox_spread, stepSN, stepRN, yoy_den, KWSR_sp, KWRR_sp;
 	int adbox, chkbox, kk;
 	double prop_range, juv_num, ad_num;
@@ -934,7 +934,8 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
         if (verbose > 0)
             printf("Doing desired chrt check\n");
 
-		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+ 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+		  
 			if (FunctGroupArray[sp].isVertebrate == TRUE) {
 				for (nf = 0; nf < bm->K_num_fisheries; nf++) {
 					bm->SP_FISHERYprms[sp][nf][larger_extant_id] = 0.0;
@@ -1146,6 +1147,10 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                        **/
                         
                         mignum = MIGRATION[sp].DEN[n][qid] * migtime2;
+                        
+                        /* Actual numbers returning - corrected for losses while away */
+                        mignum_actual = MIGRATION[sp].survival[qid] * mignum;
+                        
                         if(bm->track_contaminants){
                             ContaminantMigrationIn(bm, sp, n, qid, MIGRATION[sp].DEN[n][qid], mignum_actual);
                         }
@@ -1159,9 +1164,6 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                         if(MIGRATION[sp].DEN[n][qid] < 0)
                             MIGRATION[sp].DEN[n][qid] = 0.0;
 
-                        /* Actual numbers returning - corrected for losses while away */
-                        mignum_actual = MIGRATION[sp].survival[qid] * mignum;
-                        
                         oldden = totden[sp][n];
                         totden[sp][n] += mignum_actual;
                         mig_returners[sp] = 1;
@@ -1264,6 +1266,10 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                         }
                         **/
 
+                        if (stock_id < 0) {
+                          stock_id = 0; 
+                        }
+                        
                         if ((n < FunctGroupArray[sp].numGeneTypes) && FunctGroupArray[sp].speciesParams[recruit_outside_id]) {
                             // First start with any that might be coming from before model started
                             yoy_den = 0.0;
