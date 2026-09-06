@@ -1061,7 +1061,7 @@ int Group_Transfer_Contaminant(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
         bm->contaminantStructure[cIndex]->sp_transfer[fromGuild][fromCohort][habitat] -= transfer;
 
         /* CRITICAL FIX: Apply transfer immediately to tracer arrays so predators see updated concentrations */
-        /* This ensures BIV sees BB's contaminants immediately after eating, not one timestep later */
+        /* This ensures inverts see prey contaminants immediately after eating, not one timestep later */
         /* Validate tracer indices before accessing to prevent out-of-bounds access */
         int toGuild_tracer_idx = FunctGroupArray[toGuild].contaminantTracers[toCohort][cIndex];
         int fromGuild_tracer_idx = FunctGroupArray[fromGuild].contaminantTracers[fromCohort][cIndex];
