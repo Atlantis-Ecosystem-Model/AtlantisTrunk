@@ -2262,15 +2262,11 @@ void UpdateTrackedMort(MSEBoxModel *bm, FILE *llogfp, int guildcase, int cohort,
 	}
 
 	if(bm->track_contaminants){
-        
-        //fprintf(llogfp, "Time: %e box %d-%d %s-%d eaten by %s-%d habitat %d GRAZEinfo: %e scalar: %e EATINGinfo: %e\n", bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[prey].groupCode, prey_chrt, FunctGroupArray[guildcase].groupCode, cohort, habitat, GRAZEinfo[prey][prey_chrt][habitat], scalar, EATINGinfo[prey][prey_chrt][habitat]);
-        
+
         if(FunctGroupArray[guildcase].isOncePerDt == TRUE) {
-            
-            Group_Transfer_Contaminant(bm, boxLayerInfo, habitat, habitat, guildcase, cohort, prey, prey_chrt, (GRAZEinfo[prey][prey_chrt][habitat] * scalar), VERTinfo, EATINGinfo[prey][prey_chrt][habitat], bm->dtsz_stored, 1, 31);
+            Group_Transfer_Contaminant(bm, boxLayerInfo, level_id, habitat, guildcase, cohort, prey, prey_chrt, (GRAZEinfo[prey][prey_chrt][habitat] * scalar), VERTinfo, EATINGinfo[prey][prey_chrt][habitat], bm->dtsz_stored, 1, 31);
         } else {
-            
-            Group_Transfer_Contaminant(bm, boxLayerInfo, habitat, habitat, guildcase, cohort, prey, prey_chrt, (GRAZEinfo[prey][prey_chrt][habitat] * scalar), VERTinfo, EATINGinfo[prey][prey_chrt][habitat], bm->dt, 1, 32);
+            Group_Transfer_Contaminant(bm, boxLayerInfo, level_id, habitat, guildcase, cohort, prey, prey_chrt, (GRAZEinfo[prey][prey_chrt][habitat] * scalar), VERTinfo, EATINGinfo[prey][prey_chrt][habitat], bm->dt, 1, 32);
         }
 	}
 
