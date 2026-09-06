@@ -36,44 +36,7 @@ static FILE *contaminantContactFile;
  * Debug function: Track initial contaminant concentrations in organisms at simulation start
  * Call this once at the very beginning of the simulation
  */
-void Debug_Log_Initial_Concentrations(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitat) {
-    int sp, cohort, cIndex, box, layer;
-    double cGroupLevel = 0;
-    double *tracerArray;
 
-    fprintf(bm->logFile, "\n=== DEBUG_INITIAL_CONCENTRATIONS ===\n");
-    fprintf(bm->logFile, "Time: %e, Habitat: %d, Box: %d, Layer: %d\n", bm->dayt, habitat, bm->current_box, bm->current_layer);
-
-    if (habitat == EPIFAUNA) {
-        tracerArray = getTracerArray(boxLayerInfo, WC);
-    } else {
-        tracerArray = getTracerArray(boxLayerInfo, habitat);
-    }
-
-    /* Log all Macroalgae concentrations */
-    for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-        if (strstr(FunctGroupArray[sp].groupCode, "MA") != NULL) {
-            if ((FunctGroupArray[sp].speciesParams[flag_id] == TRUE) && (FunctGroupArray[sp].habitatCoeffs[habitat] > 0)) {
-                for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
-                    for (cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++) {
-                        cGroupLevel = tracerArray[FunctGroupArray[sp].contaminantTracers[cohort][cIndex]];
-                        fprintf(bm->logFile, "DEBUG_INIT_CONC: %s-%d, %s, cGroupLevel=%e, tracerID=%d\n",
-                                FunctGroupArray[sp].groupCode, cohort, bm->contaminantStructure[cIndex]->contaminant_name,
-                                cGroupLevel, FunctGroupArray[sp].contaminantTracers[cohort][cIndex]);
-                    }
-                }
-            }
-        }
-    }
-    fprintf(bm->logFile, "=== END DEBUG_INITIAL_CONCENTRATIONS ===\n\n");
-}
-
-/**
- * Free up the contaminant structure.
- *
- *
- *
- */
 void Free_Contaminants(MSEBoxModel *bm) {
 	int cIndex;
 
