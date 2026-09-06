@@ -40,7 +40,7 @@ The Atlantis version represents smaller fixes and new features and follows the h
 | CAM | Chesapeake Bay | USA | [Tom Ihde](https://github.com/TomIhde) | NA |
 | Icelantis | Iceland | Iceland | [Jacob Kasper](https://github.com/jacobkasper) | <https://github.com/jacobkasper/Icelantis> |
 |  | South Australia | Australia | [Beth Fulton](https://github.com/eafulton) | NA |
-|  | Salish Sea | Canada | [Raisha Lovindeer](https://github.com/raishalovindeer) | NA |
+|  SSAM | Salish Sea | Canada | [Raisha Lovindeer](https://github.com/raishalovindeer) | <https://github.com/SS-Atlantis/salish-sea-atlantis-model> |
 | AMPS | Puget Sound | USA; Canada | [Hem Nalini Morzaria-Luna](https://github.com/hmorzaria) | NA |
 |  | Southern Benguela | South Africa | [Kelly Cisneros](https://github.com/kortegac) | NA |
 |  | Tasman and Golden Bays | New Zealand |  | NA |
