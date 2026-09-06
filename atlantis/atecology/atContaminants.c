@@ -32,10 +32,6 @@
 
 static FILE *contaminantContactFile;
 
-/**
- * Debug function: Track initial contaminant concentrations in organisms at simulation start
- * Call this once at the very beginning of the simulation
- */
 
 void Free_Contaminants(MSEBoxModel *bm) {
 	int cIndex;
@@ -426,11 +422,10 @@ void Change_Contaminant_Levels(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
     double cLevel;
     double *tracerArray = getTracerArray(boxLayerInfo, habitat);
 
-    /* DEBUG: Log when contaminant processing happens */
+    /* DEBUG: Log when contaminant processing happens
     if (bm->dayt < 2.0 && habitat == WC) {
         fprintf(bm->logFile, "DEBUG_TIMING: Change_Contaminant_Levels START for habitat WC at time=%e\n", bm->dayt);
-    }
-
+    } */
 
     for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
         /* Grab the level in the water column or the sediment */
@@ -442,10 +437,10 @@ void Change_Contaminant_Levels(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
     }
     Calculate_Contaminants_Flux(bm, boxLayerInfo, habitat);
 
-    /* DEBUG: Log when contaminant processing ends */
+    /* DEBUG: Log when contaminant processing ends 
     if (bm->dayt < 2.0 && habitat == WC) {
         fprintf(bm->logFile, "DEBUG_TIMING: Change_Contaminant_Levels END for habitat WC at time=%e\n", bm->dayt);
-    }
+    } */
 
     return;
 }
