@@ -1996,14 +1996,7 @@ void Get_Settler_Contaminants(MSEBoxModel *bm, int wclayer, int sp, int ngene, i
     
    
   
-   // Explicitly separate assignment to see exactly which line creates the segmentation fault
-   flagmother = (int) (FunctGroupArray[sp].speciesParams[flagmother_id]);
-   
-   start_n = FunctGroupArray[sp].speciesParams[age_mat_id];
-   end_n = (double)FunctGroupArray[sp].numCohortsXnumGenes;
-   
-   cohort = (int)(floor(drandom(start_n, end_n)));
-
+    // Clamp cohort index to valid range (defensive against boundary values)
    // Fix applied here just in case
    if (cohort >= FunctGroupArray[sp].numCohortsXnumGenes) {
      cohort = FunctGroupArray[sp].numCohortsXnumGenes - 1;

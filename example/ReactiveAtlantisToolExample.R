@@ -6,7 +6,7 @@ library("proj4")
 library("here")
 
 ####### Compare outputs and Biomass visualization #######
-nc.current  <- here::here("example","outputFolderPristine","outputSETAS.nc")
+nc.current  <- here::here("example","outputFolder","outputSETAS.nc")
 nc.old      <- here::here("example","outputFolderPristine","outputSETAS.nc")
 grp.csv     <- here::here("example","SETasGroupsDem.csv")
 bgm.file    <- here::here("example","VMPA_setas.bgm")
