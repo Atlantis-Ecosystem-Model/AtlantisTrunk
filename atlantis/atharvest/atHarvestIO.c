@@ -44,12 +44,14 @@ FILE *anndpffp;
 FILE *anndiscardfp;
 FILE *anneffortfp;
 FILE *displaceEffortfp;
+FILE *detailedCatchfp;
 
 static void writeAnnCatch(FILE *fid, FILE *fid2, FILE *fid3, MSEBoxModel *bm, FILE *llogfp);
 static void writeAnnCatchPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
 static void writeAnnDiscardPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
 static void writeAnnEffort(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
 static void writeDisplaceEffort(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
+static void writeDetailedCatch(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
 
 static FILE * initAnnCatchFile(MSEBoxModel *bm);
 static FILE * initAnnCatchPerFisheryFile(MSEBoxModel *bm);
@@ -58,6 +60,7 @@ static FILE * initAnnDiscardFile(MSEBoxModel *bm);
 static FILE * initAnnEffortFile(MSEBoxModel *bm);
 static FILE * initAnnRecCatchFile(MSEBoxModel *bm);
 static FILE * initDisplacedEffortFile(MSEBoxModel *bm);
+static FILE * initDetailedCatchFile(MSEBoxModel *bm);
 
 /*******************************************************************************************
  Routines to report the aggregate fisheries statistics to date - done on an annual basis,
@@ -89,6 +92,14 @@ void Harvest_Report_Annual_Stats(MSEBoxModel *bm, FILE *llogfp) {
         writeAnnCatchPerFishery(anncpffp, bm, llogfp);
     writeAnnDiscardPerFishery(anndpffp, bm, llogfp);
     writeAnnEffort(anneffortfp, bm, llogfp);
+      if (!detailedCatchfp)
+	        detailedCatchfp = initDetailedCatchFile(bm);
+    if (bm->flagdetailedcatch) {
+    if (!detailedCatchfp)
+        detailedCatchfp = initDetailedCatchFile(bm);
+    if(bm->thisyear)
+        writeDetailedCatch(detailedCatchfp, bm, llogfp);
+		}	
 
 	return;
 }
@@ -116,7 +127,9 @@ void Open_Harvest_Output_Files(MSEBoxModel *bm) {
 	anncpffp = initAnnCatchPerFisheryFile(bm);
 	anndpffp = initAnnDiscardPerFisheryFile(bm);
 	anneffortfp = initAnnEffortFile(bm);
-    
+    if (bm->flagdetailedcatch) {
+    	detailedCatchfp = initDetailedCatchFile(bm);
+    }
     if (bm->flagdisplace) {
         displaceEffortfp = initDisplacedEffortFile(bm);
     }
@@ -130,7 +143,10 @@ void Close_Harvest_Output_Files(MSEBoxModel *bm) {
 	Util_Close_Output_File(anndpffp);
 	Util_Close_Output_File(anndiscardfp);
 	Util_Close_Output_File(anneffortfp);
-    
+	if (bm->flagdetailedcatch) {
+    	Util_Close_Output_File(detailedCatchfp);
+    }
+
     if (bm->flagdisplace) {
         Util_Close_Output_File(displaceEffortfp);
     }
@@ -281,6 +297,30 @@ FILE * initAnnCatchPerFisheryFile(MSEBoxModel *bm) {
 	fprintf(fid, "\n");
 	/* Return file pointer */
 	return (fid);
+}
+
+
+FILE * initDetailedCatchFile(MSEBoxModel *bm) {
+    FILE *fid;
+    char fname[STRLEN];
+    int sp, flag_sp;
+
+    sprintf(fname, "%sDetailedCatch.txt", bm->startfname);
+    printf("Creating %s\n", fname);
+
+    if ((fid = Util_fopen(bm, fname, "w")) == NULL)
+        quit("initDetailedCatchFile: Can't open %s\n", fname);
+
+    fprintf(fid, "Time Box Fishery");
+	    for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+        if (FunctGroupArray[sp].isFished == TRUE) {
+            flag_sp = (int)(FunctGroupArray[sp].speciesParams[flag_id]);
+            if (flag_sp)
+                fprintf(fid, " %s", FunctGroupArray[sp].groupCode);
+	        }
+	    }
+    fprintf(fid, "\n");
+    return (fid);
 }
 
 FILE * initAnnDiscardPerFisheryFile(MSEBoxModel *bm)
@@ -506,6 +546,42 @@ void writeAnnCatchPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp) {
 
 	return;
 }
+
+
+
+void writeDetailedCatch(FILE *fid, MSEBoxModel *bm, FILE *llogfp) {
+    int sp, flag_sp, fishery_id, b, k;
+    double catch_2_print, box_catch;
+
+    fprintf(llogfp, "DEBUG: Entering writeDetailedCatch, nbox=%d nfisheries=%d nsp=%d wcnz=%d\n",
+            bm->nbox, bm->K_num_fisheries, bm->K_num_tot_sp, bm->wcnz);
+    fflush(llogfp);
+
+    if (verbose > 1)
+        printf("Write detailed catch information\n");
+
+    for (fishery_id = 0; fishery_id < bm->K_num_fisheries; fishery_id++) {
+        for (b = 0; b < bm->nbox; b++) {
+            fprintf(fid, "%e %d %s", bm->dayt, b, FisheryArray[fishery_id].fisheryCode);
+            for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                if (FunctGroupArray[sp].isFished == TRUE) {
+                    flag_sp = (int)(FunctGroupArray[sp].speciesParams[flag_id]);
+                    if (flag_sp) {
+                        box_catch = 0.0;
+                        for (k = 0; k < bm->boxes[b].nz; k++) {
+                            box_catch += bm->CumCatch[sp][fishery_id][b][k];
+                        }
+                        catch_2_print = box_catch * bm->X_CN * mg_2_tonne;
+                        fprintf(fid, " %e", catch_2_print);
+                    }
+                }
+            }
+            fprintf(fid, "\n");
+        }
+    }
+    return;
+}
+
 
 void writeAnnDiscardPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp) {
 	int sp, flag_sp, fishery_id;

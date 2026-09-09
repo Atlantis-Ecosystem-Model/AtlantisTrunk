@@ -4320,6 +4320,7 @@ typedef struct {
 	int debug; /**< Flag enabling lots of debugging output code
 	 - different values of this flag indicate different debuging options.*/
 	int debug_it; /**< Flag checking for adaptive timestep bottlenecks */
+	int flagdetailedcatch; /**< Flag enabling detailed catch output */
 	int flagannual_Mest; /**< Flag checking whether mortality per predator outputs only annually
 	 - its useful to do it less than annually if calibrating */
 	int fishmove; /**< Flag turning fish movement on/off */

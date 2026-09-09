@@ -331,6 +331,7 @@ static int Read_Run_Parameters(MSEBoxModel *bm, char *fileName) {
 	bm->move_check = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "move_check");
 	bm->debug = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "debug");
 	bm->debug_it = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "debug_it");
+	bm->flagdetailedcatch = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flagdetailedcatch");
 
 	if (bm->debug) {
 		warn("Debugging code - Activated\n");
