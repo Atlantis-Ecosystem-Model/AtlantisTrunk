@@ -552,18 +552,22 @@ void Manage_Init(MSEBoxModel *bm, FILE *llogfp) {
 	}
 
 	for (i = 0; i < nfleets; i++) {
-		count_it = 0;
-		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-			if (FunctGroupArray[sp].isFished == TRUE) {
-				if (bm->FISHERYtarget[i][sp]) {
-					count_it++;
+      count_it = 0;
+      bm->FISHERYprms[i][flagMFCdisplace_id] = 0;
+      for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+            if (FunctGroupArray[sp].isFished == TRUE) {
+                  if (bm->FISHERYtarget[i][sp]) {
+                        count_it++;
+                        //fprintf(llogfp, "%s is target of %s\n", FunctGroupArray[sp].groupCode, FisheryArray[i].fisheryCode);
+                  }
+            }
+            if((bm->SP_FISHERYprms[sp][i][flagF_id] > 0 ) && bm->flagdisplace) {
+                  bm->FISHERYprms[i][flagMFCdisplace_id] = 1; // mFC fishery and displace effort on
+            }
+      }
+      bm->FISHERYprms[i][ntargets_id] = count_it;
+}
 
-					//fprintf(llogfp, "%s is target of %s\n", FunctGroupArray[sp].groupCode, FisheryArray[i].fisheryCode);
-				}
-			}
-		}
-		bm->FISHERYprms[i][ntargets_id] = count_it;
-	}
 
 	for (i = 0; i < nfleets; i++) {
 		for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
@@ -1189,7 +1193,7 @@ void Allocate_Arrays_Pre_Load(MSEBoxModel *bm) {
 	/* These are always allocated even if the management option is off */
 	bm->reg_season = (int *) i_alloc1d(bm->K_num_reg);
 	bm->phased_out = Util_Alloc_Init_2D_Double(nfleets, bm->K_num_tot_sp, 1.0);
-	bm->BiTAC_sp = (double ****) alloc4d(2, bm->K_num_tot_sp, totalreg_id + 1, 6);
+	bm->BiTAC_sp = Util_Alloc_Init_4D_Double(2, bm->K_num_tot_sp, totalreg_id + 1, 6, 0.0);;
 	bm->BiTACamt = Util_Alloc_Init_4D_Double(2, nfleets, bm->K_num_tot_sp, 6, 0.0);
 	bm->TACamt = Util_Alloc_Init_3D_Double(K_num_TAC_entries, nfleets, bm->K_num_tot_sp, 0.0);
 	bm->TripCatch = Util_Alloc_Init_2D_Double(nfleets, bm->K_num_tot_sp, 0.0);

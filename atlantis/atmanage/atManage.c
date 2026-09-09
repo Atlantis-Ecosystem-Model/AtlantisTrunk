@@ -85,7 +85,7 @@ double k_proprecfish;
 void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
 	double EFF_scale1 = 0.0, EFF_scale2 = 0.0, EFF_scale3 = 0.0, EFF_scale4, FCpressure, orig_FCpressure, fish_infringe, FCdisplaced, prop_pop_fish = 0.0, localcell_vol, FC_likeREEF, FC_likeFLAT, FC_likeSOFT, FC_dempel, reef_area, flat_area, soft_area, otherFC_likeREEF, otherFC_likeFLAT, totconflict, otherFC_likeSOFT, otherFC_dempel, dempel_match, K_GearConflict, conflict_contrib, active_scale, step1_cpue, totcatch, dummy, mpa_scale, mpa_infringe, F_displaced, F_rescale;
 	int ij, k, sp, nf, flagspeffortmodel, fishery_id, flagmanage, end_trigger_tripped, new_fish_loc = 0, nstock, flagfcmpa,
-    crunch_id;
+    crunch_id, flagMFCdisplace;
     //int do_debug_nf;
     //int do_debug;
 	int ncells = bm->nbox;
@@ -115,7 +115,7 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
     
     /* Initialise local arrays */
     if(bm->EffortModelsActive) {
-        for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+   	    for (nf = 0; nf < bm->K_num_fisheries; nf++) {
             Harvest_Set_Harvest_Index(bm, nf, checkdone_id, 0);
             for (ij = 0; ij < ncells; ij++) {
                 bm->CumEffort[nf][ij] += bm->Effort[ij][nf];
@@ -138,18 +138,19 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
         }
     }
     
-    // If displaceing effort need to clean up the record keeping
-    if (bm->flagdisplace) {
-        for (nf = 0; nf < bm->K_num_fisheries; nf++) {
-            for (ij = 0; ij < ncells; ij++) {
-                if(bm->newmonth && bm->flagday) {
-                    bm->CumDisplaceEffort[ij][nf] = 0.0;
-                } else {
-                    bm->CumDisplaceEffort[ij][nf] += bm->Effort[ij][nf];
-                }
-            }
-        }
-    }
+		   // If displaceing effort need to clean up the record keeping
+	if (bm->flagdisplace) {
+	 			   for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+	        			for (ij = 0; ij < ncells; ij++) {
+		            if(bm->newmonth && bm->flagday) {
+		                bm->CumDisplaceEffort[ij][nf] = 0.0;
+	    	        }
+	        	    if(!bm->Effort[ij][nf] && (bm->FISHERYprms[nf][flagMFCdisplace_id])){ 
+	            	    bm->Effort[ij][nf] = 1.0;
+	    	        }
+	    	    }
+	    }
+	}
     
     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
         if (FunctGroupArray[sp].isTAC) {
@@ -236,7 +237,6 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
         if (bm->dayt != bm->predayt) {
             for (fishery_id = 0; fishery_id < bm->K_num_fisheries; fishery_id++) {
                 Check_For_Active_MPA(bm, fishery_id);
-                
                 if (bm->flagdisplace) {
                     for (ij = 0; ij < bm->nbox; ij++) {
                         orig_FCpressure = 1.0;
@@ -252,6 +252,10 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
                         bm->Effort[ij][fishery_id] *= F_rescale; /* this is so that accumulate additional fishing mortakity pressure due to displaced effort */
                         bm->Effort[new_fish_loc][fishery_id] += F_displaced;
                     }
+
+                    for (ij = 0; ij < bm->nbox; ij++) {
+                        bm->CumDisplaceEffort[ij][fishery_id] += bm->Effort[ij][fishery_id];
+                 }
                 }
             }
         }
@@ -362,14 +366,16 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
         
         //fprintf(llogfp, "Time: %e %s flagspeffortmodel: %d\n", bm->dayt, FisheryArray[fishery_id].fisheryCode, flagspeffortmodel);
 
-        
-        /* Check if fishery activated and if no set to zero and only continue if fishery active this time step */
-		if (((!flagspeffortmodel) && ((!mEff[fishery_id][bm->NextQofY]) && (!mEff[fishery_id][bm->QofY]))) || (!bm->FISHERYprms[fishery_id][fisheriesactive_id])) {
-			for (ij = 0; ij < bm->nbox; ij++) {
-				bm->Effort[ij][fishery_id] = 0;
-			}
-			continue;
+				
+		 /* Check if fishery activated and if no set to zero and only continue if fishery active this time step */
+		flagMFCdisplace = (int)(bm->FISHERYprms[fishery_id][flagMFCdisplace_id]);
+		if (((!flagspeffortmodel) && (!flagMFCdisplace) && ((!mEff[fishery_id][bm->NextQofY]) && (!mEff[fishery_id][bm->QofY]))) || (!bm->FISHERYprms[fishery_id][fisheriesactive_id])) {
+		      for (ij = 0; ij < bm->nbox; ij++) {
+		            bm->Effort[ij][fishery_id] = 0;
+		      }
+		      continue;
 		}
+
         
         /* If active determine what proportion of the entire day it is active
 		 and then compare that against dt, so can scale realised effort accordingly
@@ -490,7 +496,7 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
                     /* Spatial management */
                     flagfcmpa = (int) (bm->FISHERYprms[fishery_id][flagmpa_id]);
                     if (flagfcmpa) {
-                        mpa_scale = bm->MPA[bm->current_box][fishery_id];
+                    	mpa_scale = bm->MPA[ij][fishery_id]; /*jmk fix, from mpa_scale = bm->MPA[bm->current_box][fishery_id];*/
                         
                         /* Allow for infringement */
                         if (bm->flaginfringe) {
@@ -502,10 +508,10 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
                         mpa_scale = 1.0;
                     }
                     
+                    orig_FCpressure = FCpressure; /*JMK bug patch */
                     FCpressure = FCpressure * mpa_scale;
                     
                     if (bm->flagdisplace) {
-                        orig_FCpressure = FCpressure;
                         Effort_Displacement(bm, fishery_id, ij, orig_FCpressure, &FCpressure, &FCdisplaced, &new_fish_loc, llogfp);
                         
                         if (FCpressure < 0.0)
@@ -658,7 +664,14 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
 			}
 		}
 	}
-    
+    // Right before Check_CAP(bm, llogfp);
+	if (bm->flagdisplace) {
+	    for (fishery_id = 0; fishery_id < bm->K_num_fisheries; fishery_id++) {
+	        for (ij = 0; ij < bm->nbox; ij++) {
+	            bm->CumDisplaceEffort[ij][fishery_id] += bm->Effort[ij][fishery_id];
+	        }
+	    }
+	}
     /* Check fishing effort cap */
 	Check_CAP(bm, llogfp);
     
@@ -1851,7 +1864,7 @@ void Effort_Displacement(MSEBoxModel *bm, int fishery_id, int ij, double orig_FC
 	if (bm->flagdisplace) {
 		mEff_thresh = bm->FISHERYprms[fishery_id][mEff_thresh_id];
 		/* Test to see if CPUE is high enough */
-		if (bm->TempCPUE[ij][fishery_id] < mEff_thresh) {
+		if ((bm->TempCPUE[ij][fishery_id] < mEff_thresh) || (bm->MPA[ij][fishery_id] < 1.0)) { /*JMK fix */
 			/* Find target stock in current cell */
 			for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 				if (FunctGroupArray[sp].isFished == TRUE) {
@@ -1885,9 +1898,10 @@ void Effort_Displacement(MSEBoxModel *bm, int fishery_id, int ij, double orig_FC
 						FisheryArray[fishery_id].fisheryCode, ij, fishthere);
 				}
 				*/
-				/* Check MPA status */
-				MPA_check = 1.0 - bm->MPA[nb][fishery_id];
+				 /* Check MPA status */
+                 MPA_check = bm->MPA[nb][fishery_id]; /*JMK fix, was 1.0 - bm->MPA[nb][fishery_id] */
 
+	
 				/* Scale stock by MPA access scalar to get final potentail stock */
 				fishthere *= MPA_check;
 
@@ -1907,18 +1921,20 @@ void Effort_Displacement(MSEBoxModel *bm, int fishery_id, int ij, double orig_FC
 			*/
 			/* If stock in an adjacent box is better than in the current box displace
 			 some effort to that location */
-			if (maxfishthere > fishhere) {
-				/* If displacement is due to poor stocks the effort displaced matches
-				 the relative stock sizes in the current and adjacent box */
-				prop_displaced = maxfishthere / (maxfishthere + fishhere);
-				*FCdisplaced = *FCpressure * prop_displaced;
-				*FCpressure -= *FCdisplaced;
+			/* MPA-imposed displacement: effort must move regardless of biomass comparison JMK bug patch*/
+				if (bm->MPA[ij][fishery_id] < 1.0) {
+				    if (maxfishthere > 0) {
+				        /* Displaced effort is the difference between original and post-MPA effort */
+				        *FCdisplaced = orig_FCpressure - *FCpressure;
+				    }
+				/* CPUE-based displacement: only if adjacent box has better stock */
+				} else if (maxfishthere > fishhere) {
+				    prop_displaced = maxfishthere / (maxfishthere + fishhere);
+				    *FCdisplaced = *FCpressure * prop_displaced;
+				    *FCpressure -= *FCdisplaced;
+				    *FCdisplaced = orig_FCpressure - *FCpressure;
+				}
 
-				/* If displacement is due to an MPA, the effort displaced
-				 is the difference between the full effort for the box and
-				 that left after MPA restrictions imposed */
-				*FCdisplaced = orig_FCpressure - *FCpressure;
-			}
 		}
 	}
 

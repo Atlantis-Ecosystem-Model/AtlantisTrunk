@@ -208,6 +208,16 @@ AC_DEFINE_UNQUOTED([RETSIGTYPE],[$ac_cv_type_signal],[Define as the return type 
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([floor localtime_r memset pow regcomp sqrt strcasecmp strchr strdup strerror strncasecmp strstr])
 
+#fetching release tag from git
+AC_MSG_CHECKING([for release version])
+RELEASE_VERSION=$(git describe --tags 2>/dev/null || echo "unknown")
+#RELEASE_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "unknown")
+AC_MSG_RESULT([$RELEASE_VERSION])
+AC_DEFINE_UNQUOTED([RELEASE_VERSION], ["$RELEASE_VERSION"], [Release version])
+AC_SUBST([RELEASE_VERSION])
+AC_FUNC_VPRINTF
+AC_CHECK_FUNCS([floor localtime_r memset pow regcomp sqrt strcasecmp strchr strdup strerror strncasecmp strstr])
+#
 
 
 AM_CONDITIONAL(GCC_GE_730, test `gcc -dumpversion | gawk '{print $1>=7?"1":"0"}'` = 1)
