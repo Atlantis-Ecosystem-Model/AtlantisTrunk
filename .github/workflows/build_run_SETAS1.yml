@@ -39,13 +39,13 @@ jobs:
           r-version: '4.2.0'
 
 
-      - name: Compile and Run Atlantis in Ubuntu 18.04 using Docker
+      - name: Compile and Run Atlantis in Ubuntu 20.04 using Docker
         run: |
-          docker run --rm -v $(pwd):/workspace -w /workspace ubuntu:18.04 bash -c "
+          docker run --rm -v $(pwd):/workspace -w /workspace ubuntu:20.04 bash -c "
           TZ=America/New_York &&
           ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &&
           apt-get update && 
-          apt-get install  -yq build-essential autoconf libnetcdf-dev libxml2-dev libproj-dev subversion valgrind dos2unix gawk nano r-base git &&
+          apt-get install  -yq build-essential autoconf libnetcdf-dev libxml2-dev libproj-dev subversion valgrind dos2unix gawk nano r-base r-base-dev git &&
           cd atlantis && aclocal && autoheader && autoconf && automake -a && ./configure --enable-rassesslink && make && make install &&
           echo 'Now run the model!' &&
           cd ../example &&
