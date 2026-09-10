@@ -101,7 +101,7 @@ endif
 #endif
 
 if RASSESS_LINK_ENABLED
-	AM_CFLAGS += -D RASSESS_LINK_ENABLED
+  AM_CFLAGS += -D RASSESS_LINK_ENABLED
 
 # NOTE: nested if statments
 # For the R links
@@ -110,15 +110,15 @@ if RASSESS_LINK_ENABLED
 # Ensure the R_HOME environment variable is set appropriately
 #
 # R_HOME = $(shell R RHOME)
-# on Ubuntu Linux
+
 if OS_LINUX
-	R_HOME = /usr/lib/R
-	R_BASE = /usr/lib/R
+R_BASE = /usr/lib/R
+R_HOME = /usr/lib/R
 endif
-# on OS X
+
 if OS_MACOS
-	R_BASE = /Library/Frameworks/R.framework/Resources
-	R_HOME = /Library/Frameworks/R.framework/Resources
+R_BASE = /Library/Frameworks/R.framework/Resources
+R_HOME = /Library/Frameworks/R.framework/Resources
 endif
 
 	AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
@@ -127,3 +127,4 @@ endif
 
 #fetching repo version from git
 AM_CFLAGS += -DRELEASE_VERSION=\"$(RELEASE_VERSION)\"
+
