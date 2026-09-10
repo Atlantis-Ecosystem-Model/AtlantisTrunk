@@ -158,6 +158,10 @@ static void Update_Detritus(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABIT
             //fprintf(bm->logFile,"Calling Group_Transfer_Contaminant from Update_Detritus WC WC - %s-%d with initialBiomass: %e prodnDR: %e prodnDL: %e\n", FunctGroupArray[guild].groupCode, cohort, initialBiomass, FunctGroupArray[guild].prodnDR[cohort], FunctGroupArray[guild].prodnDL[cohort]);
 			Group_Transfer_Contaminant(bm, boxLayerInfo, WC, WC, RefDetIndex, 0, guild, cohort, FunctGroupArray[guild].prodnDR[cohort], 0, initialBiomass, bm->dtsz_stored, 0, 0);
 			Group_Transfer_Contaminant(bm, boxLayerInfo, WC, WC, LabDetIndex, 0, guild, cohort, FunctGroupArray[guild].prodnDL[cohort] + FunctGroupArray[guild].lysis[cohort], 0, initialBiomass, bm->dtsz_stored, 0, 1);
+			/* Transfer contaminants to CARRION (dead organic matter) from total mortality */
+			/* Use total detritus production (DL + DR) as the mortality amount */
+			double totalMortality = FunctGroupArray[guild].prodnDL[cohort] + FunctGroupArray[guild].prodnDR[cohort];
+			Group_Transfer_Contaminant(bm, boxLayerInfo, WC, WC, CarrionIndex, 0, guild, cohort, totalMortality, 0, initialBiomass, bm->dtsz_stored, 0, 2);
 
 			/* Release contaminants back into the water column */
             //fprintf(bm->logFile,"Calling Gain_Contaminants from Update_Detritus WC WC - %s-%d with initialBiomass: %e releaseNH: %e\n", FunctGroupArray[guild].groupCode, cohort, initialBiomass, FunctGroupArray[guild].releaseNH[cohort]);
