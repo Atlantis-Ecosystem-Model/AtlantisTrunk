@@ -106,19 +106,18 @@ endif
 # Ensure the R_HOME environment variable is set appropriately
 #
 # R_HOME = $(shell R RHOME)
-
 if OS_LINUX
   R_BASE = /usr/lib/R
   R_HOME = /usr/lib/R
 else
-#if OS_MACOS
+ #if OS_MACOS
   R_BASE = /Library/Frameworks/R.framework/Resources
   R_HOME = /Library/Frameworks/R.framework/Resources
 endif
 
 if RASSESS_LINK_ENABLED
   AM_CFLAGS += -D RASSESS_LINK_ENABLED
-	AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
+  AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
 	LIBS += -L$(R_BASE)/lib -lR
 endif
 
