@@ -118,6 +118,7 @@ endif
 if RASSESS_LINK_ENABLED
   AM_CFLAGS += -D RASSESS_LINK_ENABLED
   AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
+  AM_LDFLAGS = -L$(R_BASE)/lib
 	LIBS += -L$(R_BASE)/lib -lR
 endif
 
