@@ -217,7 +217,7 @@ void Convert_Run_To_XML(MSEBoxModel *bm, char *fileName, char *outputFileName) {
 	Util_XML_Create_Lookup_Value_Node(lookupNode, "24", "Debug Mortality Scalar Code");
 
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "debug_it", "", "", XML_TYPE_BOOLEAN,"0");
-
+	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flagdetailedcatch", "", "", XML_TYPE_BOOLEAN, "0");
 
 	groupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, rootnode, "GroupOptions", "Parameters defining the numbers of certain types of groups.", "", "");
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "K_num_tot_sp", "Total number of groups in the model", "", XML_TYPE_INTEGER, "0");

@@ -11,6 +11,7 @@ flagpassivetracer  0   # Flag indicating whether passive tracers of advection ne
 external_populations 0  # FLag indicating whether you want a full population model run for when groups are outside the model domain - 0 = no, 1 = yes
 flag_multiyr_migs  0   # Flag indicating whether multi-year (> 1 yr long) migrations need to be included
 flag_migration_on  1   # Flag indicating whether any migrations active
+flagdetailedcatch    1    0=off, 1=detailed catch per species per box per fishery
 
 flagenviro_warn 0      # Flag indicating whether warning messages about spawn and movement being environmentally constrained are activated
 trackWind 0
