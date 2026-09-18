@@ -343,8 +343,6 @@ void Read_RAssess_output(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
   }
   
   /* Store total TAC across fisheries for this species */
-  bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = total_tac;
-  
   fprintf(llogfp,
           "RAssess: %s total TAC across fisheries set to %.3f\n",
           FunctGroupArray[species].groupCode, total_tac);
