@@ -234,7 +234,8 @@ void Manage_Calculate_Total_Effort(MSEBoxModel *bm, FILE *llogfp) {
      
     if(!bm->EffortModelsActive) {
         // Check MPAs active or not then jump out - need MPA check as used by some catch only models
-        if (bm->dayt != bm->predayt) {
+        //CH if (bm->dayt != bm->predayt) {
+        if (bm->dayt != bm->tstop) {
             for (fishery_id = 0; fishery_id < bm->K_num_fisheries; fishery_id++) {
                 Check_For_Active_MPA(bm, fishery_id);
                 if (bm->flagdisplace) {
