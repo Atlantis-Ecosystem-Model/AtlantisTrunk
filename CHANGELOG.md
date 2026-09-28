@@ -15,7 +15,7 @@ in function Ecology_Total_Verts_And_Migration in atmovement.c to correct segment
 - Moved /* Actual numbers returning - corrected for losses while away */
                         mignum_actual = MIGRATION[sp].survival[qid] * mignum; to right before mignum_actual is used for the first time
 - Updated ReactiveAtlantisToolExample.R in the model example so it runs without having to change paths
-- In atContaminants.C in function Change_Contaminant_Levels, separated tracking of contaminants into two distinct arrays for the organisms and the environment. 
+- In atContaminants.c in function Change_Contaminant_Levels, separated tracking of contaminants into two distinct arrays for the organisms and the environment.
 Added tracking of contaminant transfers not yet integrated into the tracer array. Applies contaminant transfer immediately to tracer arrays so that predators will see updated concentrations. 
 Phytoplankton, small zooplankton, filter feeders, and PWN can uptake contaminants multiple times per time step mimicking continuous feeding
 
