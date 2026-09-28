@@ -664,16 +664,15 @@ int Util_Read_Functional_Group_XML(MSEBoxModel *bm, char *fileName, FILE *llogfp
 			FunctGroupArray[guild].diagTol = 2;
 		} else {
 			if (FunctGroupArray[guild].groupType == CARRION)
-				FunctGroupArray[guild].diagTol = 3;
+				FunctGroupArray[guild].diagTol = 1;  // Changed from 3 to 1 so CARRION can process multiple times per timestep for contaminant accumulation
 			else if (FunctGroupArray[guild].groupType == SED_EP_OTHER ||
 					FunctGroupArray[guild].groupType == MOB_EP_OTHER	||
-					FunctGroupArray[guild].groupType == PWN ||
 					FunctGroupArray[guild].groupType == CEP ||
 					FunctGroupArray[guild].groupType == LG_ZOO ||
 					FunctGroupArray[guild].groupType == LG_INF)
 				FunctGroupArray[guild].diagTol = 2;
 			else {
-				FunctGroupArray[guild].diagTol = 1;  // So all phytoplankton, small zooplankton and filter feeders set the adaptive time step
+				FunctGroupArray[guild].diagTol = 1;  // So all phytoplankton, small zooplankton, filter feeders, and PWN set the adaptive time step to allow multiple feeding/uptake cycles
 				if(FunctGroupArray[guild].isCultured) // Except if an aquaculture species then just have it inflicted upon them
 					FunctGroupArray[guild].diagTol = 0;
 			}

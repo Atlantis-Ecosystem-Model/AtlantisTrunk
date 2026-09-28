@@ -41,7 +41,7 @@ The Atlantis version represents smaller fixes and new features and follows the h
 | Icelantis | Iceland | Iceland | [Jacob Kasper](https://github.com/jacobkasper) | <https://github.com/jacobkasper/Icelantis> |
 |  | South Australia | Australia | [Beth Fulton](https://github.com/eafulton) | NA |
 |  SSAM | Salish Sea | Canada | [Raisha Lovindeer](https://github.com/raishalovindeer) | <https://github.com/SS-Atlantis/salish-sea-atlantis-model> |
-| AMPS | Puget Sound | USA; Canada | [Hem Nalini Morzaria-Luna](https://github.com/hmorzaria) | NA |
+| AMPS | Puget Sound | USA; Canada | [Hem Nalini Morzaria-Luna](https://github.com/hmorzaria) | <https://github.com/atlantis-amps/psatlantismodel> |
 |  | Southern Benguela | South Africa | [Kelly Cisneros](https://github.com/kortegac) | NA |
 |  | Tasman and Golden Bays | New Zealand |  | NA |
 |  | Korean Peninsula | South Korea | [Junggil Seo]() | NA |
