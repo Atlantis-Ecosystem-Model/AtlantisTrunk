@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [3.6723] - 2026-09-28 - Commit [5ad4666](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/commit/94ccf9b9b32f3465182d17645646d2c31446d95e)
+## [3.6723] - 2026-09-28 - Commit [5ad4666](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/commit/5ad46667f7977dabbeaad89ffe62e601bb1d82f4)
 
 ### Changed
 - Defined temp_sensitive_sp=0, salt_sensitive_sp=0, mignum_actual=0.0, and int rij, rangeid, rocstage = -1, thiscase1 = 0, thiscase2 = 0, adstage, sp_Migrate_Years, stagger_return = 0, agec;
