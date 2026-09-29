@@ -247,6 +247,34 @@ void Harvest_Init_Layer_Arrays(MSEBoxModel *bm, int ij, int nl, FILE *llogfp) {
 	return;
 }
 /**
+ * Add catch still held in the per-step buffer to the annual accumulators for 'year'.
+ * Mirrors the accumulation in Harvest_Init_Layer_Arrays. Deliberately does not zero
+ * bm->Catch: Harvest_Annual_Reset does that, and annual routines read the buffer in between.
+ */
+void Harvest_Account_Catch_Buffer(MSEBoxModel *bm, int year) {
+	int ij, sp, n, nl;
+
+	if (year < 0)
+		return;
+
+	for (ij = 0; ij < bm->nbox; ij++) {
+		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+			if (FunctGroupArray[sp].isFished != TRUE)
+				continue;
+			for (n = 0; n < bm->K_num_fisheries; n++) {
+				for (nl = 0; nl < bm->wcnz; nl++) {
+					if (bm->Catch[ij][sp][n][nl] > 0.0) {
+						bm->TripCatch[sp][n] += bm->Catch[ij][sp][n][nl];
+						TotCumCatch[sp][n][year] += bm->Catch[ij][sp][n][nl];
+						bm->TotCumBiCatch[sp][n] += bm->Catch[ij][sp][n][nl];
+						bm->CumCatch[sp][n][ij][nl] += bm->Catch[ij][sp][n][nl];
+					}
+				}
+			}
+		}
+	}
+}
+/**
  *
  *	\brief This function updates the LastCatch array (for use in calculating recent CPUE) and
  *  manages the CatchQueue (so can do a running average for LastCatch)
