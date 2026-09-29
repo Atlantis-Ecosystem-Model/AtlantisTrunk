@@ -1941,6 +1941,7 @@ void Calculate_Catch(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, FILE *llogfp
 				if (FunctGroupArray[guild].isVertebrate == TRUE) {
 					FunctGroupArray[guild].SizeNumCaught[cohort][nf][bm->current_box] += bm->FishingResults[nf][CatchAtAge_result_id];
 					FunctGroupArray[guild].SizeNumDiscard[cohort][nf][bm->current_box] += bm->FishingResults[nf][DiscardsAtAge_result_id];
+					FunctGroupArray[guild].SizeCaught[cohort][nf][bm->current_box] += bm->FishingResults[nf][Catch_result_id];
 				}
 			} else {
 				bm->RecCatch[bm->current_box][guild][nf] += bm->FishingResults[nf][Catch_result_id];

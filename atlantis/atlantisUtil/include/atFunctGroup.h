@@ -285,6 +285,9 @@ typedef struct {
     double ***SizeCaught; /**< Sampled catch - size in catch */
     double **RAssessSpringSurvey; /**< Spring survey abundance - for RAssess */
     double **RAssessAutumnSurvey; /**< Autumn survey abundance - for RAssess */
+    double **RAssessSpringSurveySize; /**< Spring survey size - for RAssess */
+    double **RAssessAutumnSurveySize; /**< Autumn survey size - for RAssess */
+    
     
     /* Used in tracking informaiton for calcualting system cap in fisheries */
     double *min_wgt;
