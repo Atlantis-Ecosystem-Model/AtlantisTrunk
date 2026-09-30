@@ -1851,32 +1851,37 @@ void Harvest_Update_Total_Catch(MSEBoxModel *bm, double *FishTracers, int habita
 	 All weights converted from mg N to t.
 	 */
 
-	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
-		if (habitat == WC || (habitat == EPIFAUNA && (FunctGroupArray[guild].isVertebrate == FALSE && FunctGroupArray[guild].habitatType != WC))) {
-			if (FunctGroupArray[guild].isFished == TRUE) {
-				for (nf = 0; nf < bm->K_num_fisheries; nf++) {
-					/* Catch by fishery tracers */
-					FishTracers[FunctGroupArray[guild].CaughtByFisheryTracers[nf]] += bm->Catch[bm->current_box][guild][nf][bm->current_layer] * bm->X_CN * mg_2_tonne;
-                    
-					/* Total Rec Catch tracers */
-					//TODO: Sum over all rec fisheries.
-					FishTracers[FunctGroupArray[guild].totRecCatchTracer] += bm->RecCatch[bm->current_box][guild][nf] * bm->X_CN * mg_2_tonne;
+		/* Layer-indexed catch: adding once per layer is correct */
+		for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
+			if (habitat == WC || (habitat == EPIFAUNA && (FunctGroupArray[guild].isVertebrate == FALSE && FunctGroupArray[guild].habitatType != WC))) {
+				if (FunctGroupArray[guild].isFished == TRUE) {
+					for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+						FishTracers[FunctGroupArray[guild].CaughtByFisheryTracers[nf]] += bm->Catch[bm->current_box][guild][nf][bm->current_layer] * bm->X_CN * mg_2_tonne;
+					}
+					FishTracers[FunctGroupArray[guild].totCatchTracer] += bm->totcatch[guild] * bm->X_CN * mg_2_tonne;
 				}
-				/* Total Catch tracers */
-				FishTracers[FunctGroupArray[guild].totCatchTracer] += bm->totcatch[guild] * bm->X_CN * mg_2_tonne;
-			}
-			if (FunctGroupArray[guild].isImpacted == TRUE) {
-				for (nf = 0; nf < bm->K_num_fisheries; nf++) {
-					/* Discards by fishery tracers */
-					FishTracers[FunctGroupArray[guild].DiscardedByFisheryTracers[nf]] += bm->Discards[bm->current_box][guild][nf] * bm->X_CN * mg_2_tonne;
-				}
-
-				/* Total Discards */
-				FishTracers[FunctGroupArray[guild].totDiscardsTracer] += bm->totdiscards[guild] * bm->X_CN * mg_2_tonne;
-
 			}
 		}
-	}
+
+		/* Box-level discards and rec catch (no layer index): add once per box.
+		   Water-column groups at layer 0 (the last layer processed);
+		   epibenthic invertebrates in the EPIFAUNA call. */
+		for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
+			int epiGroup = (FunctGroupArray[guild].isVertebrate == FALSE && FunctGroupArray[guild].habitatType != WC);
+			if ((habitat == WC && !bm->current_layer && !epiGroup) || (habitat == EPIFAUNA && epiGroup)) {
+				if (FunctGroupArray[guild].isFished == TRUE) {
+					for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+						FishTracers[FunctGroupArray[guild].totRecCatchTracer] += bm->RecCatch[bm->current_box][guild][nf] * bm->X_CN * mg_2_tonne;
+					}
+				}
+				if (FunctGroupArray[guild].isImpacted == TRUE) {
+					for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+						FishTracers[FunctGroupArray[guild].DiscardedByFisheryTracers[nf]] += bm->Discards[bm->current_box][guild][nf] * bm->X_CN * mg_2_tonne;
+					}
+					FishTracers[FunctGroupArray[guild].totDiscardsTracer] += bm->totdiscards[guild] * bm->X_CN * mg_2_tonne;
+				}
+			}
+		}
 	if (!bm->current_layer && (habitat == WC)) {  // So read in at the end of every box as FCcaught reinitialised before new box calculations done
 		/* Total Effort tracers */
 		for (nf = 0; nf < bm->K_num_fisheries; nf++) {
