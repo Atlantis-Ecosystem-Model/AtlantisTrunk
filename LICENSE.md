@@ -1,4 +1,4 @@
-# Terms and Conditions for Access to and Use of CSIRO Environmental Modelling Suite (EMS) Software
+# Terms and Conditions for Access to and Use of CSIRO Atlantis Modelling Software
 
 ### ATLANTIS SOURCE CODE ACADEMIC LICENCE AGREEMENT 
 
