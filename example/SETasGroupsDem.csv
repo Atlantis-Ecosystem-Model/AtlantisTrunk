@@ -1,7 +1,7 @@
 Code,Index,IsTurnedOn,Name,LongName,NumCohorts,NumGeneTypes,NumStages,NumSpawns,NumAgeClassSize,NumStocks,VerticallyMigrates,HorizontallyMigrates,NumMigrations,MultiYrMigrations,ExternalReproduction,RecruitType,IsFished,IsImpacted,isTAC,GroupType,IsPredator,IsCover,IsSiliconDep,IsAssessed,IsCatchGrazer,OverWinters,isCultured,isHabDepend,numMoveEntries,iBioEroder,isSupplemented
 FPL,0,0,Planktiv_L_Fish,Large planktivorous fish,10,1,2,1,3,1,1,1,0,0,0,0,1,1,1,FISH,1,0,0,1,0,0,0,0,4,0,0
 FPO,1,0,Planktiv_O_Fish,Other planktivorous fish,10,1,2,1,1,1,1,1,0,0,0,0,1,1,1,FISH,1,0,0,1,0,0,0,0,4,0,0
-FPS,2,1,Planktiv_S_Fish,Small planktivorous fish,10,1,2,1,1,1,1,1,0,0,0,0,1,1,1,FISH,1,0,0,1,0,0,0,0,4,0,0
+FPS,2,1,Planktiv_S_Fish,Small planktivorous fish,10,1,2,1,1,1,1,1,0,0,0,0,1,1,2,FISH,1,0,0,1,0,0,0,0,4,0,0
 FVD,3,0,Pisciv_D_Fish,Deep piscivorous fish,10,1,2,1,1,1,1,1,0,0,0,0,1,1,1,FISH,1,0,0,1,0,0,0,0,4,0,0
 FVV,4,0,Pisciv_V_Fish,Vulnerable piscivorous fish,10,1,2,1,3,1,1,1,0,0,0,0,1,1,1,FISH,1,0,0,1,0,0,0,0,4,0,0
 FVS,5,1,Pisciv_S_Fish,Shallow piscivorous fish,10,1,2,1,1,1,1,1,0,0,0,0,1,1,1,FISH,1,0,0,1,0,0,0,0,4,0,0
