@@ -40,7 +40,7 @@ debug         0        # 0=debuging off, 1=debug fishing, 2=debug discards, 3=de
 
 title      SE Tasmania model with constant forced fishing and base level fishing pressure on FMM increased 2000 fold
 dt         	12 hour     # 12 hour time step
-tstop       30 day     # Stop time after the given period 15000 5000
+tstop       740 day     # Stop time after the given period 15000 5000
 toutstart  	0 day       # Output start time
 toutinc    	0.5 day     # Write output with this periodicity
 toutfinc   	1 day     # Write fisheries output with this periodicity
