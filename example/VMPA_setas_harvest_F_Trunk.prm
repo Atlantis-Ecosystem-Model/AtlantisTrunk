@@ -1625,7 +1625,7 @@ mowMA_end_manage     1000000000                                                 
 # sudden drop). If stock size is still too low after a set period its reduced again. 2=TACs in place.
 midwcCEP_flagmanage  0                                                                         0
 jigCEP_flagmanage    0                                                                         0
-midwcFP_flagmanage   0                                                                         0
+midwcFP_flagmanage   2                                                                         0
 dredgeBFS_flagmanage 0                                                                         0
 netFD_flagmanage     0                                                                         0
 netSH_flagmanage     0                                                                         0
