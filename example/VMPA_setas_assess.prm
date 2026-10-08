@@ -85,10 +85,14 @@ RAssessRscriptName1 Rassess_Effortinc.R
 
 # If using RAssessRuseScript 1 can only have a single Rscript in play with all the relevant function calls in it
  
+# FDW FDG FPL FPO FPS FVD FVV FVS FVB FVT FVO FMM FMN FBP FDD FDE FDS FDM FDP FDB FDC FDO FDF SHB
+# SHD SHC SHP SHR SSK PIN WDG REP SB SP WHB WHS WHT CEP PWN BG BFS BFF BFD BMS BMD BML ZL
+flag_assess           62
+0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+
 # Which R assessment script to use for the assessment:
 whichRAssess_FPL      -1
 whichRAssess_FPO      -1
-whichRAssess_FPS       0
 whichRAssess_FPS       0
 whichRAssess_FVD      -1
 whichRAssess_FVV      -1
@@ -527,10 +531,6 @@ AssessNyr         20       # Length of longrun projections in Fref estimation
 # qlinear_regress 6
 # CPUE_linear_regress 7
 # SS3 11
-# FDW FDG FPL FPO FPS FVD FVV FVS FVB FVT FVO FMM FMN FBP FDD FDE FDS FDM FDP FDB FDC FDO FDF SHB
-# SHD SHC SHP SHR SSK PIN WDG REP SB SP WHB WHS WHT CEP PWN BG BFS BFF BFD BMS BMD BML ZL
-flag_assess           62
-0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 
 
 # Datastream to be used 0 = commercial, 1 = survey
