@@ -1,0 +1,12 @@
+name,value,units_or_notes
+catchability_artisanal_EEZ_2014,3.0e2,catchability scaling for artisanal EEZ-based fleet (2014 reference)
+catchability_industrial_EEZ_2014,5.0e5,catchability scaling for industrial EEZ-based fleet (2014 reference)
+catchability_artisanal_DWFN_2014,1.2e3,catchability scaling for artisanal DWFN fleet (2014 reference)
+catchability_industrial_DWFN_2014,5.0e8,catchability scaling for industrial DWFN fleet (2014 reference); an alternative value of 2.7e5 is commented out in the Python source
+lifespan_artis,20.0,life span of artisanal fishing vessel in years
+lifespan_indus,25.0,life span of industrial fishing vessel in years
+boat_remain,0.05,fraction of boats remaining after lifespan
+effort_growth_lim,1,effort growth limitation if 1; else no limitation
+f_growth_rate_max_base,25,base of f_growth_rate_max = base^(1/root)
+f_growth_rate_max_root,10,root of f_growth_rate_max = base^(1/root); maximum growth rate of fishing effort (yr-1)
+f_growth_rate_half_sat,10.0,half saturation of the effort growth rate: f_growth_rate_max / (2 * f_growth_rate_half_sat); must be positive
