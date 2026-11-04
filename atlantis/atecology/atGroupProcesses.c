@@ -300,9 +300,8 @@ static void Update_Detritus(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABIT
 
 			if (FunctGroupArray[guild].diagTol == 2 && it_count == 1){
 				boxLayerInfo->NutsProd[SED][NH_id] += FunctGroupArray[guild].releaseNH[cohort];
-
 			} else {
-				boxLayerInfo->NutsProd[WC][NH_id] += FunctGroupArray[guild].releaseNH[cohort];
+				boxLayerInfo->NutsProdGlobal[EPIFAUNA][SED][NH_id] += FunctGroupArray[guild].releaseNH[cohort]; // Was boxLayerInfo->NutsProd[WC][NH_id]
 			}
 
 		} else {
@@ -416,6 +415,9 @@ static void Update_Detritus(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABIT
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
         break;
+    default:
+        quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
+        break;
 	}
 }
 
@@ -503,7 +505,9 @@ void Update_Debug_Info(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, int habita
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
         break;
-
+    default:
+        quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
+        break;
 	}
 }
 
@@ -568,6 +572,13 @@ int Phytoplankton_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatTy
 			initialSedBiomass = 0.0;
 			initialEpiPhyteBiomass = 0.0;
 		}
+        
+        if(bm->flagbayHAB == TRUE){
+            if(HAB_boxi[bm->current_box] > 0) {
+                mum *= FunctGroupArray[guild].speciesParams[HAB_mum_scalar_id];
+            }
+        }
+        
 		switch (habitatType) {
 		case WC:
 			if (((FunctGroupArray[guild].groupType == LG_PHY || FunctGroupArray[guild].groupType == MICROPHTYBENTHOS)) && FunctGroupArray[guild].isSiliconDependant)
@@ -975,6 +986,9 @@ int Invert_Consumers_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habita
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
         break;
+    default:
+        quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
+        break;
 	}
 
 	/* Calculate the linear mortality due to oxygen */
@@ -1015,12 +1029,10 @@ int Invert_Consumers_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habita
 		area_hab = 1.0;
 		switch (habitatType) {
 		case WC:
-			/* If this is the top layer and ice is active allow grazing into the ice layer */
-			if(bm->ice_on == TRUE){
-				if(bm->current_layer == bm->boxes[bm->current_box].nz - 1){
-					Calculate_Ice_Prey_Avail(bm, boxLayerInfo, guild, PREYinfo, &avail_Ice_Bact);
-					/* for now ignoring the amount of ice bacteria available in ice - we are not scaling based on nutrient depth  so the avail_Ice_Bact value is ignore */
-				}
+			/* If this layer is directly under the ice allow grazing into the ice layer */
+			if(Is_Ice_Grazing_Layer(bm)){
+				Calculate_Ice_Prey_Avail(bm, boxLayerInfo, guild, PREYinfo, &avail_Ice_Bact);
+				/* for now ignoring the amount of ice bacteria available in ice - we are not scaling based on nutrient depth  so the avail_Ice_Bact value is ignore */
 			}
 
 			/* Do nothing */
@@ -1037,6 +1049,11 @@ int Invert_Consumers_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habita
 
 		case EPIFAUNA:
 			area_hab = Get_Species_Area_Hab(bm, guild, 0, boxLayerInfo);
+
+			/* If the ice reaches down to this bottom cell allow grazing into the ice layer */
+			if(Is_Ice_Grazing_Layer(bm)){
+				Calculate_Ice_Prey_Avail(bm, boxLayerInfo, guild, PREYinfo, &avail_Ice_Bact);
+			}
 
 			//sDLscale = min(1,k_refsDL/(DLsed+small_num));
 
@@ -1073,6 +1090,9 @@ int Invert_Consumers_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habita
 			break;
         case MIXED:
             quit("How did we get here as should come through a primary habitat\n");
+            break;
+        default:
+            quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
             break;
 		}
 
@@ -1186,6 +1206,7 @@ int Coral_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int 
 	double E2_sp = FunctGroupArray[guild].speciesParams[E2_id];
 	double bact_DL = 0, bact_DR = 0, sedbact_DL = 0, sedbact_DR = 0;
 	double eatBiomass = -1;
+	double avail_Ice_Bact = 0.0;
 	double NH, NO, Si, Fe, IRR, initialBiomass = 0.0, area_hab;
 	int lim_case = one_nut_lim;
 	double uptakeNO, uptakeSi, uptakeFe, hN, uptakeP, uptakeC;
@@ -1227,6 +1248,9 @@ int Coral_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int 
 		break;
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
+        break;
+    default:
+        quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
         break;
 	}
 
@@ -1288,6 +1312,11 @@ int Coral_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int 
 		Calculate_Sediment_Prey_Avail(bm, boxLayerInfo, guild, PREYinfo, &BB_scale);
 		BB_scale = BB_scale * p_BBben;
 
+		/* If the ice reaches down to this bottom cell allow grazing into the ice layer (resets any values left by other predators) */
+		if(Is_Ice_Grazing_Layer(bm)){
+			Calculate_Ice_Prey_Avail(bm, boxLayerInfo, guild, PREYinfo, &avail_Ice_Bact);
+		}
+
 		Eat(bm, llogfp, (int) FunctGroupArray[guild].speciesParams[predcase_id], guild, cohort, eatBiomass, FunctGroupArray[guild].scaled_C[cohort]
 				* hO_SP, scaled_mum, FunctGroupArray[guild].speciesParams[KL_id],
 				FunctGroupArray[guild].speciesParams[KU_id], FunctGroupArray[guild].speciesParams[vl_id], FunctGroupArray[guild].speciesParams[ht_id],
@@ -1299,7 +1328,7 @@ int Coral_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int 
 		 */
 		for (preyID = 0; preyID < bm->K_num_tot_sp; preyID++) {
 			for (prey_chrt = 0; prey_chrt < FunctGroupArray[preyID].numCohortsXnumGenes; prey_chrt++) {
-				for (hab = WC; hab <= EPIFAUNA; hab++) {
+				for (hab = WC; hab < bm->num_active_habitats; hab++) { // Was <= EPIFAUNA
 					if(GRAZEinfo[preyID][prey_chrt][hab] > 0){
 
 						if (bm->flag_olddiet && (FunctGroupArray[guild].diagTol == 2))
@@ -1366,6 +1395,7 @@ int Dinoflag_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, i
 	double uptakeNO, uptakeSi, uptakeFe, hN, uptakeP, uptakeC;
 	double PRatio, P, CRatio, C;
 	double sp_GrazeFeed = 0.0;
+	double avail_Ice_Bact = 0.0;
 	int isGlobal = (FunctGroupArray[guild].diagTol == 2 && it_count == 1);
 
     if ((int) (FunctGroupArray[guild].speciesParams[flag_id]) && (int) (FunctGroupArray[guild].speciesParams[active_id]) &&
@@ -1433,6 +1463,11 @@ int Dinoflag_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, i
 			 The impact of mixotrophy on planktonic marine ecosystems. Ecol. Model. 125: 203-230.
 			 First determine potential grazing - dinoflagellates ae reported to feed on-
 			 flagellates, diatoms, bacteria and cryptophytes */
+
+			/* If in the water column layer directly under the ice allow grazing into the ice layer (resets any values left by other predators) */
+			if((habitatType == WC) && Is_Ice_Grazing_Layer(bm)){
+				Calculate_Ice_Prey_Avail(bm, boxLayerInfo, guild, PREYinfo, &avail_Ice_Bact);
+			}
 
 			/* All other feeding regimes */
 			Eat(bm, llogfp, predcase_sp, guild, cohort, initialBiomass, FunctGroupArray[guild].scaled_C[cohort],
@@ -1588,6 +1623,9 @@ int Dinoflag_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, i
 			break;
         case MIXED:
             quit("How did we get here as should come through a primary habitat\n");
+            break;
+        default:
+            quit("How did we get here as this isn't even a habitat type slot but nTotHabTypes\n");
             break;
 		}
 
@@ -1932,12 +1970,10 @@ int Epibenthic_Invert_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habit
 		Calculate_Sediment_Prey_Avail(bm, boxLayerInfo, guild, PREYinfo, &BB_scale);
 		BB_scale = BB_scale * p_BBben;
 
-		/* If this is the top layer and ice is active allow grazing into the ice layer */
-		if(bm->ice_on == TRUE){
-			if(bm->current_layer == bm->boxes[bm->current_box].nz - 1){
-				Calculate_Ice_Prey_Avail(bm, boxLayerInfo, guild, PREYinfo, &avail_Ice_Bact);
-				/* for now ignoring the amount of ice bacteria available in ice - we are not scaling based on nutrient depth  so the avail_Ice_Bact value is ignore */
-			}
+		/* If the ice reaches down to this bottom cell allow grazing into the ice layer */
+		if(Is_Ice_Grazing_Layer(bm)){
+			Calculate_Ice_Prey_Avail(bm, boxLayerInfo, guild, PREYinfo, &avail_Ice_Bact);
+			/* for now ignoring the amount of ice bacteria available in ice - we are not scaling based on nutrient depth  so the avail_Ice_Bact value is ignore */
 		}
 
 		/* If scaling growth by available habitat - do so now */
@@ -1983,7 +2019,6 @@ int Epibenthic_Invert_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habit
 			FunctGroupArray[guild].transDR[cohort] = DR * FunctGroupArray[guild].CLEAR[cohort]
 					* FunctGroupArray[guild].speciesParams[k_trans_id];
 			if(bm->track_atomic_ratio == TRUE){
-
 				/* RF is lost in the water column */
 				loss = FunctGroupArray[guild].transDR[cohort]/wcLayerThick;
 				Loose_Element(bm, boxLayerInfo, WC,  RefDetIndex, 0, loss, EPIFAUNA, isGlobal);
@@ -1992,7 +2027,7 @@ int Epibenthic_Invert_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habit
 				Gain_Element(bm, boxLayerInfo, SED, RefDetIndex, 0,  guild, cohort, loss, EPIFAUNA, isGlobal);
 			}
 		} else {
-			FunctGroupArray[guild].transDR[cohort] = 0.0;
+			FunctGroupArray[guild].transDR[cohort] = 0.0; // TODO: Fix - should this occur?
 		}
 
 		/**
@@ -2033,7 +2068,8 @@ int Sediment_Epi_Other_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habi
 	int inv_feed_while_spawn = 1;
 	int inv_spawn_now = 0;
 	double inv_mat_pcnt = 0.0; // As want all to spawn as included in growth for invertebrate pools
-	double b = 0;
+	//double b = 0;
+	double avail_Ice_Bact = 0.0;
 
 	double O2 = boxLayerInfo->localWCTracers[Oxygen_i];
 	double DL = boxLayerInfo->localWCTracers[FunctGroupArray[LabDetIndex].totNTracers[0]];
@@ -2078,9 +2114,10 @@ int Sediment_Epi_Other_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habi
 
 						prey_avail = prey_avail * depth_scalar;
 
-						/* Update prey availability */
-						PREYinfo[prey][prey_chrt][WC] = prey_avail;
-						PREYinfo[prey][prey_chrt][SED] = 0;
+						/* Update prey availability - this is phytoplankton in the sediment so put it in the sediment slot
+						 * (so it is removed from the sediment pool), and BG only graze the sediment phytoplankton */
+						PREYinfo[prey][prey_chrt][SED] = prey_avail;
+						PREYinfo[prey][prey_chrt][WC] = 0;
 					}
 				}
 			}
@@ -2101,6 +2138,11 @@ int Sediment_Epi_Other_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habi
                 bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[guild].groupCode, realised_mum, FunctGroupArray[guild].scaled_mum[cohort], area_hab, bm->flag_benthos_sediment_link);
          */
 
+		/* If the ice reaches down to this bottom cell allow grazing into the ice layer (resets any values left by other predators) */
+		if(Is_Ice_Grazing_Layer(bm)){
+			Calculate_Ice_Prey_Avail(bm, boxLayerInfo, guild, PREYinfo, &avail_Ice_Bact);
+		}
+
 		/* All other feeding regimes. The term (1. - BO / BOmax) is a crowding term to limit
 		 the total population size that benthic deposit feeders can grow to, as they are
 		 restricted to the oxygenated zone and so have a limited habitat  */
@@ -2112,7 +2154,7 @@ int Sediment_Epi_Other_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habi
 
 		for (preyID = 0; preyID < bm->K_num_tot_sp; preyID++) {
 			for (prey_chrt = 0; prey_chrt < FunctGroupArray[preyID].numCohortsXnumGenes; prey_chrt++) {
-				for (hab = 0; hab <  bm->num_active_habitats; hab++) {
+				for (hab = WC; hab <  bm->num_active_habitats; hab++) {
 					if(GRAZEinfo[preyID][prey_chrt][hab] > 0){
 						if(bm->flag_olddiet)
 							UpdateTrackedMort(bm, llogfp, guild, cohort, habitatType, (HABITAT_TYPES)hab, preyID, prey_chrt, boxLayerInfo, 1.0, 1);
@@ -2123,8 +2165,9 @@ int Sediment_Epi_Other_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habi
 			}
 		}
 
-		/* Done this way so we get the same result as the orginal code */
+		/* Done this way so we get the same result as the orginal code
 		FunctGroupArray[guild].GrazeLive[cohort] += b;
+		*/
 
 		Invert_Activities(bm, boxLayerInfo, habitatType, llogfp, guild, cohort, biomass, area_hab, FunctGroupArray[guild].speciesParams[E2_id], FunctGroupArray[guild].speciesParams[E3_id],
 				FunctGroupArray[guild].speciesParams[E4_id], boxLayerInfo->PB_DL, boxLayerInfo->PB_DR, boxLayerInfo->BB_DL, boxLayerInfo->BB_DR, p_PBben,
@@ -2142,12 +2185,14 @@ int Sediment_Epi_Other_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habi
 		}
 	}
 
-	/* reset planktonic groups */
+	/* reset planktonic groups to the values set in Epibenthic_Box() for the other predators -
+	 * water column value scaled by habitat coefficient, phytoplankton are not put in the sediment slot there */
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		if(FunctGroupArray[sp].speciesParams[flag_id] == TRUE){
 			if (FunctGroupArray[sp].groupType == LG_PHY || FunctGroupArray[sp].groupType == DINOFLAG || FunctGroupArray[sp].groupType == SM_PHY) {
 				for (prey_chrt = 0; prey_chrt < FunctGroupArray[sp].numCohortsXnumGenes; prey_chrt++) {
-					PREYinfo[sp][prey_chrt][WC] = boxLayerInfo->localWCTracers[FunctGroupArray[sp].totNTracers[prey_chrt]];
+					PREYinfo[sp][prey_chrt][WC] = boxLayerInfo->localWCTracers[FunctGroupArray[sp].totNTracers[prey_chrt]] * FunctGroupArray[sp].habitatCoeffs[WC];
+					PREYinfo[sp][prey_chrt][SED] = 0.0;
 				}
 			}
 		}

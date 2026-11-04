@@ -89,21 +89,13 @@ Local Modelling variables
 extern char **Varname;
 extern char **DiagVarname;
 
-extern double   sporosity;
-extern double   surf_stress;   /* stress on bottom */
-extern double   wcLayerThick, smLayerThick, iceLayerThick;  /* depth of wc and sm layer */
-
-
+/* Per-box working values (sporosity, layer thicknesses, H2Otemp, ...) are declared in atBoxWorkspace.h */
 
 /************************************************************************
  Modelling variables for control of processes within the model
 */
 
-extern double Susp_Sed, tot_dyn_sea_area,
-	DRdepth, O2depth, newO2depth, Enviro_turb, current_layer_sed, eddy_strength,
-	BioirrigEnh, BioturbEnh, Turbatn_contribs, Irrig_contribs, cell_depth,
-	H2Otemp, current_SALT, current_PH, init_PH, Bact_stim, current_depth, area_reef, area_flat, LocalRugosity,
-	area_canyon, area_box, area_soft, current_SALT, current_ARAG, current_WIND;
+extern double tot_dyn_sea_area, Enviro_turb, init_PH;
 
 extern int numwcvar, numepivar, numlandvar, numdiagvar, numfstatvar, numicevar, first_year, idum;
 
@@ -122,7 +114,7 @@ extern double
 	FFDDR, FDR_DL, FDON_D, FDR_DC,
 	KST_fish, KST_shark, KST_bird, KST_mammal,
 	Ktmp_fish, Ktmp_shark, Ktmp_bird, Ktmp_mammal,
-	R_0_T15, R_D_T15, Dmax, X_ON, X_CN, X_CHLN, X_SiN, X_FeN,
+	R_0_T15, R_D_T15, Dmax, 
 	k_w_depth, k_w_cdepth, k_w_deep, k_w_shallow, k_PN, k_DON, k_DL, k_IS, K_TUR_DEP, k_SED,
 	K_addepth, K_conc, K_nit_T15, KI_avail, KIOP_min, KIOP_shift,
 	K_IRR, K_MAX_IRR, K_MAX_TUR, K_MIN_IRR, K_TUR,
@@ -133,22 +125,10 @@ extern double
 	albedo_ice, k_bs, k_bi, k_rs, k_ri, R_bi, k_ice, ka_star;
 
 
-
-/* Parameters after Q10 adjustments */
-extern double  r_DL, r_DR, r_DC, r_DON, r_DSi, K_nit, R_0, R_D;
-
-
 /* Flags and switches */
 extern int	flagtrecruitdistrib, flagresp, flagkdrop, flagbactstim,
 	flagchangepop, REEFchange_max_num, FLATchange_max_num,
 	SOFTchange_max_num, readin_popratio;
-
-
-/****************************************************************************
-Tracking values for one step per day animals that impact on multi-dt per day groups
-*/
-extern double RecycledNHglobal, wcFlux2global, wcFlux3global, wcFlux2aglobal, wcFlux3aglobal,
-	wcFlux4global, smFlux2global, epiFlux2global, wcFishingGlobal, epiFishingGlobal;
 
 
 /**************************************************************************************
@@ -156,28 +136,26 @@ Local Modelling variables
 */
 
 
-extern int **recover_help, **starve_vert, **nSTOCK, **shiftVERTON, **prey_counted, *mig_returners, *active_den, *not_finished, *ngene_done, *stock_done;
+/* Box work arrays (VERTinfo, PREYinfo, EATINGinfo, boxLayerInfo, ...) are declared in atecology.h */
+extern int **recover_help, **starve_vert, ***starve_check, **nSTOCK, *mig_returners;
 //extern *mig_status;
 
 
 extern double ***AGE_stock_struct_prop, // Also updated in Prepare_Age_Distrib - used to store the normalised distribution of the cohort species across each stock
 	****newden, ***init_stock_struct_prop, ****recVERTpopratio,
-	***shiftVERT, ***cysts, ***initVERTinfo,
+	***cysts,
 	***BEDchange, ***Vchange, ***pSTOCK, ***totrecruit,
-	**VERTabund_check, **sumSTOCK, **Tchange, **roc,
-	**spSTOCKprop, **recSTOCK, **tot_yoy, ***VERTinfo,
+	**sumSTOCK, **Tchange, **roc,
+	**spSTOCKprop, **recSTOCK, **tot_yoy,
 	**stock_prop, **totden, **recruit_vdistrib, **totden_check,
 	**tempdistrib, **PHchange, **Schange, *adults_spawning,
-	*sizeMinMax, **SUPPdistrib, *recover_help_set, *BED_scale,
-	***PREYinfo, ***GRAZEinfo, ***EATINGinfo, **KDENR, *yoy,
-	***FEEDinfo, **step1distrib, **CATCHEATINGinfo,
-	**CATCHGRAZEinfo, **boxden, ****currentden, **leftden, *newden_sum,
-    ***preyamt, *totad, *totboxden, *totroc, *lostden_zero, *totsum,
+	**SUPPdistrib, *recover_help_set,
+	**KDENR, *yoy,
+	**step1distrib,
+	**boxden, ****currentden, **leftden, *newden_sum,
+    ***preyamt, *totad, *totboxden, *totroc, *totsum,
     *totksum, *tot_new_mat, *coming_SPden, *numbers_entering,
-    *numbers_already_present, **totdenCheck;
-
-extern double *initialIceBiomass, *initialLandBiomass, *initialBiomass,
-    *initialSedBiomass, *initialEpiBiomass, *initialWaterBiomass;
+    *numbers_already_present;
 
 extern double ****readinpopratio;
 
@@ -196,7 +174,7 @@ extern double
 	*vertTchange_multi,
 	*vertSchange_multi,
 	*vertPHchange_multi,
-	*Box_degradedi, *regIDi;
+	*Box_degradedi, *HAB_boxi, *regIDi;
 
 extern int     *Fluxflag;  /* Flag vector for diagonostic tracers, 1=yes, 0=no */
 extern int		*Tolflag;	/* Flag vector for tolerance checking variables, 1=yes, 0=no*/

@@ -97,35 +97,58 @@ extern int verbose; /** \var If true then detailed debugging information is writ
 
 /* Migration and reproduction arrays */
 
-extern int **recover_help, **starve_vert, **nSTOCK, **shiftVERTON, **prey_counted, *mig_returners, *active_den, *not_finished, *ngene_done, *stock_done;
+/* Box work arrays - each box overwrites them, so OpenMP builds keep one copy per thread */
+#include "atBoxWorkspace.h"
+extern BOX_THREAD_LOCAL int **shiftVERTON, **prey_counted, *active_den, *not_finished,
+	*ngene_done, *stock_done;
+extern BOX_THREAD_LOCAL double ***shiftVERT, ***initVERTinfo, ***VERTinfo, **VERTabund_check,
+	*sizeMinMax, *BED_scale, *lostden_zero,
+	***PREYinfo, ***GRAZEinfo, ***EATINGinfo, ***FEEDinfo,
+	**CATCHEATINGinfo, **CATCHGRAZEinfo, **totdenCheck;
+extern BOX_THREAD_LOCAL double *initialIceBiomass, *initialLandBiomass, *initialBiomass,
+	*initialSedBiomass, *initialEpiBiomass, *initialWaterBiomass;
+extern BOX_THREAD_LOCAL BoxLayerValues *boxLayerInfo;
+/* Diet totals: each thread adds into its own copy, which is summed after the parallel boxes */
+extern BOX_THREAD_LOCAL double *****DIET_check;
+
+/* One thread's set of box work array pointers (used to hand copies to extra threads) */
+typedef struct {
+	int **shiftVERTON, **prey_counted, *active_den, *not_finished, *ngene_done, *stock_done;
+	double ***shiftVERT, ***initVERTinfo, ***VERTinfo, **VERTabund_check, *sizeMinMax, *BED_scale, *lostden_zero;
+	double ***PREYinfo, ***GRAZEinfo, ***EATINGinfo, ***FEEDinfo, **CATCHEATINGinfo, **CATCHGRAZEinfo, **totdenCheck;
+	double *initialIceBiomass, *initialLandBiomass, *initialBiomass, *initialSedBiomass, *initialEpiBiomass, *initialWaterBiomass;
+	BoxLayerValues *boxLayerInfo;
+	double *****DIET_check;
+} BoxWorkArrays;
+
+void Ecology_Allocate_Box_Work_Arrays(MSEBoxModel *bm);
+void Ecology_Get_Box_Work_Arrays(BoxWorkArrays *arrays);
+void Ecology_Set_Box_Work_Arrays(const BoxWorkArrays *arrays);
+void Ecology_Copy_Box_Work_Arrays(MSEBoxModel *bm, BoxWorkArrays *to, const BoxWorkArrays *from);
+
+extern int **recover_help, **starve_vert, ***starve_check, **nSTOCK, *mig_returners;
 //extern int *mig_status;
 
 /* Population arrays */
 
 extern double ****readinpopratio, ****newden, ****recVERTpopratio,
 		***AGE_stock_struct_prop, ***init_stock_struct_prop,
-		***BEDchange, ***Vchange, ***pSTOCK, ***initVERTinfo, ***cysts,
-		***VERTinfo, **sumSTOCK, **Tchange, **roc, **spSTOCKprop,
-		*sizeMinMax, **stock_prop, **recSTOCK, **totden, **recruit_vdistrib,
-		**tempdistrib, **VERTabund_check, ***totrecruit, **totden_check, 
-        **Schange, **tot_yoy, **KDENR, *lostden_zero, *adults_spawning,
-		*recover_help_set, *BED_scale, **step1distrib,
-		***PREYinfo, ***GRAZEinfo, ***EATINGinfo, ***FEEDinfo, **PHchange,
-		**CATCHEATINGinfo, **CATCHGRAZEinfo, **SUPPdistrib, **boxden, ****currentden,
+		***BEDchange, ***Vchange, ***pSTOCK, ***cysts,
+		**sumSTOCK, **Tchange, **roc, **spSTOCKprop,
+		**stock_prop, **recSTOCK, **totden, **recruit_vdistrib,
+		**tempdistrib, ***totrecruit, **totden_check,
+        **Schange, **tot_yoy, **KDENR, *adults_spawning,
+		*recover_help_set, **step1distrib, **PHchange,
+		**SUPPdistrib, **boxden, ****currentden,
         **leftden, *newden_sum, ***preyamt, *totad, *totboxden, *totroc, *yoy, *totsum,
         *totksum, *tot_new_mat, *coming_SPden, *numbers_entering,
-        *numbers_already_present, **totdenCheck;
-
-extern double *initialIceBiomass, *initialLandBiomass, *initialBiomass,
-        *initialSedBiomass, *initialEpiBiomass, *initialWaterBiomass;
+        *numbers_already_present;
 
 extern int maxMortChange;
 extern int ***numMortChanges;
 extern int *tsRecruitsid;
 
 extern double *****LinearMortChange;
-
-extern BoxLayerValues *boxLayerInfo;
 
 extern int *Fluxflag; /* Flag vector for diagonostic tracers, 1=yes, 0=no */
 extern int *Tolflag; /* Flag vector for tolerance checking variables, 1=yes, 0=no*/
@@ -145,18 +168,16 @@ extern int ***numMortChanges;
 
 extern double *****LinearMortChange;
 
-extern double ***VERTinfo, ***shiftVERT, *TotVERT, *Box_degradedi;
+extern double *TotVERT, *Box_degradedi, *HAB_boxi;
 
 extern double *regIDi;
 
 extern char *pFCPIN, *pFCWHT, *pFCWHS, *Box_degraded, *regids;
 
-extern double Susp_Sed, cell_depth, DRdepth, O2depth, newO2depth, current_layer_sed,
-    Turbatn_contribs, Irrig_contribs, H2Otemp, current_SALT, current_PH, init_PH,
-    Bact_stim, current_depth, area_reef, area_flat, area_canyon, area_box, area_soft,
-    eddy_strength, current_SALT, LocalRugosity, current_ARAG, current_WIND;
+/* Per-box working values (H2Otemp, current_SALT, r_DL, ...) are declared in atBoxWorkspace.h */
+extern double init_PH;
 
-extern double tot_dyn_sea_area, Enviro_turb, BioirrigEnh, BioturbEnh;
+extern double tot_dyn_sea_area, Enviro_turb;
 
 extern int numwcvar, numepivar, numlandvar, numdiagvar, numfstatvar, numicevar, first_year, idum;
 
@@ -173,7 +194,7 @@ extern int Tchange_max_num, Schange_max_num, PHchange_max_num, BEDchange_max_num
 extern double Fben_den, FDL_wc, MB_wc, FDL_benth, FDL_fish, FDL_SG_roots, FDL_SG_leaves, FDL_top, p_linePIN, p_netPIN, p_trawlPIN, p_mtrawlPIN, p_lineWHT, p_BBfish, p_BBben, p_PBwc, p_PBben, p_IBice,
 		recover_span, recover_trigger, recover_subseq, lognorm_mu, p_lineWHS, lognorm_sigma, roc_wgt, Kthresh1, Kthresh2, KHTD, KHTI,
 		Kthreshm, r_DL_T15, r_DR_T15, r_DON_T15, r_DSi_T15, r_DC_T15, FFDDR, FDR_DL, FDON_D, FDR_DC, KST_fish, KST_shark, KST_bird, KST_mammal, Ktmp_fish,
-		Ktmp_shark, Ktmp_bird, Ktmp_mammal, R_0_T15, R_D_T15, Dmax, X_ON, X_CN, X_CHLN, X_SiN, X_FeN, k_w_depth, k_w_cdepth, k_w_deep, k_w_shallow, k_PN,
+		Ktmp_shark, Ktmp_bird, Ktmp_mammal, R_0_T15, R_D_T15, Dmax, k_w_depth, k_w_cdepth, k_w_deep, k_w_shallow, k_PN,
 		k_DON, k_DL, k_IS, K_TUR_DEP, k_SED, K_addepth, K_conc, K_nit_T15, KI_avail, KIOP_min, KIOP_shift, K_IRR, K_MAX_IRR, K_MAX_TUR, K_MIN_IRR,
 		K_TUR, Q10, RelTol, rec_sigma, rec_m, Flux_tol, k_migslow, XPB_DL, XPB_DR, XBB_DL, XBB_DR, k_PB, k_BB, FPB_DR, FPB_DON, FBB_DR, FBB_DON, p_NH_anad,
 		k_roc_food, k_refDL, k_refDR, k_refsDL,
@@ -182,23 +203,20 @@ extern double Fben_den, FDL_wc, MB_wc, FDL_benth, FDL_fish, FDL_SG_roots, FDL_SG
 extern int *bleaching_has_occurred;
 
 
-extern double r_DL, r_DR, r_DC, r_DON, r_DSi, K_nit, R_0, R_D;
+// Moved to atBoxWorkspace.h
+//extern double r_DL, r_DR, r_DC, r_DON, r_DSi, K_nit, R_0, R_D;
 
-extern double *vertTchange_multi, *vertSchange_multi, *vertPHchange_multi, *Box_degradedi;
+extern double *vertTchange_multi, *vertSchange_multi, *vertPHchange_multi;
 
 /* Flags and switches */
 extern int flagresp, flagkdrop;
+extern double predayt;
 
 /****************************************************************************
- Tracking values for one step per day animals that impact on multi-dt per day groups
- */
+ Tracking values for one step per day animals that impact on multi-dt per day groups now moved to atBoxWorkspace.h
 extern double RecycledNHglobal, wcFlux2global, wcFlux3global, wcFlux2aglobal, wcFlux3aglobal, wcFlux4global, smFlux2global, epiFlux2global, wcFishingGlobal,
 		epiFishingGlobal;
-/****/
-extern double predayt;
-extern double sporosity;
-extern double surf_stress; /* stress on bottom */
-extern double wcLayerThick, smLayerThick; /* depth of wc and sm layer */
+*/
 
 /**
  * Indices of specific functional groups - these just make things faster - it means we don't need to go searching for
@@ -209,8 +227,6 @@ extern double wcLayerThick, smLayerThick; /* depth of wc and sm layer */
 //extern int LabDetIndex;
 //extern int RefDetIndex;
 //extern int CarrionIndex;
-
-extern double *****DIET_check;
 
 /*
  *
@@ -340,7 +356,7 @@ void Grow_Macrophytes(MSEBoxModel *bm, FILE *llogfp, int sp_id, int cohort, int 
 		double E_sp, double mL_other, double SPmax, double area_hab,
 		double *spUptakeNO, double *sphN, double PRatio, double CRatio, double *spUptakeP, double *spUptakeC);
 
-double Light_Lim(MSEBoxModel *bm,  int light_case, double amt_irr, double KI_sp, double opt_irr, double prop_daylight, double PBmax_D);
+double Light_Lim(MSEBoxModel *bm,  int light_case, double amt_irr, double KI_sp, double opt_irr, double prop_daylight, double PBmax_D, double this_a);
 double Nutrient_Lim(MSEBoxModel *bm, int nut_case, int micro_case, double amt_din, double amt_si, double amt_fe, double amt_p, double PRatio, double P0, double P1,
 		double KN_sp, double KS_sp, double KF_sp, double KP_sp);
 
@@ -350,6 +366,7 @@ double Avail_Fish(MSEBoxModel *bm, int guildcase, int chrt, int chrtstage, int p
 double Avail_Catch(MSEBoxModel *bm, int guildcase, int chrt, int chrtstage, int prey, int bpreychrt, double SN, double ***SP, FILE *llogfp);
 double Get_Catch_Prey(MSEBoxModel *bm, FILE *llogfp, int predatorID, int cohort, int chrtstage, int preyID, int prey_chrt, int habitat);
 double Get_Gape_Lim_Prey(MSEBoxModel *bm, FILE *llogfp, int predatorID, int cohort, int chrtstage, int preyID, int prey_chrt, int habitat, double ***spPREYinfo);
+void Get_Predator_Competition(MSEBoxModel *bm, int sp_id, int cohort, long double *tot_pred, long double *tot_pred_comp_sp, FILE *llogfp);
 
 void Partition_Weight(MSEBoxModel *bm, int sp, double pR_SP, double SN, double RN, double X_RS, double *FRC_sp, FILE *llogfp);
 void Partition_Weight_Dynamic(MSEBoxModel *bm, int sp, double SN, double RN, double X_RS, double *FRC_sp, double avail_intake, FILE *llogfp);
@@ -359,6 +376,7 @@ void Fish_Respiration_DEB(MSEBoxModel *bm, int guildcase, double SN, double RN, 
 void Calculate_Sediment_Prey_Avail(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, int guild, double ***spPREYinfo, double *avail_BB);
 void Construct_Prey_Info(MSEBoxModel *bm, FILE *llogfp, BoxLayerValues *boxLayerInfo, int habitat_type);
 void Do_Extra_Feed(MSEBoxModel *bm, FILE *llogfp, int sp_id, int flagcase, double CLEAR, double mum_sp, double E_sp, double scalar, double tprey, double ***spGRAZEinfo);
+double Get_Graze_To_Pred_Scalar(MSEBoxModel *bm, int pred, int habitat);
 void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, double sp, double C_sp, double mum_sp, double KL_sp, double KU_sp, double vl_sp,
 		double ht_sp, double E1_sp, double E2_sp, double EDL_sp, double EDR_sp, int sp_feed_while_spawn, int sp_spawn_now, double chrt_mat,
 		double ***spPREYinfo, double ***spGRAZEinfo, double **spCATCHGRAZEinfo, double sp_Biomass);
@@ -433,9 +451,9 @@ void Free_Imposed_Recruits(MSEBoxModel *bm);
 double Get_Recruit_Size_Forcing(MSEBoxModel *bm, int species, int do_debug, FILE *llogfp);
 double Get_Imposed_MultRecruits(MSEBoxModel *bm, int guildcase, int do_debug, int boxkey_id, FILE *llogfp);
 
-void 	Setup_Linear_Mortality_Indicies(MSEBoxModel *bm) ;
-void 	Setup_Size_Change_Indicies(MSEBoxModel *bm) ;
-void 	Setup_Change_Indicies(MSEBoxModel *bm, TimeSeries *ts, int index);
+void 	Setup_Linear_Mortality_Indices(MSEBoxModel *bm) ;
+void 	Setup_Size_Change_Indices(MSEBoxModel *bm) ;
+void 	Setup_Change_Indices(MSEBoxModel *bm, TimeSeries *ts, int index);
 double  Get_Biomass_Correction(MSEBoxModel *bm, int sp, HABITAT_TYPES habitatType);
 void 	Check_Layer_Initial_Biomass(MSEBoxModel *bm);
 
@@ -476,6 +494,9 @@ double  Get_Ice_Rating(MSEBoxModel *bm, int sp);
 double 	Get_Ice_Vertebrate_Habitat_Rating(MSEBoxModel *bm, int guildcase, int stage, int boxin);
 void 	Calculate_IceBact_Scale(MSEBoxModel *bm, HABITAT_TYPES habitatType, BoxLayerValues *boxLayerInfo);
 void 	Calculate_Ice_Prey_Avail(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, int guild, double ***spPREYinfo, double *avail_Ice_Bact);
+int 	Is_Ice_Grazing_Layer(MSEBoxModel *bm);
+void 	Set_Ice_Grazing_Layer(MSEBoxModel *bm);
+void 	Set_Ice_Grazing_Flux(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo);
 
 /* Land based processes */
 void Land_HabitatState(MSEBoxModel *bm);

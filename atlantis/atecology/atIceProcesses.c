@@ -59,7 +59,7 @@ void Box_Ice_Flux(MSEBoxModel *bm, Box *pBox, FILE *llogfp) {
 	Y1 = (double*) pBox->tr[wc_layer];
 	Y2 = (double*) pBox->ice.tr[i];
 
-	if(wc_layer > pBox->nz)
+	if(wc_layer >= pBox->nz)
 		quit("Ice layer mapped to water column layer (%d) that doesn't exist for this box (%d has %d water colum layers)\n", wc_layer, pBox->n, pBox->nz);
 
 	/* Flux of nutrients into the ice - note given scale ignoring lateral melting flux */
@@ -87,11 +87,8 @@ void Box_Ice_Flux(MSEBoxModel *bm, Box *pBox, FILE *llogfp) {
 		 */
 		diffusive_flux = 0.0;
 
-		/* Final flux and nutrient concentration */
-		final_flux = (brine_flux + freeze_flux + diffusive_flux) * bm->dt;
-
-		//TODO BEC - Check with Beth - time is already taken into account in the ice growth rate.
-		final_flux = (brine_flux + freeze_flux + diffusive_flux);// * bm->dt;
+		// Final flux and nutrient concentration - time is already taken into account in the ice growth rate.
+		final_flux = (brine_flux + freeze_flux + diffusive_flux);  // TODO: Used to * bm->dt, should it still?;
 
 		/* Update the tracer fields */
 		if(ice->is_freezing){
@@ -174,7 +171,7 @@ void Box_Ice_Light_Level(MSEBoxModel *bm, Box *pBox, FILE *llogfp) {
 	/* Calculate light at the top of the ice */
 	lighttop = pBox->swr;
 
-	ice_cover = pBox->tot_ice_prop;
+	ice_cover = pBox->tot_ice_prop;  // In case no layers below?
 
 	//light_surf = k_ice * lighttop;	// At best PAR = 0.45 of incoming shortwave radiation
 	lightbot = 0;
@@ -184,15 +181,15 @@ void Box_Ice_Light_Level(MSEBoxModel *bm, Box *pBox, FILE *llogfp) {
 	for(i = ice->currentnz - 1; i >= 0 ; i--){
 		Y1 = (double*) pBox->ice.tr[i];
 
-
 		/* Get ice and snow cover first */
 		ice_cover = 0.0;
 		snow_cover = 0.0;
 		for(k = 0; k < bm->K_num_ice_classes; k++){
-			if(k != bm->snow_id)
-				ice_cover += ice->ice_classes[i][k];
-			else
-				snow_cover += ice->ice_classes[i][k]; // Should be zero for all but top layer
+            if(k != bm->snow_id) {
+                ice_cover += ice->ice_classes[i][k];
+            } else {
+                snow_cover += ice->ice_classes[i][k]; // Should be zero for all but top layer
+            }
 		}
 		/* Now get shading terms
 		 *
@@ -220,7 +217,7 @@ void Box_Ice_Light_Level(MSEBoxModel *bm, Box *pBox, FILE *llogfp) {
 
 		k_a = ka_star * phytoBiomass;// / ice->dz[i];
 
-/*
+/*      Original light representation - redone below
 		if(i == 0){
 			lighttop = lightbot;	// Surface ice layer
 		} else {
@@ -239,6 +236,9 @@ void Box_Ice_Light_Level(MSEBoxModel *bm, Box *pBox, FILE *llogfp) {
 
 		lightbot = lighttop * (R_bi * exp(step1) + (1 - R_bi) * exp(step2)) * exp(-k_a * ice->dz[i]); 	// Irradiance at the bottom of the layer
 
+        // Alternative form is
+        // lightbot_ice = lighttop × exp(-1.0 * k_snow * snow_cover) × exp(-1.0 * k_ice * ice_cover)
+        
 		switch (bm->flaglightopt) {
 		case light_orig:
 		case light_mid:
@@ -292,7 +292,8 @@ void Box_Ice_Q10(MSEBoxModel *bm, Box *pBox, int ice_layer, FILE *llogfp)
 	/* Set ice dwelling species parameters - starting with the algae */
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		if ((FunctGroupArray[sp].habitatType == ICE_BASED) && (FunctGroupArray[sp].speciesParams[flag_id] == TRUE)){
-			FunctGroupArray[sp].Tcorr = Get_Tcorr(bm, sp, current_temp, &local_current_corr);
+            FunctGroupArray[sp].current_corr = local_current_corr;
+			FunctGroupArray[sp].Tcorr = Get_Tcorr(bm, sp, current_temp, &FunctGroupArray[sp].current_corr);
 
 			/* Include pH and salinity modifiers if desired
 			 *
@@ -317,8 +318,8 @@ void Box_Ice_Q10(MSEBoxModel *bm, Box *pBox, int ice_layer, FILE *llogfp)
 			if (FunctGroupArray[sp].isVertebrate == FALSE && FunctGroupArray[sp].speciesParams[flag_id] == TRUE) {
 				for (cohort = 0; cohort < FunctGroupArray[sp].numCohorts; cohort++) {
 
-                    FunctGroupArray[sp].scaled_C[cohort] = FunctGroupArray[sp].scaled_C[cohort] * FunctGroupArray[sp].Tcorr * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr * FunctGroupArray[sp].PolluteCorr;
-					FunctGroupArray[sp].scaled_mum[cohort] = FunctGroupArray[sp].scaled_mum[cohort] * FunctGroupArray[sp].Tcorr * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr * FunctGroupArray[sp].PolluteCorr;
+                    FunctGroupArray[sp].scaled_C[cohort] = FunctGroupArray[sp].SP_C[cohort] * FunctGroupArray[sp].Tcorr * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr * FunctGroupArray[sp].PolluteCorr;
+					FunctGroupArray[sp].scaled_mum[cohort] = FunctGroupArray[sp].mum[cohort] * FunctGroupArray[sp].Tcorr * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr * FunctGroupArray[sp].PolluteCorr;
 
 					if(!(_finite(FunctGroupArray[sp].scaled_C[cohort]))){
 						quit("SP_C is not finite for species %s cohort %d\n", FunctGroupArray[sp].groupCode, cohort);
@@ -338,12 +339,12 @@ void Box_Ice_Q10(MSEBoxModel *bm, Box *pBox, int ice_layer, FILE *llogfp)
 				else
 					Tscalar = 1.0 / FunctGroupArray[sp].Tcorr;
 
-				if ((sp_q10eff == 1) && (local_current_corr < 0.0)) {
+				if ((sp_q10eff == 1) && (FunctGroupArray[sp].current_corr < 0.0)) {
 					FunctGroupArray[sp].speciesParams[E1_id] = FunctGroupArray[sp].speciesParams[E1orig_id] * Tscalar * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr;
 					FunctGroupArray[sp].speciesParams[E2_id] = FunctGroupArray[sp].speciesParams[E2orig_id] * Tscalar * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr;
 					FunctGroupArray[sp].speciesParams[E3_id] = FunctGroupArray[sp].speciesParams[E3orig_id] * Tscalar * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr;
 					FunctGroupArray[sp].speciesParams[E4_id] = FunctGroupArray[sp].speciesParams[E4orig_id] * Tscalar * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr;
-				} else if ((sp_q10eff == 2) && (local_current_corr > 0.0)) {
+				} else if ((sp_q10eff == 2) && (FunctGroupArray[sp].current_corr > 0.0)) {
 					FunctGroupArray[sp].speciesParams[E1_id] = FunctGroupArray[sp].speciesParams[E1orig_id] * Tscalar * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr;
 					FunctGroupArray[sp].speciesParams[E2_id] = FunctGroupArray[sp].speciesParams[E2orig_id] * Tscalar * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr;
 					FunctGroupArray[sp].speciesParams[E3_id] = FunctGroupArray[sp].speciesParams[E3orig_id] * Tscalar * FunctGroupArray[sp].Scorr * FunctGroupArray[sp].pHcorr;
@@ -397,6 +398,8 @@ void Ice_PrimaryProduction(MSEBoxModel *bm, FILE *llogfp, int sp_id, int micro_c
 	double prop_daylight;
 	double P0 = FunctGroupArray[sp_id].speciesParams[P_min_internal_id];
 	double P1 = FunctGroupArray[sp_id].speciesParams[P_max_internal_id];
+    
+    int irr_ice = bm->flaglight;  // TODO: Check this assumption
 
 	/* Check if enough light for photosynthesis
 	 *
@@ -409,7 +412,7 @@ void Ice_PrimaryProduction(MSEBoxModel *bm, FILE *llogfp, int sp_id, int micro_c
 		amt_irr = small_num;
 	prop_daylight = bm->boxes[bm->current_box].prop_light_time;
 	hI_sp = Light_Lim(bm, irr_ice, amt_irr, FunctGroupArray[sp_id].speciesParams[KI_id], FunctGroupArray[sp_id].speciesParams[Beta_D_id],
-					prop_daylight, FunctGroupArray[sp_id].speciesParams[PBmax_D_id]);
+					prop_daylight, FunctGroupArray[sp_id].speciesParams[PBmax_D_id], FunctGroupArray[sp_id].speciesParams[light_a_id]);
 
 	/* Nutrient limitation
 	 * TODO: Add phosphorous limitation
@@ -441,16 +444,16 @@ void Ice_PrimaryProduction(MSEBoxModel *bm, FILE *llogfp, int sp_id, int micro_c
 			/ (FunctGroupArray[sp_id].speciesParams[KN_id] + NH)) * (1.0 + FunctGroupArray[sp_id].speciesParams[KN_id] / DIN);
 
 	if (lim_case != one_nut_lim)
-		uptakeSi = sp_grow * X_SiN;
+		uptakeSi = sp_grow * bm->X_SiN;
 	else
 		uptakeSi = 0.0;
 
 	if (micro_case)
-		uptakeFe = sp_grow * X_FeN;
+		uptakeFe = sp_grow * bm->X_FeN;
 	else
 		uptakeFe = 0.0;
 
-	/* Cap nutrient uptake to what is available */
+	/* Cap nutrient uptake to what is available - this intentionally a max as it is rescaling the NH uptake based on which is the least limitign of the limiting nutients */
 	scale_uptake = 1.0;
 	if (uptakeNH > NH)
 		scale_uptake = NH / uptakeNH;
@@ -552,7 +555,7 @@ double Get_Ice_Vertebrate_Habitat_Rating(MSEBoxModel *bm, int guildcase, int sta
 			ice_dependent++;
 		}
 
-		tot_ice = 0.0;
+		tot_ice = 0.0; // Local total for ice of that class across layers in the box
 		for(z=0; z<bm->icenz; z++){
 			tot_ice += bm->boxes[boxin].ice.ice_classes[z][i];
 		}
@@ -712,40 +715,85 @@ int Ice_Bacteria_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatTyp
  *
  */
 static double Ice_Avail(MSEBoxModel *bm, double sp, double Depth) {
-	double BotDpth, TopDpth, PercentDpth, avail_sp;
+	double NearDpth, FarDpth, PercentDpth, avail_sp;
+	IceModel *ice = &bm->boxes[bm->current_box].ice;
 	int i;
 
-	BotDpth = 0;
-	for(i = 0; i < bm->current_icelayer; i++){
-		BotDpth += bm->boxes[bm->current_box].ice.dz[i];
+	/* Grazers come from the water below, so measure depth up into the ice from the ice-water interface
+	 * (the bottom ice layer is ice->currentnz - 1, see Box_Ice_Flux()) */
+	NearDpth = 0;
+	for(i = bm->current_icelayer + 1; i < ice->currentnz; i++){
+		NearDpth += ice->dz[i];
 	}
-	TopDpth = BotDpth + bm->boxes[bm->current_box].ice.dz[bm->current_icelayer];
-	if (TopDpth < 0.0)
-		TopDpth = 0.0;
+	FarDpth = NearDpth + ice->dz[bm->current_icelayer];
 
-	PercentDpth = (Depth - TopDpth) / bm->boxes[bm->current_box].ice.dz[bm->current_icelayer];
+	PercentDpth = (Depth - NearDpth) / (ice->dz[bm->current_icelayer] + small_num);
 
-	/* Layer completely above depth down to which DR completely available to that
-	 species then all detritus is available. */
-	if (BotDpth <= Depth)
+	/* Layer completely within the depth the grazer can reach then all of it is available. */
+	if (FarDpth <= Depth)
 		avail_sp = sp;
-	else if (TopDpth < Depth)
-		/* Layer spans the depth down to which DR completely available to that species
-		 then only a % of the detritus is available. (=% layer above exploitation depth).
-		 */
+	else if (NearDpth < Depth)
+		/* Layer spans the depth the grazer can reach so only that % of the layer is available. */
 		avail_sp = sp * PercentDpth;
 	else
-		/* Layer below the depth down to which DR completely available to that species
-		 then no detritus is available. */
+		/* Layer beyond the depth the grazer can reach so none is available. */
 		avail_sp = 0.0;
 
 	return avail_sp;
 }
 
 /**
+ * \brief Is the water column layer currently being processed the one directly under the ice (so its predators can graze the ice)?
+ */
+int Is_Ice_Grazing_Layer(MSEBoxModel *bm) {
+	IceModel *ice = &bm->boxes[bm->current_box].ice;
+
+	if (!bm->ice_on || ice->currentnz < 1)
+		return FALSE;
+
+	return (bm->current_layer == ice->wc_layer_match[ice->currentnz - 1]);
+}
+
+/**
+ * \brief Set the loss of the ice prey grazed by predators in the water column layer below the ice.
+ * preyEaten[][ICE_BASED] is in mg N m-3 of ice (see Eat()), the units of the ice tracers. Integrated in
+ * Adapt_Diff_Method() alongside the water column tracers.
+ */
+void Set_Ice_Grazing_Flux(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo) {
+	int guild, cohort;
+
+	if (!Is_Ice_Grazing_Layer(bm))
+		return;
+
+	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
+		if (FunctGroupArray[guild].speciesParams[flag_id] && (FunctGroupArray[guild].isVertebrate == FALSE)
+				&& (FunctGroupArray[guild].habitatCoeffs[ICE_BASED] > 0)) {
+			for (cohort = 0; cohort < FunctGroupArray[guild].numCohortsXnumGenes; cohort++) {
+				boxLayerInfo->localICEFlux[FunctGroupArray[guild].totNTracers[cohort]] = -(double)FunctGroupArray[guild].preyEaten[cohort][ICE_BASED];
+			}
+		}
+	}
+}
+
+/**
+ * \brief Point current_icelayer at the bottom ice layer (the one in contact with the water) and
+ * store its thickness so ice prey can be converted to the units of the water column predators grazing it.
+ */
+void Set_Ice_Grazing_Layer(MSEBoxModel *bm) {
+	IceModel *ice = &bm->boxes[bm->current_box].ice;
+
+	bm->current_icelayer = ice->currentnz - 1;
+	iceLayerThick = ice->dz[bm->current_icelayer];
+	if (iceLayerThick <= 0.0)
+		iceLayerThick = small_num;
+}
+
+/**
  *	\brief Availability of ice groups to predators.
  *
  */
+/* Note this writes predator specific (ICE_KDEP dependent) values into the shared spPREYinfo,
+ * so every predator grazing the ice must call it before Eat() */
 void Calculate_Ice_Prey_Avail(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo,  int guild, double ***spPREYinfo, double *avail_IceBact) {
 	double biomass;
 	double ICE_KDEP_sp = FunctGroupArray[guild].speciesParams[ICE_KDEP_id];

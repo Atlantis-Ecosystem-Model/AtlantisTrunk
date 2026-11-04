@@ -111,7 +111,7 @@ void Grow_Macrophytes(MSEBoxModel *bm, FILE *llogfp, int sp_id, int cohort, int 
 
 		mL_sp = ( FunctGroupArray[sp_id].cohortSpeciesParams[epiphyte_biomass_id][mL_id] + FunctGroupArray[sp_id].cohortSpeciesParams[main_biomass_id][mL_id] );
 		mE_sp = ( FunctGroupArray[sp_id].cohortSpeciesParams[epiphyte_biomass_id][mE_id] + FunctGroupArray[sp_id].cohortSpeciesParams[main_biomass_id][mE_id] );
-		hI_sp = Light_Lim(bm, bm->flaglight, IRR, FunctGroupArray[sp_id].speciesParams[KI_id], FunctGroupArray[sp_id].SP_IRR, prop_daylight, 0.0);
+		hI_sp = Light_Lim(bm, bm->flaglight, IRR, FunctGroupArray[sp_id].speciesParams[KI_id], FunctGroupArray[sp_id].SP_IRR, prop_daylight, 0.0, 1.0);
 
 		// Nutrient limitation
 
@@ -122,8 +122,9 @@ void Grow_Macrophytes(MSEBoxModel *bm, FILE *llogfp, int sp_id, int cohort, int 
 		// hSPACE_sp = 1.0 - (FunctGroupArray[sp_id].growth[main_biomass_id]/(FunctGroupArray[sp_id].growth[main_biomass_id]+Ksub));
 		hSPACE_sp = 1.0 - exp(-FunctGroupArray[sp_id].speciesParams[KsubEpi_id] * ratio);
             
-        if ((sp_biom_epi / sp_biom) > FunctGroupArray[sp_id].speciesParams[KsubEpi_id])
+        if ((sp_biom_epi / sp_biom) > FunctGroupArray[sp_id].speciesParams[KsubEpi_id]) {
             hSPACE_sp = 0.0;  // To constrain epiphytes wheich were growing uncontrollably compared to leaf biomass
+        }
 
 		// Growth
 		FunctGroupArray[sp_id].growth[cohort] = (this_biom * this_mum * hI_sp * hN_sp * hSPACE_sp);
@@ -140,9 +141,15 @@ void Grow_Macrophytes(MSEBoxModel *bm, FILE *llogfp, int sp_id, int cohort, int 
 		// Space limitation - the main relevant process other than mortality
 		if(sp_biom_sed < FunctGroupArray[sp_id].speciesParams[max_id]){
 			hSPACE_sp = (fabs(1.0 - sp_biom_sed / FunctGroupArray[sp_id].speciesParams[max_id])); //changed trans deleted
-		}
+        } else {
+            hSPACE_sp = 0.0;
+        }
 		/* Growth in the roots is related to growth of leaves - no max growth rate for roots */
-		FunctGroupArray[sp_id].growth[cohort] = (this_biom * FunctGroupArray[sp_id].growth[main_biomass_id] * hI_sp * hN_sp * hSPACE_sp*trans/(1-trans));
+        if (trans == 1.0) {
+            FunctGroupArray[sp_id].growth[cohort] = (this_biom * FunctGroupArray[sp_id].growth[main_biomass_id] * hI_sp * hN_sp * hSPACE_sp * trans);
+        } else {
+            FunctGroupArray[sp_id].growth[cohort] = (this_biom * FunctGroupArray[sp_id].growth[main_biomass_id] * hI_sp * hN_sp * hSPACE_sp * trans / (1 - trans));
+        }
 		//changed trans added and also divided by (1-trans) because FunctGroupArray[sp_id].processProps[main_biomass_id].growth has this *(1-trans) component that we want to get rid of to calculate the root growth
 		break;
 
@@ -151,8 +158,7 @@ void Grow_Macrophytes(MSEBoxModel *bm, FILE *llogfp, int sp_id, int cohort, int 
 	sp_grow = FunctGroupArray[sp_id].growth[cohort];
 
 	if(!_finite(FunctGroupArray[sp_id].growth[cohort]) || isnan(FunctGroupArray[sp_id].growth[cohort])){
-		fprintf(bm->logFile, "cohort = %d, this_biom = %e, this_mum = %e, hI_sp = %e, hN_sp = %e, hSPACE_s p= %e\n",
-				cohort, this_biom, this_mum, hI_sp, hN_sp, hSPACE_sp);
+		fprintf(bm->logFile, "cohort = %d, this_biom = %e, this_mum = %e, hI_sp = %e, hN_sp = %e, hSPACE_sp = %e\n", cohort, this_biom, this_mum, hI_sp, hN_sp, hSPACE_sp);
 
 		fprintf(bm->logFile, "FunctGroupArray[sp_id].processProps[cohort].growth = %e\n", FunctGroupArray[sp_id].growth[cohort]);
 
@@ -172,7 +178,7 @@ void Grow_Macrophytes(MSEBoxModel *bm, FILE *llogfp, int sp_id, int cohort, int 
 		uptakeNH = sp_grow * (NHs / (KN_term + NHs)) * ((KN_term + DINs) / DINs);
 		uptakeNO = sp_grow * (NOs / (KN_term + DINs)) * (KN_term / (KN_term + NHs)) * (1.0 + KN_term / DINs);
 
-		/* Cap nutrient uptake to what is available */
+		/* Cap nutrient uptake to what is available - this intentionally a max as it is rescaling the NH uptake based on which is the least limiting of the limiting nutients */
 		scale_uptake = 1.0;
 		if (uptakeNH > NHs)
 			scale_uptake = NHs / uptakeNH;
@@ -185,7 +191,7 @@ void Grow_Macrophytes(MSEBoxModel *bm, FILE *llogfp, int sp_id, int cohort, int 
 		uptakeNO = sp_grow * (NO / (FunctGroupArray[sp_id].speciesParams[KN_id] + DIN)) * (FunctGroupArray[sp_id].speciesParams[KN_id]
 				/ (FunctGroupArray[sp_id].speciesParams[KN_id] + NH)) * (1.0 + FunctGroupArray[sp_id].speciesParams[KN_id] / DIN);
 
-		/* Cap nutrient uptake to what is available */
+		/* Cap nutrient uptake to what is available - this intentionally a max as it is rescaling the NH uptake based on which is the least limiting of the limiting nutients */
 		scale_uptake = 1.0;
 		if (uptakeNH > NH)
 			scale_uptake = NH / uptakeNH;
@@ -215,12 +221,12 @@ void Grow_Macrophytes(MSEBoxModel *bm, FILE *llogfp, int sp_id, int cohort, int 
 	*spUptakeC = uptakeC;
 
 	if(bm->track_atomic_ratio == TRUE){
-		PP_uptake(bm, sp_id, FunctGroupArray[sp_id].uptakeNH[0], *spUptakeP , *spUptakeC);
+        // This used to be uptakeNH[0] - most macrophytes only have 1 cohort so likely no big effect on dynamics
+		PP_uptake(bm, sp_id, FunctGroupArray[sp_id].uptakeNH[cohort], *spUptakeP , *spUptakeC);
 	}
 
 	if ((bm->debug == debug_biology_process) && (bm->dayt >= bm->checkstart) && (bm->dayt < bm->checkstop)) {
-		fprintf(bm->logFile, "Grow_Macrophytes outcomes. Group %s:%d, grow = %.20e, uptakeNH= %.20e, uptakeNO= %.20e, mortality= %.20e\n",
-				FunctGroupArray[sp_id].groupCode, cohort, sp_grow, uptakeNH, uptakeNO, FunctGroupArray[sp_id].mortality[cohort]);
+		fprintf(bm->logFile, "Grow_Macrophytes outcomes. Group %s:%d, grow = %.20e, uptakeNH= %.20e, uptakeNO= %.20e, mortality= %.20e\n", FunctGroupArray[sp_id].groupCode, cohort, sp_grow, uptakeNH, uptakeNO, FunctGroupArray[sp_id].mortality[cohort]);
 	}
 
 	return;

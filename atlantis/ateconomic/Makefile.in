@@ -182,7 +182,9 @@ am_libateconomic_a_OBJECTS = ateconindicator.$(OBJEXT) \
 	ateconresponse.$(OBJEXT) ateconts.$(OBJEXT) atquota.$(OBJEXT) \
 	ateconeffort.$(OBJEXT) ateconio.$(OBJEXT) \
 	ateconParamIO.$(OBJEXT) ateffortquota.$(OBJEXT) \
-	atEconomicAnnual.$(OBJEXT) atEconomicUtil.$(OBJEXT)
+	atEconomicAnnual.$(OBJEXT) atEconomicUtil.$(OBJEXT) \
+	atFishMIP_OSP_Bridge.$(OBJEXT) \
+	atFishMIP_OSP_PluginAdapter.$(OBJEXT)
 libateconomic_a_OBJECTS = $(am_libateconomic_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -200,12 +202,14 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/atEconomicAnnual.Po \
-	./$(DEPDIR)/atEconomicUtil.Po ./$(DEPDIR)/ateconParamIO.Po \
-	./$(DEPDIR)/ateconeffort.Po ./$(DEPDIR)/ateconindicator.Po \
-	./$(DEPDIR)/ateconio.Po ./$(DEPDIR)/ateconomic.Po \
-	./$(DEPDIR)/ateconomicsetup.Po ./$(DEPDIR)/ateconresponse.Po \
-	./$(DEPDIR)/ateconts.Po ./$(DEPDIR)/ateffortquota.Po \
-	./$(DEPDIR)/atquota.Po
+	./$(DEPDIR)/atEconomicUtil.Po \
+	./$(DEPDIR)/atFishMIP_OSP_Bridge.Po \
+	./$(DEPDIR)/atFishMIP_OSP_PluginAdapter.Po \
+	./$(DEPDIR)/ateconParamIO.Po ./$(DEPDIR)/ateconeffort.Po \
+	./$(DEPDIR)/ateconindicator.Po ./$(DEPDIR)/ateconio.Po \
+	./$(DEPDIR)/ateconomic.Po ./$(DEPDIR)/ateconomicsetup.Po \
+	./$(DEPDIR)/ateconresponse.Po ./$(DEPDIR)/ateconts.Po \
+	./$(DEPDIR)/ateffortquota.Po ./$(DEPDIR)/atquota.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -219,6 +223,19 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
+CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
+AM_V_CXX = $(am__v_CXX_@AM_V@)
+am__v_CXX_ = $(am__v_CXX_@AM_DEFAULT_V@)
+am__v_CXX_0 = @echo "  CXX     " $@;
+am__v_CXX_1 = 
+CXXLD = $(CXX)
+CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
+	-o $@
+AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
+am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
+am__v_CXXLD_0 = @echo "  CXXLD   " $@;
+am__v_CXXLD_1 = 
 SOURCES = $(libateconomic_a_SOURCES)
 DIST_SOURCES = $(libateconomic_a_SOURCES)
 am__can_run_installinfo = \
@@ -256,7 +273,7 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 
-#libeconomic_a_HEADERS= ateconomic.h atEconomicModule.h ateconomicsetup.h ateconParamIO.h
+#libeconomic_a_HEADERS= ateconomic.h atEconomicModule.h ateconomicsetup.h ateconParamIO.h atFishMIP_OSP_Bridge.h atFishMIP_OSP_PluginAdapter.h
 
 # overide the -O2 flag
 CFLAGS = 
@@ -358,21 +375,33 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-INCLUDES = $(shell pkg-config --cflags libxml-2.0) \
-	-I$(top_srcdir)/atassess/include -I$(top_srcdir)/atecology/include \
-	-I$(top_srcdir)/ateconomic/include -I$(top_srcdir)/atlantisUtil/include -I$(top_srcdir)/atlantismain/include \
-	-I$(top_srcdir)/atharvest/include -I$(top_srcdir)/atimplementation/include \
-	-I$(top_srcdir)/atmanage/include -I$(top_srcdir)/atphysics/include -I$(top_srcdir)/atFileConvert/include \
-	-I$(top_srcdir)/sjwlib/include  -I$(top_srcdir)/ConvertAtlantis/include -I$(top_srcdir)/atSS3Link/include \
-	-I. -I$(top_srcdir)/atlantismain
 
+# Headers for the external FishMIP-OSP toy-model plug-in (see FISHMIP_OSP_DIR
+# in PreRules.am), needed by atFishMIP_OSP_PluginAdapter.cpp.
+INCLUDES = $(shell pkg-config --cflags libxml-2.0) \
+	-I$(top_srcdir)/atassess/include \
+	-I$(top_srcdir)/atecology/include \
+	-I$(top_srcdir)/ateconomic/include \
+	-I$(top_srcdir)/atlantisUtil/include \
+	-I$(top_srcdir)/atlantismain/include \
+	-I$(top_srcdir)/atharvest/include \
+	-I$(top_srcdir)/atimplementation/include \
+	-I$(top_srcdir)/atmanage/include \
+	-I$(top_srcdir)/atphysics/include \
+	-I$(top_srcdir)/atFileConvert/include \
+	-I$(top_srcdir)/sjwlib/include \
+	-I$(top_srcdir)/ConvertAtlantis/include \
+	-I$(top_srcdir)/atSS3Link/include -I. \
+	-I$(top_srcdir)/atlantismain -I$(FISHMIP_OSP_DIR)/cpp/include
 
 # -I$(top_srcdir)/atlink/include  -I$(top_srcdir)/atCLAMLink/include
 
 # Comment out first option and uncomment second option for for OPT if on Apple M1 chips 
 #OPT = -msse2 -mfpmath=sse
 #OPT = -mcpu=apple-m1
-OPT = -mtune=native
+# -O2 matches the frozen baseline binary. -mtune=generic keeps that binary portable.
+# -mtune=native is a separate experiment: it can change instruction selection.
+OPT = -O2 -mtune=generic
 
 # Uncomment this if want to use mac valgrin equivalent
 #OPT = -mtune=native -fsanitize=address -fno-omit-frame-pointer
@@ -386,6 +415,7 @@ DEFINES = -D PROJ4 -D REPLICATE_OLD_RESULTS -D BETH_LOG_FILE_SIZE
 GCCVERSION = $(shell gcc --version | grep ^gcc | sed 's/^.* //g')
 #-Wconversion
 
+<<<<<<< Updated upstream
 #WARN += -Wno-error
 #WARN += -Werror
 
@@ -413,18 +443,31 @@ AM_CFLAGS = $(DEFINES) $(INCLUDE) $(DBG) $(OPT) $(EF) $(PG) $(WARN) \
 # on OS X
 @RASSESS_LINK_ENABLED_TRUE@R_BASE = /Library/Frameworks/R.framework/Resources
 @RASSESS_LINK_ENABLED_TRUE@R_HOME = /Library/Frameworks/R.framework/Resources
+=======
+#fetching repo version from git
+AM_CFLAGS = $(DEFINES) $(INCLUDE) $(DBG) $(OPT) $(EF) $(PG) $(WARN) \
+	-DRELEASE_VERSION=\"$(RELEASE_VERSION)\"
+>>>>>>> Stashed changes
 lib_LIBRARIES = libateconomic.a
+
+# atFishMIP_OSP_PluginAdapter.cpp uses std::optional (C++17). Without an
+# explicit -std, this toolchain's default C++ dialect is too old for it.
+# (Per-target *_CXXFLAGS isn't honoured for plain lib_LIBRARIES in this
+# Automake version, so this is set directory-wide; it has no effect on the
+# .c sources here, which compile via the separate AM_CFLAGS/CFLAGS path.)
+AM_CXXFLAGS = -std=c++17
 libateconomic_adir = $(includedir)/ateconomic
 libateconomic_a_SOURCES = ateconindicator.c ateconomic.c ateconomicsetup.c \
     ateconresponse.c ateconts.c atquota.c ateconeffort.c \
     ateconio.c ateconParamIO.c  \
     ateconomic.h ateconomicsetup.h atEconomicLib.h \
-    ateffortquota.c atEconomicAnnual.c atEconomicUtil.c
+    ateffortquota.c atEconomicAnnual.c atEconomicUtil.c \
+    atFishMIP_OSP_Bridge.c atFishMIP_OSP_PluginAdapter.cpp
 
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .o .obj
+.SUFFIXES: .c .cpp .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am $(top_srcdir)/PreRules.am $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -500,6 +543,8 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/atEconomicAnnual.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/atEconomicUtil.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/atFishMIP_OSP_Bridge.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/atFishMIP_OSP_PluginAdapter.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ateconParamIO.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ateconeffort.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ateconindicator.Po@am__quote@ # am--include-marker
@@ -530,6 +575,20 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+.cpp.o:
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ $<
+
+.cpp.obj:
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -659,6 +718,8 @@ clean-am: clean-generic clean-libLIBRARIES mostlyclean-am
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/atEconomicAnnual.Po
 	-rm -f ./$(DEPDIR)/atEconomicUtil.Po
+	-rm -f ./$(DEPDIR)/atFishMIP_OSP_Bridge.Po
+	-rm -f ./$(DEPDIR)/atFishMIP_OSP_PluginAdapter.Po
 	-rm -f ./$(DEPDIR)/ateconParamIO.Po
 	-rm -f ./$(DEPDIR)/ateconeffort.Po
 	-rm -f ./$(DEPDIR)/ateconindicator.Po
@@ -716,6 +777,8 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/atEconomicAnnual.Po
 	-rm -f ./$(DEPDIR)/atEconomicUtil.Po
+	-rm -f ./$(DEPDIR)/atFishMIP_OSP_Bridge.Po
+	-rm -f ./$(DEPDIR)/atFishMIP_OSP_PluginAdapter.Po
 	-rm -f ./$(DEPDIR)/ateconParamIO.Po
 	-rm -f ./$(DEPDIR)/ateconeffort.Po
 	-rm -f ./$(DEPDIR)/ateconindicator.Po
@@ -762,6 +825,64 @@ uninstall-am: uninstall-libLIBRARIES
 .PRECIOUS: Makefile
 
 
+<<<<<<< Updated upstream
+=======
+# FishMIP-OSP toy-model plug-in. Its C++ code lives in ../cpp (alongside this
+# atlantis directory). ateconomic/atFishMIP_OSP_PluginAdapter.cpp needs its
+# headers, and the final atlantisMerged link needs
+# cpp/build/libfishmip_osp_plugin_models.a, built with that project's CMake:
+#   cmake -S ../cpp -B ../cpp/build -DCMAKE_BUILD_TYPE=Release
+#   cmake --build ../cpp/build
+# To use a different checkout instead, override with:
+#   make FISHMIP_OSP_DIR=/path/to/FishMIP-OSP_Toy_Model
+# or by exporting FISHMIP_OSP_DIR in your shell before running make.
+FISHMIP_OSP_DIR ?= $(abs_top_srcdir)/..
+
+#WARN += -Wno-error
+#WARN += -Werror
+
+# Needed for Mac
+@OS_MACOS_TRUE@	WARN += -Wformat-overflow
+@OS_MACOS_TRUE@	WARN += -Wno-error=pointer-bool-conversion
+@OS_MACOS_TRUE@	WARN += -Wno-nullability-completeness
+@OS_MACOS_TRUE@	WARN += -Wno-nonnull
+
+# Needed for Docker (uncomment if commented out)
+@OS_LINUX_TRUE@	WARN += -Wno-error=unused-but-set-variable
+@OS_LINUX_TRUE@	WARN += -Wno-error=misleading-indentation
+@OS_LINUX_TRUE@	WARN += -Wno-error=implicit-function-declaration
+
+@BROKER_LINK_ENABLED_TRUE@	AM_CFLAGS +=  -D BROKER_LINK_ENABLED -I$(top_srcdir)/atbrokerlink/include
+@BROKER_LINK_ENABLED_FALSE@	AM_CFLAGS += -pedantic  -std=c99
+
+@LINK_ENABLED_TRUE@	AM_CFLAGS += -D LINK_ENABLED -I$(top_srcdir)/atlink/include $(shell pkg-config --cflags libcsoap)
+
+@CLAM_LINK_ENABLED_TRUE@	AM_CFLAGS += -D CLAM_LINK_ENABLED -I$(top_srcdir)/atCLAMLink/include
+
+#if SS3_LINK_ENABLED
+#	AM_CFLAGS += -D SS3_LINK_ENABLED -I$(top_srcdir)/atSS3Link/include
+#endif
+
+@RASSESS_LINK_ENABLED_TRUE@	AM_CFLAGS += -D RASSESS_LINK_ENABLED
+
+# NOTE: nested if statments
+# For the R links
+# A working R installation is required.
+# R must have been built with the '--enable-R-shlib' option enabled to provide the R shared library
+# Ensure the R_HOME environment variable is set appropriately
+#
+# R_HOME = $(shell R RHOME)
+# on Ubuntu Linux
+@OS_LINUX_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_HOME = /usr/lib/R
+@OS_LINUX_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_BASE = /usr/lib/R
+# on OS X
+@OS_MACOS_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_BASE = /Library/Frameworks/R.framework/Resources
+@OS_MACOS_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_HOME = /Library/Frameworks/R.framework/Resources
+
+@RASSESS_LINK_ENABLED_TRUE@	AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
+@RASSESS_LINK_ENABLED_TRUE@	LIBS += -L$(R_BASE)/lib -lR
+
+>>>>>>> Stashed changes
 #WARN += -Wno-unused-parameter
 #WARN += -Werror
 

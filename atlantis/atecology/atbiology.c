@@ -220,10 +220,43 @@
 #include "atbiology.h"
 #include <atHarvestLib.h>
 
+/* ThreadSanitizer builds only: the OpenMP runtime is not instrumented, so tell
+ * TSan where threads hand data to each other (otherwise it reports false races). */
+#if defined(__SANITIZE_THREAD__)
+void __tsan_acquire(void *addr);
+void __tsan_release(void *addr);
+#define TSAN_ACQUIRE(addr) __tsan_acquire(addr)
+#define TSAN_RELEASE(addr) __tsan_release(addr)
+#else
+#define TSAN_ACQUIRE(addr) ((void) (addr))
+#define TSAN_RELEASE(addr) ((void) (addr))
+#endif
+
 static void Accumulate_Mortality_Estimates(MSEBoxModel *bm, double dtsz, FILE *llogfp);
 static void UpdateMdt(MSEBoxModel *bm, double dtsz, FILE *llogfp);
 static void Box_Bio_Process(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp);
 static void Adapt_Diff_Method(MSEBoxModel *bm, int flagModel, double tsz, BoxLayerValues *boxLayerInfo, FILE *llogfp);
+static void Return_Grazed_ICE_Tracers(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo);
+
+/**
+ * \brief Spawning and recruitment for one box-layer.
+ *
+ * These update the per-species spawning and recruitment queues (EMBRYO) that
+ * all boxes share, so when boxes run on several threads only one thread at a
+ * time may be in here.
+ */
+static void Box_Layer_Reproduction(MSEBoxModel *bm, int wclayer, int maxdeep, int totaldeep, int numwclayer, double *localWCTracers, FILE *llogfp) {
+#ifdef _OPENMP
+#pragma omp critical(box_layer_reproduction)
+#endif
+	{
+		static int tsan_reproduction_lock;
+		TSAN_ACQUIRE(&tsan_reproduction_lock);
+		Vertebrate_Reproduction(bm, wclayer, maxdeep, totaldeep, numwclayer, localWCTracers, llogfp);
+		Invertebrate_Reproduction(bm, wclayer, maxdeep, totaldeep, localWCTracers, llogfp);
+		TSAN_RELEASE(&tsan_reproduction_lock);
+	}
+}
 
 /**
  *
@@ -258,14 +291,17 @@ void Ecology_Box_Biology(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp) {
 	Parameter_Q10(bm, pBox, bm->dayt, 1, 0, pBox->nz - 1, midpoint, WC, llogfp);
     
 	/* Calculate light intensity on surfaces or bottoms of water column cells */
-	if (bm->lim_sun_hours)
-		Calculate_Box_Light(bm, pBox, llogfp);
+    if (bm->lim_sun_hours) {
+        Calculate_Box_Light(bm, pBox, llogfp);
+    }
     
 	/* Need to do ice light calculations so we know how much light gets through to the water column under the ice */
 	if(bm->ice_on) {
 		Box_Ice_Light_Level(bm, pBox, llogfp);				// Light inside the ice
 	}
-	Box_Light_Process(bm, pBox, llogfp);
+    if(!bm->force_light){
+        Box_Light_Process(bm, pBox, llogfp);
+    }
     
 	/* Calculate oxygen depth */
 	Box_O2_Depth_Process(bm, pBox);
@@ -282,7 +318,6 @@ void Ecology_Box_Biology(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp) {
 	/* Ice related biologically relevant physical ice properties */
 	if(bm->ice_on) {
 		Box_Ice_Flux(bm, pBox, llogfp);  					// Flux of dissolved properties into ice
-
 		Box_Ice_Temperature_Related(bm, pBox, llogfp);		// Temperature inside the ice
 	}
     
@@ -465,6 +500,7 @@ static void Box_Bio_Process(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp)
 		/* Transfer all the temporary values back to their final locations */
 		for (k = 0; k < numwcvar; k++)
 			newwctr[bm->current_box][ij][k] = boxLayerInfo->localWCTracers[k]; /* To WC */
+		Return_Grazed_ICE_Tracers(bm, boxLayerInfo); /* Ice grazed from below - before the ice layers are processed */
 		for (k = 0; k < numdiagvar; k++)
 			pBox->diagnost[k] = boxLayerInfo->localDiagTracers[k]; /* To diagnostics */
 		for (k = 0; k < numfstatvar; k++)
@@ -611,10 +647,7 @@ static void Box_Bio_Process(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp)
         //Ecology_Check_VertAbund(bm, newwctr, llogfp, 9);
 
 		/* Spawning */
-		Vertebrate_Reproduction(bm, 0, maxdeep, totaldeep, numwclayer, boxLayerInfo->localWCTracers, llogfp);
-		Invertebrate_Reproduction(bm, 0, maxdeep, totaldeep, boxLayerInfo->localWCTracers, llogfp);
-        
-        //Ecology_Check_VertAbund(bm, newwctr, llogfp, 10);
+		Box_Layer_Reproduction(bm, 0, maxdeep, totaldeep, numwclayer, boxLayerInfo->localWCTracers, llogfp);
 
 		/* Transfer all values in localWCTracers and localSed to the appropriate variables and
 		 reset pointers Y1 and Y2 to newwctr and newsed tr pointing to returned value space
@@ -624,6 +657,7 @@ static void Box_Bio_Process(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp)
 			newwctr[bm->current_box][0][ij] = boxLayerInfo->localWCTracers[ij]; /* To bottom cell in WC */
 			newsedtr[bm->current_box][0][ij] = boxLayerInfo->localSEDTracers[ij]; /* To top cell in sediment*/
 		}
+		Return_Grazed_ICE_Tracers(bm, boxLayerInfo); /* Ice grazed from below - before the ice layers are processed */
 
         //Ecology_Check_VertAbund(bm, newwctr, llogfp, 11);
         
@@ -784,8 +818,7 @@ static void Get_Time_Change(MSEBoxModel *bm, FILE *llogfp, int flagModel, double
 
 	if(flagModel == EPIFAUNA){
 		/* Get the max change in the epibenthic variables */
-		Get_Max_Flux_Change(bm, boxLayerInfo->localEPITracers, boxLayerInfo->localEPIFlux, bm->nepi, 2 * bm ->ntracer, del, &maxEpi_del, &epi_ind_unstable_var,
-				llogfp);
+		Get_Max_Flux_Change(bm, boxLayerInfo->localEPITracers, boxLayerInfo->localEPIFlux, bm->nepi, 2 * bm->ntracer, del, &maxEpi_del, &epi_ind_unstable_var, llogfp);
 		offset_int = 2 * bm->ntracer;
 		if (maxEpi_del > max_del) {
 			max_del = maxEpi_del;
@@ -797,10 +830,10 @@ static void Get_Time_Change(MSEBoxModel *bm, FILE *llogfp, int flagModel, double
 	}
 
 	if(flagModel == ICE_BASED ){
-		/* Get the max change in the epibenthic variables */
-		Get_Max_Flux_Change(bm, boxLayerInfo->localICETracers, boxLayerInfo->localICEFlux, bm->ntracer, bm ->ntracer, del, &maxIce_del, &ice_ind_unstable_var,
+		/* Get the max change in the ice-based variables */
+		Get_Max_Flux_Change(bm, boxLayerInfo->localICETracers, boxLayerInfo->localICEFlux, bm->ntracer, bm->ntracer, del, &maxIce_del, &ice_ind_unstable_var,
 				llogfp);
-		offset_int = 2 * bm->ntracer;
+		offset_int = 0;  // Its assumed to be zero in Adapt_Diff_Method().... should it actually be "3 * bm->ntracer" so not accidentally overwriting anything?
 		if (maxIce_del > max_del) {
 			max_del = maxIce_del;
 			ind_unstable_var = ice_ind_unstable_var;
@@ -1092,7 +1125,7 @@ static void Copy_SED_Tracers(MSEBoxModel *bm, double *localTracers, double *loca
 static void Copy_EPI_Tracers(MSEBoxModel *bm, double *localTracers, double *localFlux) {
 	int i;
 	for (i = 0; i < bm->nepi; i++) {
-        if (Fluxflag[i + 2 * bm ->ntracer] == 1) {
+        if (Fluxflag[i + 2 * bm->ntracer] == 1) {
 			localTracers[i] = 0.0;
         } else {
 			localTracers[i] = bm->boxes[bm->current_box].epi[i];
@@ -1142,6 +1175,29 @@ static void Copy_ICE_Tracers(MSEBoxModel *bm, double *localICETracers, double *l
 		}
 
 		localICEFlux[i] = 0;
+	}
+}
+
+/**
+ *	\brief Put the bottom ice layer tracers back after the water column layer below it has grazed them,
+ *	so the ice layer processing (which copies from ice.tr) starts from the grazed values.
+ *	Diagnostic tracers are skipped as Copy_ICE_Tracers() zeroed them in the local copy.
+ */
+static void Return_Grazed_ICE_Tracers(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo) {
+	int i;
+
+	if (!Is_Ice_Grazing_Layer(bm))
+		return;
+
+	for (i = 0; i < bm->ntracer; i++) {
+		if (Fluxflag[i] == 1)
+			continue;
+		if (boxLayerInfo->localICETracers[i] < 0.0) {
+			fprintf(bm->logFile, "Time: %e box %d ice layer %d %s grazed below zero (%e) by water column predators - set to zero\n",
+					bm->dayt, bm->current_box, bm->current_icelayer, Varname[i], boxLayerInfo->localICETracers[i]);
+			boxLayerInfo->localICETracers[i] = 0.0;
+		}
+		bm->boxes[bm->current_box].ice.tr[bm->current_icelayer][i] = boxLayerInfo->localICETracers[i];
 	}
 }
 
@@ -1201,13 +1257,16 @@ static void Integrate_Diag_Variables(MSEBoxModel *bm, double *tracerArray, doubl
 				continue;
 
 		/* Do once per day first */
-		if (it_count == 1)
-			if (DiagTolflag[i + offset] >= 2)
-				tracerArray[i] = tracerArray[i] + fluxArray[i] * tsz;
+        if (it_count == 1) {
+            if (DiagTolflag[i + offset] >= 2) {
+                tracerArray[i] = tracerArray[i] + fluxArray[i] * tsz;
+            }
+        }
 
 		/* Do finer scale ones */
-		if (DiagTolflag[i + offset] < 2)
-			tracerArray[i] = tracerArray[i] + fluxArray[i] * dtsz;
+        if (DiagTolflag[i + offset] < 2) {
+            tracerArray[i] = tracerArray[i] + fluxArray[i] * dtsz;
+        }
 	}
 }
 
@@ -1237,8 +1296,8 @@ static void Adapt_Diff_Method(MSEBoxModel *bm, int flagModel, double tsz, BoxLay
 	int i;
     
     if (verbose > 1) {
-        printf("Time: %e Doing adaptive timestep for box: %d, layer %d (Water Column)\n", bm->dayt, bm->current_box, bm->current_layer);
-        fprintf(llogfp, "\nTime: %e Doing adaptive timestep for box: %d, layer %d (Water Column)\n", bm->dayt, bm->current_box, bm->current_layer);
+        printf("Time: %e Doing adaptive timestep for box: %d, layer %d (Water Column) - flagModel : %d \n", bm->dayt, bm->current_box, bm->current_layer, flagModel);
+        fprintf(llogfp, "\nTime: %e Doing adaptive timestep for box: %d, layer %d (Water Column) - flagModel: %d\n", bm->dayt, bm->current_box, bm->current_layer, flagModel);
 	}
     
 	/* Initialize adaptive time step dtsz, time_left*/
@@ -1273,11 +1332,10 @@ static void Adapt_Diff_Method(MSEBoxModel *bm, int flagModel, double tsz, BoxLay
 				}
 			}
 		}
-		if(bm->ice_on){
-			/* If this is the top water column layers setup ice tracers so we can get predation */
-			if (bm->current_layer == (bm->boxes[bm->current_box].nz - 1)) {
-				Copy_ICE_Tracers(bm, boxLayerInfo->localICETracers, boxLayerInfo->localICEFlux);
-			}
+		/* If this water column layer is directly under the ice setup the bottom ice layer tracers so it can be grazed */
+		if (Is_Ice_Grazing_Layer(bm)) {
+			Set_Ice_Grazing_Layer(bm);
+			Copy_ICE_Tracers(bm, boxLayerInfo->localICETracers, boxLayerInfo->localICEFlux);
 		}
 
 		Copy_Diag_Tracers(bm, boxLayerInfo->localDiagTracers, boxLayerInfo->localDiagFlux);
@@ -1347,11 +1405,9 @@ static void Adapt_Diff_Method(MSEBoxModel *bm, int flagModel, double tsz, BoxLay
 			if(bm->track_atomic_ratio == TRUE){
 				Integrate_Ratio_Variables(bm, boxLayerInfo->localWCTracers, boxLayerInfo->localWCFlux, tsz, dtsz, WC);
 			}
-			if(bm->ice_on){
-				/* If this is the top water column layers setup ice tracers so we can get predation */
-				if (bm->current_layer == (bm->boxes[bm->current_box].nz - 1)) {
-
-				}
+			/* If this layer is directly under the ice remove the ice prey grazed by the water column predators */
+			if (Is_Ice_Grazing_Layer(bm)) {
+				Integrate_Tracer_Variables(bm, ICE_BASED, boxLayerInfo->localICETracers, boxLayerInfo->localICEFlux, bm->ntracer, 0, tsz, dtsz, llogfp);
 			}
 			break;
 		case 2:
@@ -1364,6 +1420,11 @@ static void Adapt_Diff_Method(MSEBoxModel *bm, int flagModel, double tsz, BoxLay
 			Integrate_Tracer_Variables(bm, WC, boxLayerInfo->localWCTracers, boxLayerInfo->localWCFlux, bm->ntracer, 0, tsz, dtsz, llogfp);
 			Integrate_Tracer_Variables(bm, SED, boxLayerInfo->localSEDTracers, boxLayerInfo->localSEDFlux, bm->ntracer, bm->ntracer, tsz, dtsz, llogfp);
 			Integrate_Tracer_Variables(bm, EPIFAUNA, boxLayerInfo->localEPITracers, boxLayerInfo->localEPIFlux, bm->nepi, 2 * bm->ntracer, tsz, dtsz, llogfp);
+
+			/* If the ice reaches down to this bottom cell remove the ice prey grazed from it */
+			if (Is_Ice_Grazing_Layer(bm)) {
+				Integrate_Tracer_Variables(bm, ICE_BASED, boxLayerInfo->localICETracers, boxLayerInfo->localICEFlux, bm->ntracer, 0, tsz, dtsz, llogfp);
+			}
 
 			if(bm->track_atomic_ratio == TRUE){
 				Integrate_Ratio_Variables(bm, boxLayerInfo->localWCTracers, boxLayerInfo->localWCFlux, tsz, dtsz, WC);
@@ -1514,3 +1575,482 @@ void ReInitDietData(MSEBoxModel *bm, int b) {
     }
     
 }
+
+/**************************************************************************************
+ * Running water boxes on several threads (OpenMP builds only)
+ *
+ * The box loop in runNextTimeStep() runs the first and last water box on the main
+ * thread and hands the boxes in between to a team of threads. Each extra thread
+ * gets its own:
+ *   - per-box working values (H2Otemp, r_DL, it_count, ... - thread-local globals)
+ *   - box work arrays (VERTinfo, PREYinfo, EATINGinfo, boxLayerInfo, ...)
+ *   - copy of FunctGroupArray, with its own live parameters and per-box results
+ *   - copy of the model structure, with its own mortality, diet and catch totals
+ * Everything starts from the main thread's values. After the parallel boxes, each
+ * thread's totals are added to the main totals (thread 1 first, then 2, ...).
+ * Tracers, box arrays and the other model state stay shared: each box only
+ * writes its own entries.
+ *
+ * The additions happen in a different order from the serial loop, so results
+ * agree to rounding error rather than bit for bit.
+ */
+#ifdef _OPENMP
+#include <omp.h>
+
+static int tsan_region_start, tsan_copies_done, tsan_region_end;
+
+/* Per-box working values handed from the main thread to the other threads */
+typedef struct {
+	double sporosity, surf_stress, wcLayerThick, smLayerThick, iceLayerThick;
+	double Susp_Sed, DRdepth, O2depth, newO2depth, current_layer_sed, eddy_strength,
+		BioirrigEnh, BioturbEnh, Turbatn_contribs, Irrig_contribs, cell_depth,
+		H2Otemp, current_SALT, current_PH, Bact_stim, current_depth, area_reef, area_flat, LocalRugosity,
+		area_canyon, area_box, area_soft, current_ARAG, current_WIND;
+	double r_DL, r_DR, r_DC, r_DON, r_DSi, K_nit, R_0, R_D;
+	double RecycledNHglobal, wcFlux2global, wcFlux3global, wcFlux2aglobal, wcFlux3aglobal,
+		wcFlux4global, smFlux2global, epiFlux2global, wcFishingGlobal, epiFishingGlobal;
+	int it_count, waterboundary;
+} BoxWorkingValues;
+
+/* One functional group's live parameters and per-box results, owned by one thread */
+typedef struct {
+	double *speciesParams;
+	double **cohortSpeciesParams;
+	double *scaled_C, *scaled_mum, *CLEAR, *dead, *deadGlobal;
+	long double *GrazeLive, **preyEaten, ***preyEatenGlobal;
+	double **grow;	/* vertebrates only */
+	double *releaseNH, *uptakeNH, *prodnDR, *prodnDL, *growth, *mortality, *grazing, *lysis, *transDR;	/* invertebrates only */
+} GroupWorkArrays;
+
+/* Everything one extra thread owns */
+typedef struct {
+	int allocated;
+	MSEBoxModel model;
+	FunctionalGroupStruct *groups;
+	GroupWorkArrays *group_arrays;
+	BoxWorkArrays arrays;
+	/* Totals this thread adds into, summed into the main model after the parallel boxes */
+	double **calcMnum, ***calcMnumPerPred, **calcMLinearMort, **calcMQuadMort, **calcMPredMort,
+		**calcELinearMort, **calcFnum, ****calcTrackedMort, *****calcTrackedPredMort, **FCcaught;
+	double ***FCcaughttemp;
+} BoxThreadWorkspace;
+
+static BoxThreadWorkspace *thread_workspaces = NULL;
+static int num_thread_workspaces = 0;
+
+/* Main thread state captured just before each parallel stage */
+static MSEBoxModel *main_model = NULL;
+static FunctionalGroupStruct *main_groups = NULL;
+static BoxWorkArrays main_arrays;
+static BoxWorkingValues main_values;
+
+static void Save_Box_Working_Values(BoxWorkingValues *values) {
+	values->sporosity = sporosity;
+	values->surf_stress = surf_stress;
+	values->wcLayerThick = wcLayerThick;
+	values->smLayerThick = smLayerThick;
+	values->iceLayerThick = iceLayerThick;
+	values->Susp_Sed = Susp_Sed;
+	values->DRdepth = DRdepth;
+	values->O2depth = O2depth;
+	values->newO2depth = newO2depth;
+	values->current_layer_sed = current_layer_sed;
+	values->eddy_strength = eddy_strength;
+	values->BioirrigEnh = BioirrigEnh;
+	values->BioturbEnh = BioturbEnh;
+	values->Turbatn_contribs = Turbatn_contribs;
+	values->Irrig_contribs = Irrig_contribs;
+	values->cell_depth = cell_depth;
+	values->H2Otemp = H2Otemp;
+	values->current_SALT = current_SALT;
+	values->current_PH = current_PH;
+	values->Bact_stim = Bact_stim;
+	values->current_depth = current_depth;
+	values->area_reef = area_reef;
+	values->area_flat = area_flat;
+	values->LocalRugosity = LocalRugosity;
+	values->area_canyon = area_canyon;
+	values->area_box = area_box;
+	values->area_soft = area_soft;
+	values->current_ARAG = current_ARAG;
+	values->current_WIND = current_WIND;
+	values->r_DL = r_DL;
+	values->r_DR = r_DR;
+	values->r_DC = r_DC;
+	values->r_DON = r_DON;
+	values->r_DSi = r_DSi;
+	values->K_nit = K_nit;
+	values->R_0 = R_0;
+	values->R_D = R_D;
+	values->RecycledNHglobal = RecycledNHglobal;
+	values->wcFlux2global = wcFlux2global;
+	values->wcFlux3global = wcFlux3global;
+	values->wcFlux2aglobal = wcFlux2aglobal;
+	values->wcFlux3aglobal = wcFlux3aglobal;
+	values->wcFlux4global = wcFlux4global;
+	values->smFlux2global = smFlux2global;
+	values->epiFlux2global = epiFlux2global;
+	values->wcFishingGlobal = wcFishingGlobal;
+	values->epiFishingGlobal = epiFishingGlobal;
+	values->it_count = it_count;
+	values->waterboundary = waterboundary;
+}
+
+static void Load_Box_Working_Values(const BoxWorkingValues *values) {
+	sporosity = values->sporosity;
+	surf_stress = values->surf_stress;
+	wcLayerThick = values->wcLayerThick;
+	smLayerThick = values->smLayerThick;
+	iceLayerThick = values->iceLayerThick;
+	Susp_Sed = values->Susp_Sed;
+	DRdepth = values->DRdepth;
+	O2depth = values->O2depth;
+	newO2depth = values->newO2depth;
+	current_layer_sed = values->current_layer_sed;
+	eddy_strength = values->eddy_strength;
+	BioirrigEnh = values->BioirrigEnh;
+	BioturbEnh = values->BioturbEnh;
+	Turbatn_contribs = values->Turbatn_contribs;
+	Irrig_contribs = values->Irrig_contribs;
+	cell_depth = values->cell_depth;
+	H2Otemp = values->H2Otemp;
+	current_SALT = values->current_SALT;
+	current_PH = values->current_PH;
+	Bact_stim = values->Bact_stim;
+	current_depth = values->current_depth;
+	area_reef = values->area_reef;
+	area_flat = values->area_flat;
+	LocalRugosity = values->LocalRugosity;
+	area_canyon = values->area_canyon;
+	area_box = values->area_box;
+	area_soft = values->area_soft;
+	current_ARAG = values->current_ARAG;
+	current_WIND = values->current_WIND;
+	r_DL = values->r_DL;
+	r_DR = values->r_DR;
+	r_DC = values->r_DC;
+	r_DON = values->r_DON;
+	r_DSi = values->r_DSi;
+	K_nit = values->K_nit;
+	R_0 = values->R_0;
+	R_D = values->R_D;
+	RecycledNHglobal = values->RecycledNHglobal;
+	wcFlux2global = values->wcFlux2global;
+	wcFlux3global = values->wcFlux3global;
+	wcFlux2aglobal = values->wcFlux2aglobal;
+	wcFlux3aglobal = values->wcFlux3aglobal;
+	wcFlux4global = values->wcFlux4global;
+	smFlux2global = values->smFlux2global;
+	epiFlux2global = values->epiFlux2global;
+	wcFishingGlobal = values->wcFishingGlobal;
+	epiFishingGlobal = values->epiFishingGlobal;
+	it_count = values->it_count;
+	waterboundary = values->waterboundary;
+}
+
+/* Number of values in each total that is summed across threads */
+static size_t Count_calcMnumPerPred(MSEBoxModel *bm) { return 3 * (size_t) bm->K_num_tot_sp * (size_t) bm->K_num_tot_sp; }
+static size_t Count_calcSpeciesTotals(MSEBoxModel *bm) { return 3 * (size_t) bm->K_num_tot_sp; }
+static size_t Count_calcTrackedMort(MSEBoxModel *bm) {
+	return (size_t) K_num_mort_counter * (size_t) bm->K_num_stocks_per_sp
+		* (size_t) (bm->K_num_max_cohort * bm->K_num_max_genetypes) * (size_t) bm->K_num_tot_sp;
+}
+static size_t Count_calcTrackedPredMort(MSEBoxModel *bm) {
+	return 2 * (size_t) bm->K_num_tot_sp * (size_t) bm->K_num_stocks_per_sp
+		* (size_t) (bm->K_num_max_cohort * bm->K_num_max_genetypes) * (size_t) bm->K_num_tot_sp;
+}
+static size_t Count_DIET_check(MSEBoxModel *bm) { return Count_calcTrackedPredMort(bm); }
+static size_t Count_FCcaught(MSEBoxModel *bm) {
+	return (size_t) (bm->K_num_max_cohort * bm->K_num_max_genetypes) * (size_t) bm->K_num_tot_sp;
+}
+static size_t Count_FCcaughttemp(MSEBoxModel *bm) { return Count_FCcaught(bm) * (size_t) bm->K_num_fisheries; }
+
+static void Add_Values(double *to, const double *from, size_t count) {
+	size_t i;
+	for (i = 0; i < count; i++)
+		to[i] += from[i];
+}
+
+/* Allocate one thread's group copies and the arrays that each box rewrites */
+static void Allocate_Group_Work_Arrays(MSEBoxModel *bm, BoxThreadWorkspace *workspace) {
+	int sp;
+	int ncells_x_genes;
+
+	workspace->groups = (FunctionalGroupStruct *) malloc(sizeof(FunctionalGroupStruct) * (size_t) (bm->K_num_tot_sp + 1));
+	workspace->group_arrays = (GroupWorkArrays *) calloc((size_t) bm->K_num_tot_sp, sizeof(GroupWorkArrays));
+	if (workspace->groups == NULL || workspace->group_arrays == NULL)
+		quit("Allocate_Group_Work_Arrays: not enough memory for thread copies of the functional groups\n");
+
+	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+		GroupWorkArrays *group = &workspace->group_arrays[sp];
+		ncells_x_genes = main_groups[sp].numCohortsXnumGenes;
+
+		group->speciesParams = Util_Alloc_Init_1D_Double(tot_prms, 0.0);
+		group->cohortSpeciesParams = Util_Alloc_Init_2D_Double(cohortDepParams, main_groups[sp].numStages, 0.0);
+		group->scaled_C = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+		group->scaled_mum = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+		group->CLEAR = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+		group->dead = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+		group->deadGlobal = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+		group->GrazeLive = Util_Alloc_Init_1D_Long_Double(ncells_x_genes, 0.0);
+		group->preyEaten = Util_Alloc_Init_2D_Long_Double(bm->num_active_habitats, ncells_x_genes, 0.0);
+		group->preyEatenGlobal = Util_Alloc_Init_3D_Long_Double(bm->num_active_habitats, bm->num_active_habitats, ncells_x_genes, 0.0);
+
+		if (main_groups[sp].isVertebrate == TRUE) {
+			group->grow = Util_Alloc_Init_2D_Double((RN_id + 1), ncells_x_genes, 0.0);
+		} else {
+			group->releaseNH = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+			group->uptakeNH = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+			group->prodnDR = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+			group->prodnDL = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+			group->growth = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+			group->mortality = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+			group->grazing = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+			group->lysis = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+			group->transDR = Util_Alloc_Init_1D_Double(ncells_x_genes, 0.0);
+		}
+	}
+}
+
+/* Copy the main groups into this thread's copy, keeping this thread's work arrays */
+static void Refresh_Group_Copies(MSEBoxModel *bm, BoxThreadWorkspace *workspace) {
+	int sp;
+	size_t n, nhab = (size_t) bm->num_active_habitats;
+
+	memcpy(workspace->groups, main_groups, sizeof(FunctionalGroupStruct) * (size_t) (bm->K_num_tot_sp + 1));
+
+	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+		FunctionalGroupStruct *copy = &workspace->groups[sp];
+		const FunctionalGroupStruct *original = &main_groups[sp];
+		GroupWorkArrays *group = &workspace->group_arrays[sp];
+		n = (size_t) original->numCohortsXnumGenes;
+
+		memcpy(group->speciesParams, original->speciesParams, (size_t) tot_prms * sizeof(double));
+		memcpy(group->cohortSpeciesParams[0], original->cohortSpeciesParams[0], (size_t) cohortDepParams * (size_t) original->numStages * sizeof(double));
+		memcpy(group->scaled_C, original->scaled_C, n * sizeof(double));
+		memcpy(group->scaled_mum, original->scaled_mum, n * sizeof(double));
+		memcpy(group->CLEAR, original->CLEAR, n * sizeof(double));
+		memcpy(group->dead, original->dead, n * sizeof(double));
+		memcpy(group->deadGlobal, original->deadGlobal, n * sizeof(double));
+		memcpy(group->GrazeLive, original->GrazeLive, n * sizeof(long double));
+		memcpy(group->preyEaten[0], original->preyEaten[0], nhab * n * sizeof(long double));
+		memcpy(group->preyEatenGlobal[0][0], original->preyEatenGlobal[0][0], nhab * nhab * n * sizeof(long double));
+
+		copy->speciesParams = group->speciesParams;
+		copy->cohortSpeciesParams = group->cohortSpeciesParams;
+		copy->scaled_C = group->scaled_C;
+		copy->scaled_mum = group->scaled_mum;
+		copy->CLEAR = group->CLEAR;
+		copy->dead = group->dead;
+		copy->deadGlobal = group->deadGlobal;
+		copy->GrazeLive = group->GrazeLive;
+		copy->preyEaten = group->preyEaten;
+		copy->preyEatenGlobal = group->preyEatenGlobal;
+
+		if (original->isVertebrate == TRUE) {
+			memcpy(group->grow[0], original->grow[0], (size_t) (RN_id + 1) * n * sizeof(double));
+			copy->grow = group->grow;
+		} else {
+			memcpy(group->releaseNH, original->releaseNH, n * sizeof(double));
+			memcpy(group->uptakeNH, original->uptakeNH, n * sizeof(double));
+			memcpy(group->prodnDR, original->prodnDR, n * sizeof(double));
+			memcpy(group->prodnDL, original->prodnDL, n * sizeof(double));
+			memcpy(group->growth, original->growth, n * sizeof(double));
+			memcpy(group->mortality, original->mortality, n * sizeof(double));
+			memcpy(group->grazing, original->grazing, n * sizeof(double));
+			memcpy(group->lysis, original->lysis, n * sizeof(double));
+			memcpy(group->transDR, original->transDR, n * sizeof(double));
+			copy->releaseNH = group->releaseNH;
+			copy->uptakeNH = group->uptakeNH;
+			copy->prodnDR = group->prodnDR;
+			copy->prodnDL = group->prodnDL;
+			copy->growth = group->growth;
+			copy->mortality = group->mortality;
+			copy->grazing = group->grazing;
+			copy->lysis = group->lysis;
+			copy->transDR = group->transDR;
+		}
+	}
+}
+
+static void Allocate_Thread_Totals(MSEBoxModel *bm, BoxThreadWorkspace *workspace) {
+	int ncohorts_x_genes = bm->K_num_max_cohort * bm->K_num_max_genetypes;
+
+	/* Same shapes as AllocateArrayMemory() */
+	workspace->calcMnum = Util_Alloc_Init_2D_Double(3, bm->K_num_tot_sp, 0.0);
+	workspace->calcMnumPerPred = Util_Alloc_Init_3D_Double(3, bm->K_num_tot_sp, bm->K_num_tot_sp, 0.0);
+	workspace->calcMLinearMort = Util_Alloc_Init_2D_Double(3, bm->K_num_tot_sp, 0.0);
+	workspace->calcMQuadMort = Util_Alloc_Init_2D_Double(3, bm->K_num_tot_sp, 0.0);
+	workspace->calcMPredMort = Util_Alloc_Init_2D_Double(3, bm->K_num_tot_sp, 0.0);
+	workspace->calcELinearMort = Util_Alloc_Init_2D_Double(3, bm->K_num_tot_sp, 0.0);
+	workspace->calcFnum = Util_Alloc_Init_2D_Double(3, bm->K_num_tot_sp, 0.0);
+	workspace->calcTrackedMort = Util_Alloc_Init_4D_Double(K_num_mort_counter, bm->K_num_stocks_per_sp, ncohorts_x_genes, bm->K_num_tot_sp, 0.0);
+	workspace->calcTrackedPredMort = Util_Alloc_Init_5D_Double(2, bm->K_num_tot_sp, bm->K_num_stocks_per_sp, ncohorts_x_genes, bm->K_num_tot_sp, 0.0);
+	workspace->FCcaught = (double **) alloc2d(ncohorts_x_genes, bm->K_num_tot_sp);
+	workspace->FCcaughttemp = (double ***) alloc3d(ncohorts_x_genes, bm->K_num_fisheries, bm->K_num_tot_sp);
+}
+
+static void Zero_Thread_Totals(MSEBoxModel *bm, BoxThreadWorkspace *workspace) {
+	memset(workspace->calcMnum[0], 0, Count_calcSpeciesTotals(bm) * sizeof(double));
+	memset(workspace->calcMnumPerPred[0][0], 0, Count_calcMnumPerPred(bm) * sizeof(double));
+	memset(workspace->calcMLinearMort[0], 0, Count_calcSpeciesTotals(bm) * sizeof(double));
+	memset(workspace->calcMQuadMort[0], 0, Count_calcSpeciesTotals(bm) * sizeof(double));
+	memset(workspace->calcMPredMort[0], 0, Count_calcSpeciesTotals(bm) * sizeof(double));
+	memset(workspace->calcELinearMort[0], 0, Count_calcSpeciesTotals(bm) * sizeof(double));
+	memset(workspace->calcFnum[0], 0, Count_calcSpeciesTotals(bm) * sizeof(double));
+	memset(workspace->calcTrackedMort[0][0][0], 0, Count_calcTrackedMort(bm) * sizeof(double));
+	memset(workspace->calcTrackedPredMort[0][0][0][0], 0, Count_calcTrackedPredMort(bm) * sizeof(double));
+	memset(workspace->FCcaught[0], 0, Count_FCcaught(bm) * sizeof(double));
+	memset(workspace->arrays.DIET_check[0][0][0][0], 0, Count_DIET_check(bm) * sizeof(double));
+}
+
+/**
+ * \brief Whether the middle water boxes can be handed to several threads.
+ *
+ * Only the model options the thread copies cover are allowed; anything else
+ * keeps the original serial loop.
+ */
+int Box_Biology_Can_Run_In_Parallel(MSEBoxModel *bm) {
+	int b;
+
+	if (omp_get_max_threads() < 2)
+		return 0;
+	if (bm->last_box - bm->first_box < 2)
+		return 0;
+	if (bm->flag_fisheries_on || bm->track_contaminants || bm->track_atomic_ratio || bm->ice_on
+			|| bm->external_populations || bm->flagdietcheck || bm->debug)
+		return 0;
+	for (b = bm->first_box + 1; b < bm->last_box; b++) {
+		if (bm->boxes[b].type == LAND)
+			return 0;
+	}
+	return 1;
+}
+
+/**
+ * \brief Called by the main thread just before the parallel boxes.
+ */
+void Box_Biology_Parallel_Begin(MSEBoxModel *bm) {
+	int nthreads = omp_get_max_threads();
+
+	if (thread_workspaces == NULL) {
+		thread_workspaces = (BoxThreadWorkspace *) calloc((size_t) nthreads, sizeof(BoxThreadWorkspace));
+		if (thread_workspaces == NULL)
+			quit("Box_Biology_Parallel_Begin: not enough memory for %d thread workspaces\n", nthreads);
+		num_thread_workspaces = nthreads;
+	}
+	if (nthreads > num_thread_workspaces)
+		quit("Box_Biology_Parallel_Begin: thread count rose from %d to %d during the run\n", num_thread_workspaces, nthreads);
+
+	main_model = bm;
+	main_groups = FunctGroupArray;
+	Ecology_Get_Box_Work_Arrays(&main_arrays);
+	Save_Box_Working_Values(&main_values);
+	TSAN_RELEASE(&tsan_region_start);
+}
+
+/* Give one extra thread its own copy of everything the box code changes */
+static void Copy_Main_State_To_Thread(MSEBoxModel *bm, BoxThreadWorkspace *workspace) {
+	if (!workspace->allocated) {
+		Ecology_Allocate_Box_Work_Arrays(bm);
+		Ecology_Get_Box_Work_Arrays(&workspace->arrays);
+		Allocate_Group_Work_Arrays(bm, workspace);
+		Allocate_Thread_Totals(bm, workspace);
+		workspace->allocated = 1;
+	}
+
+	Ecology_Set_Box_Work_Arrays(&workspace->arrays);
+	Ecology_Copy_Box_Work_Arrays(bm, &workspace->arrays, &main_arrays);
+	Load_Box_Working_Values(&main_values);
+
+	Refresh_Group_Copies(bm, workspace);
+	FunctGroupArray = workspace->groups;
+
+	workspace->model = *main_model;
+	Zero_Thread_Totals(bm, workspace);
+	workspace->model.calcMnum = workspace->calcMnum;
+	workspace->model.calcMnumPerPred = workspace->calcMnumPerPred;
+	workspace->model.calcMLinearMort = workspace->calcMLinearMort;
+	workspace->model.calcMQuadMort = workspace->calcMQuadMort;
+	workspace->model.calcMPredMort = workspace->calcMPredMort;
+	workspace->model.calcELinearMort = workspace->calcELinearMort;
+	workspace->model.calcFnum = workspace->calcFnum;
+	workspace->model.calcTrackedMort = workspace->calcTrackedMort;
+	workspace->model.calcTrackedPredMort = workspace->calcTrackedPredMort;
+	workspace->model.FCcaught = workspace->FCcaught;
+	memcpy(workspace->FCcaughttemp[0][0], main_model->FCcaughttemp[0][0], Count_FCcaughttemp(bm) * sizeof(double));
+	workspace->model.FCcaughttemp = workspace->FCcaughttemp;
+}
+
+/**
+ * \brief Called by every thread at the start of the parallel region.
+ *
+ * Extra threads point their thread-local state at their own copies, filled
+ * with the main thread's current values. The barrier at the end makes every
+ * thread wait until all copies are made, because the main thread's first box
+ * would otherwise change the values while they are still being copied.
+ */
+void Box_Biology_Thread_Start(MSEBoxModel *bm) {
+	int thread_id = omp_get_thread_num();
+
+	TSAN_ACQUIRE(&tsan_region_start);
+	if (thread_id > 0)
+		Copy_Main_State_To_Thread(bm, &thread_workspaces[thread_id]);
+	TSAN_RELEASE(&tsan_copies_done);
+#pragma omp barrier
+	TSAN_ACQUIRE(&tsan_copies_done);
+}
+
+/**
+ * \brief Called by every thread once it has finished its share of the boxes.
+ */
+void Box_Biology_Thread_End(MSEBoxModel *bm) {
+	(void) bm;
+	TSAN_RELEASE(&tsan_region_end);
+}
+
+/**
+ * \brief The model structure the calling thread should pass to the box code.
+ */
+MSEBoxModel *Box_Biology_Thread_Model(MSEBoxModel *bm) {
+	int thread_id = omp_get_thread_num();
+
+	if (thread_id == 0)
+		return bm;
+	return &thread_workspaces[thread_id].model;
+}
+
+/**
+ * \brief Called by the main thread after the parallel boxes: add each thread's totals.
+ */
+void Box_Biology_Parallel_End(MSEBoxModel *bm) {
+	int thread_id;
+
+	TSAN_ACQUIRE(&tsan_region_end);
+
+	for (thread_id = 1; thread_id < num_thread_workspaces; thread_id++) {
+		BoxThreadWorkspace *workspace = &thread_workspaces[thread_id];
+		if (!workspace->allocated)
+			continue;
+		Add_Values(bm->calcMnum[0], workspace->calcMnum[0], Count_calcSpeciesTotals(bm));
+		Add_Values(bm->calcMnumPerPred[0][0], workspace->calcMnumPerPred[0][0], Count_calcMnumPerPred(bm));
+		Add_Values(bm->calcMLinearMort[0], workspace->calcMLinearMort[0], Count_calcSpeciesTotals(bm));
+		Add_Values(bm->calcMQuadMort[0], workspace->calcMQuadMort[0], Count_calcSpeciesTotals(bm));
+		Add_Values(bm->calcMPredMort[0], workspace->calcMPredMort[0], Count_calcSpeciesTotals(bm));
+		Add_Values(bm->calcELinearMort[0], workspace->calcELinearMort[0], Count_calcSpeciesTotals(bm));
+		Add_Values(bm->calcFnum[0], workspace->calcFnum[0], Count_calcSpeciesTotals(bm));
+		Add_Values(bm->calcTrackedMort[0][0][0], workspace->calcTrackedMort[0][0][0], Count_calcTrackedMort(bm));
+		Add_Values(bm->calcTrackedPredMort[0][0][0][0], workspace->calcTrackedPredMort[0][0][0][0], Count_calcTrackedPredMort(bm));
+		Add_Values(bm->FCcaught[0], workspace->FCcaught[0], Count_FCcaught(bm));
+		Add_Values(DIET_check[0][0][0][0], workspace->arrays.DIET_check[0][0][0][0], Count_DIET_check(bm));
+	}
+}
+
+#else /* not _OPENMP */
+
+int Box_Biology_Can_Run_In_Parallel(MSEBoxModel *bm) {
+	(void) bm;
+	return 0;
+}
+
+#endif /* _OPENMP */

@@ -57,8 +57,7 @@ extern double ***p_fishi, ***Effort_vdistrib, ****p_fish_origi, ***MPAchange, **
 
 extern double ****RegCatch; // From economics library
 
-extern double H2Otemp, tot_dyn_sea_area;
-extern double wcLayerThick, smLayerThick;
+extern double tot_dyn_sea_area;
 
 /*************************************************************************************
  Model  Parameters

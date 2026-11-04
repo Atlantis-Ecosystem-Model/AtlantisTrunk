@@ -224,6 +224,11 @@ static double Calculate_Migration_Proportion_Back(MSEBoxModel *bm, FILE *llogfp,
         migtime2 = 0.0;
     }
      
+    /* Final step of return window - bring everyone home */
+    if ((bm->dayt + dt / 86400.0) >= (back + period)){
+        migtime2 = 1.0;
+    }
+    
     /*
      if (sp == 35) {
          fprintf(llogfp,"Time: %e, %s migtime2: %e period: %e back: %e migtemp: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, migtime2, period, back, migtemp);
@@ -326,15 +331,15 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
 					break;
 
 				case AGE_STRUCTURED_BIOMASS:
-					invertPreyAmount = preyavail * preyamt[prey][ij][preychrtstage];
-					VERTfoodAnim += (preyFlag * preyavail * preyamt[prey][ij][preychrtstage]);
+					invertPreyAmount = preyavail * preyamt[prey][ij][preystage];
+					VERTfoodAnim += (preyFlag * preyavail * preyamt[prey][ij][preystage]);
 
                     /**/
                     if (VERTfoodAnim < 0) {
 						fprintf(llogfp, "Time %e %s-%d on %s-%d in box %d VERTfoodAnim: %e, preyavail: %e, preyamt: %e, preyFlag: %e\n",
 								bm->dayt, FunctGroupArray[sp].groupCode, cohort,
 								FunctGroupArray[prey].groupCode, preystage, ij, VERTfoodAnim, preyavail,
-								preyamt[prey][ij][preychrtstage], preyFlag);
+								preyamt[prey][ij][preystage], preyFlag);
 					}
 					/**/
 
@@ -692,8 +697,6 @@ double Get_Enviro_Move_Scalar(int flag_sensitive_sp, double current_enviro, doub
     double step1, step2, step3, step4;
     double numScalar = 1.0;
     
-    step1 = K_const_sp * exp(current_enviro - min_sp) / (K_const_sp + (exp(current_enviro - min_sp) - 1.0));
-    step2 = K_const_sp * exp(max_sp - current_enviro) / (K_const_sp + (exp(max_sp - current_enviro) - 1.0));
     switch (flag_sensitive_sp) {
         case not_sensitive:  // Nothing to do
             break;
@@ -703,7 +706,8 @@ double Get_Enviro_Move_Scalar(int flag_sensitive_sp, double current_enviro, doub
             }
             break;
         case sensitive_biologistic_window: // Gaussian shape
-            numScalar = 1.0;
+            step1 = K_const_sp * exp(current_enviro - min_sp) / (K_const_sp + (exp(current_enviro - min_sp) - 1.0));
+            step2 = K_const_sp * exp(max_sp - current_enviro) / (K_const_sp + (exp(max_sp - current_enviro) - 1.0));
             step3 = step1 / K_const_sp;
             step4 = step2 / K_const_sp;
             if (step3 > step4) {
@@ -718,7 +722,8 @@ double Get_Enviro_Move_Scalar(int flag_sensitive_sp, double current_enviro, doub
                 numScalar = 0.0;
             break;
         case sensitive_gradual_side: // Flat-top version
-            numScalar = 1.0;
+            step1 = K_const_sp * exp(current_enviro - min_sp) / (K_const_sp + (exp(current_enviro - min_sp) - 1.0));
+            step2 = K_const_sp * exp(max_sp - current_enviro) / (K_const_sp + (exp(max_sp - current_enviro) - 1.0));
             if (current_enviro < min_sp) {
                 numScalar = step1;
             } else if ( current_enviro > max_sp ) {
@@ -733,7 +738,7 @@ double Get_Enviro_Move_Scalar(int flag_sensitive_sp, double current_enviro, doub
             break;
             
     }
-    
+        
     /*
     if(numScalar < 1.0) {
         fprintf(llogfp, "Time: %e %s is environmentally constrained property %d is outside their tolerance levels\n", dayt, FunctGroupArray[sp].groupCode, prop_ID);
@@ -962,8 +967,8 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 
 	/**
     //sp = bm->which_check;
-    sp = 33;
-    if ((sp <= bm->K_num_tot_sp)){
+    sp = 69;
+    if ((sp <= bm->K_num_tot_sp) && (bm->dayt < 30)){
     	if (FunctGroupArray[sp].isVertebrate == TRUE) {
 			for (ij = 0; ij < bm->nbox; ij++) {
 				if (bm->boxes[ij].type != BOUNDARY) {
@@ -978,7 +983,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 			}
     	}
 	}
-	**/
+    **/
     
     if (verbose > 0)
         printf("Doing vertebrate movement\n");
@@ -1142,11 +1147,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                        **/
                         
                         mignum = MIGRATION[sp].DEN[n][qid] * migtime2;
-                        if(bm->track_contaminants){
-                            ContaminantMigrationIn(bm, sp, n, qid, MIGRATION[sp].DEN[n][qid], mignum_actual);
-                        }
-                                                
-                        
+
                         if(!mignum)
                             continue;
                         
@@ -1161,6 +1162,10 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                         oldden = totden[sp][n];
                         totden[sp][n] += mignum_actual;
                         mig_returners[sp] = 1;
+                        
+                        if(bm->track_contaminants){
+                            ContaminantMigrationIn(bm, sp, n, qid, MIGRATION[sp].DEN[n][qid], mignum_actual);
+                        }
                         
                         /**
                         //if(do_debug2){
@@ -1234,18 +1239,14 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                              */
 						}
                         
-						if ((bm->dayt + 2) > (MIGRATION[sp].Return_Now[qid] + MIGRATION[sp].Return_Period[qid])) {
+                        /* Make sure empty if all migrants back */
+                        if ((MIGRATION[sp].Checked[qid] < 1) && (bm->dayt > (MIGRATION[sp].Return_Now[qid] + MIGRATION[sp].Return_Period[qid]))) {
 							if (bm->flagavgmig) {
                                 MIGRATION[sp].SN[n][qid] = 0.0;
                                 MIGRATION[sp].RN[n][qid] = 0.0;
 							}
 							MIGRATION[sp].DEN[n][qid] = 0.0;
-                            
-                            /*
-                            if ((sp == 33) || ((sp > 8) && (sp < 12))) {
-                                fprintf(bm->logFile, "Time: %e reset DEN for %s-%d qid %d to 0 due to time test - Return_Now: %d, Return_Period: %d\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid, MIGRATION[sp].Return_Now[qid], MIGRATION[sp].Return_Period[qid]);
-                            }
-                            */
+                            MIGRATION[sp].Checked[qid] = 1;
 						}
 
                         
@@ -1298,7 +1299,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 
                                 oldsn = VERTinfo[sp][n][SN_id];
                                 stepSN = KWSR_sp * yoy_den;
-                                VERTinfo[sp][n][RN_id] = (oldsn * totden[sp][n] + stepSN) / (totden[sp][n] + yoy_den + small_num);
+                                VERTinfo[sp][n][SN_id] = (oldsn * totden[sp][n] + stepSN) / (totden[sp][n] + yoy_den + small_num);
                                 stepRN = KWRR_sp * yoy_den;
                                 oldrn = VERTinfo[sp][n][RN_id];
                                 VERTinfo[sp][n][RN_id] = (oldrn * totden[sp][n] + stepRN) / (totden[sp][n] + yoy_den + small_num);
@@ -1333,8 +1334,8 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
     /* Movement of vertebrates */
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
         
-        if (verbose > 0)
-            printf("Doing movement for %s\n", FunctGroupArray[sp].groupCode);
+        //if (verbose > 0)
+        //    printf("Doing movement for %s\n", FunctGroupArray[sp].groupCode);
 
         if (FunctGroupArray[sp].isVertebrate == TRUE) {
             
@@ -1584,7 +1585,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                 
                                 if (roc[ij][n] < 0.0) {
                                     
-                                    //fprintf (llogfp, "Time: %e, %s-%d  in box %d has roc < 0 (%e) with roc_wgt: %e, flagroc: %d E1_sp: %e clear: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, roc[ij][n], roc_wgt, bm->flagroc, E1_sp, clear);
+                                    fprintf (llogfp, "Time: %e, %s-%d  in box %d has roc < 0 (%e) with roc_wgt: %e, flagroc: %d E1_sp: %e clear: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, roc[ij][n], roc_wgt, bm->flagroc, E1_sp, clear);
 
                                     if (rocstage >= 0){
                                     	fprintf (llogfp, "Time: %e, %s-%d (stage %d) in box %d has roc < 0 (%e) with refuge_status: %e roc_wgt: %e, flagroc: %d E1_sp: %e clear: %e\n",
@@ -2182,7 +2183,6 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 					if (bm->boxes[ij].type == LAND){
 						if( FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
 
-
 							stock_id = bm->group_stock[sp][ij][0];
 
 							if (init_stock_struct_prop[sp][n][stock_id] == 0) {
@@ -2193,7 +2193,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 									+ small_num);
 							}
                             
-							if(newden[sp][n][0][ij]  < 0){
+							if(newden[sp][n][0][ij] < 0){
 								printf("newDen - %e, stock structure = %e, init stock sturcture = %e\n", newden[sp][n][0][ij], bm->stock_struct_prop[sp][n][stock_id], init_stock_struct_prop[sp][n][stock_id]);
 								quit("Vertebrate movement. Density is less than 0 for group %s, cohort %d in land box %d\n", FunctGroupArray[sp].groupCode, n, ij);
 							}
@@ -2205,7 +2205,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 							}
 						}
 
-					}else if (bm->boxes[ij].type != BOUNDARY) {
+					} else if (bm->boxes[ij].type != BOUNDARY) {
 						for (k = 0; k < bm->boxes[ij].nz; k++) {
 							stock_id = bm->group_stock[sp][ij][k];
 
@@ -2413,12 +2413,12 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                         for (ij = 0; ij < bm->nbox; ij++) {
                             bm->recruit_hdistrib[ngene][ij][sp] /= (totad[ngene] + small_num);
                             
-                            /**/
+                            /**
                             //if(sp == bm->which_check){
                             if (sp == 23) {
                                 fprintf(llogfp,"movement.c line 2358 Time: %e, %s box-%d rechdistrib: %e (orig: %e)\n", bm->dayt, FunctGroupArray[sp].groupCode, ij, bm->recruit_hdistrib[ngene][ij][sp], bm->recruit_hdistrib_orig[ngene][ij][sp]);
                             }
-                            /**/
+                            **/
                             
 
                         }
@@ -2941,8 +2941,8 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
     
     /**
     //sp = bm->which_check;
-    sp = 33;
-    if (sp <= bm->K_num_tot_sp){
+    sp = 69;
+    if ((sp <= bm->K_num_tot_sp) && (bm->dayt < 30)){
         if (FunctGroupArray[sp].isVertebrate == TRUE) {
             for (ij = 0; ij < bm->nbox; ij++) {
                 if (bm->boxes[ij].type != BOUNDARY) {
@@ -3338,8 +3338,9 @@ void Ecology_Invert_Migration(MSEBoxModel *bm, double dt, FILE *llogfp) {
 
                         totboxden[invert_biosum+cohort] += migbiom;
 
-                        if ((bm->dayt + 2) > (MIGRATION[sp].Return_Now[qid] + migperiod)) {
+                        if ((MIGRATION[sp].Checked[qid] < 1) && ((bm->dayt) > (MIGRATION[sp].Return_Now[qid] + migperiod))) {
                             MIGRATION[sp].DEN[cohort][qid] = 0.0;
+                            MIGRATION[sp].Checked[qid] = 1;
                         }
                         
                         /*
@@ -3469,17 +3470,17 @@ void Ecology_Invert_Migration(MSEBoxModel *bm, double dt, FILE *llogfp) {
                                 }
                             }
                             
-                            /*
-                            if(sp_debug == 2){
+                            /**
+                            //if(sp_debug == 2){
                                 fprintf(llogfp,"%s enviro_depend: %d, flagtempdepend: %d, current_enviro: %e, min_temp_sp: %e, max_temp_sp: %e\n",
-                                    FunctGroupArray[sp].groupCode, enviro_depend, bm->flagtempdepend, current_enviro, min_temp_sp, max_temp_sp);
+                                    FunctGroupArray[sp].groupCode, enviro_depend, bm->flagtempdepend_move, current_enviro, min_temp_sp, max_temp_sp);
                                 fprintf(llogfp,"%s flagsaltdepend: %d, current_enviro: %e, min_salt_sp: %e, max_salt_sp: %e\n",
                                     FunctGroupArray[sp].groupCode, bm->flagsaltdepend, current_enviro, min_salt_sp, max_salt_sp);
                                 fprintf(llogfp,"%s flagO2depend: %d,  min_O2_sp: %e\n",
                                     FunctGroupArray[sp].groupCode,  bm->flagO2depend, min_O2_sp);
 
                             }
-                            */
+                            **/
                             
                             /* Total up the new proportions just to make sure */
                             totboxden[invert_propsum] += newden[sp][cohort][0][ij];
@@ -3593,7 +3594,7 @@ void Ecology_Invert_Migration(MSEBoxModel *bm, double dt, FILE *llogfp) {
                     fprintf(llogfp, "Time: %e, %s total end biom: %e (%e of orig)\n", bm->dayt, FunctGroupArray[sp].groupCode, totamt, totamt / origamt);
 
                 }
-                */
+                **/
                 
                 /** For animals in the water column do any vertical movement necessary **/
                 if (FunctGroupArray[fgIndex].habitatType != EPIFAUNA) {
@@ -3674,12 +3675,12 @@ void Ecology_Invert_Migration(MSEBoxModel *bm, double dt, FILE *llogfp) {
 
                     fprintf(llogfp, "Time: %e, %s total end biom: %e (%e of orig)\n", bm->dayt, FunctGroupArray[sp].groupCode, totamt, totamt / origamt);
 				}
-                 */
+                **/
 			}
 		}
         
         
-        if(bm->flagenviro_warn & cells_impacted) {
+        if(bm->flagenviro_warn && cells_impacted) {
             fprintf(llogfp, "Time: %e %s is environmemtally constrained in %d of %d cells (box*layer*cohort combos)\n", bm->dayt, FunctGroupArray[sp].groupCode, cells_impacted, cells_checked);
         }
 	}
@@ -4405,6 +4406,8 @@ double Check_Conditions(MSEBoxModel *bm, int sp, int n, int ij, int k, double **
     int salt_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagSaltSensitive_id]);
     int stage = FunctGroupArray[sp].cohort_stage[n];
     
+    double scalar1 = 1.0, scalar2 = 1.0, scalar3 = 1.0;
+    
     if(!bm->flagtempdepend_move) { // Have turned off temperature dependent movement
         if(temp_sensitive_sp && bm->newmonth) {
             warn("Check_Conditions: Time: %e Zeroing temperature sensitivity for movement of %s even though flagtempsensitive %d as flagtempdepend_move = %d\n", bm->dayt, FunctGroupArray[sp].groupCode, temp_sensitive_sp, bm->flagtempdepend_move);
@@ -4424,18 +4427,21 @@ double Check_Conditions(MSEBoxModel *bm, int sp, int n, int ij, int k, double **
     numScalar = Get_Enviro_Move_Scalar(temp_sensitive_sp, current_enviro, K_temp_const_sp, min_temp_sp, max_temp_sp, sp, 1, bm->dayt, bm->logFile);
     newden[sp][n][k][ij] *= numScalar;
     numScalar_final *= numScalar;
+    scalar1 = numScalar;
     
     numScalar = 1.0;
     current_enviro = bm->boxes[ij].tr[k][Salinity_i];
     numScalar = Get_Enviro_Move_Scalar(salt_sensitive_sp, current_enviro, K_salt_const_sp, min_salt_sp, max_salt_sp, sp, 2, bm->dayt, bm->logFile);
     newden[sp][n][k][ij] *= numScalar;
     numScalar_final *= numScalar;
+    scalar2 = numScalar;
 
     numScalar = 1.0;
     current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
     numScalar = Get_Enviro_Move_Scalar(bm->flagO2depend, current_enviro, K_o2_const_sp, min_O2_sp, 10000000000.0, sp, 3, bm->dayt, bm->logFile);
     newden[sp][n][k][ij] *= numScalar;
     numScalar_final *= numScalar;
+    scalar3 = numScalar;
 
     // If ice dependent and no ice present then not present
     if(bm->ice_on) {
@@ -4447,10 +4453,8 @@ double Check_Conditions(MSEBoxModel *bm, int sp, int n, int ij, int k, double **
     }
 
     /**
-    //if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
-    if(sp ==64) {
-        fprintf(llogfp,"Time %e %s-%d box%d-%d enviro_depend: %d newden after enviro %e as current_enviro: %e min_O2_sp: %e\n",
-                bm->dayt, FunctGroupArray[sp].groupCode, n, k, ij, enviro_depend, newden[sp][n][k][ij], current_enviro,  min_O2_sp);
+    if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
+        fprintf(bm->logFile,"Time %e %s-%d box%d-%d newden after enviro %e as current_enviro: %e min_O2_sp: %e (scalar1: %e, scalar2: %e, scalar3: %e)\n", bm->dayt, FunctGroupArray[sp].groupCode, n, k, ij, newden[sp][n][k][ij], current_enviro,  min_O2_sp, scalar1, scalar2, scalar3);
 
     }
     **/

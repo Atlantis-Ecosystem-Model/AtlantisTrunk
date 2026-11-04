@@ -363,7 +363,9 @@ INCLUDES = $(shell pkg-config --cflags libxml-2.0) \
 # Comment out first option and uncomment second option for for OPT if on Apple M1 chips 
 #OPT = -msse2 -mfpmath=sse
 #OPT = -mcpu=apple-m1
-OPT = -mtune=native
+# -O2 matches the frozen baseline binary. -mtune=generic keeps that binary portable.
+# -mtune=native is a separate experiment: it can change instruction selection.
+OPT = -O2 -mtune=generic
 
 # Uncomment this if want to use mac valgrin equivalent
 #OPT = -mtune=native -fsanitize=address -fno-omit-frame-pointer
@@ -377,6 +379,7 @@ DEFINES = -D PROJ4 -D REPLICATE_OLD_RESULTS -D BETH_LOG_FILE_SIZE
 GCCVERSION = $(shell gcc --version | grep ^gcc | sed 's/^.* //g')
 #-Wconversion
 
+<<<<<<< Updated upstream
 #WARN += -Wno-error
 #WARN += -Werror
 
@@ -404,6 +407,11 @@ AM_CFLAGS = $(DEFINES) $(INCLUDE) $(DBG) $(OPT) $(EF) $(PG) $(WARN) \
 # on OS X
 @RASSESS_LINK_ENABLED_TRUE@R_BASE = /Library/Frameworks/R.framework/Resources
 @RASSESS_LINK_ENABLED_TRUE@R_HOME = /Library/Frameworks/R.framework/Resources
+=======
+#fetching repo version from git
+AM_CFLAGS = $(DEFINES) $(INCLUDE) $(DBG) $(OPT) $(EF) $(PG) $(WARN) \
+	-DRELEASE_VERSION=\"$(RELEASE_VERSION)\"
+>>>>>>> Stashed changes
 lib_LIBRARIES = libatlink.a
 libatlink_adir = $(includedir)/atlink
 libatlink_a_SOURCES = atComms.c atlinkconversion.o atlinkexport.c atlinkimport.c atComms.h atlink.h atLinkModule.h
@@ -721,6 +729,62 @@ uninstall-am: uninstall-libLIBRARIES
 .PRECIOUS: Makefile
 
 
+<<<<<<< Updated upstream
+=======
+# External FishMIP-OSP toy-model plug-in project (not part of this repo).
+# ateconomic/atFishMIP_OSP_PluginAdapter.cpp needs its headers, and the
+# final atlantisMerged link needs libfishmip_osp_plugin_models.a built by
+# that project's own CMake build. Override this for your own checkout with:
+#   make FISHMIP_OSP_DIR=/path/to/FishMIP-OSP_Toy_Model
+# or by exporting FISHMIP_OSP_DIR in your shell before running make.
+#FISHMIP_OSP_DIR ?= $(HOME)/Work/climate_change_and_futures/Projects/Fish-MIP/OSP/OSP_code/FishMIP-OSP_Toy_Model
+FISHMIP_OSP_DIR ?= $(abs_top_srcdir)/..
+
+#WARN += -Wno-error
+#WARN += -Werror
+
+# Needed for Mac
+@OS_MACOS_TRUE@	WARN += -Wformat-overflow
+@OS_MACOS_TRUE@	WARN += -Wno-error=pointer-bool-conversion
+@OS_MACOS_TRUE@	WARN += -Wno-nullability-completeness
+@OS_MACOS_TRUE@	WARN += -Wno-nonnull
+
+# Needed for Docker (uncomment if commented out)
+@OS_LINUX_TRUE@	WARN += -Wno-error=unused-but-set-variable
+@OS_LINUX_TRUE@	WARN += -Wno-error=misleading-indentation
+@OS_LINUX_TRUE@	WARN += -Wno-error=implicit-function-declaration
+
+@BROKER_LINK_ENABLED_TRUE@	AM_CFLAGS +=  -D BROKER_LINK_ENABLED -I$(top_srcdir)/atbrokerlink/include
+@BROKER_LINK_ENABLED_FALSE@	AM_CFLAGS += -pedantic  -std=c99
+
+@LINK_ENABLED_TRUE@	AM_CFLAGS += -D LINK_ENABLED -I$(top_srcdir)/atlink/include $(shell pkg-config --cflags libcsoap)
+
+@CLAM_LINK_ENABLED_TRUE@	AM_CFLAGS += -D CLAM_LINK_ENABLED -I$(top_srcdir)/atCLAMLink/include
+
+#if SS3_LINK_ENABLED
+#	AM_CFLAGS += -D SS3_LINK_ENABLED -I$(top_srcdir)/atSS3Link/include
+#endif
+
+@RASSESS_LINK_ENABLED_TRUE@	AM_CFLAGS += -D RASSESS_LINK_ENABLED
+
+# NOTE: nested if statments
+# For the R links
+# A working R installation is required.
+# R must have been built with the '--enable-R-shlib' option enabled to provide the R shared library
+# Ensure the R_HOME environment variable is set appropriately
+#
+# R_HOME = $(shell R RHOME)
+# on Ubuntu Linux
+@OS_LINUX_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_HOME = /usr/lib/R
+@OS_LINUX_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_BASE = /usr/lib/R
+# on OS X
+@OS_MACOS_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_BASE = /Library/Frameworks/R.framework/Resources
+@OS_MACOS_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_HOME = /Library/Frameworks/R.framework/Resources
+
+@RASSESS_LINK_ENABLED_TRUE@	AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
+@RASSESS_LINK_ENABLED_TRUE@	LIBS += -L$(R_BASE)/lib -lR
+
+>>>>>>> Stashed changes
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

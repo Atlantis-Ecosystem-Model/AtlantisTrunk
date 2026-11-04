@@ -34,6 +34,7 @@
 #include <atlantisboxmodel.h>
 #include <atUtilLib.h>
 #include "atHarvestLib.h"
+#include <atFishMIP_OSP_Bridge.h>
 #include <atEconomicLib.h>
 
 /***********************************************************************************
@@ -46,9 +47,9 @@ extern double ****pi, ****friendship_netwk, ****RegCatch, ***linearPI, ***prop_t
 extern int **boats_free, **boats_new, *best_subfleet, *tempTarget, *redo_effort;
 
 /* External parameters */
-extern double H2Otemp, tot_dyn_sea_area, X_CN, k_avgcatch, k_varcatch;
+extern double tot_dyn_sea_area, X_CN, k_avgcatch, k_varcatch;
 
-extern int it_count, waterboundary, flagcatch, flaglbs;
+extern int flagcatch, flaglbs;
 
 //double k_initEffortThresh;
 
@@ -71,7 +72,7 @@ int Read_Economic_Parameters(MSEBoxModel *bm, char *filename);
 
 void Initialise_Subfleets(MSEBoxModel *bm, FILE *llogfp);
 void Read_Econ_Time_Series(char *folderPath, char *name, char *tsname, char *t_units, FisheryTimeSeries **ts);
-void Free_Econ_Time_Series(FisheryTimeSeries **ts);
+//void Free_Econ_Time_Series(FisheryTimeSeries **ts);
 
 /* Economic model routines */
 void Allocate_Catch(MSEBoxModel *bm, FILE *llogfp);

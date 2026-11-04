@@ -67,7 +67,7 @@
 
 static void Scale_Cohort_Linear_Mortality(MSEBoxModel *bm, FILE *llogfp, int speciesIndex, int ageClass, int boxID) {
 	int mL_scale_index = -1;
-	double environScaler = 0.0, scalingFactor = 0.0, scaledmL, origmL;
+	double environScaler = 1.0, scalingFactor = 1.0, scaledmL, origmL;
 
 	mL_scale_index = (int)FunctGroupArray[speciesIndex].cohortSpeciesParams[ageClass][mL_scale_id];
     origmL = FunctGroupArray[speciesIndex].cohortSpeciesParams[ageClass][mL_id];
@@ -77,15 +77,13 @@ static void Scale_Cohort_Linear_Mortality(MSEBoxModel *bm, FILE *llogfp, int spe
 	/* Apply environmental forcing to this group */
 	if (mL_scale_index != -1) {
 		environScaler = tsEval(bm->tslinearMort, mL_scale_index, bm->t);
-        scaledmL = origmL * environScaler;
 	}
 
 	/* Now get the scaling factor to apply */
 	if (numMortChanges[speciesIndex][ageClass][boxID] > 0) {
 		scalingFactor = Util_Get_Accumulative_Change_Scale(bm, numMortChanges[speciesIndex][ageClass][boxID], LinearMortChange[speciesIndex][ageClass][boxID]);
-		scaledmL = origmL * scalingFactor;
-        
 	}
+    scaledmL = origmL * environScaler * scalingFactor;
     FunctGroupArray[speciesIndex].cohortSpeciesParams[ageClass][mL_id] = scaledmL;
 }
 
@@ -136,8 +134,9 @@ void Parameter_Q10(MSEBoxModel *bm, Box *pBox, double dayt, int numwclayer, doub
     bm->current_corr = (H2Otemp - bm->baseline_temp) / 10.0;
 	if (bm->flagq10) {
 		bm->Tcorr = pow(Q10, bm->current_corr);
-	} else
-		bm->Tcorr = 1.0;
+    } else {
+        bm->Tcorr = 1.0;
+    }
 
 	/**
 	 if(verbose)
@@ -150,7 +149,8 @@ void Parameter_Q10(MSEBoxModel *bm, Box *pBox, double dayt, int numwclayer, doub
 
 	/* Calculate the TCorr value for each group */
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-		FunctGroupArray[sp].Tcorr = Get_Tcorr(bm, sp, H2Otemp, &bm->current_corr);
+        FunctGroupArray[sp].current_corr = bm->current_corr;
+		FunctGroupArray[sp].Tcorr = Get_Tcorr(bm, sp, H2Otemp, &FunctGroupArray[sp].current_corr);
         FunctGroupArray[sp].TcorrEff = FunctGroupArray[sp].Tcorr;
         
 		/** Include pH and salinity modifiers if desired **/
@@ -384,7 +384,7 @@ double Get_pHcorr(MSEBoxModel *bm, int sp, double current_ph, int cbox, int clay
         } else if (current_ph >= max_pH){
             ans = pH_const_B;
         } else {
-            ans = pH_const_A + current_ph * (pH_const_B - pH_const_A) / (max_pH - min_pH);
+            ans = pH_const_A + (current_ph - min_pH) * (pH_const_B - pH_const_A) / (max_pH - min_pH); // This was just current_ph but that was an error in the interpolation
         }
         break;
     case quadratic_pH_id:
@@ -521,17 +521,17 @@ void Apply_Q10_Corrections(MSEBoxModel *bm) {
                 
                 TscalarEff = 1.0 / (FunctGroupArray[sp].TcorrEff); // added Caren & Albi -- it will only be applied for temps warmer than the baseline so when TcorrEff is positive
 
-				if ((sp_q10eff == poorer_when_cool) && (bm->current_corr < 0.0)) {
+				if ((sp_q10eff == poorer_when_cool) && (FunctGroupArray[sp].current_corr < 0.0)) {
 					FunctGroupArray[sp].speciesParams[E1_id] = FunctGroupArray[sp].speciesParams[E1orig_id] * Tscalar * FunctGroupArray[sp].Scorr * contamScalar;
 					FunctGroupArray[sp].speciesParams[E2_id] = FunctGroupArray[sp].speciesParams[E2orig_id] * Tscalar * FunctGroupArray[sp].Scorr * contamScalar;
 					FunctGroupArray[sp].speciesParams[E3_id] = FunctGroupArray[sp].speciesParams[E3orig_id] * Tscalar * FunctGroupArray[sp].Scorr * contamScalar;
 					FunctGroupArray[sp].speciesParams[E4_id] = FunctGroupArray[sp].speciesParams[E4orig_id] * Tscalar * FunctGroupArray[sp].Scorr * contamScalar;
-				} else if ((sp_q10eff == poorer_when_warm) && (bm->current_corr > 0.0)) {
+				} else if ((sp_q10eff == poorer_when_warm) && (FunctGroupArray[sp].current_corr > 0.0)) {
 					FunctGroupArray[sp].speciesParams[E1_id] = FunctGroupArray[sp].speciesParams[E1orig_id] * Tscalar * FunctGroupArray[sp].Scorr * contamScalar;
 					FunctGroupArray[sp].speciesParams[E2_id] = FunctGroupArray[sp].speciesParams[E2orig_id] * Tscalar * FunctGroupArray[sp].Scorr * contamScalar;
 					FunctGroupArray[sp].speciesParams[E3_id] = FunctGroupArray[sp].speciesParams[E3orig_id] * Tscalar * FunctGroupArray[sp].Scorr * contamScalar;
 					FunctGroupArray[sp].speciesParams[E4_id] = FunctGroupArray[sp].speciesParams[E4orig_id] * Tscalar * FunctGroupArray[sp].Scorr * contamScalar;
-				} else if ((sp_q10eff == versus_baseline) && (bm->current_corr > 0.0)) { // added by Albi
+				} else if ((sp_q10eff == versus_baseline) && (FunctGroupArray[sp].current_corr > 0.0)) { // added by Albi
                     FunctGroupArray[sp].speciesParams[E1_id] = FunctGroupArray[sp].speciesParams[E1orig_id] * TscalarEff * FunctGroupArray[sp].Scorr * contamScalar;
                     FunctGroupArray[sp].speciesParams[E2_id] = FunctGroupArray[sp].speciesParams[E2orig_id] * TscalarEff * FunctGroupArray[sp].Scorr * contamScalar;
                     FunctGroupArray[sp].speciesParams[E3_id] = FunctGroupArray[sp].speciesParams[E3orig_id] * TscalarEff * FunctGroupArray[sp].Scorr * contamScalar;

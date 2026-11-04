@@ -397,7 +397,7 @@ void Water_Column_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo
 	/* Define pool, flux and flag names */
 	double wcFlux, wcFlux1, wcFlux2, wcFlux3, wcFishing;
 
-	int guild, cohort, kij, flag_sp, nf, present_here, spdem, fished_chrt, flagimposecatch, spplank, ct;
+	int guild, cohort, kij, flag_sp, nf, present_here, spdem, fished_chrt, flagimposecatch, spplank, ct, basecohort;
 
     double sp_scalar = 0.0, Wgt = 1.0;
 
@@ -562,7 +562,7 @@ void Water_Column_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo
 					case BIOMASS:	/* intentional follow thur */
 					case AGE_STRUCTURED_BIOMASS:
 						for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
-							if (flagimposecatch || initialBiomass[FunctGroupArray[fgIndex].totNTracers[cohort]] > bm->min_pool) {
+ 							if (flagimposecatch || initialBiomass[FunctGroupArray[fgIndex].totNTracers[cohort]] > bm->min_pool) {
 								Calculate_Catch(bm, boxLayerInfo, llogfp, fgIndex, cohort, initialBiomass[FunctGroupArray[fgIndex].totNTracers[cohort]], 0.0,
 										1.0, 1.0, 1.0);
 							}
@@ -656,9 +656,10 @@ void Water_Column_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo
     /* Do scaling of dead due to fishing in one go now */
 	if(bm->scale_all_mortality == TRUE){
 		for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
-			for(cohort=0; cohort<FunctGroupArray[guild].numCohorts; cohort++){
+			for(cohort=0; cohort<FunctGroupArray[guild].numCohortsXnumGenes; cohort++){
 				/* If there is a scalar to apply then grab it now */
-				mortality_scalar = Ecology_Get_Mortality_Scalar(bm, guild, cohort);
+                		basecohort = (int)floor(cohort / FunctGroupArray[guild].numGeneTypes);
+				mortality_scalar = Ecology_Get_Mortality_Scalar(bm, guild, basecohort);
 
 				FunctGroupArray[guild].dead[cohort] = FunctGroupArray[guild].dead[cohort] * mortality_scalar;
 			}
@@ -754,7 +755,10 @@ void Water_Column_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo
 	if (!boxLayerInfo->DIN) {
 		boxLayerInfo->DIN = bm->min_pool;
 		fprintf(llogfp, "Time: %e, box: %d, layer: %d had to reset DIN in watercolumn to minpool as was = 0\n", bm->dayt, bm->current_box, bm->current_layer);
-		warn("Time: %e, box: %d, layer: %d had to reset DIN in watercolumn to minpool as was = 0\n", bm->dayt, bm->current_box, bm->current_layer);
+        if(!lots_warn || (lots_warn && bm->newmonth)){
+            warn("Time: %e, box: %d, layer: %d had to reset DIN in watercolumn to minpool as was = 0\n", bm->dayt, bm->current_box, bm->current_layer);
+        }
+        track_warn++;
 	}
 
 	/**
@@ -1193,7 +1197,7 @@ void Water_Column_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo
 	}
 
 
-	boxLayerInfo->localWCTracers[Chl_a_i] = boxLayerInfo->localWCTracers[Chl_a_i] / X_CHLN;
+	boxLayerInfo->localWCTracers[Chl_a_i] = boxLayerInfo->localWCTracers[Chl_a_i] / bm->X_CHLN;
 
 	/* MPB_PProd */
 	boxLayerInfo->localDiagFlux[Don_Prod_i] += FunctGroupArray[LabDetIndex].solDON + FunctGroupArray[RefDetIndex].solDON
@@ -1392,6 +1396,9 @@ void Water_Column_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo
 
 	}
 
+	/* Loss of ice prey grazed by water column predators from below the ice */
+	Set_Ice_Grazing_Flux(bm, boxLayerInfo);
+
 	return;
 }
 
@@ -1543,7 +1550,10 @@ void Sediment_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, FI
 	if (!DIN) {
 		DIN = bm->min_pool;
 		fprintf(llogfp, "Time: %e, box: %d, layer: %d had to reset DIN in sediment to minpool as was = 0\n", bm->dayt, bm->current_box, bm->current_layer);
-		warn("Time: %e, box: %d, layer: %d had to reset DIN in sediment to minpool as was = 0\n", bm->dayt, bm->current_box, bm->current_layer);
+        if(!lots_warn || (lots_warn && bm->newmonth)){
+            warn("Time: %e, box: %d, layer: %d had to reset DIN in sediment to minpool as was = 0\n", bm->dayt, bm->current_box, bm->current_layer);
+        }
+        track_warn++;
 	}
 
 	/*
@@ -1856,7 +1866,7 @@ void Sediment_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, FI
 		if (FunctGroupArray[guild].isVertebrate == FALSE)
 			boxLayerInfo->localSEDTracers[Chl_a_i] += FunctGroupArray[guild].chl;
 
-	boxLayerInfo->localSEDTracers[Chl_a_i] = boxLayerInfo->localSEDTracers[Chl_a_i] / X_CHLN;
+	boxLayerInfo->localSEDTracers[Chl_a_i] = boxLayerInfo->localSEDTracers[Chl_a_i] / bm->X_CHLN;
 
 	if (it_count == 1) {
 		boxLayerInfo->localDiagTracers[DivCount_i] += DivHere;
@@ -2049,7 +2059,7 @@ void Epibenthic_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, 
 			epiFishing = 0, TotFlux = 0;
 
 	double sp_scalar = 0.0, Wgt = 1.0;
-	int guild, kij, i, flag_sp, nf, ct, flagimposecatch;
+	int guild, kij, i, flag_sp, nf, ct, flagimposecatch, basecohort;
 	int max_flux_id = -1;
 	int flux_model_id = -1;
 	int flux_sp = -1;
@@ -2343,7 +2353,7 @@ void Epibenthic_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, 
                                 bm->Discards[bm->current_box][guild][nf] += (bm->DependDiscardsTot[nf][guild][cohort] * bm->dt * bm->cell_vol);
 
                                 if(FunctGroupArray[guild].groupAgeType == AGE_STRUCTURED){
-                                    FunctGroupArray[guild].SizeNumDiscard[cohort][nf][bm->current_box] += bm->DependDiscardsTot[nf][guild][cohort];
+                                    FunctGroupArray[guild].SizeNumDiscard[cohort][nf][bm->current_box] += (bm->DependDiscardsTot[nf][guild][cohort] * bm->dt * bm->cell_vol);  // Added "* bm->dt * bm->cell_vol" to be consistent with water column box case and CatchSum case
                                     bm->FCdiscard[guild][cohort] += bm->DependDiscardsTot[nf][guild][cohort];
                                 }
                                 boxLayerInfo->DetritusProd[SED][DCdet_id] += bm->DependDiscardsTot[nf][guild][cohort];
@@ -2373,9 +2383,10 @@ void Epibenthic_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, 
 	/* Do scaling of dead due to fishing in one go now */
 	if(bm->scale_all_mortality == TRUE){
 		for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
-			for(cohort=0; cohort<FunctGroupArray[guild].numCohorts; cohort++){
-				/* If there is a scalar to apply then grab it now */
-				mortality_scalar = Ecology_Get_Mortality_Scalar(bm, guild, cohort);
+            for(cohort=0; cohort<FunctGroupArray[guild].numCohortsXnumGenes; cohort++){
+                /* If there is a scalar to apply then grab it now */
+                basecohort = (int)floor(cohort / FunctGroupArray[guild].numGeneTypes);
+				mortality_scalar = Ecology_Get_Mortality_Scalar(bm, guild, basecohort);
 
 				FunctGroupArray[guild].dead[cohort] = FunctGroupArray[guild].dead[cohort] * mortality_scalar;
  			}
@@ -2457,7 +2468,10 @@ void Epibenthic_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, 
 	if (!boxLayerInfo->DIN) {
 		boxLayerInfo->DIN = bm->min_pool;
 		fprintf(llogfp, "Time: %e, box: %d, layer: %d had to reset DIN in epibenthic to minpool as was = 0\n", bm->dayt, bm->current_box, bm->current_layer);
-		warn("Time: %e, box: %d, layer: %d had to reset DIN in epibenthic to minpool as was = 0\n", bm->dayt, bm->current_box, bm->current_layer);
+        if(!lots_warn || (lots_warn && bm->newmonth)){
+            warn("Time: %e, box: %d, layer: %d had to reset DIN in epibenthic to minpool as was = 0\n", bm->dayt, bm->current_box, bm->current_layer);
+        }
+        track_warn++;
 	}
 
 	/**
@@ -2724,7 +2738,7 @@ void Epibenthic_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, 
 											for (ct = 0; ct < FunctGroupArray[guild].numCohortsXnumGenes; ct++){
 												grazeEaten += FunctGroupArray[guild].preyEaten[ct][SED];
 											}
-											grazeEaten *= (boxLayerInfo->localWCTracers[FunctGroupArray[guild].totNTracers[cohort]] / totalBiomass);
+											grazeEaten *= (boxLayerInfo->localSEDTracers[FunctGroupArray[guild].totNTracers[cohort]] / totalBiomass);
 										} else {
 											grazeEaten = FunctGroupArray[guild].preyEaten[cohort][SED];
 										}
@@ -3199,6 +3213,9 @@ void Epibenthic_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, 
 				TotFlux);
 	}
 
+	/* Loss of ice prey grazed from below if the ice reaches down to this bottom cell */
+	Set_Ice_Grazing_Flux(bm, boxLayerInfo);
+
 }
 
 
@@ -3310,7 +3327,7 @@ void Ice_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, FILE *l
 				}
 
 				if (FunctGroupArray[guild].groupAgeType == AGE_STRUCTURED_BIOMASS) {
-					for (cohort = 0; cohort < FunctGroupArray[guild].numCohorts; cohort++) {
+					for (cohort = 0; cohort < FunctGroupArray[guild].numCohortsXnumGenes; cohort++) {
 						PREYinfo[guild][cohort][ICE_BASED] += boxLayerInfo->localICETracers[FunctGroupArray[guild].totNTracers[cohort]]
 								* FunctGroupArray[guild].habitatCoeffs[ICE_BASED];
 					}
@@ -3357,7 +3374,10 @@ void Ice_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, FILE *l
 	if (!boxLayerInfo->DIN) {
 		boxLayerInfo->DIN = bm->min_pool;
 		fprintf(llogfp, "Time: %e, box: %d, layer: %d had to reset DIN in ice to minpool as was = 0\n", bm->dayt, bm->current_box, bm->current_layer);
-		warn("Time: %e, box: %d, layer: %d had to reset DIN in ice to minpool as was = 0\n", bm->dayt, bm->current_box, bm->current_layer);
+        if(!lots_warn || (lots_warn && bm->newmonth)){
+            warn("Time: %e, box: %d, layer: %d had to reset DIN in ice to minpool as was = 0\n", bm->dayt, bm->current_box, bm->current_layer);
+        }
+        track_warn++;
 	}
 
 	/*
@@ -3522,7 +3542,7 @@ void Ice_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, FILE *l
 		if (FunctGroupArray[guild].isVertebrate == FALSE)
 			boxLayerInfo->localICETracers[Chl_a_i] += FunctGroupArray[guild].chl;
 
-	boxLayerInfo->localICETracers[Chl_a_i] = boxLayerInfo->localICETracers[Chl_a_i] / X_CHLN;
+	boxLayerInfo->localICETracers[Chl_a_i] = boxLayerInfo->localICETracers[Chl_a_i] / bm->X_CHLN;
 
 	if (it_count == 1) {
 		boxLayerInfo->localDiagTracers[DivCount_i] += DivHere;
@@ -3581,7 +3601,7 @@ void Ice_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, FILE *l
 		for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
 			if(FunctGroupArray[guild].speciesParams[flag_id]){
 				if (FunctGroupArray[guild].habitatCoeffs[ICE_BASED] > 0 ){
-					iceFlux += boxLayerInfo->localSEDFlux[FunctGroupArray[guild].totNTracers[0]];
+					iceFlux += boxLayerInfo->localICEFlux[FunctGroupArray[guild].totNTracers[0]];
 				}
 			}
 		}
@@ -3992,8 +4012,7 @@ void Reset_Arrays(MSEBoxModel *bm, HABITAT_TYPES habitat_type, int it_count, Box
 	if(bm->track_atomic_ratio == TRUE){
 		for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
 			if (FunctGroupArray[guild].speciesParams[flag_id]){
-				for (cohort = 0; cohort < FunctGroupArray[guild].numCohorts; cohort++) {
-
+				for (cohort = 0; cohort < FunctGroupArray[guild].numCohortsXnumGenes; cohort++) {
 					for (hab = 0; hab < bm->num_active_habitats; hab++) {
 						for(tracerIndex = 0; tracerIndex < num_atomic_id; tracerIndex++){
 							if (it_count == 1){

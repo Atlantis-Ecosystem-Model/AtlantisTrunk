@@ -155,21 +155,30 @@ double Nutrient_Lim(MSEBoxModel *bm, int nut_case, int micro_case, double amt_di
 		double amt_fe, double amt_p, double PRatio, double P0, double P1, double KN_sp, double KS_sp, double KF_sp, double KP_sp) {
 	double hN =0, xx;
 	double PValue = 0.0;
+    
+    /* Sanity check */
+    if(amt_din < 0) {
+        amt_din = 0.0;
+    }
+    if(amt_si < 0) {
+        amt_si = 0.0;
+    }
 
 	/* Do the Phosphorus calculation once */
 	if(bm->track_atomic_ratio == TRUE){
-		if(PRatio < P0)
-			PValue = 0;
-		else if(PRatio > P1)
-			PValue = 0;
-		else
-			PValue = ((P1 - PRatio)/(P1 - P0)) * (amt_p/(KP_sp + amt_p));
+        if(PRatio < P0) {
+            PValue = 0;
+        } else if(PRatio > P1) {
+            PValue = 0;
+        } else {
+            PValue = ((P1 - PRatio)/(P1 - P0)) * (amt_p/(KP_sp + amt_p));
+        }
 
 		if(PRatio == 0){
-			printf("nut_case = %d, micro_case = %d, amt_din = %.20e, amt_si = %.20e, amt_fe = %.20e, KN_sp = %.20e, KS_sp = %.20e, KF_sp = %.20e,KP_sp= %e, PValue= %e\n",
-						nut_case, micro_case, amt_din, amt_si, amt_fe, KN_sp, KS_sp, KF_sp, KP_sp, PValue);
-
+			printf("nut_case = %d, micro_case = %d, amt_din = %.20e, amt_si = %.20e, amt_fe = %.20e, KN_sp = %.20e, KS_sp = %.20e, KF_sp = %.20e,KP_sp= %e, PValue= %e\n", nut_case, micro_case, amt_din, amt_si, amt_fe, KN_sp, KS_sp, KF_sp, KP_sp, PValue);
 			printf("P1 = %e, P0 = %e, PRatio = %e\n", P1, P0, PRatio);
+            fflush(stdout);
+            fflush(stderr);
 			abort();
 		}
 	}
@@ -196,8 +205,8 @@ double Nutrient_Lim(MSEBoxModel *bm, int nut_case, int micro_case, double amt_di
 			break;
 		case WQI_id:
 			if(bm->track_atomic_ratio == TRUE){
-				hN = 2.0 / ((KN_sp + amt_din) / amt_din + (KS_sp + amt_si) / amt_si + 1.0/PValue);
-			}else{
+				hN = 2.0 / ((KN_sp + amt_din) / amt_din + (KS_sp + amt_si) / amt_si + 1.0 / PValue);
+			} else {
 				hN = 2.0 / ((KN_sp + amt_din) / amt_din + (KS_sp + amt_si) / amt_si);
 			}
 			break;
@@ -209,6 +218,14 @@ double Nutrient_Lim(MSEBoxModel *bm, int nut_case, int micro_case, double amt_di
 			break;
 		}
 	} else {
+        /* Sanity check */
+        if(amt_fe < 0) {
+            amt_fe = 0.0;
+        }
+        if(amt_p < 0) {
+            amt_p = 0.0;
+        }
+
 		/* Micro-nutrient limitation */
 		switch (nut_case) {
 		case leibig_id:
@@ -227,8 +244,8 @@ double Nutrient_Lim(MSEBoxModel *bm, int nut_case, int micro_case, double amt_di
 			break;
 		case WQI_id:
 			if(bm->track_atomic_ratio == TRUE){
-				hN = 3.0 / ((KN_sp + amt_din) / amt_din + (KS_sp + amt_si) / amt_si + (KF_sp + amt_fe) / amt_fe + 1.0/PValue);
-			}else{
+				hN = 3.0 / ((KN_sp + amt_din) / amt_din + (KS_sp + amt_si) / amt_si + (KF_sp + amt_fe) / amt_fe + 1.0 / PValue);
+			} else {
 				hN = 3.0 / ((KN_sp + amt_din) / amt_din + (KS_sp + amt_si) / amt_si + (KF_sp + amt_fe) / amt_fe);
 			}
 			break;
@@ -250,8 +267,8 @@ double Nutrient_Lim(MSEBoxModel *bm, int nut_case, int micro_case, double amt_di
 				break;
 			case WQI_id:
 				if(bm->track_atomic_ratio == TRUE){
-					hN = 2.0 / ((KN_sp + amt_din) / amt_din + (KF_sp + amt_fe) / amt_fe + PValue);
-				}else{
+					hN = 2.0 / ((KN_sp + amt_din) / amt_din + (KF_sp + amt_fe) / amt_fe + 1.0 / PValue);
+				} else {
 					hN = 2.0 / ((KN_sp + amt_din) / amt_din + (KF_sp + amt_fe) / amt_fe);
 				}
 				break;
@@ -273,7 +290,7 @@ double Nutrient_Lim(MSEBoxModel *bm, int nut_case, int micro_case, double amt_di
  *
  */
 
-double Light_Lim(MSEBoxModel *bm, int light_case, double amt_irr, double KI_sp, double opt_irr, double prop_daylight, double PBmax_D) {
+double Light_Lim(MSEBoxModel *bm, int light_case, double amt_irr, double KI_sp, double opt_irr, double prop_daylight, double PBmax_D, double this_a) {
 	double hI = 0;
 	double step1 = 0.0;
 	double step2 = 0.0;
@@ -286,7 +303,7 @@ double Light_Lim(MSEBoxModel *bm, int light_case, double amt_irr, double KI_sp, 
 	case irr_adapt_on:
 		hI = min(amt_irr/(KI_sp+opt_irr), 1.0);
 		break;
-	case irr_ice:
+	case irr_ice_v1:
 		/* From Griffith & Spitz 2009
 
 		aB_D = 0.035		Photosynthetic efficiency Lavoie Resolute Passage 2005 (or 0.05 Smith and Herman 1991 (In situ))
@@ -302,6 +319,9 @@ double Light_Lim(MSEBoxModel *bm, int light_case, double amt_irr, double KI_sp, 
 		// Light limitation with photoadaptation
 		hI = (1.0 - exp(step1 * amt_irr / step2)) * exp(-1.0 * opt_irr * amt_irr / step2);
 		break;
+    case irr_ice_v2:
+        hI = tanh(this_a * amt_irr / PBmax_D);
+        break;
 	default:
 		quit("No such light_case defined (%d) - value must be between 0 and 1 currently\n", light_case);
 		break;
@@ -445,6 +465,19 @@ static void Calculate_PreyAvail(MSEBoxModel *bm, FILE *llogfp, int predatorGuild
 		pHscalar = 1.0;
 	}
 
+	/* Zero diet link: the availability below is exactly 0 in every habitat, so the
+	 * prey totals would only gain +0. pSPVERTeat is fixed once the parameters are read. */
+	if (!bm->flag_olddiet && !bm->debug
+			&& !(bm->flag_macro_model && (FunctGroupArray[preyGuildID].groupType == SEAGRASS))
+			&& !(catcheater && bm->flag_fisheries_on)
+			&& _finite((double) pHscalar) && _finite(FunctGroupArray[preyGuildID].pHcorr)
+			&& (bm->pSPVERTeat[predatorGuildID][preyGuildID][chrtstage][FunctGroupArray[preyGuildID].cohort_stage[prey_chrt]] == 0.0)) {
+		for (habitat = WC; habitat <= max_hab; habitat++) {
+			EATINGinfo[preyGuildID][prey_chrt][habitat] = 0.0;
+		}
+		return;
+	}
+
 	/* Piggy back on the habitat loops for the seagrass cohorts */
 	for (habitat = WC; habitat <= max_hab; habitat++) {
 
@@ -461,6 +494,36 @@ static void Calculate_PreyAvail(MSEBoxModel *bm, FILE *llogfp, int predatorGuild
 
 		/* determine biomass available */
 		prey_eat =  prey_avail * pHscalar;
+
+		/* PREYinfo holds each habitat in its own units: WC mg N m-3 water, SED mg N m-3 sediment,
+		 * EPIFAUNA mg N m-2, ICE_BASED mg N m-3 ice - so put the prey on a consistent basis for the predator.
+		 *
+		 * Water column predators (mg N m-3): spread the other habitats over the water cell the predator is in.
+		 * Converted back in Eat() so the amount removed from the prey stays in the prey's own units.
+		 *
+		 * Epibenthic predators (mg N m-2): prey are used as concentrations so the amount eaten is per m-2.
+		 * The water column, sediment and ice prey are already concentrations, the epibenthic prey are
+		 * converted to a concentration over smLayerThick (the epibenthic m-2 / smLayerThick convention).
+		 */
+		if (FunctGroupArray[predatorGuildID].habitatType == EPIFAUNA) {
+			if (habitat == EPIFAUNA)
+				prey_eat /= smLayerThick;
+		} else if (FunctGroupArray[predatorGuildID].habitatType == WC) {
+			switch (habitat) {
+			case EPIFAUNA:
+				prey_eat /= wcLayerThick;
+				break;
+			case SED:
+				prey_eat *= smLayerThick / wcLayerThick;
+				break;
+			case ICE_BASED:
+				prey_eat *= iceLayerThick / wcLayerThick;
+				break;
+			default:
+				break;
+			}
+		}
+
 		EATINGinfo[preyGuildID][prey_chrt][habitat] = (double)prey_eat;
 
 		/**
@@ -524,18 +587,18 @@ static void Calculate_PreyAvail(MSEBoxModel *bm, FILE *llogfp, int predatorGuild
  * Calculate the amount of predator biomass and competiton for ratio dependent fucntional feeding responses
  *
  */
-void Get_Predator_Competition(MSEBoxModel *bm, int sp_id, int cohort, long double *tot_pred, long double *tot_pred_comp_sp, FILE *llogfp) {
+void Get_Predator_Competition(MSEBoxModel *bm, int sp_id, int cohort, long double *tot_pred, long double *tot_pred_comp, FILE *llogfp) {
     double ans_tot_pred = 0.0;
     double ans_tot_pred_comp = 0.0;
-    int predID, pid;
+    int predID, pid, predCohort;
     
     //TODO: FIX the dim_corrections
     double epi_dim_correction = 1.0, sm_dim_correction = 1.0, wc_dim_correction = 1.0;
     
     if (!bm->need_predcomp_params ) { // Just need total predation but not competition
         for (predID = 0; predID < bm->K_num_tot_sp; predID++) {
-            for (cohort = 0; cohort < FunctGroupArray[predID].numCohortsXnumGenes; cohort++) {
-                pid = FunctGroupArray[predID].totNTracers[cohort];
+            for (predCohort = 0; predCohort < FunctGroupArray[predID].numCohortsXnumGenes; predCohort++) {
+                pid = FunctGroupArray[predID].totNTracers[predCohort];
             
                 if ( !bm->current_layer ) { // Need sediment based predators
                     if ( FunctGroupArray[predID].isEpiFauna )
@@ -548,8 +611,11 @@ void Get_Predator_Competition(MSEBoxModel *bm, int sp_id, int cohort, long doubl
                 }
             }
         }
-
+        ans_tot_pred_comp = ans_tot_pred;
     } else { // Need to include predator competition - where it is sum(competition param * pred biomass)
+        
+        quit("Ask development team to code in predator competition fully\n ");
+        
         for (predID = 0; predID < bm->K_num_tot_sp; predID++) {
             if (current_layer_sed > -1) { // Need sediment based predators
                     
@@ -561,7 +627,8 @@ void Get_Predator_Competition(MSEBoxModel *bm, int sp_id, int cohort, long doubl
         }
     }
     
-    *tot_pred = ans_tot_pred_comp;
+    *tot_pred_comp = ans_tot_pred_comp;
+    *tot_pred = ans_tot_pred;
     return;
 }
 
@@ -631,6 +698,56 @@ void Get_Extra_Feed(MSEBoxModel *bm, FILE *llogfp, int sp_id, int cohort, double
     
     return;
     
+}
+
+/**
+ * \brief Scalar to convert an amount eaten into the units the predator's growth is calculated in.
+ *
+ * spGRAZEinfo (after Eat()) holds the amount eaten in the units of the prey's habitat slot, so it can be
+ * removed directly from the prey: WC mg N m-3 water, SED mg N m-3 sediment, EPIFAUNA mg N m-2, ICE_BASED mg N m-3 ice.
+ * Water column predators grow per m-3 of the water cell they are in. Epibenthic predators eat per m-2 (prey used as
+ * concentrations in Calculate_PreyAvail()) and their growth uses m-2 / smLayerThick, which is set back to m-2 when
+ * their growth is multiplied by smLayerThick. Sediment and ice predators only eat in their own habitat so need no conversion.
+ */
+double Get_Graze_To_Pred_Scalar(MSEBoxModel *bm, int pred, int habitat) {
+	double scalar = 1.0;
+
+	switch (FunctGroupArray[pred].habitatType) {
+	case WC:
+		switch (habitat) {
+		case SED:
+			scalar = smLayerThick / wcLayerThick;
+			break;
+		case EPIFAUNA:
+			scalar = 1.0 / wcLayerThick;
+			break;
+		case ICE_BASED:
+			scalar = iceLayerThick / wcLayerThick;
+			break;
+		default:
+			break;
+		}
+		break;
+	case EPIFAUNA:
+		switch (habitat) {
+		case WC:
+			scalar = wcLayerThick / smLayerThick;
+			break;
+		case EPIFAUNA:
+			scalar = 1.0 / smLayerThick;
+			break;
+		case ICE_BASED:
+			scalar = iceLayerThick / smLayerThick;
+			break;
+		default:
+			break;
+		}
+		break;
+	default:
+		break;
+	}
+
+	return scalar;
 }
 
 /**
@@ -770,7 +887,7 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
 
 			if (catcheater && bm->flag_fisheries_on){
 				for (fleet = 0; fleet < bm->K_num_fisheries; fleet++) {
-					bm->groupTotCatch[preyID][kij] = bm->FCcaughttemp[preyID][fleet][kij] * bm->pFLEET[sp_id][fleet];
+					bm->groupTotCatch[preyID][kij] += bm->FCcaughttemp[preyID][fleet][kij] * bm->pFLEET[sp_id][fleet];
 				}
 				if(!bm->flag_olddiet)
 					bm->groupTotCatch[preyID][kij] *= bm->pSPFCeat[sp_id][preyID][cohort][kij];
@@ -954,7 +1071,7 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
 				case eat_minmax:
 
 					rel_scalar = 0.0;
-					for (habitat = EPIFAUNA; habitat >= max_hab; habitat--) {
+					for (habitat = EPIFAUNA; habitat >= 0; habitat--) {
 						if(habitat == WC){
 							catch_addition = CATCHEATINGinfo[preyID][kij];
 						} else {
@@ -985,7 +1102,7 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
                         for (habitat = WC; habitat <= max_hab; habitat++) {
                             spGRAZEinfo[preyID][kij][habitat] = EATINGinfo[preyID][kij][habitat] * EATINGinfo[preyID][kij][habitat] * (double)(scaled_clear / tot_prey_sq);
                         }
-                        spCATCHGRAZEinfo[preyID][kij] = CATCHEATINGinfo[preyID][kij] * CATCHEATINGinfo[preyID][kij] * (double)(scaled_clear / tot_prey);
+                        spCATCHGRAZEinfo[preyID][kij] = CATCHEATINGinfo[preyID][kij] * CATCHEATINGinfo[preyID][kij] * (double)(scaled_clear / tot_prey_sq);
                         scalar = pHscalar / tot_prey_sq;
                         tprey = tot_prey_sq;
                     break;
@@ -1005,20 +1122,27 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
                  **/
 
 				/* Corrections when dealing with epibenthic predators or prey */
-				/* if not epibenthic predator convert epibenthic prey back to m-2 */
-				if (FunctGroupArray[sp_id].habitatType != EPIFAUNA) {
-					if (FunctGroupArray[preyID].habitatType == EPIFAUNA) {
-						spGRAZEinfo[preyID][kij][EPIFAUNA] *= smLayerThick;
+				/* if water column predator convert prey from other habitats back to the units of that habitat
+				 * (undoing the conversion done in Calculate_PreyAvail()) so the amount removed from the prey is correct.
+				 * Done by habitat slot not prey habitatType as some groups (e.g. MICROPHTYBENTHOS) occupy several slots.
+				 */
+				if (FunctGroupArray[sp_id].habitatType == WC) {
+					spGRAZEinfo[preyID][kij][EPIFAUNA] *= wcLayerThick;
+					spGRAZEinfo[preyID][kij][SED] *= wcLayerThick / smLayerThick;
+					if (bm->ice_on && (bm->num_active_habitats > ICE_BASED) && (iceLayerThick > 0.0)) {
+						spGRAZEinfo[preyID][kij][ICE_BASED] *= wcLayerThick / iceLayerThick;
 					}
+				} else if (FunctGroupArray[sp_id].habitatType != EPIFAUNA) {
+					/* Sediment and ice based predators only see prey in their own habitat - no conversion needed */
 				} else {
-					if (FunctGroupArray[preyID].groupType != REF_DET) { /* not 100% sure about this - might be a bug in the original code */
-
-						/* if epibenthic predator convert watercolumn and sediment prey */
-						if (FunctGroupArray[preyID].habitatType != EPIFAUNA) {
-							spGRAZEinfo[preyID][kij][WC] /= wcLayerThick;
-							spGRAZEinfo[preyID][kij][SED] /= smLayerThick;
-						}
-
+					/* if epibenthic predator convert watercolumn, sediment and ice prey to the m-3 of the habitat they are removed from.
+					 * Done by habitat slot for all prey (refractory detritus used to be skipped here, which removed wcLayerThick times
+					 * too much DR from the water column).
+					 */
+					spGRAZEinfo[preyID][kij][WC] /= wcLayerThick;
+					spGRAZEinfo[preyID][kij][SED] /= smLayerThick;
+					if (bm->ice_on && (bm->num_active_habitats > ICE_BASED) && (iceLayerThick > 0.0)) {
+						spGRAZEinfo[preyID][kij][ICE_BASED] /= iceLayerThick;
 					}
 				}
 
@@ -1029,16 +1153,19 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
                  
                  **/
                 
-                /** Update GrazeLive - units in m-3 **/
+                /** Update GrazeLive - units in m-3 (m-2 / smLayerThick for epibenthic predators) **/
 
-				/* Add the epibenthic prey to graze_live in m-3 */
+				/* Add the epibenthic prey to graze_live */
 				if (FunctGroupArray[preyID].groupType != MICROPHTYBENTHOS) {
-					graze_live += spGRAZEinfo[preyID][kij][EPIFAUNA] / smLayerThick;
+					graze_live += spGRAZEinfo[preyID][kij][EPIFAUNA] * Get_Graze_To_Pred_Scalar(bm, sp_id, EPIFAUNA);
 				}
 				if (FunctGroupArray[preyID].groupType != LAB_DET && FunctGroupArray[preyID].groupType != REF_DET && FunctGroupArray[preyID].groupType != CARRION) {
-					/* Add the wc and sed values */
-					graze_live += spGRAZEinfo[preyID][kij][WC];
-					graze_live += spGRAZEinfo[preyID][kij][SED];
+					/* Add the wc, sed and ice values */
+					graze_live += spGRAZEinfo[preyID][kij][WC] * Get_Graze_To_Pred_Scalar(bm, sp_id, WC);
+					graze_live += spGRAZEinfo[preyID][kij][SED] * Get_Graze_To_Pred_Scalar(bm, sp_id, SED);
+					if (bm->num_active_habitats > ICE_BASED) {
+						graze_live += spGRAZEinfo[preyID][kij][ICE_BASED] * Get_Graze_To_Pred_Scalar(bm, sp_id, ICE_BASED);
+					}
 					graze_live += spCATCHGRAZEinfo[preyID][kij];
 				}
 
@@ -1059,7 +1186,7 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
 					if(!_finite(spGRAZEinfo[preyID][kij][habitat] )){
 						printf("In Eat for group %s, cohort %d in box%d-%d habitat %d. Amount of %s-%d eaten is infinite\n",
 								FunctGroupArray[sp_id].groupCode, cohort, bm->current_box, bm->current_layer, habitat, FunctGroupArray[preyID].groupCode, kij);
-                        fprintf(bm->logFile, "In Eat for group %s, cohort %d in box%d-%d habitat %d-%d. Amount of %s eaten is infinite\n", FunctGroupArray[sp_id].groupCode, cohort, bm->current_box, bm->current_layer, habitat, FunctGroupArray[preyID].groupCode, kij);
+                        fprintf(bm->logFile, "In Eat for group %s, cohort %d in box%d-%d habitat %d. Amount of %s-%d eaten is infinite\n", FunctGroupArray[sp_id].groupCode, cohort, bm->current_box, bm->current_layer, habitat, FunctGroupArray[preyID].groupCode, kij);
 						quit("");
 					}
 				}
@@ -1184,9 +1311,9 @@ void Invert_Activities(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TY
 	}
 
 	if (FunctGroupArray[guild].groupAgeType == AGE_STRUCTURED_BIOMASS && cohort == 0)
-		sprintf(code, "j%s", FunctGroupArray[guild].groupCode);
+		snprintf(code, sizeof(code), "j%s", FunctGroupArray[guild].groupCode);
 	else
-		sprintf(code, "%s", FunctGroupArray[guild].groupCode);
+		snprintf(code, sizeof(code),"%s", FunctGroupArray[guild].groupCode);
 
 
     /*
@@ -1203,17 +1330,18 @@ void Invert_Activities(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TY
 	SPgrazeDR = 0.0;
 	SPgrazeDL = 0.0;
 
+	/* Detritus eaten is in the units of the habitat it was eaten from so convert to the predator's units */
 	for (habitat = WC; habitat <  bm->num_active_habitats; habitat++) {
-		SPgrazeDR += spGRAZEinfo[RefDetIndex][0][habitat];
-		SPgrazeDL += spGRAZEinfo[LabDetIndex][0][habitat];
+		SPgrazeDR += spGRAZEinfo[RefDetIndex][0][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat);
+		SPgrazeDL += spGRAZEinfo[LabDetIndex][0][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat);
 	}
 
-	/* Start with grazing on bacteria - in m-3 */
+	/* Start with grazing on bacteria - in m-3 of water (PB) and sediment (BB) - these are what is removed from the bacteria */
 	SPgrazePB = (spGRAZEinfo[LabDetIndex][0][WC] * bact_DL / (DL + small_num) + spGRAZEinfo[RefDetIndex][0][WC] * bact_DR / (DR + small_num)) * PB_scale;
 
 	SPgrazeBB = (spGRAZEinfo[LabDetIndex][0][SED] * sedbact_DL / (DLsed + small_num) + spGRAZEinfo[RefDetIndex][0][SED] * sedbact_DR / (DRsed + small_num)) * BB_scale;
 
-	FunctGroupArray[guild].GrazeLive[cohort] += SPgrazePB + SPgrazeBB;
+	FunctGroupArray[guild].GrazeLive[cohort] += SPgrazePB * Get_Graze_To_Pred_Scalar(bm, guild, WC) + SPgrazeBB * Get_Graze_To_Pred_Scalar(bm, guild, SED);
 
     /* Handle grazing of aquaculture feed */
     if(FunctGroupArray[guild].isCultured || FunctGroupArray[guild].isSupplemented)
@@ -1411,8 +1539,9 @@ void Primary_Production(MSEBoxModel *bm, FILE *llogfp, int sp_id, int micro_case
 	double P0 = FunctGroupArray[sp_id].speciesParams[P_min_internal_id];
 	double P1 = FunctGroupArray[sp_id].speciesParams[P_max_internal_id];
 	double mortality_scalar;
+    double scale_uptake_NO = 1.0, scale_uptake_Si = 1.0, scale_uptake_Fe = 1.0, scale_uptake_NH = 1.0;
     
-    /**/
+    /**
 	//if ((bm->debug == debug_biology_process) && (bm->dayt >= bm->checkstart) && (bm->dayt < bm->checkstop)) {
     if((bm->dayt > 3633) && (FunctGroupArray[sp_id].groupType == TURF) && (bm->current_box == 24)) {
 		fprintf(
@@ -1422,9 +1551,10 @@ void Primary_Production(MSEBoxModel *bm, FILE *llogfp, int sp_id, int micro_case
 			FunctGroupArray[sp_id].speciesParams[KS_id], FunctGroupArray[sp_id].speciesParams[KF_id], FunctGroupArray[sp_id].speciesParams[KI_id], IRR,
 			FunctGroupArray[sp_id].SP_IRR, mum, E_sp, FunctGroupArray[sp_id].speciesParams[KLYS_id],
 			mL_other, SPmax, area_hab, mL_sp);
+        
 
 	}
-    /**/
+    **/
     
 	/* Loop over strata here */
 
@@ -1433,18 +1563,21 @@ void Primary_Production(MSEBoxModel *bm, FILE *llogfp, int sp_id, int micro_case
 			FunctGroupArray[sp_id].speciesParams[KN_id], FunctGroupArray[sp_id].speciesParams[KS_id],
 			FunctGroupArray[sp_id].speciesParams[KF_id], FunctGroupArray[sp_id].speciesParams[KP_id]);
 
-	if(hN_sp <= small_num){
+	if(hN_sp <= small_num && !suppress_runtime_warnings){
+        if(bm->track_atomic_ratio == TRUE) {
+            fprintf(bm->logFile, "group %s is nutrient limited in box %d, layer %d, DIN (NO + NH) = %e, Si = %e, Fe = %e, P = %e\n",  FunctGroupArray[sp_id].groupCode, bm->current_box, bm->current_layer, DIN, Si, Fe, P);
+            warn("group %s is nutrient limited in box %d, layer %d, DIN (NO + NH) = %e, Si = %e, Fe = %e, P = %e\n",  FunctGroupArray[sp_id].groupCode, bm->current_box, bm->current_layer, DIN, Si, Fe, P);
+        } else {
+            fprintf(bm->logFile, "group %s is nutrient limited in box %d, layer %d, DIN (NO + NH) = %e, Si = %e\n",  FunctGroupArray[sp_id].groupCode, bm->current_box, bm->current_layer, DIN, Si);
+            warn("group %s is nutrient limited in box %d, layer %d, DIN (NO + NH) = %e, Si = %e\n",  FunctGroupArray[sp_id].groupCode, bm->current_box, bm->current_layer, DIN, Si);
 
-		fprintf(bm->logFile, "group %s is nutrient limited in box %d, layer %d, DIN (NO + NH) = %e, Si = %e, Fe = %e, P = %e\n",  FunctGroupArray[sp_id].groupCode, bm->current_box, bm->current_layer,
-						DIN, Si, Fe, P);
-		warn("group %s is nutrient limited in box %d, layer %d, DIN (NO + NH) = %e, Si = %e, Fe = %e, P = %e\n",  FunctGroupArray[sp_id].groupCode, bm->current_box, bm->current_layer,
-				DIN, Si, Fe, P);
+        }
 	}
 
 	*sphN = hN_sp;
 
 	prop_daylight = bm->boxes[bm->current_box].prop_light_time;
-	hI_sp = Light_Lim(bm, bm->flaglight, IRR, FunctGroupArray[sp_id].speciesParams[KI_id], FunctGroupArray[sp_id].SP_IRR, prop_daylight, 0.0);
+	hI_sp = Light_Lim(bm, bm->flaglight, IRR, FunctGroupArray[sp_id].speciesParams[KI_id], FunctGroupArray[sp_id].SP_IRR, prop_daylight, 0.0, 1.0);
 
 	/* Calculate pH limitation  - leave out for now as captured through changed growth rates
 	k_pH = FunctGroupArray[sp_id].speciesParams[KpH_id];
@@ -1490,29 +1623,54 @@ void Primary_Production(MSEBoxModel *bm, FILE *llogfp, int sp_id, int micro_case
 			* (FunctGroupArray[sp_id].speciesParams[KN_id]	/ (FunctGroupArray[sp_id].speciesParams[KN_id] + NH))
 			* (1.0 + FunctGroupArray[sp_id].speciesParams[KN_id] / DIN);
 
-	if (lim_case != one_nut_lim)
-		uptakeSi = sp_grow * X_SiN;
-	else
-		uptakeSi = 0.0;
+    if (lim_case != one_nut_lim) {
+        uptakeSi = sp_grow * bm->X_SiN;
+    } else {
+        uptakeSi = 0.0;
+    }
 
-	if (micro_case)
-		uptakeFe = sp_grow * X_FeN;
-	else
-		uptakeFe = 0.0;
+    if (micro_case) {
+        uptakeFe = sp_grow * bm->X_FeN;
+    } else {
+        uptakeFe = 0.0;
+    }
 
-	/* Cap nutrient uptake to what is available */
+	/* Cap nutrient uptake to what is available - this intentionally a max as it is rescaling the NH uptake based on which is the least limiting of the limiting nutients */
 	scale_uptake = 1.0;
-	if (uptakeNH > NH)
-		scale_uptake = NH / uptakeNH;
-	if (uptakeNO > NO)
-		scale_uptake = max(scale_uptake, NO / uptakeNO);
-	if (uptakeSi > Si)
-		scale_uptake = max(scale_uptake, Si / uptakeSi);
-	if (uptakeFe > Fe)
-		scale_uptake = max(scale_uptake, Fe / uptakeFe);
+    if(uptakeNH > 0) {
+        if (uptakeNH > NH) {
+            scale_uptake_NH = NH / uptakeNH;
+        }
+        scale_uptake = min(scale_uptake, scale_uptake_NH);
+        if (uptakeNO > NO) {
+            scale_uptake_NO = max(scale_uptake, NO / uptakeNO);
+        }
+        scale_uptake = min(scale_uptake, scale_uptake_NO);
+        if (uptakeSi > Si) {
+            scale_uptake_Si = max(scale_uptake, Si / uptakeSi);
+        }
+        scale_uptake = min(scale_uptake, scale_uptake_Si);
+        if (micro_case) {
+            if (uptakeFe > Fe) {
+                scale_uptake_Fe = max(scale_uptake, Fe / uptakeFe);
+            }
+            scale_uptake = min(scale_uptake, scale_uptake_Fe);
+        }
+    } else {
+        if (uptakeNH < 0) {
+            uptakeNH = 0.0;
+        }
+    }
 
 	/* Assign uptake */
 	FunctGroupArray[sp_id].uptakeNH[0] = uptakeNH * scale_uptake;
+    
+    /*
+    //if ((bm->dayt >= bm->checkstart) && (bm->checkbox == bm->current_box)) {
+    if (bm->dayt >= bm->checkstart) {
+        fprintf(llogfp, "Time %e box%d-%d %s sp_uptakeNH: %e uptakeNH: %e scale_uptake: %e\n", bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[sp_id].groupCode, FunctGroupArray[sp_id].uptakeNH[0], uptakeNH, scale_uptake);
+    }
+    */
 
 	/* If there is a scalar to apply then grab it now */
 	if(bm->scale_all_mortality == TRUE){
@@ -1520,6 +1678,12 @@ void Primary_Production(MSEBoxModel *bm, FILE *llogfp, int sp_id, int micro_case
 	}else{
 		mortality_scalar = 1.0;
 	}
+    
+    if(bm->flagbayHAB == TRUE){
+        if(HAB_boxi[bm->current_box] > 0) {
+            mortality_scalar *= FunctGroupArray[sp_id].speciesParams[HAB_mort_scalar_id];
+        }
+    }
 
 	/* Calculate mortality and lysis - do before P and C calcs.*/
 	FunctGroupArray[sp_id].mortality[0] = mortality_scalar * ((mS_sp + mL_sp + mE_sp) * sp_biom + cyst_transfer);
@@ -1697,6 +1861,8 @@ void Encystment(MSEBoxModel *bm, FILE *llogfp, int sp_id, double sp_biom, double
 /**
  *	\brief Availability of sediment fauna to epibenthos and pelagos
  *
+ *	Note this writes predator specific (KDEP dependent) values into the shared spPREYinfo, so every predator
+ *	eating sediment prey must call it before Eat() (likewise Calculate_Ice_Prey_Avail() for ice prey).
  */
 void Calculate_Sediment_Prey_Avail(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, int guild, double ***spPREYinfo,
 		double *avail_BB) {
@@ -1729,7 +1895,8 @@ void Calculate_Sediment_Prey_Avail(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo
 						prey == RefDetIndex ||
 						prey == CarrionIndex) {
 
-					biomass = boxLayerInfo->localSEDTracers[FunctGroupArray[prey].totNTracers[prey_chrt]];
+					/* Scale by the habitat coefficient as done when PREYinfo was constructed */
+					biomass = boxLayerInfo->localSEDTracers[FunctGroupArray[prey].totNTracers[prey_chrt]] * FunctGroupArray[prey].habitatCoeffs[SED];
 					avail = 1.0;
 
 					/* Find availability */
@@ -1908,7 +2075,12 @@ void Calculate_Catch(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, FILE *llogfp
 		double propSediment, double propWater) {
 	double biomassToDL, numDead, numInvDead;
 	int nf, stock_id;
-
+    int do_debug = 0;
+    
+    if(do_debug) {
+        fprintf(llogfp, "Time: %e box%d-%d attempting to Calculate_Catch for %s-%d\n", bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[guild].groupCode, cohort);
+    }
+    
 	//FunctGroupArray[guild].dead[cohort] = 0.0;  This removed as was zeroing out density dependent fishing discard effects
 
 	/* Calculate the biomass that is lost due to fishing - either though catch (stored in the bm->FishingResults array), and the amount that is discarded dead
@@ -2274,7 +2446,8 @@ void UpdateTrackedMort(MSEBoxModel *bm, FILE *llogfp, int guildcase, int cohort,
         }
 	}
 
-	biomass_correction = Get_Biomass_Correction(bm, prey, level_id);
+	/* GRAZEinfo is in the units of the habitat the prey was eaten from (see Eat()) so scale by that habitat not the level being processed */
+	biomass_correction = Get_Biomass_Correction(bm, prey, habitat);
 
 	bm->calcMnumPerPred[prey][guildcase][current_id] += (mortality_scalar * GRAZEinfo[prey][prey_chrt][habitat] * biomass_correction);
 	bm->calcTrackedMort[prey][prey_chrt][preystock][ongoingM2_id] += (mortality_scalar * GRAZEinfo[prey][prey_chrt][habitat] * biomass_correction * FunctGroupArray[prey].speciesParams[Mdt_id]);

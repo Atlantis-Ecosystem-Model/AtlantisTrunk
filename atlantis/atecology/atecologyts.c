@@ -173,12 +173,12 @@ void Ecology_Read_LinearMortality_TS(MSEBoxModel *bm, char *key, TimeSeries **ts
  * \brief Setup the links between the variables defined in the linear mortality time series file
  * and each of the functional groups. The resulting indices are stored in the bm->Sp_prms array.
  */
-void Setup_Linear_Mortality_Indicies(MSEBoxModel *bm) {
+void Setup_Linear_Mortality_Indices(MSEBoxModel *bm) {
 	int b, sp;
 	char str[50];
     
     if (verbose > 1)
-        printf("Doing Setup_Linear_Mortality_Indicies\n");
+        printf("Doing Setup_Linear_Mortality_Indices\n");
 
     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		if (FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED || FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED_BIOMASS) {
@@ -233,7 +233,7 @@ void Setup_Linear_Mortality_Indicies(MSEBoxModel *bm) {
 	}
     
     if (verbose > 1)
-        printf("Finishing Setup_Linear_Mortality_Indicies\n");
+        printf("Finishing Setup_Linear_Mortality_Indices\n");
 
     return;
 }
@@ -298,12 +298,12 @@ void Ecology_Read_FSPB_TS(MSEBoxModel *bm, char *key, TimeSeries **ts,
  * \brief Setup the links between the variables defined in the time series file
  * and each of the functional groups. The resulting indices are stored in the bm->Sp_prms array.
  */
-void Setup_Change_Indicies(MSEBoxModel *bm, TimeSeries *ts, int index) {
+void Setup_Change_Indices(MSEBoxModel *bm, TimeSeries *ts, int index) {
 	int b, sp, n;
 	char str[50];
     
     //if(verbose)
-    //    printf("Doing Setup_Change_Indicies\n");
+    //    printf("Doing Setup_Change_Indices\n");
 
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		for(n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++){
@@ -372,7 +372,7 @@ static void Scale_Growth_Rate(MSEBoxModel *bm){
  * 	This function will read in the value that should be added to the FSPB value for each
  * 	vertebrate cohort from the supplied TS file.
  *
- * 	The index of each cohort for each vertebrate is set in Setup_Change_Indicies which is called from initBiology().
+ * 	The index of each cohort for each vertebrate is set in Setup_Change_Indices which is called from initBiology().
  *
  * 	This will set the value in the bm->scaled_FSPB array with the value in bm->FSPB + the value read in.
  *

@@ -1,3 +1,14 @@
+# FishMIP-OSP toy-model plug-in. Its C++ code lives in ../cpp (alongside this
+# atlantis directory). ateconomic/atFishMIP_OSP_PluginAdapter.cpp needs its
+# headers, and the final atlantisMerged link needs
+# cpp/build/libfishmip_osp_plugin_models.a, built with that project's CMake:
+#   cmake -S ../cpp -B ../cpp/build -DCMAKE_BUILD_TYPE=Release
+#   cmake --build ../cpp/build
+# To use a different checkout instead, override with:
+#   make FISHMIP_OSP_DIR=/path/to/FishMIP-OSP_Toy_Model
+# or by exporting FISHMIP_OSP_DIR in your shell before running make.
+FISHMIP_OSP_DIR ?= $(abs_top_srcdir)/..
+
 INCLUDES = $(shell pkg-config --cflags libxml-2.0) \
 	-I$(top_srcdir)/atassess/include -I$(top_srcdir)/atecology/include \
 	-I$(top_srcdir)/ateconomic/include -I$(top_srcdir)/atlantisUtil/include -I$(top_srcdir)/atlantismain/include \
@@ -11,7 +22,9 @@ INCLUDES = $(shell pkg-config --cflags libxml-2.0) \
 # Comment out first option and uncomment second option for for OPT if on Apple M1 chips 
 #OPT = -msse2 -mfpmath=sse
 #OPT = -mcpu=apple-m1
-OPT = -mtune=native
+# -O2 matches the frozen baseline binary. -mtune=generic keeps that binary portable.
+# -mtune=native is a separate experiment: it can change instruction selection.
+OPT = -O2 -mtune=generic
 
 # Uncomment this if want to use mac valgrin equivalent
 #OPT = -mtune=native -fsanitize=address -fno-omit-frame-pointer

@@ -5,7 +5,8 @@ atlantisMergeddir=$(includedir)/atlantismain
 atlantisMerged_SOURCES = atlantismain.c atlantisboxmodel.h
 
 atlantisMerged_LDADD = -latlantisutil -latassess -latphysics -latecology -lateconomic -latmanage -latharvest \
-    -latimplementation -latphysics -latConvertAtlantis -latlantisutil  -lsjwlib -latSS3Link
+    -latimplementation -latphysics -latConvertAtlantis -latlantisutil  -lsjwlib -latSS3Link \
+    -lfishmip_osp_plugin_models
 
 SVNWCPATH = -D'ATLANTIS_WCPATH="$(shell svn info  ../| grep URL | sed  's/URL: //g')"'
 SVNWCDATE = -D'ATLANTIS_WCDATE="$(shell svn info  ../| grep "Last Changed Date:" | sed  's/Last Changed Date: //g')"'
@@ -22,7 +23,8 @@ LIBDIRS = -L$(top_srcdir)/atassess -L$(top_srcdir)/atecology \
 	-L$(top_srcdir)/ateconomic -L$(top_srcdir)/atlantisUtil -L$(top_srcdir)/atlantismain \
 	-L$(top_srcdir)/atmanage -L$(top_srcdir)/atharvest -L$(top_srcdir)/atimplementation \
 	-L$(top_srcdir)/atphysics -L$(top_srcdir)/ConvertAtlantis \
-	-L$(top_srcdir)/sjwlib -L$(top_srcdir)/atSS3Link
+	-L$(top_srcdir)/sjwlib -L$(top_srcdir)/atSS3Link \
+	-L$(FISHMIP_OSP_DIR)/cpp/build
 
 atlantisMerged_DEPENDENCIES =  $(top_srcdir)/atassess/libatassess.a  $(top_srcdir)/atphysics/libatphysics.a \
      $(top_srcdir)/atecology/libatecology.a $(top_srcdir)/ateconomic/libateconomic.a \
@@ -30,9 +32,21 @@ atlantisMerged_DEPENDENCIES =  $(top_srcdir)/atassess/libatassess.a  $(top_srcdi
      $(top_srcdir)/atmanage/libatmanage.a \
      $(top_srcdir)/ConvertAtlantis/libatConvertAtlantis.a \
      $(top_srcdir)/atlantisUtil/libatlantisutil.a $(top_srcdir)/sjwlib/libsjwlib.a $(top_srcdir)/atSS3Link/libatSS3Link.a
-     
+
+# NOTE: libfishmip_osp_plugin_models.a is deliberately NOT listed in
+# atlantisMerged_DEPENDENCIES. Make expands prerequisite lists while parsing,
+# before FISHMIP_OSP_DIR's "?=" default (which Automake moves to the bottom of
+# the generated Makefile) is assigned, so it would expand to "/cpp/build/...".
+# It is safe in LIBDIRS because the link recipe is expanded later. If you
+# rebuild the toy-model library, force a relink (e.g. touch atlantismain.c).
+
 atlantisMerged_LDFLAGS =  $(LIBDIRS) $(shell pkg-config --libs libxml-2.0)
-     
+
+# libateconomic.a contains atFishMIP_OSP_PluginAdapter.cpp (C++), so the final
+# link must be driven by the C++ compiler to pull in the C++ runtime.
+# atlantismain.c itself stays plain C; only this link step changes.
+atlantisMerged_LINK = $(CXX) $(AM_CFLAGS) $(CFLAGS) $(atlantisMerged_LDFLAGS) $(LDFLAGS) -o $@
+
 atlantisMerged_INCLUDES = 	-I$(top_srcdir)/atassess/include -I$(top_srcdir)/atecology/include \
 	-I$(top_srcdir)/ateconomic/include -I$(top_srcdir)/atlantisUtil/include -I$(top_srcdir)/atlantismain/include \
 	-I$(top_srcdir)/atharvest/include -I$(top_srcdir)/atimplementation/include \

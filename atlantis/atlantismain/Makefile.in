@@ -162,8 +162,6 @@ PROGRAMS = $(bin_PROGRAMS)
 am_atlantisMerged_OBJECTS = atlantismain.$(OBJEXT)
 atlantisMerged_OBJECTS = $(am_atlantisMerged_OBJECTS)
 am__DEPENDENCIES_1 =
-atlantisMerged_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(atlantisMerged_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -373,7 +371,9 @@ INCLUDES = $(shell pkg-config --cflags libxml-2.0) \
 # Comment out first option and uncomment second option for for OPT if on Apple M1 chips 
 #OPT = -msse2 -mfpmath=sse
 #OPT = -mcpu=apple-m1
-OPT = -mtune=native
+# -O2 matches the frozen baseline binary. -mtune=generic keeps that binary portable.
+# -mtune=native is a separate experiment: it can change instruction selection.
+OPT = -O2 -mtune=generic
 
 # Uncomment this if want to use mac valgrin equivalent
 #OPT = -mtune=native -fsanitize=address -fno-omit-frame-pointer
@@ -387,6 +387,7 @@ DEFINES = -D PROJ4 -D REPLICATE_OLD_RESULTS -D BETH_LOG_FILE_SIZE
 GCCVERSION = $(shell gcc --version | grep ^gcc | sed 's/^.* //g')
 #-Wconversion
 
+<<<<<<< Updated upstream
 #WARN += -Wno-error
 #WARN += -Werror
 
@@ -414,13 +415,24 @@ AM_CFLAGS = $(DEFINES) $(INCLUDE) $(DBG) $(OPT) $(EF) $(PG) $(WARN) \
 # on OS X
 @RASSESS_LINK_ENABLED_TRUE@R_BASE = /Library/Frameworks/R.framework/Resources
 @RASSESS_LINK_ENABLED_TRUE@R_HOME = /Library/Frameworks/R.framework/Resources
+=======
+#fetching repo version from git
+AM_CFLAGS = $(DEFINES) $(INCLUDE) $(DBG) $(OPT) $(EF) $(PG) $(WARN) \
+	-DRELEASE_VERSION=\"$(RELEASE_VERSION)\"
+>>>>>>> Stashed changes
 atlantisMergeddir = $(includedir)/atlantismain
 atlantisMerged_SOURCES = atlantismain.c atlantisboxmodel.h
 atlantisMerged_LDADD = -latlantisutil -latassess -latphysics \
 	-latecology -lateconomic -latmanage -latharvest \
 	-latimplementation -latphysics -latConvertAtlantis \
+<<<<<<< Updated upstream
 	-latlantisutil -lsjwlib -latSS3Link $(am__append_9) \
 	$(am__append_13) $(am__append_17)
+=======
+	-latlantisutil -lsjwlib -latSS3Link \
+	-lfishmip_osp_plugin_models $(am__append_3) $(am__append_7) \
+	$(am__append_11)
+>>>>>>> Stashed changes
 SVNWCPATH = -D'ATLANTIS_WCPATH="$(shell svn info  ../| grep URL | sed  's/URL: //g')"'
 SVNWCDATE = -D'ATLANTIS_WCDATE="$(shell svn info  ../| grep "Last Changed Date:" | sed  's/Last Changed Date: //g')"'
 #SVNDEV = -D'ATLANTIS_REVISION="$(shell svn info  ../| grep "Last Changed Rev:" | sed  's/Last Changed Rev: //g')"'
@@ -431,7 +443,12 @@ LIBDIRS = -L$(top_srcdir)/atassess -L$(top_srcdir)/atecology \
 	-L$(top_srcdir)/atharvest -L$(top_srcdir)/atimplementation \
 	-L$(top_srcdir)/atphysics -L$(top_srcdir)/ConvertAtlantis \
 	-L$(top_srcdir)/sjwlib -L$(top_srcdir)/atSS3Link \
+<<<<<<< Updated upstream
 	$(am__append_8) $(am__append_12) $(am__append_16)
+=======
+	-L$(FISHMIP_OSP_DIR)/cpp/build $(am__append_2) $(am__append_6) \
+	$(am__append_10)
+>>>>>>> Stashed changes
 atlantisMerged_DEPENDENCIES = $(top_srcdir)/atassess/libatassess.a \
 	$(top_srcdir)/atphysics/libatphysics.a \
 	$(top_srcdir)/atecology/libatecology.a \
@@ -442,9 +459,26 @@ atlantisMerged_DEPENDENCIES = $(top_srcdir)/atassess/libatassess.a \
 	$(top_srcdir)/ConvertAtlantis/libatConvertAtlantis.a \
 	$(top_srcdir)/atlantisUtil/libatlantisutil.a \
 	$(top_srcdir)/sjwlib/libsjwlib.a \
+<<<<<<< Updated upstream
 	$(top_srcdir)/atSS3Link/libatSS3Link.a $(am__append_11) \
 	$(am__append_15) $(am__append_19)
+=======
+	$(top_srcdir)/atSS3Link/libatSS3Link.a $(am__append_5) \
+	$(am__append_9) $(am__append_13)
+
+# NOTE: libfishmip_osp_plugin_models.a is deliberately NOT listed in
+# atlantisMerged_DEPENDENCIES. Make expands prerequisite lists while parsing,
+# before FISHMIP_OSP_DIR's "?=" default (which Automake moves to the bottom of
+# the generated Makefile) is assigned, so it would expand to "/cpp/build/...".
+# It is safe in LIBDIRS because the link recipe is expanded later. If you
+# rebuild the toy-model library, force a relink (e.g. touch atlantismain.c).
+>>>>>>> Stashed changes
 atlantisMerged_LDFLAGS = $(LIBDIRS) $(shell pkg-config --libs libxml-2.0)
+
+# libateconomic.a contains atFishMIP_OSP_PluginAdapter.cpp (C++), so the final
+# link must be driven by the C++ compiler to pull in the C++ runtime.
+# atlantismain.c itself stays plain C; only this link step changes.
+atlantisMerged_LINK = $(CXX) $(AM_CFLAGS) $(CFLAGS) $(atlantisMerged_LDFLAGS) $(LDFLAGS) -o $@
 atlantisMerged_INCLUDES = -I$(top_srcdir)/atassess/include \
 	-I$(top_srcdir)/atecology/include \
 	-I$(top_srcdir)/ateconomic/include \
@@ -551,7 +585,7 @@ clean-binPROGRAMS:
 
 atlantisMerged$(EXEEXT): $(atlantisMerged_OBJECTS) $(atlantisMerged_DEPENDENCIES) $(EXTRA_atlantisMerged_DEPENDENCIES) 
 	@rm -f atlantisMerged$(EXEEXT)
-	$(AM_V_CCLD)$(atlantisMerged_LINK) $(atlantisMerged_OBJECTS) $(atlantisMerged_LDADD) $(LIBS)
+	$(AM_V_GEN)$(atlantisMerged_LINK) $(atlantisMerged_OBJECTS) $(atlantisMerged_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -834,6 +868,64 @@ uninstall-am: uninstall-binPROGRAMS uninstall-library_includeHEADERS \
 .PRECIOUS: Makefile
 
 
+<<<<<<< Updated upstream
+=======
+# FishMIP-OSP toy-model plug-in. Its C++ code lives in ../cpp (alongside this
+# atlantis directory). ateconomic/atFishMIP_OSP_PluginAdapter.cpp needs its
+# headers, and the final atlantisMerged link needs
+# cpp/build/libfishmip_osp_plugin_models.a, built with that project's CMake:
+#   cmake -S ../cpp -B ../cpp/build -DCMAKE_BUILD_TYPE=Release
+#   cmake --build ../cpp/build
+# To use a different checkout instead, override with:
+#   make FISHMIP_OSP_DIR=/path/to/FishMIP-OSP_Toy_Model
+# or by exporting FISHMIP_OSP_DIR in your shell before running make.
+FISHMIP_OSP_DIR ?= $(abs_top_srcdir)/..
+
+#WARN += -Wno-error
+#WARN += -Werror
+
+# Needed for Mac
+@OS_MACOS_TRUE@	WARN += -Wformat-overflow
+@OS_MACOS_TRUE@	WARN += -Wno-error=pointer-bool-conversion
+@OS_MACOS_TRUE@	WARN += -Wno-nullability-completeness
+@OS_MACOS_TRUE@	WARN += -Wno-nonnull
+
+# Needed for Docker (uncomment if commented out)
+@OS_LINUX_TRUE@	WARN += -Wno-error=unused-but-set-variable
+@OS_LINUX_TRUE@	WARN += -Wno-error=misleading-indentation
+@OS_LINUX_TRUE@	WARN += -Wno-error=implicit-function-declaration
+
+@BROKER_LINK_ENABLED_TRUE@	AM_CFLAGS +=  -D BROKER_LINK_ENABLED -I$(top_srcdir)/atbrokerlink/include
+@BROKER_LINK_ENABLED_FALSE@	AM_CFLAGS += -pedantic  -std=c99
+
+@LINK_ENABLED_TRUE@	AM_CFLAGS += -D LINK_ENABLED -I$(top_srcdir)/atlink/include $(shell pkg-config --cflags libcsoap)
+
+@CLAM_LINK_ENABLED_TRUE@	AM_CFLAGS += -D CLAM_LINK_ENABLED -I$(top_srcdir)/atCLAMLink/include
+
+#if SS3_LINK_ENABLED
+#	AM_CFLAGS += -D SS3_LINK_ENABLED -I$(top_srcdir)/atSS3Link/include
+#endif
+
+@RASSESS_LINK_ENABLED_TRUE@	AM_CFLAGS += -D RASSESS_LINK_ENABLED
+
+# NOTE: nested if statments
+# For the R links
+# A working R installation is required.
+# R must have been built with the '--enable-R-shlib' option enabled to provide the R shared library
+# Ensure the R_HOME environment variable is set appropriately
+#
+# R_HOME = $(shell R RHOME)
+# on Ubuntu Linux
+@OS_LINUX_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_HOME = /usr/lib/R
+@OS_LINUX_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_BASE = /usr/lib/R
+# on OS X
+@OS_MACOS_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_BASE = /Library/Frameworks/R.framework/Resources
+@OS_MACOS_TRUE@@RASSESS_LINK_ENABLED_TRUE@	R_HOME = /Library/Frameworks/R.framework/Resources
+
+@RASSESS_LINK_ENABLED_TRUE@	AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
+@RASSESS_LINK_ENABLED_TRUE@	LIBS += -L$(R_BASE)/lib -lR
+
+>>>>>>> Stashed changes
 atlantismain.o:   .FORCE
 
 .FORCE:

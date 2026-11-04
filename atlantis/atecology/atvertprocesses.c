@@ -278,6 +278,7 @@ static void Determine_Fish_Feeding_Prms(MSEBoxModel *bm, int guildcase, double S
 static void Vert_Mortality(MSEBoxModel *bm, int guildcase, int chrt, double SN, double RN, double Biom, double Dens, double Wgt, double *mort, double *waste, FILE *llogfp);
 static void Print_Diagnostic_Grazing(MSEBoxModel *bm, FILE *llogfp, int guildcase, double ***spGRAZEinfo);
 static void Vertebrate_Activities(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitatType, FILE *llogfp, int guildcase, double SN, double RN, double NUMS, int predcase, int chrt, double E1_sp, double E2_sp, double E3_sp, double E4_sp, double PB_scale, double BB_scale, double ***spPREYinfo, double ***spGRAZEinfo, double **spCATCHGRAZEinfo, double ***spSPinfo, double *Growth, double *GrazeLive, double *FRCsp, double *Tot_sp, double *Mort, double *ReleaseNH, double *ProdnDL, double *ProdnDR);
+static void Check_for_Starvation(MSEBoxModel *bm, int guildcase, int cohort, double SN, double RN);
 
 
 /**
@@ -580,7 +581,7 @@ double Avail_Fish(MSEBoxModel *bm, int guildcase, int chrt, int chrtstage, int p
 					} else {
                         if ( !bm->UseBiLogisticFeedingWindow ) {  // Using humped relaitonship with potential skew
                             Kmax_coefft = FunctGroupArray[guildcase].speciesParams[Kmax_coefft_id];
-                            rel_size = SP[prey][bpreychrt][SN_id] / (SN * KUP_SN);
+                            rel_size = SP[prey][bpreychrt][SN_id] / KUP_SN; // This used to be (SN *  KUP_SN) but "SN *" not needed as already in KLP_SN
                             sizeScalar = rel_size * exp(Kmax_coefft * (1.0 - rel_size));
                             
                             /**
@@ -609,12 +610,12 @@ double Avail_Fish(MSEBoxModel *bm, int guildcase, int chrt, int chrtstage, int p
 
                             /*
                             maxavail = KLP_SN + (KUP_SN - KLP_SN) * 0.5;
-                            if (SP[prey][bpreychrt][SN_id] <= (maxavail * SN)){
-                                xmid = (KLP_SN + (maxavail - KLP_SN ) * 0.5) * SN;
+                            if (SP[prey][bpreychrt][SN_id] <= maxavail){  // was (maxavail * SN)
+                                xmid = KLP_SN + (maxavail - KLP_SN ) * 0.5;   // was (KLP_SN + (maxavail - KLP_SN ) * 0.5) * SN but final SN not needed as alrady in maxavail, KLP_SN and KUP_SN
                                 sizeScalar = 1.0 / (1.0 + exp(-Kmax_coefft * (SP[prey][bpreychrt][SN_id] - xmid)));
                             }
-                            if (SP[prey][bpreychrt][SN_id] > (maxavail * SN)){
-                                xmid = (KUP_SN - (KUP_SN - maxavail) * 0.5) * SN;
+                            if (SP[prey][bpreychrt][SN_id] > maxavail * SN){  // was (maxavail * SN)
+                                xmid = (KUP_SN - (KUP_SN - maxavail) * 0.5); // was (KUP_SN - (KUP_SN - maxavail) * 0.5) * SN but final SN not needed as alrady in maxavail, KLP_SN and KUP_SN
                                 sizeScalar = 1.0 / (1.0 + exp(Kmax_coefft * (SP[prey][bpreychrt][SN_id] - xmid)));
                             }
                             */
@@ -887,7 +888,7 @@ void Vert_Mortality(MSEBoxModel *bm, int guildcase, int chrt, double SN, double 
 	*waste = SBtoDR + FDStoDR;
 
 	/* Natural mortality (disease, starvation, implicit predation) */
-    if (bm ->flag_dynamicXRS) {
+    if (bm->flag_dynamicXRS) {
         opt_cond = X_RS * SN; // this is the optimal (maximum) RN
         starving = Kthreshm * exp(-RSstarve * (RN /opt_cond));
     } else {
@@ -904,9 +905,9 @@ void Vert_Mortality(MSEBoxModel *bm, int guildcase, int chrt, double SN, double 
 		starving = 0.0;
 	else {
 		starve_vert[guildcase][bm->current_box] = 1;
-
+        starve_check[guildcase][chrt][bm->current_box] += 1;
 	}
-
+    
 	nums = Dens * bm->cell_vol;
 	nat_mort = (starving + mL + mE + mS + mQ * nums) * nums;
 
@@ -1018,12 +1019,10 @@ double Do_Vertebrate_Living(MSEBoxModel *bm, FILE *llogfp, int guildcase, HABITA
 		else
 			avail_BB = 0.0;
 
-		/* If this is the top layer and ice is active allow grazing into the ice layer */
-		if(bm->ice_on == TRUE){
-			if(level_id == WC && bm->current_layer == bm->boxes[bm->current_box].nz - 1){
-				Calculate_Ice_Prey_Avail(bm, boxLayerInfo, guildcase, spPREYinfo, &avail_Ice_Bact);
-				/* for now ignoring the amount of ice bacteria available in ice - we are not scaling based on nutrient depth  so the avail_Ice_Bact value is ignore */
-			}
+		/* If this layer is directly under the ice allow grazing into the ice layer */
+		if(Is_Ice_Grazing_Layer(bm)){
+			Calculate_Ice_Prey_Avail(bm, boxLayerInfo, guildcase, spPREYinfo, &avail_Ice_Bact);
+			/* for now ignoring the amount of ice bacteria available in ice - we are not scaling based on nutrient depth  so the avail_Ice_Bact value is ignore */
 		}
 
 		/* Do fish feeding and mortality processes */
@@ -1041,8 +1040,9 @@ double Do_Vertebrate_Living(MSEBoxModel *bm, FILE *llogfp, int guildcase, HABITA
 				FunctGroupArray[guildcase].GrazeLive[cohort] = VGrazelive;
                 
                 test_value = VGrowth;
-                if(bm->flag_replicated_old)
+                if(bm->flag_replicated_old) {
                     test_value = FRC_V;
+                }
                 
                 if ((test_value >= 0.0) || !bm->flag_shrinkfat) {   // Should this be a test on test_value not FRC_V? (can FRC_V ever be < 0? Yes if shrinkfat is not on... I think
                     if (bm->flag_dynamicXRS) {
@@ -1055,9 +1055,9 @@ double Do_Vertebrate_Living(MSEBoxModel *bm, FILE *llogfp, int guildcase, HABITA
                         FunctGroupArray[guildcase].grow[cohort][RN_id] = VGrowth - FRC_V * VGrowth;
                     }
                 } else if (bm->flag_shrinkfat && (test_value < 0.0)) { // No flag_shrinkfat check here as will be trapped by first half of if statement regardless
-                    if (bm -> flag_dynamicXRS) {
+                    if (bm->flag_dynamicXRS) {
                         RNcost_sp = FunctGroupArray[guildcase].speciesParams[RNcost_id];
-                        FunctGroupArray[guildcase].grow[cohort][RN_id] = 1/RNcost_sp * VGrowth; // if there is a cost in converting energy to RN, the same inverse cost applies when
+                        FunctGroupArray[guildcase].grow[cohort][RN_id] = 1.0 / RNcost_sp * VGrowth; // if there is a cost in converting energy to RN, the same inverse cost applies when
                     } else {
                         FunctGroupArray[guildcase].grow[cohort][RN_id] = VGrowth;  // Take deficit from the reserve so this represents living off fat
                     }
@@ -1101,6 +1101,14 @@ double Do_Vertebrate_Living(MSEBoxModel *bm, FILE *llogfp, int guildcase, HABITA
 				}
 
 				boxLayerInfo->NutsProd[WC][NH_id] += VreleaseNHchrt;
+                
+                /* Check for starvation */
+                if(bm->newmonth){
+                    if (FunctGroupArray[guildcase].speciesParams[shrinkStarve_id] > 0) {
+                        Check_for_Starvation(bm, guildcase, cohort, spSPinfo[guildcase][cohort][SN_id], spSPinfo[guildcase][cohort][RN_id]);
+                    }
+                    starve_check[guildcase][cohort][bm->current_box] = 0;
+                }
 
 				/* Update global fluxes */
 				boxLayerInfo->DetritusProdGlobal[level_id][WC][DLdet_id] += VprodDLchrt;
@@ -1158,6 +1166,7 @@ double Do_Vertebrate_Living(MSEBoxModel *bm, FILE *llogfp, int guildcase, HABITA
 				TotSP += (spSPinfo[guildcase][cohort][SN_id] + spSPinfo[guildcase][cohort][RN_id]) * spSPinfo[guildcase][cohort][DEN_id] / bm->cell_vol;
 		}
 	}
+
 	if (bm->debug == debug_prey_biology_process && bm->dayt >= bm->checkstart && bm->dayt < bm->checkstop) {
 		fprintf(llogfp, "Do_Vertebrate_Living %d\n", guildcase);
 		Print_Eat_Diagnostics(bm, logfp, guildcase, level_id, 2);
@@ -1276,6 +1285,9 @@ void Vertebrate_Activities(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITA
 		/* Should we check the other habitats? Can ice bacteria be in the water column? What happens when we get melt? */
 		eatIceBact += spGRAZEinfo[LabDetIndex][0][ICE_BASED] * boxLayerInfo->ICEB_DL / (spPREYinfo[LabDetIndex][0][ICE_BASED] + small_num);
 		eatIceBact += spGRAZEinfo[RefDetIndex][0][ICE_BASED] * boxLayerInfo->ICEB_DR / (spPREYinfo[RefDetIndex][0][ICE_BASED] + small_num);
+
+		/* Ice bacteria eaten is per m-3 of ice so convert to per m-3 of the water cell the predator is in */
+		eatIceBact *= Get_Graze_To_Pred_Scalar(bm, guildcase, ICE_BASED);
 	}
 
 	/* Add ref det */
@@ -1288,14 +1300,16 @@ void Vertebrate_Activities(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITA
 	SPgrazeDR = 0.0;
 	SPgrazeDL = 0.0;
 
+	/* Detritus eaten is in the units of the habitat it was eaten from so convert to the predator's units */
 	for (habitat = WC; habitat <  bm->num_active_habitats; habitat++) {
-		SPgrazeDR += spGRAZEinfo[RefDetIndex][0][habitat];
-		SPgrazeDL += spGRAZEinfo[LabDetIndex][0][habitat];
+		SPgrazeDR += spGRAZEinfo[RefDetIndex][0][habitat] * Get_Graze_To_Pred_Scalar(bm, guildcase, habitat);
+		SPgrazeDL += spGRAZEinfo[LabDetIndex][0][habitat] * Get_Graze_To_Pred_Scalar(bm, guildcase, habitat);
 	}
 
+	/* Bacteria removed in their own units (m-3 water and m-3 sediment), predator gains converted to its units */
 	spGRAZEinfo[pelagicBactIndex][0][WC] = eatBactPB;
 	spGRAZEinfo[SedBactIndex][0][SED] = eatBactBB;
-	eatBact = eatBactPB + eatBactBB + eatIceBact;
+	eatBact = eatBactPB * Get_Graze_To_Pred_Scalar(bm, guildcase, WC) + eatBactBB * Get_Graze_To_Pred_Scalar(bm, guildcase, SED) + eatIceBact;
 	FunctGroupArray[guildcase].GrazeLive[chrt] += eatBact;
 
 
@@ -1308,13 +1322,10 @@ void Vertebrate_Activities(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITA
 			for (h = WC; h <  bm->num_active_habitats; h++) {
 				habitat = h;
 
-				/* if this prey is epibenthic scale to get units in m^2 not m^3*/
+				/* Plants eaten are in the units of the habitat they were eaten from so convert to the predator's units
+				 * (the same conversion used when they were added to GrazeLive in Eat()) */
 				for (kij = 0; kij < FunctGroupArray[preyID].numCohortsXnumGenes; kij++) {
-					if (FunctGroupArray[preyID].habitatType == EPIFAUNA){
-						sp_GrazePlant += spGRAZEinfo[preyID][kij][habitat] / smLayerThick;
-					}else{
-						sp_GrazePlant += spGRAZEinfo[preyID][kij][habitat];
-					}
+					sp_GrazePlant += spGRAZEinfo[preyID][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guildcase, habitat);
 				}
 			}
 		}
@@ -1549,6 +1560,67 @@ void Fish_Respiration_DEB(MSEBoxModel *bm, int guildcase, double SN, double RN, 
 
     return;
     
+}
+
+/**
+ * \brief Shrinkage of SN and RN due to starvation - seen in krill and urchins
+ *
+ */
+static void Check_for_Starvation(MSEBoxModel *bm, int guildcase, int cohort, double SN, double RN){
+    int stock_id, final_check;
+    double step1, opt_SN, opt_RN, newSN;
+    double X_RS = FunctGroupArray[guildcase].X_RS[cohort];
+    int shrinkStarve = (int)(FunctGroupArray[guildcase].speciesParams[shrinkStarve_id]);
+    double propDrop = FunctGroupArray[guildcase].speciesParams[shrinkProp_id];
+    int num_steps = (int) (86400.0 / bm->dt);
+    int month_check = 30;
+    double diff_SN = 0.0;
+    double diff_RN = 0.0;
+    
+    month_check *= num_steps;
+    step1 = bm->shrink_tol * ((double)(month_check));
+    final_check = (int)(step1);
+
+    if(starve_check[guildcase][cohort][bm->current_box] > final_check){
+        switch(bm->size_shrinking_type) {
+            case no_shrink: //Noting to do
+                break;
+            case XRS_shrink: // Shrink SN so RB back to optimal
+                if (bm->flag_dynamicXRS) {
+                    // This assumes opt_RN = X_RS * SN
+                    opt_SN = RN / X_RS;
+                } else {
+                    // This is the original version which assumes opt_RN = (1.0 + X_RS) * SN
+                    opt_SN = RN / (1.0 + X_RS);
+                }
+                diff_SN = SN - opt_SN;
+                if(diff_SN < 0.0) {
+                    diff_SN = 0.0;  // As not underweight yet
+                }
+                diff_RN = 0.0; // As based off RN so no change needed
+                break;
+            case incremental_shrink: // Shrink x% per month
+                diff_SN = SN * propDrop;
+                newSN = SN - diff_SN;
+                if (bm->flag_dynamicXRS) {
+                    // This assumes opt_RN = X_RS * SN
+                    opt_RN = X_RS * newSN;
+                } else {
+                    // This is the original version which assumes opt_RN = (1.0 + X_RS) * SN
+                    opt_RN = (1.0 + X_RS) * newSN;
+                }
+                diff_RN = RN - opt_RN;
+                break;
+            default:
+                quit("No such shrinkage case - you set size_shrinking_type to %d but it needs to be %d (no shrinking) or %d (reset based on RN) or %d (incfemental fixed % drops)\n", bm->size_shrinking_type, no_shrink, XRS_shrink, incremental_shrink);
+                break;
+        }
+        
+        /* Update the growth vectors */
+        FunctGroupArray[guildcase].grow[cohort][SN_id] -= diff_SN;
+        FunctGroupArray[guildcase].grow[cohort][RN_id] -= diff_RN;
+    }
+    return ;
 }
 
 static void Print_Diagnostic_Grazing(MSEBoxModel *bm, FILE *llogfp, int guildcase, double ***spGRAZEinfo) {
