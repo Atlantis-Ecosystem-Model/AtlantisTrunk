@@ -276,11 +276,13 @@ int runNextTimeStep(MSEBoxModel *bm){
 
         }
         
-        /* Write spatial diet information - if required
-        if (bm->flagdietcheck && (bm->which_check <= bm->K_num_tot_sp)) {
-            writeBMDietData(bm->ncOdietfid, bm->ncOdietdump, bm);   // Now in txt file instead printed out in atbiolmessage.c
-        }
-        */
+        /* Write spatial diet information - if required */
+        if (bm->flagdietcheck) {
+       		writeBMDietData(bm->ncOdietfid, bm->ncOdietdump, bm);
+       		ncsync(bm->ncOdietfid);
+       		bm->ncOdietdump++;
+   		}
+        
 
 		/* Increment output time */
 		while (bm->tout < bm->t + bm->dt / 2.0)
@@ -710,12 +712,10 @@ int main(int argc, char *argv[]) {
         ncclose(bm.ncOaafid);
     }
 
-    /*
-    if (bm.flagdietcheck && (bm.which_check <= bm.K_num_tot_sp)) {
-        writeBMDietData(bm.ncOdietfid, bm.ncOdietdump, &bm);   // Now in txt file instead printed out in atbiolmessage.c
-        ncclose(bm.ncOdietfid);
-    }
-    */
+    if (bm.flagdietcheck) {
+       writeBMDietData(bm.ncOdietfid, bm.ncOdietdump, &bm);
+       ncclose(bm.ncOdietfid);
+   }
 
 	if (bm.fishout) {
 
@@ -775,7 +775,7 @@ void setupMSEBoxModel(int argc, char *argv[], MSEBoxModel *bm) {
 	double cellvol, ask_t;
 	int ij, traceid, den, rn, sn, fgIndex, i;
 	int fid, fid2 = -1, fid3, fid4, fid5  =-1, fid6 = -1, fid7 = -1, b, k, totname, totnz;
-    //int fid8 = -1;
+    int fid8 = -1;
 	long n = 0;
 	char *progname = argv[0];
 	char endname[] = ".nc";
@@ -1003,8 +1003,8 @@ void setupMSEBoxModel(int argc, char *argv[], MSEBoxModel *bm) {
     //sprintf(bm->ncOAACfname, "%sANNAGECATCH.nc", bm->ncOAACfname);
     strcat(bm->ncOAACfname, "ANNAGECATCH.nc");
 
-    //strncpy(bm->ncODIETfname, bm->ncOfname, (size_t)totname);
-    //sprintf(bm->ncODIETfname, "%sDIET.nc", bm->ncODIETfname);
+   	strncpy(bm->ncODIETfname, bm->ncOfname, (size_t)totname);
+  	strcat(bm->ncODIETfname, "DIET.nc");
 
 	/* Check that all required arguments were present */
 	if (!bm->ncIfname[0] || !bm->ncOfname[0] || !bm->runprmIfname[0] || !bm->forceIfname || !bm->fishprmIfname || !bm->assessprmIfname || !bm->econprmIfname
@@ -1325,17 +1325,19 @@ void setupMSEBoxModel(int argc, char *argv[], MSEBoxModel *bm) {
         }
     }
 
-    /* Open the spatial diet output file - now relaced with text file version
-    printf("Create spatial diet output file\n");
-    ncopts = 0;
-    fid8 =  Util_ncopen(bm->destFolder, bm->ncODIETfname, NC_WRITE);
-    if (fid8 == -1) {
-        // File doesn't exist so will have to create it later
-    } else if (!bm->flagreusefile) {
-        // File does exist and don't want to replace or re-use it
-        quit("file with name %s already exists, either delete, rename or set reuse param in run.prm to 1\n", bm->ncODIETfname);
-    }
-     */
+    /* Open the spatial diet output file - now relaced with text file version */
+	if (bm->flagdietcheck) {
+		printf("Create spatial diet output file\n");
+		ncopts = 0;
+		fid8 =  Util_ncopen(bm->destFolder, bm->ncODIETfname, NC_WRITE);
+		if (fid8 == -1) {
+			// File doesn't exist so will have to create it later
+		} else if (!bm->flagreusefile) {
+			// File does exist and don't want to replace or re-use it
+			quit("file with name %s already exists, either delete, rename or set reuse param in run.prm to 1\n", bm->ncODIETfname);
+		}
+	}
+    
 
 	/* Initialise the hydrodynamic inputs - this must be done before
 	 * the source/sink inputs so that the hydrodynamic time units are known
@@ -1743,39 +1745,43 @@ void setupMSEBoxModel(int argc, char *argv[], MSEBoxModel *bm) {
 
     }
     
-   /* Open the spatial diet output file - now in a text file
-    printf("Create spatial output file\n");
-    ncopts = 0;
-    if (fid8 == -1) {
-        // Create file
-        fid8 = createBMDietDataFile(bm->destFolder, bm->ncODIETfname, bm);
-        bm->ncOdietdump = 0;
+      /* Create or re-open the spatial diet output file */
+    if (bm->flagdietcheck) {
+        printf("Create spatial diet output file\n");
+        ncopts = 0;
+        if (fid8 == -1) {
+            // Create file
+            fid8 = createBMDietDataFile(bm->destFolder, bm->ncODIETfname, bm);
+            bm->ncOdietdump = 0;
 
-    } else if (bm->flagreusefile == 2) {
-        // Create file anew
-        ncopts = NC_CLOBBER;
-        ncclose(fid8);
-        fid8 = createBMDietDataFile(bm->destFolder, bm->ncODIETfname, bm);
-        bm->ncOpcdump = 0;
-    } else if (bm->flagreusefile == 1) {
-        // File does exist - check dimension lengths
-        ncopts = NC_VERBOSE;
-        ncdiminq(fid8, ncdimid(fid8, "b"), NULL, &n);
-        if (n != bm->nbox)
-            quit("setupMSEBoxModel: growth and consumption output file has wrong number of boxes\n");
-        ncdiminq(fid8, ncdimid(fid8, "z"), NULL, &n);
-        if (n != bm->wcnz + bm->sednz)
-            quit("setupMSEBoxModel: growth and consumption output file has wrong total number of layers\n");
+        } else if (bm->flagreusefile == 2) {
+            // Create file anew
+            ncclose(fid8);
+            fid8 = createBMDietDataFile(bm->destFolder, bm->ncODIETfname, bm);
+            bm->ncOdietdump = 0;
+        } else if (bm->flagreusefile == 1) {
+            // File does exist - check dimension lengths
+            ncopts = NC_VERBOSE;
+            ncdiminq(fid8, ncdimid(fid8, "b"), NULL, &n);
+            if (n != bm->nbox)
+                quit("setupMSEBoxModel: diet output file has wrong number of boxes\n");
+            ncdiminq(fid8, ncdimid(fid8, "z"), NULL, &n);
+            if (n != bm->wcnz + bm->sednz)
+                quit("setupMSEBoxModel: diet output file has wrong total number of layers\n");
+            ncdiminq(fid8, ncdimid(fid8, "prey"), NULL, &n);
+            if (n != bm->K_num_tot_sp)
+                quit("setupMSEBoxModel: diet output file has wrong number of prey groups\n");
 
-        // Find out highest dump so far
-        ncdiminq(fid8, ncdimid(fid8, "t"), NULL, &n);
-        bm->ncOdietdump = (int)n;
-    } else {
-        quit("file with name %s already exists, either delete, rename or set reuse param in run.prm to 1\n", bm->ncODIETfname);
+            // Find out highest dump so far
+            ncdiminq(fid8, ncdimid(fid8, "t"), NULL, &n);
+            bm->ncOdietdump = (int)n;
+        } else {
+            quit("file with name %s already exists, either delete, rename or set reuse param in run.prm to 1\n", bm->ncODIETfname);
+        }
+        bm->ncOdietfid = fid8;
+        ncopts = NC_VERBOSE | NC_FATAL;
     }
-    bm->ncOdietfid = fid8;
-    ncopts = NC_VERBOSE | NC_FATAL;
-    */
+    
 
 	/* Check for cryptic biomass */
 	Ecology_Boundary_Check(bm, logfp);
@@ -2177,6 +2183,7 @@ void checknetCDFFiles(MSEBoxModel *bm) {
 		bm->ncOfishIndex = 0;
 		bm->ncOsumIndex = 0;
 		bm->ncOpcIndex = 0;
+		bm->ncOdietIndex = 0;
         bm->ncOdetfishIndex = 0;
         bm->ncOaaIndex = 0;
         bm->ncOaacIndex = 0;
