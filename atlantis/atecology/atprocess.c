@@ -1004,21 +1004,28 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
                  
                  **/
 
-				/* Corrections when dealing with epibenthic predators or prey */
-				/* if not epibenthic predator convert epibenthic prey back to m-2 */
-				if (FunctGroupArray[sp_id].habitatType != EPIFAUNA) {
-					if (FunctGroupArray[preyID].habitatType == EPIFAUNA) {
-						spGRAZEinfo[preyID][kij][EPIFAUNA] *= smLayerThick;
+		/* Corrections when dealing with epibenthic predators or prey */
+				/* if water column predator convert prey from other habitats back to the units of that habitat
+				 * (undoing the conversion done in Calculate_PreyAvail()) so the amount removed from the prey is correct.
+				 * Done by habitat slot not prey habitatType as some groups (e.g. MICROPHTYBENTHOS) occupy several slots.
+				 */
+				if (FunctGroupArray[sp_id].habitatType == WC) {
+					spGRAZEinfo[preyID][kij][EPIFAUNA] *= wcLayerThick;
+					spGRAZEinfo[preyID][kij][SED] *= wcLayerThick / smLayerThick;
+					if (bm->ice_on && (bm->num_active_habitats > ICE_BASED) && (iceLayerThick > 0.0)) {
+						spGRAZEinfo[preyID][kij][ICE_BASED] *= wcLayerThick / iceLayerThick;
 					}
+				} else if (FunctGroupArray[sp_id].habitatType != EPIFAUNA) {
+					/* Sediment and ice based predators only see prey in their own habitat - no conversion needed */
 				} else {
-					if (FunctGroupArray[preyID].groupType != REF_DET) { /* not 100% sure about this - might be a bug in the original code */
-
-						/* if epibenthic predator convert watercolumn and sediment prey */
-						if (FunctGroupArray[preyID].habitatType != EPIFAUNA) {
-							spGRAZEinfo[preyID][kij][WC] /= wcLayerThick;
-							spGRAZEinfo[preyID][kij][SED] /= smLayerThick;
-						}
-
+					/* if epibenthic predator convert watercolumn, sediment and ice prey to the m-3 of the habitat they are removed from.
+					 * Done by habitat slot for all prey (refractory detritus used to be skipped here, which removed wcLayerThick times
+					 * too much DR from the water column).
+					 */
+					spGRAZEinfo[preyID][kij][WC] /= wcLayerThick;
+					spGRAZEinfo[preyID][kij][SED] /= smLayerThick;
+					if (bm->ice_on && (bm->num_active_habitats > ICE_BASED) && (iceLayerThick > 0.0)) {
+						spGRAZEinfo[preyID][kij][ICE_BASED] /= iceLayerThick;
 					}
 				}
 
