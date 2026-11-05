@@ -14,7 +14,7 @@ body:
         * The Atlantis [wiki](https://atlantis-ecosystem-model.github.io/atlantis-wiki/)
         * The Atlantis [manual](https://atlantis-ecosystem-model.github.io/AtlantisManual/)
 
-        We are also happy to accept contributions from our users. So if you have a solution to the bug consider contributing. For more details see [here](https://github.com/andybeet/testatlantis/blob/main/CONTRIBUTING.md).
+        We are also happy to accept contributions from our users. So if you have a solution to the bug consider contributing. For more details see [here](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/blob/main/CONTRIBUTING.md).
   - type: textarea
     id: codeversion
     attributes:
