@@ -633,6 +633,57 @@ void Get_Extra_Feed(MSEBoxModel *bm, FILE *llogfp, int sp_id, int cohort, double
     
 }
 
+
+/**
+ * \brief Scalar to convert an amount eaten into the units the predator's growth is calculated in.
+ *
+ * spGRAZEinfo (after Eat()) holds the amount eaten in the units of the prey's habitat slot, so it can be
+ * removed directly from the prey: WC mg N m-3 water, SED mg N m-3 sediment, EPIFAUNA mg N m-2, ICE_BASED mg N m-3 ice.
+ * Water column predators grow per m-3 of the water cell they are in. Epibenthic predators eat per m-2 (prey used as
+ * concentrations in Calculate_PreyAvail()) and their growth uses m-2 / smLayerThick, which is set back to m-2 when
+ * their growth is multiplied by smLayerThick. Sediment and ice predators only eat in their own habitat so need no conversion.
+ */
+double Get_Graze_To_Pred_Scalar(MSEBoxModel *bm, int pred, int habitat) {
+	double scalar = 1.0;
+
+	switch (FunctGroupArray[pred].habitatType) {
+	case WC:
+		switch (habitat) {
+		case SED:
+			scalar = smLayerThick / wcLayerThick;
+			break;
+		case EPIFAUNA:
+			scalar = 1.0 / wcLayerThick;
+			break;
+		case ICE_BASED:
+			scalar = iceLayerThick / wcLayerThick;
+			break;
+		default:
+			break;
+		}
+		break;
+	case EPIFAUNA:
+		switch (habitat) {
+		case WC:
+			scalar = wcLayerThick / smLayerThick;
+			break;
+		case EPIFAUNA:
+			scalar = 1.0 / smLayerThick;
+			break;
+		case ICE_BASED:
+			scalar = iceLayerThick / smLayerThick;
+			break;
+		default:
+			break;
+		}
+		break;
+	default:
+		break;
+	}
+
+	return scalar;
+}
+
 /**
  * \brief Consumption
  *

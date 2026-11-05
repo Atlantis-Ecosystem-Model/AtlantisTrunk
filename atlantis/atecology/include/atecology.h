@@ -359,6 +359,7 @@ void Fish_Respiration_DEB(MSEBoxModel *bm, int guildcase, double SN, double RN, 
 void Calculate_Sediment_Prey_Avail(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, int guild, double ***spPREYinfo, double *avail_BB);
 void Construct_Prey_Info(MSEBoxModel *bm, FILE *llogfp, BoxLayerValues *boxLayerInfo, int habitat_type);
 void Do_Extra_Feed(MSEBoxModel *bm, FILE *llogfp, int sp_id, int flagcase, double CLEAR, double mum_sp, double E_sp, double scalar, double tprey, double ***spGRAZEinfo);
+double Get_Graze_To_Pred_Scalar(MSEBoxModel *bm, int pred, int habitat);
 void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, double sp, double C_sp, double mum_sp, double KL_sp, double KU_sp, double vl_sp,
 		double ht_sp, double E1_sp, double E2_sp, double EDL_sp, double EDR_sp, int sp_feed_while_spawn, int sp_spawn_now, double chrt_mat,
 		double ***spPREYinfo, double ***spGRAZEinfo, double **spCATCHGRAZEinfo, double sp_Biomass);
