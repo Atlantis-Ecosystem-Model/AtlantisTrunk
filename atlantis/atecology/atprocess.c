@@ -2363,7 +2363,8 @@ void UpdateTrackedMort(MSEBoxModel *bm, FILE *llogfp, int guildcase, int cohort,
         }
 	}
 
-	biomass_correction = Get_Biomass_Correction(bm, prey, level_id);
+	/* GRAZEinfo is in the units of the habitat the prey was eaten from (see Eat()) so scale by that habitat not the level being processed */
+	biomass_correction = Get_Biomass_Correction(bm, prey, habitat);
 
 	bm->calcMnumPerPred[prey][guildcase][current_id] += (mortality_scalar * GRAZEinfo[prey][prey_chrt][habitat] * biomass_correction);
 	bm->calcTrackedMort[prey][prey_chrt][preystock][ongoingM2_id] += (mortality_scalar * GRAZEinfo[prey][prey_chrt][habitat] * biomass_correction * FunctGroupArray[prey].speciesParams[Mdt_id]);
