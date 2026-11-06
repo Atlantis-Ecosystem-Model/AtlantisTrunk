@@ -5776,6 +5776,7 @@ void writeBMAnnAgeCatData(int fid, int dump, MSEBoxModel *bm);
 void writeBMDiagInfo(int fid, MSEBoxModel *bm, int dtype);
 void writeBMDiagData(int fid, int dump, MSEBoxModel *bm, int dtype);
 void writeBMDietData(int fid, int dump, MSEBoxModel *bm);
+int countBMDietPrey(MSEBoxModel *bm, int *map);
 void writeBMDietInfo(int fid, MSEBoxModel *bm);
 void writeBMFisheriesInfo(int fid, MSEBoxModel *bm, int dtype);
 void writeBMFisheriesData(int fid, int dump, MSEBoxModel *bm, int dtype);

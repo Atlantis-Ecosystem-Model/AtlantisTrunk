@@ -1769,8 +1769,8 @@ void setupMSEBoxModel(int argc, char *argv[], MSEBoxModel *bm) {
             if (n != bm->wcnz + bm->sednz)
                 quit("setupMSEBoxModel: diet output file has wrong total number of layers\n");
             ncdiminq(fid8, ncdimid(fid8, "prey"), NULL, &n);
-            if (n != bm->K_num_tot_sp)
-                quit("setupMSEBoxModel: diet output file has wrong number of prey groups\n");
+   			if (n != countBMDietPrey(bm, NULL))
+       			quit("setupMSEBoxModel: diet output file has wrong number of prey groups\n");
 
             // Find out highest dump so far
             ncdiminq(fid8, ncdimid(fid8, "t"), NULL, &n);
