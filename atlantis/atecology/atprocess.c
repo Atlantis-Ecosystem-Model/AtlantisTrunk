@@ -1291,17 +1291,19 @@ void Invert_Activities(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TY
 	SPgrazeDR = 0.0;
 	SPgrazeDL = 0.0;
 
+	/* Detritus eaten is in the units of the habitat it was eaten from so convert to the predator's units */
 	for (habitat = WC; habitat <  bm->num_active_habitats; habitat++) {
-		SPgrazeDR += spGRAZEinfo[RefDetIndex][0][habitat];
-		SPgrazeDL += spGRAZEinfo[LabDetIndex][0][habitat];
+		SPgrazeDR += spGRAZEinfo[RefDetIndex][0][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat);
+		SPgrazeDL += spGRAZEinfo[LabDetIndex][0][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat);
 	}
 
-	/* Start with grazing on bacteria - in m-3 */
+	/* Start with grazing on bacteria - in m-3 of water (PB) and sediment (BB) - these are what is removed from the bacteria */
 	SPgrazePB = (spGRAZEinfo[LabDetIndex][0][WC] * bact_DL / (DL + small_num) + spGRAZEinfo[RefDetIndex][0][WC] * bact_DR / (DR + small_num)) * PB_scale;
 
 	SPgrazeBB = (spGRAZEinfo[LabDetIndex][0][SED] * sedbact_DL / (DLsed + small_num) + spGRAZEinfo[RefDetIndex][0][SED] * sedbact_DR / (DRsed + small_num)) * BB_scale;
 
-	FunctGroupArray[guild].GrazeLive[cohort] += SPgrazePB + SPgrazeBB;
+	FunctGroupArray[guild].GrazeLive[cohort] += SPgrazePB * Get_Graze_To_Pred_Scalar(bm, guild, WC) + SPgrazeBB * Get_Graze_To_Pred_Scalar(bm, guild, SED);
+
 
     /* Handle grazing of aquaculture feed */
     if(FunctGroupArray[guild].isCultured || FunctGroupArray[guild].isSupplemented)

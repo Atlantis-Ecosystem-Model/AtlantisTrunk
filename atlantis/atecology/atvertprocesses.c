@@ -1276,6 +1276,9 @@ void Vertebrate_Activities(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITA
 		/* Should we check the other habitats? Can ice bacteria be in the water column? What happens when we get melt? */
 		eatIceBact += spGRAZEinfo[LabDetIndex][0][ICE_BASED] * boxLayerInfo->ICEB_DL / (spPREYinfo[LabDetIndex][0][ICE_BASED] + small_num);
 		eatIceBact += spGRAZEinfo[RefDetIndex][0][ICE_BASED] * boxLayerInfo->ICEB_DR / (spPREYinfo[RefDetIndex][0][ICE_BASED] + small_num);
+
+		/* Ice bacteria eaten is per m-3 of ice so convert to per m-3 of the water cell the predator is in */
+		eatIceBact *= Get_Graze_To_Pred_Scalar(bm, guildcase, ICE_BASED);
 	}
 
 	/* Add ref det */
@@ -1288,14 +1291,16 @@ void Vertebrate_Activities(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITA
 	SPgrazeDR = 0.0;
 	SPgrazeDL = 0.0;
 
+	/* Detritus eaten is in the units of the habitat it was eaten from so convert to the predator's units */
 	for (habitat = WC; habitat <  bm->num_active_habitats; habitat++) {
-		SPgrazeDR += spGRAZEinfo[RefDetIndex][0][habitat];
-		SPgrazeDL += spGRAZEinfo[LabDetIndex][0][habitat];
+		SPgrazeDR += spGRAZEinfo[RefDetIndex][0][habitat] * Get_Graze_To_Pred_Scalar(bm, guildcase, habitat);
+		SPgrazeDL += spGRAZEinfo[LabDetIndex][0][habitat] * Get_Graze_To_Pred_Scalar(bm, guildcase, habitat);
 	}
 
+	/* Bacteria removed in their own units (m-3 water and m-3 sediment), predator gains converted to its units */
 	spGRAZEinfo[pelagicBactIndex][0][WC] = eatBactPB;
 	spGRAZEinfo[SedBactIndex][0][SED] = eatBactBB;
-	eatBact = eatBactPB + eatBactBB + eatIceBact;
+	eatBact = eatBactPB * Get_Graze_To_Pred_Scalar(bm, guildcase, WC) + eatBactBB * Get_Graze_To_Pred_Scalar(bm, guildcase, SED) + eatIceBact;
 	FunctGroupArray[guildcase].GrazeLive[chrt] += eatBact;
 
 
@@ -1308,13 +1313,10 @@ void Vertebrate_Activities(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITA
 			for (h = WC; h <  bm->num_active_habitats; h++) {
 				habitat = h;
 
-				/* if this prey is epibenthic scale to get units in m^2 not m^3*/
+				/* Plants eaten are in the units of the habitat they were eaten from so convert to the predator's units
+				 * (the same conversion used when they were added to GrazeLive in Eat()) */
 				for (kij = 0; kij < FunctGroupArray[preyID].numCohortsXnumGenes; kij++) {
-					if (FunctGroupArray[preyID].habitatType == EPIFAUNA){
-						sp_GrazePlant += spGRAZEinfo[preyID][kij][habitat] / smLayerThick;
-					}else{
-						sp_GrazePlant += spGRAZEinfo[preyID][kij][habitat];
-					}
+					sp_GrazePlant += spGRAZEinfo[preyID][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guildcase, habitat);
 				}
 			}
 		}
