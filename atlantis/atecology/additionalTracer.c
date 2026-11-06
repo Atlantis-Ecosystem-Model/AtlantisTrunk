@@ -1133,22 +1133,17 @@ void Transfer_To_Pred(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, double ***s
 			for (kij = 0; kij < FunctGroupArray[prey].numCohortsXnumGenes; kij++) {
 				for (habitat = WC; habitat < bm->num_active_habitats; habitat++) {
 					if (FunctGroupArray[prey].groupType != LAB_DET && FunctGroupArray[prey].groupType != REF_DET && FunctGroupArray[prey].groupType != CARRION) {
-						amount = scalar * E_SP * spGRAZEinfo[prey][kij][habitat];
-
-						if(habitat == EPIFAUNA){
-							if (FunctGroupArray[prey].groupType != MICROPHTYBENTHOS) {
-								amount = amount / smLayerThick;
-							}
-						}
+						/* Convert from the units of the habitat eaten from to the predator's units (as done for growth) */
+						amount = scalar * E_SP * spGRAZEinfo[prey][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat);
 
 
 						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, prey, 0, amount);
 
 					}
 					else if (FunctGroupArray[prey].groupType == LAB_DET){
-						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, LabDetIndex, 0, scalar * EDL_SP * spGRAZEinfo[prey][kij][habitat]);
+						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, LabDetIndex, 0, scalar * EDL_SP * spGRAZEinfo[prey][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat));
 					}else if(FunctGroupArray[prey].groupType == REF_DET){
-						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, RefDetIndex, 0, scalar * EDR_SP * spGRAZEinfo[prey][kij][habitat]);
+						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, RefDetIndex, 0, scalar * EDR_SP * spGRAZEinfo[prey][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat));
 					}
 				}
 			}
@@ -1191,13 +1186,8 @@ void Vertebrates_Transfer_To_Pred(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo,
 						habitat = h;
 					}
 
-					/* if this prey is epibenthic scale to get units in m^2 not m^3*/
-					if (FunctGroupArray[prey].habitatType == EPIFAUNA){
-						Gain_Element_Predation(bm, boxLayerInfo, WC, guild, cohort, prey, 0, densityScalar* E_Plant * spGRAZEinfo[prey][kij][habitat] / smLayerThick);
-
-					}else{
-						Gain_Element_Predation(bm, boxLayerInfo, WC, guild, cohort, prey, 0, densityScalar * E_Plant * spGRAZEinfo[prey][kij][habitat]);
-					}
+					/* Convert from the units of the habitat eaten from to the predator's units (as done for growth) */
+					Gain_Element_Predation(bm, boxLayerInfo, WC, guild, cohort, prey, 0, densityScalar * E_Plant * spGRAZEinfo[prey][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat));
 				}
 			}
 		}
