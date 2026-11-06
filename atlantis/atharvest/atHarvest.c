@@ -1846,7 +1846,7 @@ int Harvest_Get_Num_Gear_Changes(MSEBoxModel *bm, int nf, FILE *llogfp) {
  *
  */
 void Harvest_Update_Total_Catch(MSEBoxModel *bm, double *FishTracers, int habitat, FILE *llogfp) {
-	int guild, nf, cohort;
+	int guild, nf, cohort, epiGroup;
 
 	/*** Update total catch and discards ***/
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
@@ -1893,6 +1893,15 @@ void Harvest_Update_Total_Catch(MSEBoxModel *bm, double *FishTracers, int habita
 				/* Total Catch tracers */
 				FishTracers[FunctGroupArray[guild].totCatchTracer] += bm->totcatch[guild] * bm->X_CN * mg_2_tonne;
 			}
+		}
+	}
+
+	/* Discards have no layer index (bm->Discards is a box total), so add them once per box:
+	   water-column groups at layer 0 (the last layer processed) and epibenthic invertebrates
+	   in the EPIFAUNA call. Adding them in every layer inflated the discard tracers. */
+	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
+		epiGroup = (FunctGroupArray[guild].isVertebrate == FALSE && FunctGroupArray[guild].habitatType != WC);
+		if ((habitat == WC && !bm->current_layer && !epiGroup) || (habitat == EPIFAUNA && epiGroup)) {
 			if (FunctGroupArray[guild].isImpacted == TRUE) {
 				for (nf = 0; nf < bm->K_num_fisheries; nf++) {
 					/* Discards by fishery tracers */
