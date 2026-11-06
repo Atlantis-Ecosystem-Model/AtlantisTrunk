@@ -461,6 +461,36 @@ static void Calculate_PreyAvail(MSEBoxModel *bm, FILE *llogfp, int predatorGuild
 
 		/* determine biomass available */
 		prey_eat =  prey_avail * pHscalar;
+
+		/* PREYinfo holds each habitat in its own units: WC mg N m-3 water, SED mg N m-3 sediment,
+		 * EPIFAUNA mg N m-2, ICE_BASED mg N m-3 ice - so put the prey on a consistent basis for the predator.
+		 *
+		 * Water column predators (mg N m-3): spread the other habitats over the water cell the predator is in.
+		 * Converted back in Eat() so the amount removed from the prey stays in the prey's own units.
+		 *
+		 * Epibenthic predators (mg N m-2): prey are used as concentrations so the amount eaten is per m-2.
+		 * The water column, sediment and ice prey are already concentrations, the epibenthic prey are
+		 * converted to a concentration over smLayerThick (the epibenthic m-2 / smLayerThick convention).
+		 */
+		if (FunctGroupArray[predatorGuildID].habitatType == EPIFAUNA) {
+			if (habitat == EPIFAUNA)
+				prey_eat /= smLayerThick;
+		} else if (FunctGroupArray[predatorGuildID].habitatType == WC) {
+			switch (habitat) {
+			case EPIFAUNA:
+				prey_eat /= wcLayerThick;
+				break;
+			case SED:
+				prey_eat *= smLayerThick / wcLayerThick;
+				break;
+			case ICE_BASED:
+				prey_eat *= iceLayerThick / wcLayerThick;
+				break;
+			default:
+				break;
+			}
+		}
+
 		EATINGinfo[preyGuildID][prey_chrt][habitat] = (double)prey_eat;
 
 		/**
