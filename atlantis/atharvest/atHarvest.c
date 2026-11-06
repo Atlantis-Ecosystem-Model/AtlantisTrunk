@@ -247,6 +247,34 @@ void Harvest_Init_Layer_Arrays(MSEBoxModel *bm, int ij, int nl, FILE *llogfp) {
 	return;
 }
 /**
+ * Add catch still held in the per-step buffer to the annual accumulators for 'year'.
+ * Mirrors the accumulation in Harvest_Init_Layer_Arrays. Deliberately does not zero
+ * bm->Catch: Harvest_Annual_Reset does that, and annual routines read the buffer in between.
+ */
+void Harvest_Account_Catch_Buffer(MSEBoxModel *bm, int year) {
+	int ij, sp, n, nl;
+
+	if (year < 0)
+		return;
+
+	for (ij = 0; ij < bm->nbox; ij++) {
+		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+			if (FunctGroupArray[sp].isFished != TRUE)
+				continue;
+			for (n = 0; n < bm->K_num_fisheries; n++) {
+				for (nl = 0; nl < bm->wcnz; nl++) {
+					if (bm->Catch[ij][sp][n][nl] > 0.0) {
+						bm->TripCatch[sp][n] += bm->Catch[ij][sp][n][nl];
+						TotCumCatch[sp][n][year] += bm->Catch[ij][sp][n][nl];
+						bm->TotCumBiCatch[sp][n] += bm->Catch[ij][sp][n][nl];
+						bm->CumCatch[sp][n][ij][nl] += bm->Catch[ij][sp][n][nl];
+					}
+				}
+			}
+		}
+	}
+}
+/**
  *
  *	\brief This function updates the LastCatch array (for use in calculating recent CPUE) and
  *  manages the CatchQueue (so can do a running average for LastCatch)
@@ -1818,7 +1846,7 @@ int Harvest_Get_Num_Gear_Changes(MSEBoxModel *bm, int nf, FILE *llogfp) {
  *
  */
 void Harvest_Update_Total_Catch(MSEBoxModel *bm, double *FishTracers, int habitat, FILE *llogfp) {
-	int guild, nf, cohort;
+	int guild, nf, cohort, epiGroup;
 
 	/*** Update total catch and discards ***/
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
@@ -1865,6 +1893,15 @@ void Harvest_Update_Total_Catch(MSEBoxModel *bm, double *FishTracers, int habita
 				/* Total Catch tracers */
 				FishTracers[FunctGroupArray[guild].totCatchTracer] += bm->totcatch[guild] * bm->X_CN * mg_2_tonne;
 			}
+		}
+	}
+
+	/* Discards have no layer index (bm->Discards is a box total), so add them once per box:
+	   water-column groups at layer 0 (the last layer processed) and epibenthic invertebrates
+	   in the EPIFAUNA call. Adding them in every layer inflated the discard tracers. */
+	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
+		epiGroup = (FunctGroupArray[guild].isVertebrate == FALSE && FunctGroupArray[guild].habitatType != WC);
+		if ((habitat == WC && !bm->current_layer && !epiGroup) || (habitat == EPIFAUNA && epiGroup)) {
 			if (FunctGroupArray[guild].isImpacted == TRUE) {
 				for (nf = 0; nf < bm->K_num_fisheries; nf++) {
 					/* Discards by fishery tracers */

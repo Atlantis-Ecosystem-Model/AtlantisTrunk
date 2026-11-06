@@ -313,8 +313,8 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 
 				if (FisherySpeciesCatchFlags[fgIndex][nf] == TRUE) {
 
-					sprintf(name, "%s_Catch_FC%d", FunctGroupArray[fgIndex].groupCode, nf + 1);
-					sprintf(longName, "Total catch of %s by fishery %d (%s)", FunctGroupArray[fgIndex].groupCode, nf + 1, FisheryArray[nf].fisheryCode);
+					sprintf(name, "%s_Catch_FC%d", FunctGroupArray[fgIndex].name, nf + 1);
+					sprintf(longName, "Total catch of %s by fishery %d (%s)", FunctGroupArray[fgIndex].fullName, nf + 1, FisheryArray[nf].fisheryCode);
 
 					Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Tonnes", 0, 3, &FunctGroupArray[fgIndex].CaughtByFisheryTracers[nf], 0, 2, 0);
 				}
@@ -328,8 +328,8 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 
 				if (FisherySpeciesCatchFlags[fgIndex][nf] == TRUE) {
 
-					sprintf(name, "%s_Discard_FC%d", FunctGroupArray[fgIndex].groupCode, nf + 1);
-					sprintf(longName, "Total discards of %s by fishery %d (%s)", FunctGroupArray[fgIndex].groupCode, nf + 1, FisheryArray[nf].fisheryCode);
+					sprintf(name, "%s_Discard_FC%d", FunctGroupArray[fgIndex].name, nf + 1);
+					sprintf(longName, "Total discards of %s by fishery %d (%s)", FunctGroupArray[fgIndex].fullName, nf + 1, FisheryArray[nf].fisheryCode);
 
 					Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Tonnes", 0, 3, &FunctGroupArray[fgIndex].DiscardedByFisheryTracers[nf], 0, 2, 0);
 				}
@@ -339,7 +339,7 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 	/* The total catch tracer */
 	for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
 		if (FunctGroupArray[fgIndex].isFished == TRUE) {
-			sprintf(name, "Tot_%s_Catch", FunctGroupArray[fgIndex].groupCode);
+			sprintf(name, "Tot_%s_Catch", FunctGroupArray[fgIndex].name);
 			sprintf(longName, "Total catch of %s", FunctGroupArray[fgIndex].fullName);
 
 			Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Tonnes", 0, 1, &FunctGroupArray[fgIndex].totCatchTracer, 0, 2, 0);
@@ -348,7 +348,7 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 	/* The total REC catch tracer */
 	for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
 		if (FunctGroupArray[fgIndex].isImpacted == TRUE) {
-			sprintf(name, "Tot_%s_RecCatch", FunctGroupArray[fgIndex].groupCode);
+			sprintf(name, "Tot_%s_RecCatch", FunctGroupArray[fgIndex].name);
 			sprintf(longName, "Total recreational catch of %s", FunctGroupArray[fgIndex].fullName);
 
 			Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Tonnes", 0, 1, &FunctGroupArray[fgIndex].totRecCatchTracer, 0, 2, 0);
@@ -357,7 +357,7 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 	/* The total Discards catch tracer */
 	for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
 		if (FunctGroupArray[fgIndex].isImpacted == TRUE) {
-			sprintf(name, "Tot_%s_Discards", FunctGroupArray[fgIndex].groupCode);
+			sprintf(name, "Tot_%s_Discards", FunctGroupArray[fgIndex].name);
 			sprintf(longName, "Total discards of %s", FunctGroupArray[fgIndex].fullName);
 
 			Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Tonnes", 0, 1, &FunctGroupArray[fgIndex].totDiscardsTracer, 0, 2, 0);
@@ -396,17 +396,15 @@ void Build_Fishery_Tracers(MSEBoxModel *bm) {
 		if (FisheryArray[nf].isRec == TRUE) {
 			if(recCount > 1){
 				sprintf(name, "Avg_Catch_Sze_Recfish%d", FCindex + 1);
-				sprintf(longName, "Total effort of recreational fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
+				sprintf(longName, "Average catch size of recreational fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
 				FCindex++;
 			}else{
 				sprintf(name, "Avg_Catch_Sze_Recfish");
-				sprintf(longName, "Total effort of recreational fishery");
+				sprintf(longName, "Average catch size of recreational fishery");
 			}
 		} else {
 			sprintf(name, "Avg_Catch_Sze_FC%d", FCindex + 1);
-
-			/* This should be different but is not!*/
-			sprintf(longName, "Total effort of fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
+			sprintf(longName, "Average catch size of fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
 			FCindex++;
 		}
 		Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "mg N", 0, 1, &FisheryArray[nf].averageCatchSizeTracer, 0, 2, 0);

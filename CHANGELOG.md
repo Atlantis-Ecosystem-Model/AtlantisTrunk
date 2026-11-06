@@ -6,6 +6,17 @@ As changed, removed, or added.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Catch and discard outputs now agree with each other (#101, jacobkasper). Files: atHarvest.c, atHarvestAnnual.c, atHarvestIO.c, atHarvestSetup.c, atHarvestLib.h, atUtilIO.c
+  - OutCatchPerFishery.txt no longer misses the last timestep of each year: the step still in the per-step catch buffer is added before the annual report (new Harvest_Account_Catch_Buffer). OutHarvestIndx.txt, which uses the same accumulators, changes accordingly.
+  - Discard tracers in OutCATCH.nc and OutTOTCATCH.nc are added once per box instead of once per water-column layer, which inflated them.
+  - OutDiscardPerFishery.txt reports each year's last timestep in that year rather than the next. Only the output is corrected; TotCumDiscards is unchanged.
+  - The end-of-run row of OutCatchPerFishery.txt reports the current year instead of repeating the previous one. Harvest_Report_Annual_Stats now takes the year to report.
+  - Avg_Catch_Sze_* variables have their own long name instead of the effort variable's.
+  - Breaking: catch, discard and rec-catch variables in OutCATCH.nc and OutTOTCATCH.nc are named by group Name instead of group Code (e.g. Tot_FCD_Catch is now Tot_Cod_Catch, FCD_Catch_FC7 is now Cod_Catch_FC7), as in Out.nc. Scripts that read these variables by name need updating.
+
 
 ## [3.6723] - 2026-09-28 - Commit [5ad4666](https://github.com/Atlantis-Ecosystem-Model/AtlantisTrunk/commit/5ad46667f7977dabbeaad89ffe62e601bb1d82f4)
 

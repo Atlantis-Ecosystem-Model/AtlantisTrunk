@@ -205,7 +205,11 @@ void Textfile_Dump(MSEBoxModel *bm, FILE *llogfp) {
 		Ecology_Calculate_Total_Abundance(bm, bm->dt, -2, llogfp);
 	if (do_manage && bm->flag_fisheries_on) {
 		Harvest_Report_Fisheries_Stats(bm, llogfp);
-		Harvest_Report_Annual_Stats(bm, llogfp);
+
+		/* The run is ending part-way through bm->thisyear, which has not been advanced:
+		   add the catch still in the per-step buffer to it and report that year */
+		Harvest_Account_Catch_Buffer(bm, bm->thisyear);
+		Harvest_Report_Annual_Stats(bm, bm->thisyear, llogfp);
 
 		if (bm->flagecon_on) {
 			Economic_Output_Indices(bm, llogfp);

@@ -44,6 +44,7 @@ double Harvest_Get_Harvest_Index(MSEBoxModel *bm, int nf, int index);
 /* Public Functions*/
 void Harvest_Init_Box_Arrays(MSEBoxModel *bm, int ij, FILE *llogfp);
 void Harvest_Init_Layer_Arrays(MSEBoxModel *bm, int ij, int nl, FILE *llogfp);
+void Harvest_Account_Catch_Buffer(MSEBoxModel *bm, int year);
 void Harvest_Update_Temp_Catch_Array(MSEBoxModel *bm, FILE *llogfp);
 
 void Harvest_Set_Fishery_Active(MSEBoxModel *bm, FILE *llogfp);
@@ -74,7 +75,7 @@ void Update_Harvest_Index_Values(MSEBoxModel *bm, FILE *llogfp);
  */
 void Harvest_Report_Fisheries_Stats(MSEBoxModel *bm, FILE *llogfp);
 void Harvest_Refresh_Fishing_Stats(MSEBoxModel *bm);
-void Harvest_Report_Annual_Stats(MSEBoxModel *bm, FILE *llogfp);
+void Harvest_Report_Annual_Stats(MSEBoxModel *bm, int year, FILE *llogfp);
 void Harvest_Report_Monthly_Stats(MSEBoxModel *bm, FILE *llogfp);
 
 /* Needed in Annual Management for Ecosytem Cap calculations too */
