@@ -45,6 +45,14 @@ FILE *anndiscardfp;
 FILE *anneffortfp;
 FILE *displaceEffortfp;
 
+/**
+ * Discards still in the per-step buffer bm->Discards when OutDiscardPerFishery.txt was
+ * last written [sp][nf]. They reach TotCumDiscards only at the start of the next step,
+ * after the annual reset, so without this correction each year's last step was reported
+ * in the following year.
+ */
+static double **annDiscardCarry = NULL;
+
 static void writeAnnCatch(FILE *fid, FILE *fid2, FILE *fid3, MSEBoxModel *bm, FILE *llogfp);
 static void writeAnnCatchPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
 static void writeAnnDiscardPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
@@ -130,10 +138,15 @@ void Close_Harvest_Output_Files(MSEBoxModel *bm) {
 	Util_Close_Output_File(anndpffp);
 	Util_Close_Output_File(anndiscardfp);
 	Util_Close_Output_File(anneffortfp);
-    
+
     if (bm->flagdisplace) {
         Util_Close_Output_File(displaceEffortfp);
     }
+
+	if (annDiscardCarry) {
+		free2d(annDiscardCarry);
+		annDiscardCarry = NULL;
+	}
 }
 
 /******************************************************************************************
@@ -508,22 +521,33 @@ void writeAnnCatchPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp) {
 }
 
 void writeAnnDiscardPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp) {
-	int sp, flag_sp, fishery_id;
-	double discard_2_print = 0;
+	int sp, flag_sp, fishery_id, ij;
+	double discard_2_print = 0, buffered;
 
 	if (verbose > 1)
         printf( "Write discards per fishery information\n");
 
-	/* Write discard values */
+	if (!annDiscardCarry)
+		annDiscardCarry = Util_Alloc_Init_2D_Double(bm->K_num_fisheries, bm->K_num_tot_sp, 0.0);
+
+	/* Write discard values. Only the output is corrected: TotCumDiscards itself is also
+	   used by management, quota and assessment code and is left unchanged. */
 	for (fishery_id = 0; fishery_id < bm->K_num_fisheries; fishery_id++) {
 		fprintf(fid, "%e %s", bm->dayt, FisheryArray[fishery_id].fisheryCode);
 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 			if (FunctGroupArray[sp].isImpacted == TRUE) {
+				/* Add this year's discards still in the buffer and take off last year's,
+				   which TotCumDiscards received after the previous report */
+				buffered = 0.0;
+				for (ij = 0; ij < bm->nbox; ij++)
+					buffered += bm->Discards[ij][sp][fishery_id];
+
 				flag_sp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
 				if (flag_sp) {
-					discard_2_print = bm->TotCumDiscards[sp][fishery_id] * bm->X_CN * mg_2_tonne;
+					discard_2_print = (bm->TotCumDiscards[sp][fishery_id] + buffered - annDiscardCarry[sp][fishery_id]) * bm->X_CN * mg_2_tonne;
 					fprintf(fid, " %f", discard_2_print);
 				}
+				annDiscardCarry[sp][fishery_id] = buffered;
 			}
 		}
 		fprintf(fid, "\n");
