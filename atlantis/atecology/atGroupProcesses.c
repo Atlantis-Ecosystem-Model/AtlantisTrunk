@@ -2082,9 +2082,10 @@ int Sediment_Epi_Other_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habi
 
 						prey_avail = prey_avail * depth_scalar;
 
-						/* Update prey availability */
-						PREYinfo[prey][prey_chrt][WC] = prey_avail;
-						PREYinfo[prey][prey_chrt][SED] = 0;
+						/* Update prey availability - this is phytoplankton in the sediment so put it in the sediment slot
+						 * (so it is removed from the sediment pool), and BG only graze the sediment phytoplankton */
+						PREYinfo[prey][prey_chrt][SED] = prey_avail;
+						PREYinfo[prey][prey_chrt][WC] = 0;
 					}
 				}
 			}
@@ -2146,12 +2147,14 @@ int Sediment_Epi_Other_Process(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habi
 		}
 	}
 
-	/* reset planktonic groups */
+	/* reset planktonic groups to the values set in Epibenthic_Box() for the other predators -
+	 * water column value scaled by habitat coefficient, phytoplankton are not put in the sediment slot there */
 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 		if(FunctGroupArray[sp].speciesParams[flag_id] == TRUE){
 			if (FunctGroupArray[sp].groupType == LG_PHY || FunctGroupArray[sp].groupType == DINOFLAG || FunctGroupArray[sp].groupType == SM_PHY) {
 				for (prey_chrt = 0; prey_chrt < FunctGroupArray[sp].numCohortsXnumGenes; prey_chrt++) {
-					PREYinfo[sp][prey_chrt][WC] = boxLayerInfo->localWCTracers[FunctGroupArray[sp].totNTracers[prey_chrt]];
+					PREYinfo[sp][prey_chrt][WC] = boxLayerInfo->localWCTracers[FunctGroupArray[sp].totNTracers[prey_chrt]] * FunctGroupArray[sp].habitatCoeffs[WC];
+					PREYinfo[sp][prey_chrt][SED] = 0.0;
 				}
 			}
 		}
