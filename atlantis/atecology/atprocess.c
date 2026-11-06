@@ -1117,16 +1117,19 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
                  
                  **/
                 
-                /** Update GrazeLive - units in m-3 **/
+                /** Update GrazeLive - units in m-3 (m-2 / smLayerThick for epibenthic predators) **/
 
-				/* Add the epibenthic prey to graze_live in m-3 */
+				/* Add the epibenthic prey to graze_live */
 				if (FunctGroupArray[preyID].groupType != MICROPHTYBENTHOS) {
-					graze_live += spGRAZEinfo[preyID][kij][EPIFAUNA] / smLayerThick;
+					graze_live += spGRAZEinfo[preyID][kij][EPIFAUNA] * Get_Graze_To_Pred_Scalar(bm, sp_id, EPIFAUNA);
 				}
 				if (FunctGroupArray[preyID].groupType != LAB_DET && FunctGroupArray[preyID].groupType != REF_DET && FunctGroupArray[preyID].groupType != CARRION) {
-					/* Add the wc and sed values */
-					graze_live += spGRAZEinfo[preyID][kij][WC];
-					graze_live += spGRAZEinfo[preyID][kij][SED];
+					/* Add the wc, sed and ice values */
+					graze_live += spGRAZEinfo[preyID][kij][WC] * Get_Graze_To_Pred_Scalar(bm, sp_id, WC);
+					graze_live += spGRAZEinfo[preyID][kij][SED] * Get_Graze_To_Pred_Scalar(bm, sp_id, SED);
+					if (bm->num_active_habitats > ICE_BASED) {
+						graze_live += spGRAZEinfo[preyID][kij][ICE_BASED] * Get_Graze_To_Pred_Scalar(bm, sp_id, ICE_BASED);
+					}
 					graze_live += spCATCHGRAZEinfo[preyID][kij];
 				}
 
