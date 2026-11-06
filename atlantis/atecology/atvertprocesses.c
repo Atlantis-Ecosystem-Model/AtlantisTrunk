@@ -1277,8 +1277,6 @@ void Vertebrate_Activities(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITA
 		eatIceBact += spGRAZEinfo[LabDetIndex][0][ICE_BASED] * boxLayerInfo->ICEB_DL / (spPREYinfo[LabDetIndex][0][ICE_BASED] + small_num);
 		eatIceBact += spGRAZEinfo[RefDetIndex][0][ICE_BASED] * boxLayerInfo->ICEB_DR / (spPREYinfo[RefDetIndex][0][ICE_BASED] + small_num);
 
-		/* Ice bacteria eaten is per m-3 of ice so convert to per m-3 of the water cell the predator is in */
-		eatIceBact *= Get_Graze_To_Pred_Scalar(bm, guildcase, ICE_BASED);
 	}
 
 	/* Add ref det */

@@ -483,9 +483,6 @@ static void Calculate_PreyAvail(MSEBoxModel *bm, FILE *llogfp, int predatorGuild
 			case SED:
 				prey_eat *= smLayerThick / wcLayerThick;
 				break;
-			case ICE_BASED:
-				prey_eat *= iceLayerThick / wcLayerThick;
-				break;
 			default:
 				break;
 			}
@@ -685,9 +682,6 @@ double Get_Graze_To_Pred_Scalar(MSEBoxModel *bm, int pred, int habitat) {
 		case EPIFAUNA:
 			scalar = 1.0 / wcLayerThick;
 			break;
-		case ICE_BASED:
-			scalar = iceLayerThick / wcLayerThick;
-			break;
 		default:
 			break;
 		}
@@ -699,9 +693,6 @@ double Get_Graze_To_Pred_Scalar(MSEBoxModel *bm, int pred, int habitat) {
 			break;
 		case EPIFAUNA:
 			scalar = 1.0 / smLayerThick;
-			break;
-		case ICE_BASED:
-			scalar = iceLayerThick / smLayerThick;
 			break;
 		default:
 			break;
@@ -1093,9 +1084,6 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
 				if (FunctGroupArray[sp_id].habitatType == WC) {
 					spGRAZEinfo[preyID][kij][EPIFAUNA] *= wcLayerThick;
 					spGRAZEinfo[preyID][kij][SED] *= wcLayerThick / smLayerThick;
-					if (bm->ice_on && (bm->num_active_habitats > ICE_BASED) && (iceLayerThick > 0.0)) {
-						spGRAZEinfo[preyID][kij][ICE_BASED] *= wcLayerThick / iceLayerThick;
-					}
 				} else if (FunctGroupArray[sp_id].habitatType != EPIFAUNA) {
 					/* Sediment and ice based predators only see prey in their own habitat - no conversion needed */
 				} else {
@@ -1105,9 +1093,6 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
 					 */
 					spGRAZEinfo[preyID][kij][WC] /= wcLayerThick;
 					spGRAZEinfo[preyID][kij][SED] /= smLayerThick;
-					if (bm->ice_on && (bm->num_active_habitats > ICE_BASED) && (iceLayerThick > 0.0)) {
-						spGRAZEinfo[preyID][kij][ICE_BASED] /= iceLayerThick;
-					}
 				}
 
                 /**
@@ -1127,9 +1112,6 @@ void Eat(MSEBoxModel *bm, FILE *llogfp, int flagcase, int sp_id, int cohort, dou
 					/* Add the wc, sed and ice values */
 					graze_live += spGRAZEinfo[preyID][kij][WC] * Get_Graze_To_Pred_Scalar(bm, sp_id, WC);
 					graze_live += spGRAZEinfo[preyID][kij][SED] * Get_Graze_To_Pred_Scalar(bm, sp_id, SED);
-					if (bm->num_active_habitats > ICE_BASED) {
-						graze_live += spGRAZEinfo[preyID][kij][ICE_BASED] * Get_Graze_To_Pred_Scalar(bm, sp_id, ICE_BASED);
-					}
 					graze_live += spCATCHGRAZEinfo[preyID][kij];
 				}
 
@@ -2379,6 +2361,7 @@ void UpdateTrackedMort(MSEBoxModel *bm, FILE *llogfp, int guildcase, int cohort,
         }
 
         bm->totDiet[bm->current_box][this_layer][guildcase][cohort][prey] += (mortality_scalar * GRAZEinfo[prey][prey_chrt][habitat] * biomass_correction * FunctGroupArray[guildcase].speciesParams[Mdt_id]);
+        
         
         
         /*
