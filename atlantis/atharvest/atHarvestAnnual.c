@@ -121,8 +121,8 @@ void Report_Annual_Harvest(MSEBoxModel *bm, FILE *llogfp) {
 	Harvest_Account_Catch_Buffer(bm, bm->thisyear - 1);
 
 	if(bm->thisyear >= 0){
-		/* Report annual catch statistics */
-		Harvest_Report_Annual_Stats(bm, llogfp);
+		/* Report annual catch statistics for the year just completed */
+		Harvest_Report_Annual_Stats(bm, bm->thisyear - 1, llogfp);
 	}
 
 	/* Reset annual catch statistics */

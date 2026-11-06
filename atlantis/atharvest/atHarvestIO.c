@@ -54,7 +54,7 @@ FILE *displaceEffortfp;
 static double **annDiscardCarry = NULL;
 
 static void writeAnnCatch(FILE *fid, FILE *fid2, FILE *fid3, MSEBoxModel *bm, FILE *llogfp);
-static void writeAnnCatchPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
+static void writeAnnCatchPerFishery(FILE *fid, MSEBoxModel *bm, int year, FILE *llogfp);
 static void writeAnnDiscardPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
 static void writeAnnEffort(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
 static void writeDisplaceEffort(FILE *fid, MSEBoxModel *bm, FILE *llogfp);
@@ -72,7 +72,11 @@ static FILE * initDisplacedEffortFile(MSEBoxModel *bm);
  as only called from Annual_Fisheries_Mgmt()
  */
 
-void Harvest_Report_Annual_Stats(MSEBoxModel *bm, FILE *llogfp) {
+/**
+ * 'year' is the index into the TotCumCatch year dimension to report: the year just
+ * completed for the annual report, or the current year when the run ends.
+ */
+void Harvest_Report_Annual_Stats(MSEBoxModel *bm, int year, FILE *llogfp) {
 
 	if (verbose)
 		fprintf(stderr, "Writing annual catch and effort output (instead of puting it in a logfile)\n");
@@ -93,8 +97,8 @@ void Harvest_Report_Annual_Stats(MSEBoxModel *bm, FILE *llogfp) {
 
 	/* Write output */
 	writeAnnCatch(anncatchfp, anndiscardfp, annreccatchfp, bm, llogfp);
-    if(bm->thisyear)
-        writeAnnCatchPerFishery(anncpffp, bm, llogfp);
+    if(year >= 0)
+        writeAnnCatchPerFishery(anncpffp, bm, year, llogfp);
     writeAnnDiscardPerFishery(anndpffp, bm, llogfp);
     writeAnnEffort(anneffortfp, bm, llogfp);
 
@@ -489,7 +493,7 @@ void writeAnnCatch(FILE *fid, FILE *fid2, FILE *fid3, MSEBoxModel *bm, FILE *llo
 	return;
 }
 
-void writeAnnCatchPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp) {
+void writeAnnCatchPerFishery(FILE *fid, MSEBoxModel *bm, int year, FILE *llogfp) {
 	int sp, flag_sp, fishery_id;
 	double catch_2_print = 0;
 
@@ -505,7 +509,7 @@ void writeAnnCatchPerFishery(FILE *fid, MSEBoxModel *bm, FILE *llogfp) {
 				flag_sp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
 				if (flag_sp) {
 					if(!FisheryArray[fishery_id].isRec){
-						catch_2_print = TotCumCatch[sp][fishery_id][bm->thisyear-1] * bm->X_CN * mg_2_tonne;
+						catch_2_print = TotCumCatch[sp][fishery_id][year] * bm->X_CN * mg_2_tonne;
 						fprintf(fid, " %e", catch_2_print);
 					} else {
 						catch_2_print = bm->TotCumRecCatch[sp][fishery_id] * bm->X_CN * mg_2_tonne;
