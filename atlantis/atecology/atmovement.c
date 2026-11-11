@@ -1554,8 +1554,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
 
                                 if ((int) (FunctGroupArray[sp].speciesParams[flag_id]) && (int) (FunctGroupArray[sp].speciesParams[active_id]) &&
                                 		( bm->boxes[ij].botz <= (-1.0 * FunctGroupArray[sp].speciesParams[mindepth_id]) &&
-                                		 bm->boxes[ij].botz >= (-1.0 * FunctGroupArray[sp].speciesParams[maxdepth_id]) &&
-                                        ((-1.0 * bm->boxes[bm->current_box].botz) <= FunctGroupArray[sp].speciesParams[maxtotdepth_id]))) {
+                                		 bm->boxes[ij].botz >= (-1.0 * FunctGroupArray[sp].speciesParams[maxdepth_id]))) {
                                 //if ((int) (FunctGroupArray[sp].speciesParams[flag_id]) && (int) (FunctGroupArray[sp].speciesParams[active_id]) &&
                                 //    (current_depth <= (-1.0 * FunctGroupArray[sp].speciesParams[mindepth_id]) &&
                                 //     current_depth >= (-1.0 * FunctGroupArray[sp].speciesParams[maxdepth_id]))) {
