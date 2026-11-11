@@ -875,7 +875,9 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                         double migtime2;
                         double some_ice = 0.0, ice_effect;
                         int do_debug2;
-                        double boxcur;
+                        double boxcur, wnorm, target, sticky_thresh, leftsum;;
+                        int follow_mother, nroc, mstage, use_spawn_move, prescribed_only, bb;
+                        
                         
                         updated_already = 0;
                         
@@ -1756,69 +1758,94 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                                                     }
                                                     */
                                                     
+                                                    /* Replaces the whole switch (sp_ddepend_move) block in Ecology_Total_Verts_And_Migration()
+                                                    in atmovement.c, from "switch (sp_ddepend_move) {" down to the closing "}" after "default:".
+                                                    
+                                                    New declarations at the top of the function:
+                                                    int follow_mother, nroc, mstage, use_spawn_move, prescribed_only;
+                                                    double boxcur;
+                                                    thiscase1 and thiscase2 are no longer used and can be removed. */
+                                                    
                                                     switch (sp_ddepend_move) {
                                                         case weight_ddepend:
                                                         case switch_ddepend:
                                                         case only_ddepend:
+                                                        case weight_switch_ddepend:
                                                         
-                                                        /* If using weighted density dependent movement (weights slow movement but still drift
-                                                        as if ideal free distributed then determine ideal distribution */
+                                                        /* Density dependent movement, types 2, 5,7 and 9:
+                                                        weight_ddepend (2): prescribed × forage all year
+                                                        switch_ddepend (5): forage-dependent; during spawning prescribed movement only
+                                                        only_ddepend   (7): forage-dependent all year, prescribed distribution ignored
+                                                        weight_switch_ddepend   (9): prescribed × forage, during spawning prescribed movement only
+                                                        Juveniles staying with their mother (flagmother > 0) follow the first mature
+                                                        cohort (age_mat) all year. Other juveniles use forage only.
+                                                        feed_while_spawn is no longer used in the movement logic. */
+                                                        
                                                         /* FIX -- may want to have depth based on roc too not just always at optimal,
                                                         otherwise with conditions change may not see distribution changes */
                                                         vertdistrib = tempdistrib[k][stage];
                                                         
-                                                        if(!stage) {
-                                                            thiscase1 = 1;
-                                                            thiscase2 = 1;
+                                                        /* Which cohort sets the horizontal movement */
+                                                        follow_mother = (flagmother > 0) && (n < age_mat);
+                                                        if (follow_mother) {
+                                                            nroc = age_mat;
+                                                            mstage = FunctGroupArray[sp].cohort_stage[age_mat];
+                                                            use_spawn_move = (overall_checkday >= EMBRYO[sp].Spawn_Now[age_mat][EMBRYO[sp].next_spawn]) &&
+                                                            (overall_checkday <= (EMBRYO[sp].Spawn_Now[age_mat][EMBRYO[sp].next_spawn] + spawn_period));
                                                         } else {
-                                                            thiscase1 = 0;
-                                                            thiscase2 = 0;
-                                                            if(!sp_feed_while_spawn && sp_spawn_now) {
-                                                                thiscase1 = 1;
-                                                            }
-                                                            if(!sp_feed_while_spawn && !sp_spawn_now) {
-                                                                thiscase2 = 1;
-                                                            }
-                                                        }
-                                                        if (sp_ddepend_move == only_ddepend) {
-                                                            thiscase2 = 1;
-                                                            thiscase1 = 0;
+                                                            nroc = n;
+                                                            mstage = stage;
+                                                            /* Juveniles not following mother: forage only */
+                                                            use_spawn_move = sp_spawn_now && stage;
                                                         }
                                                         
-                                                        /* Find other migration pressure */
-                                                        if (thiscase1 || (sp_ddepend_move != switch_ddepend)) {
-                                                            spawnmove = this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][stage] - FunctGroupArray[sp].distrib[ij][qrt][stage]) + FunctGroupArray[sp].distrib[ij][qrt][stage];
-                                                        } else if (thiscase2){
-                                                            /* If case where use perscribed spawning movement in spawning season and juvenile
-                                                            * or not spawning and using case where use forage only in non-spawning period,
-                                                            * then assume always use forage dependent movement alone, so set spawn_move = 1.0 so
-                                                            * that it makes no contribution.
-                                                            */
-                                                            spawnmove = 1.0;
+                                                        /* Movement rule for this cohort and time:
+                                                           weight_ddepend        (2): prescribed x forage all year
+                                                           switch_ddepend        (5): forage; prescribed only in spawning
+                                                           only_ddepend          (7): forage all year
+                                                           weight_switch_ddepend (9): prescribed x forage; prescribed only in spawning */
+                                                        weighted = 0;
+                                                        prescribed_only = 0;
+                                                        switch (sp_ddepend_move) {
+                                                            case weight_ddepend:
+                                                                weighted = 1;
+                                                                break;
+                                                            case switch_ddepend:
+                                                                prescribed_only = use_spawn_move;
+                                                                break;
+                                                            case weight_switch_ddepend:
+                                                                if (use_spawn_move)
+                                                                    prescribed_only = 1;
+                                                                else
+                                                                    weighted = 1;
+                                                                break;
+                                                            default:   /* only_ddepend */
+                                                                break;
+                                                        }
+
+                                                        /* Prescribed share (spawnmove = 1.0 makes no contribution: forage only) */
+                                                        spawnmove = 1.0;
+                                                        if (weighted || prescribed_only) {
+                                                            spawnmove = this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][mstage] - FunctGroupArray[sp].distrib[ij][qrt][mstage]) + FunctGroupArray[sp].distrib[ij][qrt][mstage];
+                                                        }
+
+                                                        /* Normaliser for the weighted target (prescribed share x forage share),
+                                                           so that it sums to 1 over boxes before the relaxation step */
+                                                        wnorm = 1.0;
+                                                        if (weighted && totroc[nroc]) {
+                                                            wnorm = 0.0;
+                                                            for (bb = 0; bb < bm->nbox; bb++) {
+                                                                wnorm += (this_HowFar * (FunctGroupArray[sp].distrib[bb][next_qrt][mstage] - FunctGroupArray[sp].distrib[bb][qrt][mstage]) + FunctGroupArray[sp].distrib[bb][qrt][mstage])
+                                                                         * roc[bb][nroc] / (totroc[nroc] + small_num);
+                                                            }
                                                         }
                                                         
+                                                        
+                                                        /* Current share of this cohort in the whole box: the target is a box-level
+                                                        share, so relax from the box total and split vertically afterwards */
                                                         boxcur = 0.0;
                                                         for (kk = 0; kk < bm->boxes[ij].nz; kk++)
                                                         boxcur += currentden[sp][n][kk][ij];
-                                                        
-                                                        
-                                                        /* Find feeding migration pressure.
-                                                        For animals (e.g. dolphins) where stay with mother
-                                                        until mature have the juveniles stay with mother via
-                                                        basing their allocation on that of the older age group(s) */
-                                                        
-                                                        
-                                                        if( (flagmother > 0) && (n < age_mat) ){
-                                                            newden[sp][n][k][ij] = spawnmove * roc[ij][age_mat] / (totroc[age_mat] + small_num);
-                                                            if(!totroc[age_mat]) {
-                                                                newden[sp][n][k][ij] = boxcur;
-                                                            }
-                                                        } else {
-                                                            newden[sp][n][k][ij] = spawnmove * roc[ij][n] / (totroc[n] + small_num);
-                                                            if(!totroc[n]) {
-                                                                newden[sp][n][k][ij] = boxcur;
-                                                            }
-                                                        }
                                                         
                                                         
                                                         orig_newden = newden[sp][n][k][ij];
@@ -1829,96 +1856,118 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                                                             spSpeed *= FunctGroupArray[sp].C_move_corr[n];
                                                         }
                                                         
-                                                        // This needs to be a minimum (so never goes negative), but we need to multiply with vertdistrib AFTER this
-                                                        // step so that distinguish horizontal and vertical movement limitations
+                                                        // Relax at box level (never negative), then split vertically once, so that
+                                                        // horizontal and vertical movement limitations are distinguished
                                                         newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (newden[sp][n][k][ij] - boxcur) + boxcur;
                                                         newden[sp][n][k][ij] *= vertdistrib;
                                                         
-                                                        /*
+                                                        
                                                         if(sp == bm->which_check) {
                                                         fprintf(llogfp, "Time: %e %s-%d box %d-%d newden: %.20e ", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, newden[sp][n][k][ij]);
-                                                        fprintf(llogfp, "currentden: %.20e orig_newden: %.20e ", currentden[sp][n][k][ij], orig_newden);
+                                                        fprintf(llogfp, "boxcur: %.20e orig_newden: %.20e ", boxcur, orig_newden);
                                                         fprintf(llogfp, "spSpeed  = %.20e,  dt = %.20e, bm->width = %.20e, vertdistrib = %.20e ", spSpeed, dt, bm->width, vertdistrib);
-                                                        fprintf(llogfp, "spawnmove = %.20e roc = %.20e totroc = %.20e (age_mat: %d roc-age_mat: %.20e totroc-age_mat: %.20e)\n", spawnmove, roc[ij][n], totroc[n], age_mat, roc[ij][age_mat], totroc[age_mat]);
+                                                        fprintf(llogfp, "spawnmove = %.20e prescribed_only = %d nroc = %d roc = %.20e totroc = %.20e\n", spawnmove, prescribed_only, nroc, roc[ij][nroc], totroc[nroc]);
                                                         }
-                                                        */
+                                                        
                                                         
                                                         if(newden[sp][n][k][ij]  < 0){
                                                             printf("Error in Ecology_Total_Verts_And_Migration\n");
                                                             printf("newden[%s][%d][%d][%d] = %.20e\n", FunctGroupArray[sp].groupCode, n, k, ij, newden[sp][n][k][ij]);
-                                                            printf("currentden[%s][%d][%d][%d] = %.20e orig_newden = %.20e\n",
-                                                                FunctGroupArray[sp].groupCode, n, k, ij, currentden[sp][n][k][ij], orig_newden);
+                                                            printf("boxcur[%s][%d][%d] = %.20e orig_newden = %.20e\n",
+                                                                FunctGroupArray[sp].groupCode, n, ij, boxcur, orig_newden);
                                                                 printf("(spSpeed * dt / bm->width) = %.20e\n", (spSpeed * dt / bm->width));
                                                                 printf("spSpeed  = %.20e,  dt = %.20e, bm->width = %.20e, vertdistrib = %.20e\n", spSpeed, dt, bm->width, vertdistrib);
-                                                                printf("spawnmove = %.20e roc = %.20e totroc = %.20e (age_mat: %d roc-age_mat: %.20e totroc-age_mat: %.20e)\n", spawnmove, roc[ij][n], totroc[n], age_mat, roc[ij][age_mat], totroc[age_mat]);
+                                                                printf("spawnmove = %.20e prescribed_only = %d nroc = %d roc = %.20e totroc = %.20e\n", spawnmove, prescribed_only, nroc, roc[ij][nroc], totroc[nroc]);
                                                                 quit("");
                                                             }
                                                             
-                                                            
                                                             break;
-                                                            case sticky_ddepend:
-                                                            /* FIX -- may want to have depth based on roc too not just always at optimal,
-                                                            otherwise with conditions change may not see distribution changes */
-                                                            vertdistrib = tempdistrib[k][stage];
-                                                            /* Find other migration pressure */
-                                                            spawnmove = this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][stage] - FunctGroupArray[sp].distrib[ij][qrt][stage]) + FunctGroupArray[sp].distrib[ij][qrt][stage];
                                                             
-                                                            /* Current share of this cohort in the whole box: the target is a box-level
-                                                            share, so relax from the box total and split vertically afterwards */
-                                                            boxcur = 0.0;
-                                                            for (kk = 0; kk < bm->boxes[ij].nz; kk++)
+                                                        case sticky_ddepend:
+                                                        /* Sticky density dependent movement (as in the Atlantis manual):
+                                                           cohorts in boxes passing the forage test (roc / roc_wgt > k_roc_food * SN) stay;
+                                                           cohorts in boxes failing it are redistributed over the whole domain by the
+                                                           forage field, including into passing boxes. Movement is gradual (rate r).
+                                                           Juveniles staying with their mother follow the first mature cohort: its forage
+                                                           field and size decide which boxes pass. No prescribed weighting. */
+                                                        vertdistrib = tempdistrib[k][stage];
+
+                                                        if ((flagmother > 0) && (n < age_mat))
+                                                            nroc = age_mat;
+                                                        else
+                                                            nroc = n;
+                                                        sticky_thresh = k_roc_food * VERTinfo[sp][nroc][SN_id];
+
+                                                        /* Current share of this cohort in the whole box */
+                                                        boxcur = 0.0;
+                                                        for (kk = 0; kk < bm->boxes[ij].nz; kk++)
                                                             boxcur += currentden[sp][n][kk][ij];
+
+                                                        if (!totroc[nroc]) {
+                                                            /* No forage anywhere: stay where they are */
+                                                            target = boxcur;
+                                                        } else {
+                                                            /* Share of the cohort in boxes failing the test: these move */
+                                                            leftsum = 0.0;
+                                                            for (bb = 0; bb < bm->nbox; bb++) {
+                                                                if ((roc[bb][nroc] / roc_wgt) > sticky_thresh)
+                                                                    continue;
+                                                                for (kk = 0; kk < bm->boxes[bb].nz; kk++)
+                                                                    leftsum += currentden[sp][n][kk][bb];
+                                                            }
+
+                                                            /* Movers arrive by the forage field; stayers keep their share */
+                                                            target = leftsum * roc[ij][nroc] / (totroc[nroc] + small_num);
+                                                            if ((roc[ij][nroc] / roc_wgt) > sticky_thresh)
+                                                                target += boxcur;
+                                                        }
+
+                                                        if(bm->track_contaminants) {
+                                                            spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
+                                                            Get_ContamMoveEffects(bm, sp, n, ij, k);
+                                                            spSpeed *= FunctGroupArray[sp].C_move_corr[n];
+                                                        }
+
+                                                        // Relax at box level toward the target, then split vertically once
+                                                        newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (target - boxcur) + boxcur;
+                                                        newden[sp][n][k][ij] *= vertdistrib;
+                                                        break;
                                                             
-                                                            /* For animals (e.g. dolphins) where stay with mother
-                                                            until mature have the juveniles stay with mother via
-                                                            basing their allocation on that of the older age group(s).
-                                                            Also use averaged sized individual for comparison purposes */
-                                                            if ((flagmother > 0) && (n < age_mat)) {
-                                                                
-                                                                if ((roc[ij][age_mat] / roc_wgt) > (k_roc_food * VERTinfo[sp][n][SN_id])) {
-                                                                    newden[sp][n][k][ij] = spawnmove * vertdistrib * boxden[ij][n];
-                                                                } else {
-                                                                    newden[sp][n][k][ij] = spawnmove * leftden[sp][n] * roc[ij][age_mat] / (totroc[age_mat] + small_num);
-                                                                    if(!totroc[age_mat]) {
-                                                                        newden[sp][n][k][ij] = boxcur;
-                                                                    }
-                                                                    
-                                                                    if(bm->track_contaminants) {
-                                                                        spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
-                                                                        Get_ContamMoveEffects(bm, sp, n, ij, k);
-                                                                        spSpeed *= FunctGroupArray[sp].C_move_corr[n];
-                                                                    }
-                                                                    
-                                                                    // Relax at box level, then split vertically once
-                                                                    newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (newden[sp][n][k][ij] - boxcur) + boxcur;
-                                                                    newden[sp][n][k][ij] *= vertdistrib;
-                                                                }
-                                                                
-                                                            } else {
-                                                                if ((roc[ij][n] / roc_wgt) > (k_roc_food * VERTinfo[sp][n][SN_id])) {
-                                                                    newden[sp][n][k][ij] = spawnmove * vertdistrib * boxden[ij][n];
-                                                                } else {
-                                                                    newden[sp][n][k][ij] = spawnmove * leftden[sp][n] * roc[ij][n] / (totroc[n] + small_num);
-                                                                    if(!totroc[n]) {
-                                                                        newden[sp][n][k][ij] = boxcur;
-                                                                    }
-                                                                    
-                                                                    if(bm->track_contaminants) {
-                                                                        spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
-                                                                        Get_ContamMoveEffects(bm, sp, n, ij, k);
-                                                                        spSpeed *= FunctGroupArray[sp].C_move_corr[n];
-                                                                    }
-                                                                    
-                                                                    // Relax at box level, then split vertically once
-                                                                    newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (newden[sp][n][k][ij] - boxcur) + boxcur;
-                                                                    newden[sp][n][k][ij] *= vertdistrib;
-                                                                }
-                                                            }                                                                                           
-                                                            break;
+                                                        case relax_prescribed:
+                                                        /* Prescribed distribution as target, approached gradually: local depletion
+                                                           (e.g. fishing) persists and is refilled at rate r instead of every step.
+                                                           Juveniles staying with their mother follow the first mature cohort's
+                                                           current box share. */
+                                                        vertdistrib = tempdistrib[k][stage];
+
+                                                        boxcur = 0.0;
+                                                        for (kk = 0; kk < bm->boxes[ij].nz; kk++)
+                                                            boxcur += currentden[sp][n][kk][ij];
+
+                                                        if ((flagmother > 0) && (n < age_mat)) {
+                                                            target = 0.0;
+                                                            for (kk = 0; kk < bm->boxes[ij].nz; kk++)
+                                                                target += currentden[sp][age_mat][kk][ij];
+                                                        } else {
+                                                            target = this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][stage] - FunctGroupArray[sp].distrib[ij][qrt][stage]) + FunctGroupArray[sp].distrib[ij][qrt][stage];
+                                                        }
+
+                                                        if(bm->track_contaminants) {
+                                                            spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
+                                                            Get_ContamMoveEffects(bm, sp, n, ij, k);
+                                                            spSpeed *= FunctGroupArray[sp].C_move_corr[n];
+                                                        }
+
+                                                        // Relax at box level toward the target, then split vertically once
+                                                        newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (target - boxcur) + boxcur;
+                                                        newden[sp][n][k][ij] *= vertdistrib;
+                                                        break;
+                                                            
                                                             case sedentary_move:
                                                             vertdistrib = tempdistrib[k][stage];
                                                             newden[sp][n][k][ij] = vertdistrib * boxden[ij][n];
                                                             break;
+                                                            
                                                             case perscribed_move:
                                                             /* Used prescribed migration routes */
                                                             vertdistrib = tempdistrib[k][stage];
@@ -1930,6 +1979,7 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                                                             }
                                                             
                                                             break;
+                                                            
                                                             case homerange_move:
                                                             /* Use home ranges
                                                             
@@ -1952,10 +2002,13 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                                                                 newden[sp][n][k][ij] *= bm->refuge_status[sp][ij][stage];
                                                             }
                                                             break;
+                                                            
                                                             default:
                                                             quit("No such ddepend flag value (%d) for %s\n", sp_ddepend_move, FunctGroupArray[sp].groupCode);
                                                             break;
-                                                        }
+                                                        }                                                                                                                                                  
+                                                        
+                                                        
                                                         
                                                         /* Do a check to see how we are travelling so far */
                                                         if(newden[sp][n][k][ij] < 0){

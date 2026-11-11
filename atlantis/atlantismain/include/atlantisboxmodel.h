@@ -698,6 +698,8 @@ typedef enum {
 #define switch_ddepend 5
 #define homerange_move 6
 #define only_ddepend 7
+#define relax_prescribed 8
+#define weight_switch_ddepend 9
 
 /* Multi-year migration types */
 #define all_cohorts_migrate_per_yr 0
