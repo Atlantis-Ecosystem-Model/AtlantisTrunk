@@ -929,7 +929,7 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
         amount of each prey in each box of the bay. Will update the totden array. */
         Calculate_Prey_Values(bm, preyamt, llogfp);
         
-
+        
         /* Vertical distributions of all vertebrate groups for the overlap in the food index */
         Fill_Vertical_Distributions(bm, enviro_depend, llogfp);
         
@@ -1610,8 +1610,10 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                                             
                                             
                                         }
-
                                         
+                                        /* Weight per-capita habitat quality by box size, so boxes of
+                                        equal quality hold equal densities rather than equal numbers */
+                                        roc[ij][n] *= bm->boxes[ij].area;
                                         
                                         /* Calculate total potential growth across entire area for each species */
                                         totroc[n] += roc[ij][n];
