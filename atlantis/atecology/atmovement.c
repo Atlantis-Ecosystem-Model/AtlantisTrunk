@@ -1918,8 +1918,10 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                                             } else {
                                                 /* Share of the cohort in boxes failing the test: these move */
                                                 leftsum = 0.0;
+                                                /* roc is area-weighted, so the stay/move test must divide the area out again to
+                                                compare per-capita quality with k_roc_food x SN (sticky_thresh). */
                                                 for (bb = 0; bb < bm->nbox; bb++) {
-                                                    if ((roc[bb][nroc] / roc_wgt) > sticky_thresh)
+                                                    if ((roc[bb][nroc] / (roc_wgt * bm->boxes[bb].area + small_num)) > sticky_thresh)
                                                     continue;
                                                     for (kk = 0; kk < bm->boxes[bb].nz; kk++)
                                                     leftsum += currentden[sp][n][kk][bb];
@@ -1927,7 +1929,7 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                                                 
                                                 /* Movers arrive by the forage field; stayers keep their share */
                                                 target = leftsum * roc[ij][nroc] / (totroc[nroc] + small_num);
-                                                if ((roc[ij][nroc] / roc_wgt) > sticky_thresh)
+                                                if ((roc[ij][nroc] / (roc_wgt * bm->boxes[ij].area + small_num)) > sticky_thresh)
                                                 target += boxcur;
                                             }
                                             
