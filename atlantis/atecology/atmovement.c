@@ -234,6 +234,75 @@ static double Calculate_Migration_Proportion_Back(MSEBoxModel *bm, FILE *llogfp,
     return migtime2;
 }
 
+
+/* Vertical distribution of every vertebrate group in every box, by stage (0, 1) and
+   half-day (0 = night, 1 = day); fractions sum to 1 over the box's water layers.
+   Filled once per call of Ecology_Total_Verts_And_Migration(). */
+static double *vd_all = NULL;
+#define VD(sp_, ij_, k_, st_, dp_) \
+    vd_all[((((size_t)(sp_) * bm->nbox + (ij_)) * bm->wcnz + (k_)) * 2 + (st_)) * 2 + (dp_)]
+ 
+/* Index of the water layer next to the seabed (0 in Atlantis's layer numbering).
+   Change to (bm->boxes[ij].nz - 1) if your check shows the bottom layer is the last one. */
+static int Bottom_Layer(MSEBoxModel *bm, int ij) {
+    (void) bm; (void) ij;          /* unused while the bottom layer is k = 0 */
+    return 0;
+}
+ 
+static void Fill_Vertical_Distributions(MSEBoxModel *bm, int enviro_depend, FILE *llogfp) {
+    int sp, ij, k, st, dp, n, nz;
+    size_t i, nval;
+    double sum;
+ 
+    nval = (size_t)bm->K_num_tot_sp * bm->nbox * bm->wcnz * 2 * 2;
+    if (vd_all == NULL) {
+        vd_all = (double *) malloc(nval * sizeof(double));
+        if (vd_all == NULL)
+            quit("Fill_Vertical_Distributions: could not allocate vd_all\n");
+    }
+    for (i = 0; i < nval; i++)
+        vd_all[i] = 0.0;
+ 
+    for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+        if ((FunctGroupArray[sp].isVertebrate != TRUE) || !((int) FunctGroupArray[sp].speciesParams[flag_id]))
+            continue;
+ 
+        for (ij = 0; ij < bm->nbox; ij++) {
+            if ((bm->boxes[ij].type == BOUNDARY) || (bm->boxes[ij].type == LAND))
+                continue;
+            nz = bm->boxes[ij].nz;
+ 
+            for (dp = 0; dp < 2; dp++) {
+                if (FunctGroupArray[sp].isMobile == TRUE) {
+                    /* From VERTday / VERTnight, mapped to this box's layers */
+                    Get_Vertical_Distribution(bm, ij, sp, currentden, enviro_depend, dp, -1, llogfp);
+                    for (st = 0; st < 2; st++)
+                        for (k = 0; k < nz; k++)
+                            VD(sp, ij, k, st, dp) = tempdistrib[k][st];
+                } else {
+                    /* Not vertically mobile: use where the animals are now */
+                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                        st = FunctGroupArray[sp].cohort_stage[n];
+                        for (k = 0; k < nz; k++)
+                            VD(sp, ij, k, st, dp) += bm->boxes[ij].tr[k][FunctGroupArray[sp].NumsTracers[n]];
+                    }
+                }
+ 
+                /* Normalise over the box's layers (even spread if nothing to go on) */
+                for (st = 0; st < 2; st++) {
+                    sum = 0.0;
+                    for (k = 0; k < nz; k++)
+                        sum += VD(sp, ij, k, st, dp);
+                    for (k = 0; k < nz; k++)
+                        VD(sp, ij, k, st, dp) = (sum > 0.0) ? VD(sp, ij, k, st, dp) / sum : 1.0 / nz;
+                }
+            }
+        }
+    }
+    return;
+}
+
+
 /**
 * \brief Calculate the clearance rate of the given cohort of the species in the ijth box.
 *
