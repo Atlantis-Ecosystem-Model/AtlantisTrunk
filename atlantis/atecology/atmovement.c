@@ -235,7 +235,7 @@ static double Calculate_Migration_Proportion_Back(MSEBoxModel *bm, FILE *llogfp,
 }
 
 
-/* Vertical distribution of every vertebrate group in every box, by stage (0, 1) and
+/* Vertical distribution of every vertebrate group and mobile invertebrate groups in every box, by stage (0, 1) and
 half-day (0 = night, 1 = day); fractions sum to 1 over the box's water layers.
 Filled once per call of Ecology_Total_Verts_And_Migration(). */
 static double *vd_all = NULL;
@@ -264,4316 +264,4332 @@ static void Fill_Vertical_Distributions(MSEBoxModel *bm, int enviro_depend, FILE
     vd_all[i] = 0.0;
     
     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-        if ((FunctGroupArray[sp].isVertebrate != TRUE) || !((int) FunctGroupArray[sp].speciesParams[flag_id]))
+        if (!((int) FunctGroupArray[sp].speciesParams[flag_id]))
+        continue;
+        /* Vertebrates, and invertebrates that migrate vertically in the water column
+        (placed by VERTnight / VERTday in Ecology_Invert_Migration()) */
+        if ((FunctGroupArray[sp].isVertebrate != TRUE) &&
+        !((FunctGroupArray[sp].isDetritus == FALSE) && (FunctGroupArray[sp].isMobile == TRUE) &&
+        (FunctGroupArray[sp].habitatType == WC)))
         continue;
         
         for (ij = 0; ij < bm->nbox; ij++) {
-            if ((bm->boxes[ij].type == BOUNDARY) || (bm->boxes[ij].type == LAND))
-            continue;
-            nz = bm->boxes[ij].nz;
             
-            for (dp = 0; dp < 2; dp++) {
-                if (FunctGroupArray[sp].isMobile == TRUE) {
-                    /* From VERTday / VERTnight, mapped to this box's layers */
-                    Get_Vertical_Distribution(bm, ij, sp, currentden, enviro_depend, dp, -1, llogfp);
-                    for (st = 0; st < 2; st++)
-                    for (k = 0; k < nz; k++)
-                    VD(sp, ij, k, st, dp) = tempdistrib[k][st];
-                } else {
-                    /* Not vertically mobile: use where the animals are now */
-                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                        st = FunctGroupArray[sp].cohort_stage[n];
+            for (ij = 0; ij < bm->nbox; ij++) {
+                if ((bm->boxes[ij].type == BOUNDARY) || (bm->boxes[ij].type == LAND))
+                continue;
+                nz = bm->boxes[ij].nz;
+                
+                for (dp = 0; dp < 2; dp++) {
+                    if (FunctGroupArray[sp].isMobile == TRUE) {
+                        /* From VERTday / VERTnight, mapped to this box's layers */
+                        Get_Vertical_Distribution(bm, ij, sp, currentden, enviro_depend, dp, -1, llogfp);
+                        for (st = 0; st < 2; st++)
                         for (k = 0; k < nz; k++)
-                        VD(sp, ij, k, st, dp) += bm->boxes[ij].tr[k][FunctGroupArray[sp].NumsTracers[n]];
-                    }
-                }
-                
-                /* Normalise over the box's layers (even spread if nothing to go on) */
-                for (st = 0; st < 2; st++) {
-                    sum = 0.0;
-                    for (k = 0; k < nz; k++)
-                    sum += VD(sp, ij, k, st, dp);
-                    for (k = 0; k < nz; k++)
-                    VD(sp, ij, k, st, dp) = (sum > 0.0) ? VD(sp, ij, k, st, dp) / sum : 1.0 / nz;
-                }
-            }
-        }
-    }
-    return;
-}
-
-
-/**
-* \brief Calculate the clearance rate of the given cohort of the species in the ijth box.
-*
-*
-*/
-/* ------------------------------------------------------------------------------------------
-
-Food index = prey concentration the cohort experiences in the layers it occupies,
-separately for night and day. The Holling intake is applied per half-day and averaged,
-so groups that swap layers between day and night don't meet.
-
-Vertebrate prey:        box mass x prey's own vertical fraction / layer volume
-Water-column groups:    tracer concentration in each layer
-Epifauna:               areal density / bottom-layer thickness, bottom layer only.
-This matches the Eat() fix, where non-epibenthic predators see
-epibenthos spread over the whole bottom water cell (wcLayerThick).
-Sediment groups, sediment part of carrion: bottom layer only, units as before
-
-clear stays a per-capita intake.
------------------------------------------------------------------------------------------- */
-
-static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, int sp, int cohort, int ij, double ***preyamt) {
-    
-    double E1_sp = FunctGroupArray[sp].speciesParams[E1_id];
-    double E2_sp = FunctGroupArray[sp].speciesParams[E2_id];
-    double E3_sp = FunctGroupArray[sp].speciesParams[E3_id];
-    double C_SP = FunctGroupArray[sp].SP_C_per_day[cohort];
-    double mum_SP = FunctGroupArray[sp].mum_per_day[cohort];
-    int nz = bm->boxes[ij].nz;
-    double area = bm->boxes[ij].area;
-    double pred_layer_frac[bm->wcnz];                  /* C99 variable-length array */
-    double food[3] = {0.0, 0.0, 0.0};        /* experienced concentration by class, averaged over half-days */
-    double food_dp[3];                       /* animal, plant, dead food for this half-day (mg N m-3) */
-    double clear = 0.0, preyavail, step1, prey_fits, predSn, preyMinSn, preyMaxSn, conc, frac;
-    double Ddp, Ftot, food_before = 0.0;
-    int prey, chrtstage, preystage, k, kb, n, dp, cls, predSNID, preyminSNID, preymaxSNID;
-    
-    /* DEBUG: per-prey contributions, printed as PREYCONTRIB lines (read with read_preycontrib_log()) */
-    int debug_this = (!strcmp(FunctGroupArray[sp].groupCode, "FCD") && (bm->dayt <= 5.0));
-    double *contrib_dp = NULL, *contrib_food = NULL, *contrib_clear = NULL;
-    if (debug_this) {
-        contrib_dp    = (double *) calloc(bm->K_num_tot_sp, sizeof(double));
-        contrib_food  = (double *) calloc(bm->K_num_tot_sp, sizeof(double));
-        contrib_clear = (double *) calloc(bm->K_num_tot_sp, sizeof(double));
-    }
-    
-    chrtstage = FunctGroupArray[sp].cohort_stage[cohort];
-    kb = Bottom_Layer(bm, ij);
-    
-    for (dp = 0; dp < 2; dp++) {               /* 0 = night, 1 = day */
-        
-        /* Predator's vertical fractions for this half-day (sum to 1 over the box's layers) */
-        for (k = 0; k < nz; k++)
-        pred_layer_frac[k] = VD(sp, ij, k, chrtstage, dp);
-        
-        food_dp[0] = food_dp[1] = food_dp[2] = 0.0;
-        
-        for (prey = 0; prey < bm->K_num_tot_sp; prey++) {
-            if (FunctGroupArray[prey].speciesParams[flag_id] != TRUE)
-            continue;
-            
-            if (debug_this)
-            food_before = food_dp[0] + food_dp[1] + food_dp[2];
-            
-            for (preystage = 0; preystage < FunctGroupArray[prey].numStages; preystage++) {
-                if (bm->flag_olddiet)
-                preyavail = FunctGroupArray[sp].pSPEat[juv_id][prey][WC];
-                else
-                preyavail = bm->pSPVERTeat[sp][prey][chrtstage][preystage];
-                
-                switch (FunctGroupArray[prey].groupAgeType) {
-                    
-                    case AGE_STRUCTURED:
-                    step1 = min(1.0, bm->pSPVERTeat[sp][prey][chrtstage][preystage] / (bm->refuge_status[prey][ij][preystage] + small_num));
-                    if (step1 <= 0.0)
-                    break;
-                    
-                    /* Gape test: does this prey stage fit this predator's window in any layer */
-                    prey_fits = 0.0;
-                    if (bm->flag_olddiet) {
-                        prey_fits = 1.0;
+                        VD(sp, ij, k, st, dp) = tempdistrib[k][st];
                     } else {
-                        preyminSNID = FunctGroupArray[prey].spMinMax[(preystage * 2)];
-                        preymaxSNID = FunctGroupArray[prey].spMinMax[(preystage * 2 + 1)];
-                        predSNID = FunctGroupArray[sp].structNTracers[cohort];
-                        for (k = 0; k < nz; k++) {
-                            predSn = bm->boxes[ij].tr[k][predSNID];
-                            preyMinSn = bm->boxes[ij].tr[k][preyminSNID];
-                            preyMaxSn = bm->boxes[ij].tr[k][preymaxSNID];
-                            if (!((preyMaxSn < FunctGroupArray[sp].speciesParams[KLP_id] * predSn) ||
-                            (preyMinSn > FunctGroupArray[sp].speciesParams[KUP_id] * predSn))) {
-                                prey_fits = 1.0;
-                                break;
-                            }
-                        }
-                    }
-                    if (prey_fits <= 0.0)
-                    break;
-                    
-                    /* Experienced concentration: box mass spread over layers by the prey's own
-                    vertical distribution, divided by layer volume, weighted by the predator's fractions */
-                    frac = 0.0;
-                    for (k = 0; k < nz; k++)
-                    frac += pred_layer_frac[k] * VD(prey, ij, k, preystage, dp) / (area * bm->boxes[ij].dz[k] + small_num);
-                    food_dp[0] += step1 * preyamt[prey][ij][preystage] * frac;     /* mg N m-3 experienced */
-                    break;
-                    
-                    case AGE_STRUCTURED_BIOMASS:
-                    case BIOMASS:
-                    if (preyavail <= 0.0)
-                    break;
-                    conc = 0.0;
-                    
-                    for (n = 0; n < FunctGroupArray[prey].numCohortsXnumGenes; n++) {
-                        /* each cohort counted once, with its own stage's availability */
-                        if ((FunctGroupArray[prey].groupAgeType == AGE_STRUCTURED_BIOMASS) &&
-                        (FunctGroupArray[prey].cohort_stage[n] != preystage))
-                        continue;
-                        
-                        if (FunctGroupArray[prey].habitatType == WC) {
-                            /* tracer is already a concentration (mg N m-3) */
+                        /* Not vertically mobile: use where the animals are now */
+                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                            st = FunctGroupArray[sp].cohort_stage[n];
                             for (k = 0; k < nz; k++)
-                            conc += pred_layer_frac[k] * bm->boxes[ij].tr[k][FunctGroupArray[prey].totNTracers[n]];
-                        } else if (FunctGroupArray[prey].habitatType == EPIFAUNA) {
-                            /* areal density (mg N m-2) spread over the bottom water cell, as in the Eat() fix;
-                            only the predator's share in the bottom layer meets it */
-                            conc += pred_layer_frac[kb] * bm->boxes[ij].epi[FunctGroupArray[prey].totNTracers[n]]
-                            / (bm->boxes[ij].dz[kb] + small_num);
-                        } else if (FunctGroupArray[prey].habitatType == SED) {
-                            /* units as before; needs sediment thickness / bottom-layer thickness if used in diets */
-                            for (k = 0; k < bm->boxes[ij].sm.nz; k++)
-                            conc += pred_layer_frac[kb] * bm->boxes[ij].sm.tr[k][FunctGroupArray[prey].totNTracers[n]];
+                            VD(sp, ij, k, st, dp) += bm->boxes[ij].tr[k][FunctGroupArray[sp].NumsTracers[n]];
                         }
                     }
-                    /* Sediment part of carrion: only reachable from the bottom layer (units as before) */
-                    if ((FunctGroupArray[prey].groupType == CARRION) && (FunctGroupArray[prey].habitatType == WC)) {
-                        for (k = 0; k < bm->boxes[ij].sm.nz; k++)
-                        conc += pred_layer_frac[kb] * bm->boxes[ij].sm.tr[k][FunctGroupArray[prey].totNTracers[0]];
-                    }
-                    conc *= preyavail;
                     
-                    switch (FunctGroupArray[prey].groupType) {
-                        case LG_PHY:
-                        case SM_PHY:
-                        case DINOFLAG:
-                        case PHYTOBEN:
-                        case SEAGRASS:
-                        case MICROPHTYBENTHOS:
-                        case ICE_DIATOMS:
-                        case ICE_MIXOTROPHS:
-                        case TURF:
-                        food_dp[1] += conc;
-                        break;
-                        case LAB_DET:
-                        food_dp[2] += conc;
-                        break;
-                        case REF_DET:
-                        break;                              /* not counted, as in the original */
-                        default:                                /* carrion and all other animal prey */
-                        food_dp[0] += conc;
-                        break;
+                    /* Normalise over the box's layers (even spread if nothing to go on) */
+                    for (st = 0; st < 2; st++) {
+                        sum = 0.0;
+                        for (k = 0; k < nz; k++)
+                        sum += VD(sp, ij, k, st, dp);
+                        for (k = 0; k < nz; k++)
+                        VD(sp, ij, k, st, dp) = (sum > 0.0) ? VD(sp, ij, k, st, dp) / sum : 1.0 / nz;
                     }
-                    break;
                 }
             }
-            
-            if (debug_this)
-            contrib_dp[prey] = (food_dp[0] + food_dp[1] + food_dp[2]) - food_before;
         }
-        
-        /* Holling intake per individual for this half-day, as in feeding; averaged over half-days */
-        Ddp = 1.0 + (food_dp[0] * E1_sp + food_dp[1] * E2_sp + food_dp[2] * E3_sp) * C_SP / mum_SP;
-        clear += 0.5 * (food_dp[0] + food_dp[1] + food_dp[2]) * C_SP / Ddp;
-        
-        for (cls = 0; cls < 3; cls++)
-        food[cls] += 0.5 * food_dp[cls];
-        
-        if (debug_this) {
-            for (prey = 0; prey < bm->K_num_tot_sp; prey++) {
-                contrib_food[prey]  += 0.5 * contrib_dp[prey];
-                contrib_clear[prey] += 0.5 * contrib_dp[prey] * C_SP / Ddp;
-                contrib_dp[prey] = 0.0;
-            }
-        }
+        return;
     }
     
-    /* DEBUG: each prey's contribution to the experienced food term and to clear
-    (clear_contrib sums to clear) */
-    if (debug_this) {
-        Ftot = food[0] + food[1] + food[2];
-        for (prey = 0; prey < bm->K_num_tot_sp; prey++) {
-            if (contrib_food[prey] == 0.0)
-            continue;
-            fprintf(llogfp, "PREYCONTRIB Time: %e %s-%d box %d prey %s habitatType %d groupAgeType %d food: %.10e share: %.10e clear_contrib: %.10e clear: %.10e\n",
-                bm->dayt, FunctGroupArray[sp].groupCode, cohort, ij, FunctGroupArray[prey].groupCode,
-                (int)FunctGroupArray[prey].habitatType, (int)FunctGroupArray[prey].groupAgeType,
-                contrib_food[prey], contrib_food[prey] / (Ftot + small_num), contrib_clear[prey], clear);
-            }
-            free(contrib_dp);
-            free(contrib_food);
-            free(contrib_clear);
-        }
-        
-        return clear;
-    }
     
     /**
-    * \brief Calculate the prey values. Determine tot numbers per cohort per species and total
-    amount of each prey in each box.
+    * \brief Calculate the clearance rate of the given cohort of the species in the ijth box.
     *
     *
     */
-    static void Calculate_Prey_Values(MSEBoxModel *bm, double ***preyamt, FILE *llogfp) {
-        int ij, k, sp, n, pid;
-        int rugosity_check_done = 0;
-        int preychrtstage = 0;
-        double cdepth;
+    /* ------------------------------------------------------------------------------------------
+    
+    Food index = prey concentration the cohort experiences in the layers it occupies,
+    separately for night and day. The Holling intake is applied per half-day and averaged,
+    so groups that swap layers between day and night don't meet.
+    
+    Vertebrate prey:        box mass x prey's own vertical fraction / layer volume
+    Water-column groups:    tracer concentration in each layer
+    Epifauna:               areal density / bottom-layer thickness, bottom layer only.
+    This matches the Eat() fix, where non-epibenthic predators see
+    epibenthos spread over the whole bottom water cell (wcLayerThick).
+    Sediment groups, sediment part of carrion: bottom layer only, units as before
+    
+    clear stays a per-capita intake.
+    ------------------------------------------------------------------------------------------ */
+    
+    static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, int sp, int cohort, int ij, double ***preyamt) {
         
-        /* Determine tot numbers per cohort per species and total
-        amount of each prey in each box */
+        double E1_sp = FunctGroupArray[sp].speciesParams[E1_id];
+        double E2_sp = FunctGroupArray[sp].speciesParams[E2_id];
+        double E3_sp = FunctGroupArray[sp].speciesParams[E3_id];
+        double C_SP = FunctGroupArray[sp].SP_C_per_day[cohort];
+        double mum_SP = FunctGroupArray[sp].mum_per_day[cohort];
+        int nz = bm->boxes[ij].nz;
+        double area = bm->boxes[ij].area;
+        double pred_layer_frac[bm->wcnz];                  /* C99 variable-length array */
+        double food[3] = {0.0, 0.0, 0.0};        /* experienced concentration by class, averaged over half-days */
+        double food_dp[3];                       /* animal, plant, dead food for this half-day (mg N m-3) */
+        double clear = 0.0, preyavail, step1, prey_fits, predSn, preyMinSn, preyMaxSn, conc, frac;
+        double Ddp, Ftot, food_before = 0.0, colN;
+        int prey, chrtstage, preystage, k, kb, n, dp, cls, predSNID, preyminSNID, preymaxSNID, pst;
         
-        for (ij = 0; ij < bm->nbox; ij++) {
+        /* DEBUG: per-prey contributions, printed as PREYCONTRIB lines (read with read_preycontrib_log()) */
+        int debug_this = (!strcmp(FunctGroupArray[sp].groupCode, "FCD") && (bm->dayt <= 5.0));
+        double *contrib_dp = NULL, *contrib_food = NULL, *contrib_clear = NULL;
+        if (debug_this) {
+            contrib_dp    = (double *) calloc(bm->K_num_tot_sp, sizeof(double));
+            contrib_food  = (double *) calloc(bm->K_num_tot_sp, sizeof(double));
+            contrib_clear = (double *) calloc(bm->K_num_tot_sp, sizeof(double));
+        }
+        
+        chrtstage = FunctGroupArray[sp].cohort_stage[cohort];
+        kb = Bottom_Layer(bm, ij);
+        
+        for (dp = 0; dp < 2; dp++) {               /* 0 = night, 1 = day */
             
-            /* Determine initial biomasses */
-            if (bm->boxes[ij].type == LAND) {
-                for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+            /* Predator's vertical fractions for this half-day (sum to 1 over the box's layers) */
+            for (k = 0; k < nz; k++)
+            pred_layer_frac[k] = VD(sp, ij, k, chrtstage, dp);
+            
+            food_dp[0] = food_dp[1] = food_dp[2] = 0.0;
+            
+            for (prey = 0; prey < bm->K_num_tot_sp; prey++) {
+                if (FunctGroupArray[prey].speciesParams[flag_id] != TRUE)
+                continue;
+                
+                if (debug_this)
+                food_before = food_dp[0] + food_dp[1] + food_dp[2];
+                
+                for (preystage = 0; preystage < FunctGroupArray[prey].numStages; preystage++) {
+                    if (bm->flag_olddiet)
+                    preyavail = FunctGroupArray[sp].pSPEat[juv_id][prey][WC];
+                    else
+                    preyavail = bm->pSPVERTeat[sp][prey][chrtstage][preystage];
                     
-                    /* Skip over groups not in the model */
-                    if (!(int) (FunctGroupArray[sp].speciesParams[flag_id]))
-                    continue;
-                    
-                    if (FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
+                    switch (FunctGroupArray[prey].groupAgeType) {
                         
-                        switch (FunctGroupArray[sp].groupAgeType) {
-                            case AGE_STRUCTURED:
-                            Get_Vert_Diet(bm, preyamt, ij, 0, sp);
-                            break;
-                            case AGE_STRUCTURED_BIOMASS:	/* Intentional follow through */
-                            case BIOMASS:
-                            /* ignore - will not get here */
-                            quit("Calculate_Prey_Values - no support for land based inverts.\n");
+                        case AGE_STRUCTURED:
+                        step1 = min(1.0, bm->pSPVERTeat[sp][prey][chrtstage][preystage] / (bm->refuge_status[prey][ij][preystage] + small_num));
+                        if (step1 <= 0.0)
+                        break;
+                        
+                        /* Gape test: does this prey stage fit this predator's window in any layer */
+                        prey_fits = 0.0;
+                        if (bm->flag_olddiet) {
+                            prey_fits = 1.0;
+                        } else {
+                            preyminSNID = FunctGroupArray[prey].spMinMax[(preystage * 2)];
+                            preymaxSNID = FunctGroupArray[prey].spMinMax[(preystage * 2 + 1)];
+                            predSNID = FunctGroupArray[sp].structNTracers[cohort];
+                            for (k = 0; k < nz; k++) {
+                                predSn = bm->boxes[ij].tr[k][predSNID];
+                                preyMinSn = bm->boxes[ij].tr[k][preyminSNID];
+                                preyMaxSn = bm->boxes[ij].tr[k][preymaxSNID];
+                                if (!((preyMaxSn < FunctGroupArray[sp].speciesParams[KLP_id] * predSn) ||
+                                (preyMinSn > FunctGroupArray[sp].speciesParams[KUP_id] * predSn))) {
+                                    prey_fits = 1.0;
+                                    break;
+                                }
+                            }
+                        }
+                        if (prey_fits <= 0.0)
+                        break;
+                        
+                        /* Experienced concentration: box mass spread over layers by the prey's own
+                        vertical distribution, divided by layer volume, weighted by the predator's fractions */
+                        frac = 0.0;
+                        for (k = 0; k < nz; k++)
+                        frac += pred_layer_frac[k] * VD(prey, ij, k, preystage, dp) / (area * bm->boxes[ij].dz[k] + small_num);
+                        food_dp[0] += step1 * preyamt[prey][ij][preystage] * frac;     /* mg N m-3 experienced */
+                        break;
+                        
+                        case AGE_STRUCTURED_BIOMASS:
+                        case BIOMASS:
+                        if (preyavail <= 0.0)
+                        break;
+                        conc = 0.0;
+                        
+                        for (n = 0; n < FunctGroupArray[prey].numCohortsXnumGenes; n++) {
+                            /* each cohort counted once, with its own stage's availability */
+                            if ((FunctGroupArray[prey].groupAgeType == AGE_STRUCTURED_BIOMASS) &&
+                            (FunctGroupArray[prey].cohort_stage[n] != preystage))
+                            continue;
+                            
+                            if (FunctGroupArray[prey].habitatType == WC) {
+                                if ((FunctGroupArray[prey].isVertebrate == FALSE) && (FunctGroupArray[prey].isDetritus == FALSE) &&
+                                (FunctGroupArray[prey].isMobile == TRUE)) {
+                                    /* Vertically migrating: spread the water-column total (mg N m-2) over the layers
+                                    by the prey's own VERTnight / VERTday for this half-day, as for vertebrate prey */
+                                    colN = 0.0;
+                                    for (k = 0; k < nz; k++)
+                                    colN += bm->boxes[ij].tr[k][FunctGroupArray[prey].totNTracers[n]] * bm->boxes[ij].dz[k];
+                                    pst = (preystage > 0) ? 1 : 0;
+                                    for (k = 0; k < nz; k++)
+                                    conc += pred_layer_frac[k] * colN * VD(prey, ij, k, pst, dp) / (bm->boxes[ij].dz[k] + small_num);
+                                } else {
+                                    /* Not migrating: tracer is already a concentration (mg N m-3) where they are */
+                                    for (k = 0; k < nz; k++)
+                                    conc += pred_layer_frac[k] * bm->boxes[ij].tr[k][FunctGroupArray[prey].totNTracers[n]];
+                                } else if (FunctGroupArray[prey].habitatType == EPIFAUNA) {
+                                    /* areal density (mg N m-2) spread over the bottom water cell, as in the Eat() fix;
+                                    only the predator's share in the bottom layer meets it */
+                                    conc += pred_layer_frac[kb] * bm->boxes[ij].epi[FunctGroupArray[prey].totNTracers[n]]
+                                    / (bm->boxes[ij].dz[kb] + small_num);
+                                } else if (FunctGroupArray[prey].habitatType == SED) {
+                                    /* units as before; needs sediment thickness / bottom-layer thickness if used in diets */
+                                    for (k = 0; k < bm->boxes[ij].sm.nz; k++)
+                                    conc += pred_layer_frac[kb] * bm->boxes[ij].sm.tr[k][FunctGroupArray[prey].totNTracers[n]];
+                                }
+                            }
+                            /* Sediment part of carrion: only reachable from the bottom layer (units as before) */
+                            if ((FunctGroupArray[prey].groupType == CARRION) && (FunctGroupArray[prey].habitatType == WC)) {
+                                for (k = 0; k < bm->boxes[ij].sm.nz; k++)
+                                conc += pred_layer_frac[kb] * bm->boxes[ij].sm.tr[k][FunctGroupArray[prey].totNTracers[0]];
+                            }
+                            conc *= preyavail;
+                            
+                            switch (FunctGroupArray[prey].groupType) {
+                                case LG_PHY:
+                                case SM_PHY:
+                                case DINOFLAG:
+                                case PHYTOBEN:
+                                case SEAGRASS:
+                                case MICROPHTYBENTHOS:
+                                case ICE_DIATOMS:
+                                case ICE_MIXOTROPHS:
+                                case TURF:
+                                food_dp[1] += conc;
+                                break;
+                                case LAB_DET:
+                                food_dp[2] += conc;
+                                break;
+                                case REF_DET:
+                                break;                              /* not counted, as in the original */
+                                default:                                /* carrion and all other animal prey */
+                                food_dp[0] += conc;
+                                break;
+                            }
                             break;
                         }
                     }
+                    
+                    if (debug_this)
+                    contrib_dp[prey] = (food_dp[0] + food_dp[1] + food_dp[2]) - food_before;
+                }
+                
+                /* Holling intake per individual for this half-day, as in feeding; averaged over half-days */
+                Ddp = 1.0 + (food_dp[0] * E1_sp + food_dp[1] * E2_sp + food_dp[2] * E3_sp) * C_SP / mum_SP;
+                clear += 0.5 * (food_dp[0] + food_dp[1] + food_dp[2]) * C_SP / Ddp;
+                
+                for (cls = 0; cls < 3; cls++)
+                food[cls] += 0.5 * food_dp[cls];
+                
+                if (debug_this) {
+                    for (prey = 0; prey < bm->K_num_tot_sp; prey++) {
+                        contrib_food[prey]  += 0.5 * contrib_dp[prey];
+                        contrib_clear[prey] += 0.5 * contrib_dp[prey] * C_SP / Ddp;
+                        contrib_dp[prey] = 0.0;
+                    }
                 }
             }
-            else if (bm->boxes[ij].type != BOUNDARY) {
+            
+            /* DEBUG: each prey's contribution to the experienced food term and to clear
+            (clear_contrib sums to clear) */
+            if (debug_this) {
+                Ftot = food[0] + food[1] + food[2];
+                for (prey = 0; prey < bm->K_num_tot_sp; prey++) {
+                    if (contrib_food[prey] == 0.0)
+                    continue;
+                    fprintf(llogfp, "PREYCONTRIB Time: %e %s-%d box %d prey %s habitatType %d groupAgeType %d food: %.10e share: %.10e clear_contrib: %.10e clear: %.10e\n",
+                        bm->dayt, FunctGroupArray[sp].groupCode, cohort, ij, FunctGroupArray[prey].groupCode,
+                        (int)FunctGroupArray[prey].habitatType, (int)FunctGroupArray[prey].groupAgeType,
+                        contrib_food[prey], contrib_food[prey] / (Ftot + small_num), contrib_clear[prey], clear);
+                    }
+                    free(contrib_dp);
+                    free(contrib_food);
+                    free(contrib_clear);
+                }
                 
-                for (k = 0; k < bm->REEFcover_id; k++)
-                bm->coveramt[k][ij] = 0.0;
+                return clear;
+            }
+            
+            /**
+            * \brief Calculate the prey values. Determine tot numbers per cohort per species and total
+            amount of each prey in each box.
+            *
+            *
+            */
+            static void Calculate_Prey_Values(MSEBoxModel *bm, double ***preyamt, FILE *llogfp) {
+                int ij, k, sp, n, pid;
+                int rugosity_check_done = 0;
+                int preychrtstage = 0;
+                double cdepth;
                 
-                cdepth = bm->boxes[ij].botz;
-                for (k = 0; k < bm->boxes[ij].nz; k++) {
+                /* Determine tot numbers per cohort per species and total
+                amount of each prey in each box */
+                
+                for (ij = 0; ij < bm->nbox; ij++) {
                     
-                    /* Initialise whether species counted in this depth band */
-                    //Util_Init_2D_Int(counted, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
+                    /* Determine initial biomasses */
+                    if (bm->boxes[ij].type == LAND) {
+                        for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                            
+                            /* Skip over groups not in the model */
+                            if (!(int) (FunctGroupArray[sp].speciesParams[flag_id]))
+                            continue;
+                            
+                            if (FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
+                                
+                                switch (FunctGroupArray[sp].groupAgeType) {
+                                    case AGE_STRUCTURED:
+                                    Get_Vert_Diet(bm, preyamt, ij, 0, sp);
+                                    break;
+                                    case AGE_STRUCTURED_BIOMASS:	/* Intentional follow through */
+                                    case BIOMASS:
+                                    /* ignore - will not get here */
+                                    quit("Calculate_Prey_Values - no support for land based inverts.\n");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else if (bm->boxes[ij].type != BOUNDARY) {
+                        
+                        for (k = 0; k < bm->REEFcover_id; k++)
+                        bm->coveramt[k][ij] = 0.0;
+                        
+                        cdepth = bm->boxes[ij].botz;
+                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                            
+                            /* Initialise whether species counted in this depth band */
+                            //Util_Init_2D_Int(counted, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
+                            
+                            for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                                
+                                /* Skip over groups not in the model */
+                                if (!(int) (FunctGroupArray[sp].speciesParams[flag_id]))
+                                continue;
+                                
+                                if (FunctGroupArray[sp].habitatType == WC){
+                                    
+                                    switch (FunctGroupArray[sp].groupAgeType) {
+                                        case AGE_STRUCTURED:
+                                        Get_Vert_Diet(bm, preyamt, ij, k, sp);
+                                        break;
+                                        case AGE_STRUCTURED_BIOMASS:	/* Intentional follow through */
+                                        case BIOMASS:
+                                        preychrtstage = 0;
+                                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                            preyamt[sp][ij][preychrtstage] += bm->boxes[ij].tr[k][FunctGroupArray[sp].totNTracers[n]];
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                        }
+                        
+                        for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                            if (FunctGroupArray[sp].speciesParams[flag_id] == TRUE){
+                                if (FunctGroupArray[sp].habitatType == SED || FunctGroupArray[sp].groupType == CARRION) {
+                                    if(FunctGroupArray[sp].groupAgeType == BIOMASS){
+                                        for (k = 0; k < bm->boxes[ij].sm.nz; k++) {
+                                            preyamt[sp][ij][0] += bm->boxes[ij].sm.tr[k][FunctGroupArray[sp].totNTracers[0]];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        /* Epibenthos and benthic biogenic habitat coverage - use epi call here
+                        for epibenthos values instead of tracer value array as easier to
+                        access and no difference in value as yet (no invertebrate movement yet)
+                        */
+                        
+                        for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                            if (FunctGroupArray[sp].speciesParams[flag_id] == TRUE){
+                                if (FunctGroupArray[sp].habitatType == EPIFAUNA) {
+                                    switch (FunctGroupArray[sp].groupAgeType) {
+                                        case AGE_STRUCTURED:
+                                        /* Do nothing */
+                                        break;
+                                        case AGE_STRUCTURED_BIOMASS: /* Intentional follow through */
+                                        case BIOMASS:
+                                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                            preyamt[sp][ij][0] += bm->boxes[ij].epi[FunctGroupArray[sp].totNTracers[n]];
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                            if (FunctGroupArray[sp].speciesParams[flag_id] == TRUE){
+                                if (FunctGroupArray[sp].isCover == TRUE) {
+                                    pid = FunctGroupArray[sp].CoverTracer;
+                                    n = FunctGroupArray[sp].coverID;
+                                    bm->coveramt[n][ij] += bm->boxes[ij].epi[pid];
+                                }
+                            }
+                        }
+                        
+                        /** Assess the environment (to account for habitat depdendency due to
+                        refuges not just diet requirements **/
+                        rugosity_check_done = 0;
+                        for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                            if(FunctGroupArray[sp].speciesParams[flag_id]){
+                                if (FunctGroupArray[sp].isVertebrate == TRUE) {
+                                    
+                                    /* Skip over groups not in the model */
+                                    if (! (int) (FunctGroupArray[sp].speciesParams[flag_id]))
+                                    continue;
+                                    
+                                    Vertebrate_Assess_Enviro(bm, sp, ij, bm->coveramt, cdepth, rugosity_check_done, llogfp);
+                                    rugosity_check_done = 1;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return;
+            }
+            
+            /**
+            *    \brief This routine calculates any effects of turbidity on predation
+            *
+            */
+            void Calculate_Turbid_Effects(MSEBoxModel *bm, FILE *llogfp) {
+                double L_sp, a_sp, b_sp, step1;
+                int sp, stage, b, k;
+                
+                if (verbose > 0)
+                printf("Calculate_Turbid_Effects\n");
+                
+                if(!bm->flagIsEstuary)
+                return;
+                
+                // Find the scalars per predator
+                for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                    for (stage = 0; stage < FunctGroupArray[sp].numStages; stage++) {
+                        L_sp = FunctGroupArray[sp].cohortSpeciesParams[stage][L_turbid_id];
+                        b_sp = FunctGroupArray[sp].cohortSpeciesParams[stage][b_turbid_id];
+                        a_sp = FunctGroupArray[sp].cohortSpeciesParams[stage][a_turbid_id];
+                        /* Get details of feeding preferences */
+                        for (b = 0; b < bm->nbox; b++) {
+                            if (bm->boxes[b].type != BOUNDARY) {
+                                for (k = 0; k < bm->boxes[b].nz; k++) {
+                                    step1 = 1.0 - L_sp / (1.0 + exp(-1.0 * a_sp * (bm->boxes[b].tr[k][SED_i] - b_sp)));
+                                    bm->turbid_effect[sp][b][k][stage] = (1.0 / step1);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (verbose > 0)
+                printf("Completed Calculate_Turbid_Effects\n");
+                
+                return;
+            }
+            
+            /*
+            * Routine for calculating how movement effected by environmental conditions
+            */
+            
+            double Get_Enviro_Move_Scalar(int flag_sensitive_sp, double current_enviro, double K_const_sp, double min_sp, double max_sp, int sp, int prop_ID, double dayt, FILE *llogfp) {
+                double step1, step2, step3, step4;
+                double numScalar = 1.0;
+                
+                step1 = K_const_sp * exp(current_enviro - min_sp) / (K_const_sp + (exp(current_enviro - min_sp) - 1.0));
+                step2 = K_const_sp * exp(max_sp - current_enviro) / (K_const_sp + (exp(max_sp - current_enviro) - 1.0));
+                switch (flag_sensitive_sp) {
+                    case not_sensitive:  // Nothing to do
+                    break;
+                    case sensitive_heaviside_window:
+                    if ((current_enviro < min_sp) || (current_enviro > max_sp)) {
+                        numScalar = 0.0;
+                    }
+                    break;
+                    case sensitive_biologistic_window: // Gaussian shape
+                    numScalar = 1.0;
+                    step3 = step1 / K_const_sp;
+                    step4 = step2 / K_const_sp;
+                    if (step3 > step4) {
+                        numScalar = step4;
+                    } else {
+                        numScalar = step3;
+                    }
+                    
+                    if(numScalar > 1.0)
+                    numScalar = 1.0;
+                    if(numScalar < 0.0)
+                    numScalar = 0.0;
+                    break;
+                    case sensitive_gradual_side: // Flat-top version
+                    numScalar = 1.0;
+                    if (current_enviro < min_sp) {
+                        numScalar = step1;
+                    } else if ( current_enviro > max_sp ) {
+                        numScalar = step2;
+                    }
+                    if(numScalar > 1.0)
+                    numScalar = 1.0;
+                    if(numScalar < 0.0)
+                    numScalar = 0.0;
+                    break;
+                    default:
+                    break;
+                    
+                }
+                
+                /*
+                if(numScalar < 1.0) {
+                fprintf(llogfp, "Time: %e %s is environmentally constrained property %d is outside their tolerance levels\n", dayt, FunctGroupArray[sp].groupCode, prop_ID);
+                }
+                */
+                return numScalar;
+            }
+            
+            
+            void Store_Min_Max_Avg(MSEBoxModel *bm, int sp) {
+                int n, nlist;
+                double this_wgt, this_biom;
+                double this_denom = (double)(bm->K_rolling_cap_num);
+                double this_sum_W = 0.0;
+                double this_sum_B = 0.0;
+                
+                if (FunctGroupArray[sp].isFished == TRUE) {
+                    if((!FunctGroupArray[sp].speciesParams[flagFonly_id]) || (!FunctGroupArray[sp].speciesParams[flag_systcap_sp_id]))
+                    return;  // Nothing to do here
+                    
+                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                        /* Do weights first - only for age structured (vertebrate style) groups - totden, VERTinfo being calculated in the Vertebrate movement code */
+                        if (FunctGroupArray[sp].isVertebrate == TRUE) {
+                            this_wgt = VERTinfo[sp][n][SN_id] + VERTinfo[sp][n][RN_id];
+                            
+                            if (FunctGroupArray[sp].min_wgt[n] > this_wgt) {
+                                FunctGroupArray[sp].min_wgt[n] = this_wgt;
+                            }
+                            if (FunctGroupArray[sp].max_wgt[n] < this_wgt) {
+                                FunctGroupArray[sp].max_wgt[n] = this_wgt;
+                            }
+                            
+                            /* Now their biomass */
+                            this_biom = this_wgt * totden[sp][n];
+                            
+                            if (FunctGroupArray[sp].min_B[n] > this_biom) {
+                                FunctGroupArray[sp].min_B[n] = this_biom;
+                            }
+                            if (FunctGroupArray[sp].max_B[n] < this_biom) {
+                                FunctGroupArray[sp].max_B[n] = this_biom;
+                            }
+                            
+                            /* And now the rollign values - Iterate the list and get new values */
+                            this_sum_W = 0.0;
+                            this_sum_B = 0.0;
+                            if (!bm->rolling_cap_initialised[sp][n]) { // Initialise if the first time through
+                                for ( nlist = 0; nlist < bm->K_rolling_cap_num; nlist++) {
+                                    FunctGroupArray[sp].rolling_wgt[n][nlist] = this_wgt;
+                                    FunctGroupArray[sp].rolling_B[n][nlist] = this_biom;
+                                }
+                                FunctGroupArray[sp].rolling_wgt[n][bm->K_rolling_cap_num] = this_wgt;
+                                FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num] = this_biom;
+                                bm->rolling_cap_initialised[sp][n] = 1;
+                            } else {
+                                if ( bm->newmonth) {
+                                    for ( nlist = 0; nlist < (bm->K_rolling_cap_num - 1); nlist++) {
+                                        FunctGroupArray[sp].rolling_wgt[n][nlist] = FunctGroupArray[sp].rolling_wgt[n][nlist + 1];
+                                        FunctGroupArray[sp].rolling_B[n][nlist] = FunctGroupArray[sp].rolling_B[n][nlist + 1];
+                                        this_sum_W += FunctGroupArray[sp].rolling_wgt[n][nlist];
+                                        this_sum_B += FunctGroupArray[sp].rolling_B[n][nlist];
+                                    }
+                                    FunctGroupArray[sp].rolling_wgt[n][bm->K_rolling_cap_num - 1] = this_wgt;
+                                    FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num - 1] = this_biom;
+                                    this_sum_W += this_wgt;
+                                    this_sum_B += this_biom;
+                                    FunctGroupArray[sp].rolling_wgt[n][bm->K_rolling_cap_num] = this_sum_W / this_denom;
+                                    FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num] = this_sum_B / this_denom;
+                                }
+                            }
+                            
+                        } else {
+                            /* Invertebrate biomass */
+                            this_biom = totboxden[invert_biosum+n];  // Calculated in the invertbrate movement routine
+                            
+                            if (FunctGroupArray[sp].min_B[n] > this_biom) {
+                                FunctGroupArray[sp].min_B[n] = this_biom;
+                            }
+                            if (FunctGroupArray[sp].max_B[n] < this_biom) {
+                                FunctGroupArray[sp].max_B[n] = this_biom;
+                            }
+                            
+                            /* And now the rollign values - Iterate the list and get new values */
+                            this_sum_B = 0.0;
+                            if (!bm->rolling_cap_initialised[sp][n]) { // Initialise if the first time through
+                                for ( nlist = 0; nlist < bm->K_rolling_cap_num; nlist++) {
+                                    FunctGroupArray[sp].rolling_B[n][nlist] = this_biom;
+                                }
+                                FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num] = this_biom;
+                                bm->rolling_cap_initialised[sp][n] = 1;
+                            } else {
+                                if ( bm->newmonth) {
+                                    for ( nlist = 0; nlist < (bm->K_rolling_cap_num - 1); nlist++) {
+                                        FunctGroupArray[sp].rolling_B[n][nlist] = FunctGroupArray[sp].rolling_B[n][nlist + 1];
+                                        this_sum_B += FunctGroupArray[sp].rolling_B[n][nlist];
+                                    }
+                                    FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num - 1] = this_biom;
+                                    this_sum_B += this_biom;
+                                    FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num] = this_sum_B / this_denom;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return;
+                
+            }
+            
+            
+            /**
+            *	\brief This routine calculates any movements by vertebrates
+            *	(horizontal or vertical)
+            */
+            void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp) {
+                int ij, k, n, qrt, next_qrt, sp, flagmother, flagsp, /*spjmin, spjmax, spamin = 0, spamax,*/
+                age_mat, sp_ddepend_move, day_part, sn, rn, den, mig_done, spmigrate, spmigrate_done, bearlive, stage, flagimposecatch, stock_id = -1, spupdatemig, do_debug, recalc_needed, decdis, sp_spawn_now, flagchannel, desired_chrt, nf, flagcontract_sp, qid, lid, ngene, spawn_period, spawn_date, bcohort, temp_sensitive_sp=0, salt_sensitive_sp=0, update_larval_distrib, updated_already, test_day, cells_checked, cells_impacted, DR_id, DL_id;
+                double ldayt = bm->t / 86400.0;
+                //double migtemp = 86400.0 / dt;
+                int maxij = bm->K_num_stocks_per_sp;
+                int overall_checkday = (int) (floor(bm->dayt));
+                int this_flag_recruit, is_maternal_raised = 0;
+                double clear, E1_sp, spSpeed, this_HowFar, vertdistrib, mignum, mignum_actual=0.0, spawnmove, totmig, midpoint, FSMG_grow, migtime, oldden, totdenom = 0, maxstock, min_spawntemp_sp, max_spawntemp_sp, temp_effect, finalmig, avgsn, avgrn, dynsn, dynrn, min_O2_sp, current_enviro, min_spawnsalt_sp, max_spawnsalt_sp, salt_effect, o2_effect, contract_sp, oldsn, oldrn, this_tot_biom, pH_scale, orig_newden, check_day, stagger_scalar, noise_effect, light_effect, K_salt_const_sp, K_o2_const_sp, numScalar_final, growth_period, den_diff, start_n, end_n;
+                double numScalar, K_temp_const_sp = 0.0;
+                // double step1, step2;  OLD WAY OF DOING AGE - DEPRECATE
+                double ReturnPeriod;
+                double IBoxProp;
+                int enviro_depend = 0, sp_enviro_depend = 0, check_done = 0, is_suitable = 0;
+                int rij, rangeid, rocstage = -1, adstage, sp_Migrate_Years, stagger_return = 0, agec;
+                double nbox_spread, stepSN, stepRN, yoy_den, KWSR_sp, KWRR_sp;
+                int adbox, chkbox, kk;
+                double prop_range, juv_num, ad_num;
+                int prij, rrid, ad_cohort, not_done, ad_start_cohort;
+                double sp_amt;
+                double migProp;
+                double migtime2;
+                double some_ice = 0.0, ice_effect;
+                int do_debug2;
+                double boxcur, wnorm, target, sticky_thresh, leftsum;
+                int follow_mother, nroc, mstage, use_spawn_move, prescribed_only, weighted, bb;
+                
+                
+                updated_already = 0;
+                
+                if (bm->debug && (((bm->debug > debug_eat) || ((bm->debug > debug_spawn) && (bm->debug < debug_biom))) && (bm->dayt >= bm->checkstart)))
+                do_debug = 1;
+                else
+                do_debug = 0;
+                
+                if (bm->flagtempdepend_move || bm->flagsaltdepend || bm->flagO2depend)
+                enviro_depend = 1;
+                
+                mig_done = 0;
+                
+                if (verbose)
+                printf("Dealing with migration\n");
+                
+                /* Determine current date and metabolic parameter values.
+                Bases everything on the latitude of box 0, so don't have to worry
+                about accidently calling a box that isn't in the geometry being used. */
+                midpoint = bm->boxes[1].inside.y;
+                
+                Parameter_Q10(bm, &bm->boxes[1], ldayt, 1, 0, bm->boxes[1].nz - 1, midpoint, WC, llogfp);
+                
+                day_part = bm->flagday; // 1 = day time, 0 = night time
+                
+                /* Initialise local arrays */
+                Util_Init_2D_Double(boxden, bm->nbox, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
+                Util_Init_4D_Double(currentden, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->wcnz, bm->nbox, 0.0);
+                Util_Init_3D_Double(init_stock_struct_prop, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->K_num_stocks_per_sp, 0.0);
+                Util_Init_2D_Double(leftden, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
+                Util_Init_1D_Int(mig_returners, bm->K_num_tot_sp, 0);
+                Util_Init_4D_Double(newden, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->wcnz, bm->nbox, 0.0);
+                Util_Init_1D_Double(newden_sum, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
+                Util_Init_2D_Int(prey_counted, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0);
+                Util_Init_3D_Double(preyamt, bm->K_num_tot_sp, bm->nbox, 2, 0.0);
+                Util_Init_1D_Double(totad, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
+                Util_Init_1D_Double(totboxden, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
+                Util_Init_2D_Double(totden, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
+                Util_Init_2D_Double(totden_check, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
+                Util_Init_1D_Double(totroc, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
+                Util_Init_3D_Double(VERTinfo, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, 3, 0.0);
+                
+                Util_Init_2D_Double(bm->targetspbiom, bm->K_num_tot_sp, bm->nbox, 0.0);
+                Util_Init_3D_Double(bm->stock_struct_prop, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->K_num_stocks_per_sp, 0.0);
+                Util_Init_3D_Double(bm->HomeRangeTotal, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->K_num_homerange, 0.0);
+                
+                /* Determine tot numbers per cohort per species and total
+                amount of each prey in each box of the bay. Will update the totden array. */
+                Calculate_Prey_Values(bm, preyamt, llogfp);
+                
+                
+                /* Vertical distributions of all vertebrate and mobile invertabrate groups for the overlap in the food index */
+                Fill_Vertical_Distributions(bm, enviro_depend, llogfp);
+                
+                /* Determine any turbidity effects - to apply to predation */
+                Calculate_Turbid_Effects(bm, llogfp);
+                
+                /* Check for desired cohorts for each fishery */
+                if (bm->flag_fisheries_on) {
+                    
+                    if (verbose > 0)
+                    printf("Doing desired chrt check\n");
                     
                     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
                         
-                        /* Skip over groups not in the model */
-                        if (!(int) (FunctGroupArray[sp].speciesParams[flag_id]))
-                        continue;
-                        
-                        if (FunctGroupArray[sp].habitatType == WC){
-                            
-                            switch (FunctGroupArray[sp].groupAgeType) {
-                                case AGE_STRUCTURED:
-                                Get_Vert_Diet(bm, preyamt, ij, k, sp);
-                                break;
-                                case AGE_STRUCTURED_BIOMASS:	/* Intentional follow through */
-                                case BIOMASS:
-                                preychrtstage = 0;
-                                for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                    preyamt[sp][ij][preychrtstage] += bm->boxes[ij].tr[k][FunctGroupArray[sp].totNTracers[n]];
-                                }
-                                break;
-                            }
-                        }
-                    }
-                    
-                }
-                
-                for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-                    if (FunctGroupArray[sp].speciesParams[flag_id] == TRUE){
-                        if (FunctGroupArray[sp].habitatType == SED || FunctGroupArray[sp].groupType == CARRION) {
-                            if(FunctGroupArray[sp].groupAgeType == BIOMASS){
-                                for (k = 0; k < bm->boxes[ij].sm.nz; k++) {
-                                    preyamt[sp][ij][0] += bm->boxes[ij].sm.tr[k][FunctGroupArray[sp].totNTracers[0]];
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                /* Epibenthos and benthic biogenic habitat coverage - use epi call here
-                for epibenthos values instead of tracer value array as easier to
-                access and no difference in value as yet (no invertebrate movement yet)
-                */
-                
-                for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-                    if (FunctGroupArray[sp].speciesParams[flag_id] == TRUE){
-                        if (FunctGroupArray[sp].habitatType == EPIFAUNA) {
-                            switch (FunctGroupArray[sp].groupAgeType) {
-                                case AGE_STRUCTURED:
-                                /* Do nothing */
-                                break;
-                                case AGE_STRUCTURED_BIOMASS: /* Intentional follow through */
-                                case BIOMASS:
-                                for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                    preyamt[sp][ij][0] += bm->boxes[ij].epi[FunctGroupArray[sp].totNTracers[n]];
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-                for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-                    if (FunctGroupArray[sp].speciesParams[flag_id] == TRUE){
-                        if (FunctGroupArray[sp].isCover == TRUE) {
-                            pid = FunctGroupArray[sp].CoverTracer;
-                            n = FunctGroupArray[sp].coverID;
-                            bm->coveramt[n][ij] += bm->boxes[ij].epi[pid];
-                        }
-                    }
-                }
-                
-                /** Assess the environment (to account for habitat depdendency due to
-                refuges not just diet requirements **/
-                rugosity_check_done = 0;
-                for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-                    if(FunctGroupArray[sp].speciesParams[flag_id]){
                         if (FunctGroupArray[sp].isVertebrate == TRUE) {
-                            
-                            /* Skip over groups not in the model */
-                            if (! (int) (FunctGroupArray[sp].speciesParams[flag_id]))
-                            continue;
-                            
-                            Vertebrate_Assess_Enviro(bm, sp, ij, bm->coveramt, cdepth, rugosity_check_done, llogfp);
-                            rugosity_check_done = 1;
-                        }
-                    }
-                }
-            }
-        }
-        
-        return;
-    }
-    
-    /**
-    *    \brief This routine calculates any effects of turbidity on predation
-    *
-    */
-    void Calculate_Turbid_Effects(MSEBoxModel *bm, FILE *llogfp) {
-        double L_sp, a_sp, b_sp, step1;
-        int sp, stage, b, k;
-        
-        if (verbose > 0)
-        printf("Calculate_Turbid_Effects\n");
-        
-        if(!bm->flagIsEstuary)
-        return;
-        
-        // Find the scalars per predator
-        for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-            for (stage = 0; stage < FunctGroupArray[sp].numStages; stage++) {
-                L_sp = FunctGroupArray[sp].cohortSpeciesParams[stage][L_turbid_id];
-                b_sp = FunctGroupArray[sp].cohortSpeciesParams[stage][b_turbid_id];
-                a_sp = FunctGroupArray[sp].cohortSpeciesParams[stage][a_turbid_id];
-                /* Get details of feeding preferences */
-                for (b = 0; b < bm->nbox; b++) {
-                    if (bm->boxes[b].type != BOUNDARY) {
-                        for (k = 0; k < bm->boxes[b].nz; k++) {
-                            step1 = 1.0 - L_sp / (1.0 + exp(-1.0 * a_sp * (bm->boxes[b].tr[k][SED_i] - b_sp)));
-                            bm->turbid_effect[sp][b][k][stage] = (1.0 / step1);
-                        }
-                    }
-                }
-            }
-        }
-        
-        if (verbose > 0)
-        printf("Completed Calculate_Turbid_Effects\n");
-        
-        return;
-    }
-    
-    /*
-    * Routine for calculating how movement effected by environmental conditions
-    */
-    
-    double Get_Enviro_Move_Scalar(int flag_sensitive_sp, double current_enviro, double K_const_sp, double min_sp, double max_sp, int sp, int prop_ID, double dayt, FILE *llogfp) {
-        double step1, step2, step3, step4;
-        double numScalar = 1.0;
-        
-        step1 = K_const_sp * exp(current_enviro - min_sp) / (K_const_sp + (exp(current_enviro - min_sp) - 1.0));
-        step2 = K_const_sp * exp(max_sp - current_enviro) / (K_const_sp + (exp(max_sp - current_enviro) - 1.0));
-        switch (flag_sensitive_sp) {
-            case not_sensitive:  // Nothing to do
-            break;
-            case sensitive_heaviside_window:
-            if ((current_enviro < min_sp) || (current_enviro > max_sp)) {
-                numScalar = 0.0;
-            }
-            break;
-            case sensitive_biologistic_window: // Gaussian shape
-            numScalar = 1.0;
-            step3 = step1 / K_const_sp;
-            step4 = step2 / K_const_sp;
-            if (step3 > step4) {
-                numScalar = step4;
-            } else {
-                numScalar = step3;
-            }
-            
-            if(numScalar > 1.0)
-            numScalar = 1.0;
-            if(numScalar < 0.0)
-            numScalar = 0.0;
-            break;
-            case sensitive_gradual_side: // Flat-top version
-            numScalar = 1.0;
-            if (current_enviro < min_sp) {
-                numScalar = step1;
-            } else if ( current_enviro > max_sp ) {
-                numScalar = step2;
-            }
-            if(numScalar > 1.0)
-            numScalar = 1.0;
-            if(numScalar < 0.0)
-            numScalar = 0.0;
-            break;
-            default:
-            break;
-            
-        }
-        
-        /*
-        if(numScalar < 1.0) {
-        fprintf(llogfp, "Time: %e %s is environmentally constrained property %d is outside their tolerance levels\n", dayt, FunctGroupArray[sp].groupCode, prop_ID);
-        }
-        */
-        return numScalar;
-    }
-    
-    
-    void Store_Min_Max_Avg(MSEBoxModel *bm, int sp) {
-        int n, nlist;
-        double this_wgt, this_biom;
-        double this_denom = (double)(bm->K_rolling_cap_num);
-        double this_sum_W = 0.0;
-        double this_sum_B = 0.0;
-        
-        if (FunctGroupArray[sp].isFished == TRUE) {
-            if((!FunctGroupArray[sp].speciesParams[flagFonly_id]) || (!FunctGroupArray[sp].speciesParams[flag_systcap_sp_id]))
-            return;  // Nothing to do here
-            
-            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                /* Do weights first - only for age structured (vertebrate style) groups - totden, VERTinfo being calculated in the Vertebrate movement code */
-                if (FunctGroupArray[sp].isVertebrate == TRUE) {
-                    this_wgt = VERTinfo[sp][n][SN_id] + VERTinfo[sp][n][RN_id];
-                    
-                    if (FunctGroupArray[sp].min_wgt[n] > this_wgt) {
-                        FunctGroupArray[sp].min_wgt[n] = this_wgt;
-                    }
-                    if (FunctGroupArray[sp].max_wgt[n] < this_wgt) {
-                        FunctGroupArray[sp].max_wgt[n] = this_wgt;
-                    }
-                    
-                    /* Now their biomass */
-                    this_biom = this_wgt * totden[sp][n];
-                    
-                    if (FunctGroupArray[sp].min_B[n] > this_biom) {
-                        FunctGroupArray[sp].min_B[n] = this_biom;
-                    }
-                    if (FunctGroupArray[sp].max_B[n] < this_biom) {
-                        FunctGroupArray[sp].max_B[n] = this_biom;
-                    }
-                    
-                    /* And now the rollign values - Iterate the list and get new values */
-                    this_sum_W = 0.0;
-                    this_sum_B = 0.0;
-                    if (!bm->rolling_cap_initialised[sp][n]) { // Initialise if the first time through
-                        for ( nlist = 0; nlist < bm->K_rolling_cap_num; nlist++) {
-                            FunctGroupArray[sp].rolling_wgt[n][nlist] = this_wgt;
-                            FunctGroupArray[sp].rolling_B[n][nlist] = this_biom;
-                        }
-                        FunctGroupArray[sp].rolling_wgt[n][bm->K_rolling_cap_num] = this_wgt;
-                        FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num] = this_biom;
-                        bm->rolling_cap_initialised[sp][n] = 1;
-                    } else {
-                        if ( bm->newmonth) {
-                            for ( nlist = 0; nlist < (bm->K_rolling_cap_num - 1); nlist++) {
-                                FunctGroupArray[sp].rolling_wgt[n][nlist] = FunctGroupArray[sp].rolling_wgt[n][nlist + 1];
-                                FunctGroupArray[sp].rolling_B[n][nlist] = FunctGroupArray[sp].rolling_B[n][nlist + 1];
-                                this_sum_W += FunctGroupArray[sp].rolling_wgt[n][nlist];
-                                this_sum_B += FunctGroupArray[sp].rolling_B[n][nlist];
+                            for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+                                bm->SP_FISHERYprms[sp][nf][larger_extant_id] = 0.0;
+                                desired_chrt = (int) (bm->SP_FISHERYprms[sp][nf][desired_chrt_id]);
+                                for (n = desired_chrt; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                    if (totden[sp][n] > bm->min_dens) {
+                                        bm->SP_FISHERYprms[sp][nf][larger_extant_id] = 1.0;
+                                    }
+                                }
                             }
-                            FunctGroupArray[sp].rolling_wgt[n][bm->K_rolling_cap_num - 1] = this_wgt;
-                            FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num - 1] = this_biom;
-                            this_sum_W += this_wgt;
-                            this_sum_B += this_biom;
-                            FunctGroupArray[sp].rolling_wgt[n][bm->K_rolling_cap_num] = this_sum_W / this_denom;
-                            FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num] = this_sum_B / this_denom;
-                        }
-                    }
-                    
-                } else {
-                    /* Invertebrate biomass */
-                    this_biom = totboxden[invert_biosum+n];  // Calculated in the invertbrate movement routine
-                    
-                    if (FunctGroupArray[sp].min_B[n] > this_biom) {
-                        FunctGroupArray[sp].min_B[n] = this_biom;
-                    }
-                    if (FunctGroupArray[sp].max_B[n] < this_biom) {
-                        FunctGroupArray[sp].max_B[n] = this_biom;
-                    }
-                    
-                    /* And now the rollign values - Iterate the list and get new values */
-                    this_sum_B = 0.0;
-                    if (!bm->rolling_cap_initialised[sp][n]) { // Initialise if the first time through
-                        for ( nlist = 0; nlist < bm->K_rolling_cap_num; nlist++) {
-                            FunctGroupArray[sp].rolling_B[n][nlist] = this_biom;
-                        }
-                        FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num] = this_biom;
-                        bm->rolling_cap_initialised[sp][n] = 1;
-                    } else {
-                        if ( bm->newmonth) {
-                            for ( nlist = 0; nlist < (bm->K_rolling_cap_num - 1); nlist++) {
-                                FunctGroupArray[sp].rolling_B[n][nlist] = FunctGroupArray[sp].rolling_B[n][nlist + 1];
-                                this_sum_B += FunctGroupArray[sp].rolling_B[n][nlist];
-                            }
-                            FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num - 1] = this_biom;
-                            this_sum_B += this_biom;
-                            FunctGroupArray[sp].rolling_B[n][bm->K_rolling_cap_num] = this_sum_B / this_denom;
                         }
                     }
                 }
-            }
-        }
-        
-        return;
-        
-    }
-    
-    
-    /**
-    *	\brief This routine calculates any movements by vertebrates
-    *	(horizontal or vertical)
-    */
-    void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp) {
-        int ij, k, n, qrt, next_qrt, sp, flagmother, flagsp, /*spjmin, spjmax, spamin = 0, spamax,*/
-        age_mat, sp_ddepend_move, day_part, sn, rn, den, mig_done, spmigrate, spmigrate_done, bearlive, stage, flagimposecatch, stock_id = -1, spupdatemig, do_debug, recalc_needed, decdis, sp_spawn_now, flagchannel, desired_chrt, nf, flagcontract_sp, qid, lid, ngene, spawn_period, spawn_date, bcohort, temp_sensitive_sp=0, salt_sensitive_sp=0, update_larval_distrib, updated_already, test_day, cells_checked, cells_impacted, DR_id, DL_id;
-        double ldayt = bm->t / 86400.0;
-        //double migtemp = 86400.0 / dt;
-        int maxij = bm->K_num_stocks_per_sp;
-        int overall_checkday = (int) (floor(bm->dayt));
-        int this_flag_recruit, is_maternal_raised = 0;
-        double clear, E1_sp, spSpeed, this_HowFar, vertdistrib, mignum, mignum_actual=0.0, spawnmove, totmig, midpoint, FSMG_grow, migtime, oldden, totdenom = 0, maxstock, min_spawntemp_sp, max_spawntemp_sp, temp_effect, finalmig, avgsn, avgrn, dynsn, dynrn, min_O2_sp, current_enviro, min_spawnsalt_sp, max_spawnsalt_sp, salt_effect, o2_effect, contract_sp, oldsn, oldrn, this_tot_biom, pH_scale, orig_newden, check_day, stagger_scalar, noise_effect, light_effect, K_salt_const_sp, K_o2_const_sp, numScalar_final, growth_period, den_diff, start_n, end_n;
-        double numScalar, K_temp_const_sp = 0.0;
-        // double step1, step2;  OLD WAY OF DOING AGE - DEPRECATE
-        double ReturnPeriod;
-        double IBoxProp;
-        int enviro_depend = 0, sp_enviro_depend = 0, check_done = 0, is_suitable = 0;
-        int rij, rangeid, rocstage = -1, adstage, sp_Migrate_Years, stagger_return = 0, agec;
-        double nbox_spread, stepSN, stepRN, yoy_den, KWSR_sp, KWRR_sp;
-        int adbox, chkbox, kk;
-        double prop_range, juv_num, ad_num;
-        int prij, rrid, ad_cohort, not_done, ad_start_cohort;
-        double sp_amt;
-        double migProp;
-        double migtime2;
-        double some_ice = 0.0, ice_effect;
-        int do_debug2;
-        double boxcur, wnorm, target, sticky_thresh, leftsum;
-        int follow_mother, nroc, mstage, use_spawn_move, prescribed_only, weighted, bb;
-        
-        
-        updated_already = 0;
-        
-        if (bm->debug && (((bm->debug > debug_eat) || ((bm->debug > debug_spawn) && (bm->debug < debug_biom))) && (bm->dayt >= bm->checkstart)))
-        do_debug = 1;
-        else
-        do_debug = 0;
-        
-        if (bm->flagtempdepend_move || bm->flagsaltdepend || bm->flagO2depend)
-        enviro_depend = 1;
-        
-        mig_done = 0;
-        
-        if (verbose)
-        printf("Dealing with migration\n");
-        
-        /* Determine current date and metabolic parameter values.
-        Bases everything on the latitude of box 0, so don't have to worry
-        about accidently calling a box that isn't in the geometry being used. */
-        midpoint = bm->boxes[1].inside.y;
-        
-        Parameter_Q10(bm, &bm->boxes[1], ldayt, 1, 0, bm->boxes[1].nz - 1, midpoint, WC, llogfp);
-        
-        day_part = bm->flagday; // 1 = day time, 0 = night time
-        
-        /* Initialise local arrays */
-        Util_Init_2D_Double(boxden, bm->nbox, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
-        Util_Init_4D_Double(currentden, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->wcnz, bm->nbox, 0.0);
-        Util_Init_3D_Double(init_stock_struct_prop, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->K_num_stocks_per_sp, 0.0);
-        Util_Init_2D_Double(leftden, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
-        Util_Init_1D_Int(mig_returners, bm->K_num_tot_sp, 0);
-        Util_Init_4D_Double(newden, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->wcnz, bm->nbox, 0.0);
-        Util_Init_1D_Double(newden_sum, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
-        Util_Init_2D_Int(prey_counted, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0);
-        Util_Init_3D_Double(preyamt, bm->K_num_tot_sp, bm->nbox, 2, 0.0);
-        Util_Init_1D_Double(totad, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
-        Util_Init_1D_Double(totboxden, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
-        Util_Init_2D_Double(totden, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
-        Util_Init_2D_Double(totden_check, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
-        Util_Init_1D_Double(totroc, bm->K_num_max_cohort * bm->K_num_max_genetypes, 0.0);
-        Util_Init_3D_Double(VERTinfo, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, 3, 0.0);
-        
-        Util_Init_2D_Double(bm->targetspbiom, bm->K_num_tot_sp, bm->nbox, 0.0);
-        Util_Init_3D_Double(bm->stock_struct_prop, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->K_num_stocks_per_sp, 0.0);
-        Util_Init_3D_Double(bm->HomeRangeTotal, bm->K_num_tot_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->K_num_homerange, 0.0);
-        
-        /* Determine tot numbers per cohort per species and total
-        amount of each prey in each box of the bay. Will update the totden array. */
-        Calculate_Prey_Values(bm, preyamt, llogfp);
-        
-        
-        /* Vertical distributions of all vertebrate groups for the overlap in the food index */
-        Fill_Vertical_Distributions(bm, enviro_depend, llogfp);
-        
-        /* Determine any turbidity effects - to apply to predation */
-        Calculate_Turbid_Effects(bm, llogfp);
-        
-        /* Check for desired cohorts for each fishery */
-        if (bm->flag_fisheries_on) {
-            
-            if (verbose > 0)
-            printf("Doing desired chrt check\n");
-            
-            for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                if (do_debug && (bm->move_check < no_move_check) && (bm->move_check < bm->K_num_tot_sp)) {
+                    for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                        if (FunctGroupArray[sp].isVertebrate == TRUE) {
+                            if (sp == bm->move_check) {
+                                if(bm->which_check == sp){
+                                    fprintf(llogfp, "guild: %s, time: %e, ", FunctGroupArray[sp].groupCode, bm->dayt);
+                                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                        fprintf(llogfp, "stotden[%s][%d]: %e, ", FunctGroupArray[sp].groupCode, n, totden[sp][n]);
+                                    }
+                                    fprintf(llogfp, "\n");
+                                }
+                            }
+                        }
+                    }
+                }
                 
-                if (FunctGroupArray[sp].isVertebrate == TRUE) {
-                    for (nf = 0; nf < bm->K_num_fisheries; nf++) {
-                        bm->SP_FISHERYprms[sp][nf][larger_extant_id] = 0.0;
-                        desired_chrt = (int) (bm->SP_FISHERYprms[sp][nf][desired_chrt_id]);
-                        for (n = desired_chrt; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                            if (totden[sp][n] > bm->min_dens) {
-                                bm->SP_FISHERYprms[sp][nf][larger_extant_id] = 1.0;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        if (do_debug && (bm->move_check < no_move_check) && (bm->move_check < bm->K_num_tot_sp)) {
-            for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-                if (FunctGroupArray[sp].isVertebrate == TRUE) {
-                    if (sp == bm->move_check) {
-                        if(bm->which_check == sp){
-                            fprintf(llogfp, "guild: %s, time: %e, ", FunctGroupArray[sp].groupCode, bm->dayt);
-                            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                fprintf(llogfp, "stotden[%s][%d]: %e, ", FunctGroupArray[sp].groupCode, n, totden[sp][n]);
-                            }
-                            fprintf(llogfp, "\n");
-                        }
-                    }
-                }
-            }
-        }
-        
-        /**
-        //sp = bm->which_check;
-        sp = 33;
-        if ((sp <= bm->K_num_tot_sp)){
-        if (FunctGroupArray[sp].isVertebrate == TRUE) {
-        for (ij = 0; ij < bm->nbox; ij++) {
-        if (bm->boxes[ij].type != BOUNDARY) {
-        for (k = 0; k < bm->boxes[ij].nz; k++) {
-        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-        den = FunctGroupArray[sp].NumsTracers[n];
-        
-        fprintf(llogfp, "START Time: %e, %s-%d box%d-%d den: %e (vs totden: %e)\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, bm->boxes[ij].tr[k][den], totden[sp][n]);
-        }
-        }
-        }
-        }
-        }
-        }
-        **/
-        
-        if (verbose > 0)
-        printf("Doing vertebrate movement\n");
-        
-        for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-            
-            //fprintf(llogfp,"%s move0 starts with next_larvae set to %d\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae);
-            //printf("%s move0 starts with next_larvae set to %d\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae);
-            
-            
-            //if (verbose > 0)
-            //    printf("Doing movement for %s\n", FunctGroupArray[sp].groupCode);
-            
-            if (FunctGroupArray[sp].isVertebrate == TRUE) {
-                flagimposecatch = (int) (FunctGroupArray[sp].speciesParams[flagimpose_id]);
-                flagsp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
-                
-                do_debug2 = 0;
                 /**
-                if (bm->debug && (((bm->debug == debug_migrate) || (bm->debug == debug_age)) && (((sp == bm->which_check) && (bm->dayt > bm->checkstart)) || (bm->which_check > bm->K_num_tot_sp)))) {
-                do_debug2 = 1;
-                }
+                //sp = bm->which_check;
+                sp = 33;
+                if ((sp <= bm->K_num_tot_sp)){
+                if (FunctGroupArray[sp].isVertebrate == TRUE) {
+                for (ij = 0; ij < bm->nbox; ij++) {
+                if (bm->boxes[ij].type != BOUNDARY) {
+                for (k = 0; k < bm->boxes[ij].nz; k++) {
+                for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                den = FunctGroupArray[sp].NumsTracers[n];
                 
-                if (bm->which_check == sp)
-                do_debug2 = 1;
+                fprintf(llogfp, "START Time: %e, %s-%d box%d-%d den: %e (vs totden: %e)\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, bm->boxes[ij].tr[k][den], totden[sp][n]);
+                }
+                }
+                }
+                }
+                }
+                }
                 **/
                 
-                this_tot_biom = 0.0;
+                if (verbose > 0)
+                printf("Doing vertebrate movement\n");
                 
-                for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                    newden_sum[n] = 0.0;
-                    FunctGroupArray[sp].allgone[n] = 1;  // Initialise for the new timestep
-                }
-                
-                /* Skip over groups not in the model */
-                if (!flagsp)
-                continue;
-                
-                /* Finish finding new structural and reserve weights for each fish group - weight each box's
-                relative contribution by the relative amount of the population in that box */
-                recalc_needed = 0;
-                decdis = 0;
-                for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                    if (totden[sp][n] > bm->min_dens) {
-                        VERTinfo[sp][n][SN_id] /= totden[sp][n];
-                        VERTinfo[sp][n][RN_id] /= totden[sp][n];
-                    } else {
-                        VERTinfo[sp][n][SN_id] = bm->min_pool;
-                        VERTinfo[sp][n][RN_id] = bm->min_pool;
-                    }
+                for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
                     
-                    /* Sanity check */
-                    if (VERTinfo[sp][n][SN_id] < 0)
-                    VERTinfo[sp][n][SN_id] = bm->min_pool;
-                    if (VERTinfo[sp][n][RN_id] < 0)
-                    VERTinfo[sp][n][RN_id] = bm->min_pool;
+                    //fprintf(llogfp,"%s move0 starts with next_larvae set to %d\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae);
+                    //printf("%s move0 starts with next_larvae set to %d\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae);
                     
-                    dynsn = VERTinfo[sp][n][SN_id];
-                    dynrn = VERTinfo[sp][n][RN_id];
                     
-                    if (flagimposecatch || bm->flaghighgrading) {
-                        /* Check if catch distribution recalculation needed */
-                        mignum = 0;
-                        for (qid = MIGRATION[sp].num_in_queue_done; qid < MIGRATION[sp].num_in_queue; qid++) {
-                            mignum += MIGRATION[sp].DEN[n][qid] * (MIGRATION[sp].SN[n][qid] + MIGRATION[sp].RN[n][qid]);
-                        }
+                    //if (verbose > 0)
+                    //    printf("Doing movement for %s\n", FunctGroupArray[sp].groupCode);
+                    
+                    if (FunctGroupArray[sp].isVertebrate == TRUE) {
+                        flagimposecatch = (int) (FunctGroupArray[sp].speciesParams[flagimpose_id]);
+                        flagsp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
                         
-                        if ((totden[sp][n] + mignum) < (bm->min_dens * bm->nbox * 2)) {
-                            /* Fallen to negligible levels so recalc */
-                            if (!bm->pSPcheck[sp][n]) {
-                                recalc_needed = 1;
-                                decdis = 1;
-                            }
-                        } else {
-                            /* Risen again so reset */
-                            if (bm->pSPcheck[sp][n]) {
-                                recalc_needed = 1;
-                                decdis = 0;
-                            }
-                        }
-                    }
-                    
-                    /* Sort out home range proportions */
-                    for (rij = 0; rij < bm->K_num_homerange; rij++) {
-                        bm->HomeRangeTotal[sp][n][rij] /= (totden[sp][n] + small_num);
-                    }
-                }
-                
-                /* Recalculate time series catch distributions if necessary */
-                if (recalc_needed) {
-                    Harvest_Recalc_Time_Series_Distrib(bm, totden, sp, decdis, llogfp);
-                }
-                
-                /* Update information to take into account returning migrants (if any) */
-                age_mat = (int) (FunctGroupArray[sp].speciesParams[age_mat_id]);
-                spmigrate = MIGRATION[sp].num_in_queue;
-                spmigrate_done = MIGRATION[sp].num_in_queue_done;
-                
-                /* Loop over each of the migrations for this group */
-                for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                    stage = FunctGroupArray[sp].cohort_stage[n];
-                    
-                    if (!MIGRATION[sp].ActualMigrator[stage])
-                    continue;
-                    
-                    for (qid = spmigrate_done; qid < spmigrate; qid++) {
-                        stock_id = (int) (MIGRATION[sp].returnstock[qid]) - 1;
-                        ReturnPeriod = (double)(MIGRATION[sp].Return_Period[qid]);
-                        
+                        do_debug2 = 0;
                         /**
-                        //if(do_debug2){
-                        //if (sp == 33) || ((sp > 8) && (sp < 12))) {
-                        if (sp == 33) {
-                        fprintf(llogfp, "Time: %e, Species %s-%d qid: %d Return_Period = %d, Return_Now: %d (num_in_queue: %d, num_in_queue_done: %d) FinalMigBack: %d DEN: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid, MIGRATION[sp].Return_Period[qid], MIGRATION[sp].Return_Now[qid], MIGRATION[sp].num_in_queue, MIGRATION[sp].num_in_queue_done, MIGRATION[sp].Return_Now[qid] + MIGRATION[sp].Return_Period[qid], MIGRATION[sp].DEN[n][qid]);
+                        if (bm->debug && (((bm->debug == debug_migrate) || (bm->debug == debug_age)) && (((sp == bm->which_check) && (bm->dayt > bm->checkstart)) || (bm->which_check > bm->K_num_tot_sp)))) {
+                        do_debug2 = 1;
                         }
+                        
+                        if (bm->which_check == sp)
+                        do_debug2 = 1;
                         **/
                         
-                        // Update for stagger - so more return in the next year if any stagger left
-                        if (bm->dayt == (MIGRATION[sp].Return_Now[qid] + ReturnPeriod + 1.0)) {
-                            if (MIGRATION[sp].num_stagger[qid] > 0) {
-                                MIGRATION[sp].Return_Now[qid] += 365;
-                                MIGRATION[sp].num_stagger[qid] -= 1;
+                        this_tot_biom = 0.0;
+                        
+                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                            newden_sum[n] = 0.0;
+                            FunctGroupArray[sp].allgone[n] = 1;  // Initialise for the new timestep
+                        }
+                        
+                        /* Skip over groups not in the model */
+                        if (!flagsp)
+                        continue;
+                        
+                        /* Finish finding new structural and reserve weights for each fish group - weight each box's
+                        relative contribution by the relative amount of the population in that box */
+                        recalc_needed = 0;
+                        decdis = 0;
+                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                            if (totden[sp][n] > bm->min_dens) {
+                                VERTinfo[sp][n][SN_id] /= totden[sp][n];
+                                VERTinfo[sp][n][RN_id] /= totden[sp][n];
+                            } else {
+                                VERTinfo[sp][n][SN_id] = bm->min_pool;
+                                VERTinfo[sp][n][RN_id] = bm->min_pool;
+                            }
+                            
+                            /* Sanity check */
+                            if (VERTinfo[sp][n][SN_id] < 0)
+                            VERTinfo[sp][n][SN_id] = bm->min_pool;
+                            if (VERTinfo[sp][n][RN_id] < 0)
+                            VERTinfo[sp][n][RN_id] = bm->min_pool;
+                            
+                            dynsn = VERTinfo[sp][n][SN_id];
+                            dynrn = VERTinfo[sp][n][RN_id];
+                            
+                            if (flagimposecatch || bm->flaghighgrading) {
+                                /* Check if catch distribution recalculation needed */
+                                mignum = 0;
+                                for (qid = MIGRATION[sp].num_in_queue_done; qid < MIGRATION[sp].num_in_queue; qid++) {
+                                    mignum += MIGRATION[sp].DEN[n][qid] * (MIGRATION[sp].SN[n][qid] + MIGRATION[sp].RN[n][qid]);
+                                }
+                                
+                                if ((totden[sp][n] + mignum) < (bm->min_dens * bm->nbox * 2)) {
+                                    /* Fallen to negligible levels so recalc */
+                                    if (!bm->pSPcheck[sp][n]) {
+                                        recalc_needed = 1;
+                                        decdis = 1;
+                                    }
+                                } else {
+                                    /* Risen again so reset */
+                                    if (bm->pSPcheck[sp][n]) {
+                                        recalc_needed = 1;
+                                        decdis = 0;
+                                    }
+                                }
+                            }
+                            
+                            /* Sort out home range proportions */
+                            for (rij = 0; rij < bm->K_num_homerange; rij++) {
+                                bm->HomeRangeTotal[sp][n][rij] /= (totden[sp][n] + small_num);
                             }
                         }
                         
-                        if (((MIGRATION[sp].Return_Period[qid] > 0) && (bm->dayt < MIGRATION[sp].Return_Now[qid])) && (FunctGroupArray[sp].isComplexMigrator == FALSE))
-                        break;
+                        /* Recalculate time series catch distributions if necessary */
+                        if (recalc_needed) {
+                            Harvest_Recalc_Time_Series_Distrib(bm, totden, sp, decdis, llogfp);
+                        }
                         
-                        /* Migrating species returning to the model */
-                        if ((spmigrate && (MIGRATION[sp].Return_Period[qid] > 0)) && (bm->dayt >= MIGRATION[sp].Return_Now[qid]) && (bm->dayt < (MIGRATION[sp].Return_Now[qid] + MIGRATION[sp].Return_Period[qid])) && (bm->t / 86400.0 > 0.0) && (MIGRATION[sp].DEN[n][qid] > 0)) {  // Only bother doing it if any individuals to return
+                        /* Update information to take into account returning migrants (if any) */
+                        age_mat = (int) (FunctGroupArray[sp].speciesParams[age_mat_id]);
+                        spmigrate = MIGRATION[sp].num_in_queue;
+                        spmigrate_done = MIGRATION[sp].num_in_queue_done;
+                        
+                        /* Loop over each of the migrations for this group */
+                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                            stage = FunctGroupArray[sp].cohort_stage[n];
                             
-                            /**
-                            //if(do_debug2){
-                            //if ((sp == 33) || ((sp > 8) && (sp < 12))) {
-                            if (sp == 33) {
-                            fprintf(llogfp,"Time: %e, %s-%d mig-%d returning MigBack: %d, MigPeriod: %d, FinalMigBack: %d original migDEN: %e\n",
-                            bm->dayt, FunctGroupArray[sp].groupCode, stage, qid,
-                            MIGRATION[sp].Return_Now[qid], MIGRATION[sp].Return_Period[qid],
-                            MIGRATION[sp].Return_Now[qid]+MIGRATION[sp].Return_Period[qid], MIGRATION[sp].DEN[n][qid]);
-                            }
-                            **/
-                            
-                            /* Update numbers for returning migrants and then update overall size,
-                            based on contributions from returning migrants */
-                            migtime2 = Calculate_Migration_Proportion_Back(bm, llogfp, dt, sp, MIGRATION[sp].Return_Now[qid], MIGRATION[sp].Return_Period[qid]);
-                            migtime = MIGRATION[sp].Return_Now[qid] - MIGRATION[sp].Leave_Now[qid];
-                            
-                            // Reduce prop returning if staggering (so some left for next stagger year)
-                            stagger_scalar = 0.0;
-                            if (MIGRATION[sp].num_stagger[qid] > 0) {
-                                stagger_scalar = 1.0 / (double)(MIGRATION[sp].num_stagger[qid]);
-                                migtime2 *= stagger_scalar;
-                            }
-                            
-                            /**
-                            //if(do_debug2){
-                            //if ((sp == 33) || ((sp > 8) && (sp < 12))) {
-                            if (sp == 33) {
-                            fprintf(bm->logFile, "Time: %e, %s qid: %d migtime2 = %e, period = %d, migtime = %e, migrateReturn = %d, away = %d with original migDEN: %e stagger_scalar: %e num_stagger: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, qid, migtime2, MIGRATION[sp].Return_Period[qid], migtime, MIGRATION[sp].Return_Now[qid], MIGRATION[sp].Leave_Now[qid], MIGRATION[sp].DEN[n][qid], stagger_scalar, (double)(MIGRATION[sp].num_stagger[qid]));
-                            }
-                            **/
-                            
-                            mignum = MIGRATION[sp].DEN[n][qid] * migtime2;
-                            
-                            /* Actual numbers returning - corrected for losses while away */
-                            mignum_actual = MIGRATION[sp].survival[qid] * mignum;
-                            
-                            if(bm->track_contaminants){
-                                ContaminantMigrationIn(bm, sp, n, qid, MIGRATION[sp].DEN[n][qid], mignum_actual);
-                            }
-                            
-                            
-                            if(!mignum)
+                            if (!MIGRATION[sp].ActualMigrator[stage])
                             continue;
                             
-                            MIGRATION[sp].DEN[n][qid] -= mignum;
-                            
-                            if(MIGRATION[sp].DEN[n][qid] < 0)
-                            MIGRATION[sp].DEN[n][qid] = 0.0;
-                            
-                            oldden = totden[sp][n];
-                            totden[sp][n] += mignum_actual;
-                            mig_returners[sp] = 1;
-                            
-                            /**
-                            //if(do_debug2){
-                            //if ((sp == 33) || ((sp > 8) && (sp < 12))) {
-                            if (sp == 33) {
-                            fprintf(bm->logFile,"Time: %e, %s-%d qid: %d totden: %e with mignum_actual: %e mignum: %e migtime2: %e survival: %e migDEN now: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid,  totden[sp][n], mignum_actual, mignum, migtime2, MIGRATION[sp].survival[qid], MIGRATION[sp].DEN[n][qid]);
-                            }
-                            **/
-                            
-                            /* Split across stocks */
-                            if (stock_id < 0) {
-                                /* Homogeneously spread across stocks */
-                                maxstock = FunctGroupArray[sp].numStocks;
-                                for (k = 0; k < maxstock; k++) {
-                                    init_stock_struct_prop[sp][n][k] += (mignum_actual / maxstock);
-                                }
-                                stock_id = 0;
-                            } else {
-                                /* Directed to a specific stock */
-                                init_stock_struct_prop[sp][n][stock_id] += mignum_actual;
-                            }
-                            
-                            
-                            /* Adjust average size to account for fact not all those who migrate out return (FSM_sp)
-                            and growth during the intervening period - rather than add extra parameters
-                            for this, assume that over the course of a year recover what is lost in spawning
-                            so pro-rate that recovery for the period out side the model domain. Only exceptions
-                            are juvenile FVO, which actively grow not just recover reserves during the period,
-                            and baleen whales which on recover reserves in the summer migration as don't feed
-                            in the winter.  */
-                            
-                            oldsn = VERTinfo[sp][n][SN_id];
-                            if(MIGRATION[sp].IsAnnualMigration[qid]) {
-                                if(bm->flag_replicated_old) {
-                                    FSMG_grow = 1.0 + (MIGRATION[sp].growth[qid] * migtime / 364.0) / FunctGroupArray[sp].X_RS[n];
-                                } else {
-                                    FSMG_grow = 1.0 + (MIGRATION[sp].growth[qid] * migtime / 364.0);
-                                }
-                            } else {
-                                FSMG_grow = 1.0;
-                                if (FunctGroupArray[sp].isExternal == FALSE) { // If true explicitly grow without needing additional growth scaling
-                                    growth_period = (double)(MIGRATION[sp].MinYearsAway[qid]);
-                                    FSMG_grow = 1.0 + ((MIGRATION[sp].growth[qid] / growth_period) * migtime / 364.0);
-                                }
-                            }
-                            
-                            if (MIGRATION[sp].SN[n][qid] > 0) {
-                                stepSN = MIGRATION[sp].SN[n][qid] * FSMG_grow * mignum_actual;
-                                VERTinfo[sp][n][SN_id] = (oldsn * oldden + stepSN) / (totden[sp][n] + small_num);
-                            }
-                            
-                            oldrn = VERTinfo[sp][n][RN_id];
-                            
-                            if (MIGRATION[sp].RN[n][qid] > 0) {
-                                stepRN = MIGRATION[sp].RN[n][qid] * FSMG_grow * mignum_actual;
-                                VERTinfo[sp][n][RN_id] = (oldrn * oldden + stepRN) / (totden[sp][n] + small_num);
-                            }
-                            
-                            /* Reset Migration matrix if all have returned or this migration period is over */  
-                            if (MIGRATION[sp].DEN[n][qid] < 0.0) {
-                                if (bm->flagavgmig) {
-                                    MIGRATION[sp].SN[n][qid] = 0.0;
-                                    MIGRATION[sp].RN[n][qid] = 0.0;
-                                }
-                                MIGRATION[sp].DEN[n][qid] = 0.0;
-                                
-                                /*
-                                if ((sp == 33) || ((sp > 8) && (sp < 12))) {
-                                fprintf(bm->logFile, "Time: %e reset DEN for %s-%d qid %d to 0 as all migrants exhausted (DEN < 0)\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid);
-                                }
-                                */
-                            }
-                            
-                            if ((bm->dayt + 2) > (MIGRATION[sp].Return_Now[qid] + MIGRATION[sp].Return_Period[qid])) {
-                                if (bm->flagavgmig) {
-                                    MIGRATION[sp].SN[n][qid] = 0.0;
-                                    MIGRATION[sp].RN[n][qid] = 0.0;
-                                }
-                                MIGRATION[sp].DEN[n][qid] = 0.0;
-                                
-                                /*
-                                if ((sp == 33) || ((sp > 8) && (sp < 12))) {
-                                fprintf(bm->logFile, "Time: %e reset DEN for %s-%d qid %d to 0 due to time test - Return_Now: %d, Return_Period: %d\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid, MIGRATION[sp].Return_Now[qid], MIGRATION[sp].Return_Period[qid]);
-                                }
-                                */
-                            }
-                            
-                            
-                            /** Do any young of the year returning **/
-                            
-                            /**
-                            if(do_debug2){
-                            //printf("Time; %e starting movement/migration load of recruits for %s-%d stock_id: %d\n", bm->dayt, FunctGroupArray[sp].groupCode, n, stock_id);
-                            //printf("Time: %e, %s-%d recruit_outside: %e direct_recruit_entry: %e larval_queue_extension: %e recruit_qid: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, FunctGroupArray[sp].speciesParams[recruit_outside_id], FunctGroupArray[sp].speciesParams[direct_recruit_entry_id], FunctGroupArray[sp].speciesParams[larval_queue_extension_id], FunctGroupArray[sp].speciesParams[recruit_qid_id]);
-                            
-                            fprintf(bm->logFile,"Time: %e, %s-%d stock_id: %d qid: %d, recruit_outside: %e direct_recruit_entry: %e larval_queue_extension: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, stock_id, qid, FunctGroupArray[sp].speciesParams[recruit_outside_id], FunctGroupArray[sp].speciesParams[direct_recruit_entry_id], FunctGroupArray[sp].speciesParams[larval_queue_extension_id]);
-                            }
-                            **/
-                            
-                            if (stock_id < 0) {
-                                stock_id = 0; 
-                            }
-                            
-                            if ((n < FunctGroupArray[sp].numGeneTypes) && FunctGroupArray[sp].speciesParams[recruit_outside_id]) {
-                                // First start with any that might be coming from before model started
-                                yoy_den = 0.0;
-                                if(FunctGroupArray[sp].speciesParams[larval_queue_extension_id] > 0) {
-                                    for (lid = 0; lid < FunctGroupArray[sp].speciesParams[larval_queue_extension_id]; lid++) {
-                                        yoy_den += EMBRYO[sp].Larvae[stock_id][n][lid];
-                                        EMBRYO[sp].Larvae[stock_id][n][lid] = 0;
-                                    }
-                                    // Reset larval_queue_extension so not called in subsequent years
-                                    if (stock_id == (FunctGroupArray[sp].numStocks - 1)) {
-                                        FunctGroupArray[sp].speciesParams[larval_queue_extension_id] = 0;
-                                    }
-                                } else {
-                                    //lid = (int)(FunctGroupArray[sp].speciesParams[recruit_qid_id]);
-                                    //yoy_den += EMBRYO[sp].Larvae[stock_id][n][lid];
-                                    
-                                    //Nothing to do as now delivered to MIGRATION[sp].recruit[n][qid]; array direct
-                                }
+                            for (qid = spmigrate_done; qid < spmigrate; qid++) {
+                                stock_id = (int) (MIGRATION[sp].returnstock[qid]) - 1;
+                                ReturnPeriod = (double)(MIGRATION[sp].Return_Period[qid]);
                                 
                                 /**
-                                if(do_debug2){
-                                fprintf(bm->logFile,"Time: %e, %s-%d qid: %d MIGrecruit: %e yoy_den: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid, MIGRATION[sp].recruit[n][qid], yoy_den);
+                                //if(do_debug2){
+                                //if (sp == 33) || ((sp > 8) && (sp < 12))) {
+                                if (sp == 33) {
+                                fprintf(llogfp, "Time: %e, Species %s-%d qid: %d Return_Period = %d, Return_Now: %d (num_in_queue: %d, num_in_queue_done: %d) FinalMigBack: %d DEN: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid, MIGRATION[sp].Return_Period[qid], MIGRATION[sp].Return_Now[qid], MIGRATION[sp].num_in_queue, MIGRATION[sp].num_in_queue_done, MIGRATION[sp].Return_Now[qid] + MIGRATION[sp].Return_Period[qid], MIGRATION[sp].DEN[n][qid]);
                                 }
                                 **/
                                 
-                                if (FunctGroupArray[sp].speciesParams[direct_recruit_entry_id] && (MIGRATION[sp].recruit[n][qid] || yoy_den)) {
-                                    // Now direct returning recruits
-                                    yoy_den += MIGRATION[sp].recruit[n][qid];
-                                    
-                                    KWSR_sp = FunctGroupArray[sp].speciesParams[KWSR_id];
-                                    KWRR_sp = FunctGroupArray[sp].speciesParams[KWRR_id];
-                                    if (bm->flag_modify_KWSR) {
-                                        KWSR_sp = Get_Recruit_Size_Forcing(bm, sp, do_debug, llogfp);
-                                        KWRR_sp = KWSR_sp * FunctGroupArray[sp].X_RS[n];
+                                // Update for stagger - so more return in the next year if any stagger left
+                                if (bm->dayt == (MIGRATION[sp].Return_Now[qid] + ReturnPeriod + 1.0)) {
+                                    if (MIGRATION[sp].num_stagger[qid] > 0) {
+                                        MIGRATION[sp].Return_Now[qid] += 365;
+                                        MIGRATION[sp].num_stagger[qid] -= 1;
                                     }
-                                    
-                                    oldsn = VERTinfo[sp][n][SN_id];
-                                    stepSN = KWSR_sp * yoy_den;
-                                    VERTinfo[sp][n][RN_id] = (oldsn * totden[sp][n] + stepSN) / (totden[sp][n] + yoy_den + small_num);
-                                    stepRN = KWRR_sp * yoy_den;
-                                    oldrn = VERTinfo[sp][n][RN_id];
-                                    VERTinfo[sp][n][RN_id] = (oldrn * totden[sp][n] + stepRN) / (totden[sp][n] + yoy_den + small_num);
-                                    
-                                    if(bm->track_contaminants){
-                                        ContaminantDirectRectuitMigrants(bm, sp, n, qid);
-                                    }
-                                    
-                                    totden[sp][n] += yoy_den;  // Add the recruits to tot numbers
-                                    MIGRATION[sp].recruit[n][qid] = 0;  // Reset
+                                }
+                                
+                                if (((MIGRATION[sp].Return_Period[qid] > 0) && (bm->dayt < MIGRATION[sp].Return_Now[qid])) && (FunctGroupArray[sp].isComplexMigrator == FALSE))
+                                break;
+                                
+                                /* Migrating species returning to the model */
+                                if ((spmigrate && (MIGRATION[sp].Return_Period[qid] > 0)) && (bm->dayt >= MIGRATION[sp].Return_Now[qid]) && (bm->dayt < (MIGRATION[sp].Return_Now[qid] + MIGRATION[sp].Return_Period[qid])) && (bm->t / 86400.0 > 0.0) && (MIGRATION[sp].DEN[n][qid] > 0)) {  // Only bother doing it if any individuals to return
                                     
                                     /**
                                     //if(do_debug2){
                                     //if ((sp == 33) || ((sp > 8) && (sp < 12))) {
-                                    fprintf(bm->logFile,"Time: %e, %s-%d qid: %d, totden: %e with yoy_den: %e SN: %e RN: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid, totden[sp][n], yoy_den, VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
-                                    //}
+                                    if (sp == 33) {
+                                    fprintf(llogfp,"Time: %e, %s-%d mig-%d returning MigBack: %d, MigPeriod: %d, FinalMigBack: %d original migDEN: %e\n",
+                                    bm->dayt, FunctGroupArray[sp].groupCode, stage, qid,
+                                    MIGRATION[sp].Return_Now[qid], MIGRATION[sp].Return_Period[qid],
+                                    MIGRATION[sp].Return_Now[qid]+MIGRATION[sp].Return_Period[qid], MIGRATION[sp].DEN[n][qid]);
+                                    }
                                     **/
-                                }
-                            }
-                            mig_done++;
-                        }
-                    }
-                }
-            }
-            
-            //fprintf(llogfp,"%s move1 now has next_larvae set to %d\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae);
-            //printf("%s move1 now has next_larvae set to %d\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae);
-            
-        }
-        
-        /* Movement of vertebrates */
-        for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-            
-            if (verbose > 0)
-            printf("Doing movement for %s\n", FunctGroupArray[sp].groupCode);
-            
-            if (FunctGroupArray[sp].isVertebrate == TRUE) {
-                
-                spmigrate = 0;
-                bearlive = 0;
-                flagmother = 0;
-                sp_amt = 0;
-                this_tot_biom = 0;
-                spawnmove = 1.0;
-                
-                for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                    newden_sum[n] = 0.0;
-                }
-                
-                flagsp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
-                
-                /* Get the current season index */
-                qrt = FunctGroupArray[sp].moveEntryIndex;
-                //qrt = bm->QofY;
-                next_qrt = FunctGroupArray[sp].next_moveEntryIndex;
-                
-                /* If which check is greater than all funct groups then show debugging for all groups */
-                do_debug2 = 0;
-                /**
-                if(sp == 64)
-                do_debug2 = 1;
-                
-                if (bm->debug && ((bm->debug == debug_migrate) && (((sp == bm->which_check) && (bm->dayt > bm->checkstart)) || (bm->which_check > bm->K_num_tot_sp)))) {
-                do_debug2 = 1;
-                }
-                if (bm->which_check == sp)
-                do_debug2 = 1;
-                **/
-                
-                /* Skip over groups not in the model */
-                if (!flagsp)
-                continue;
-                
-                /* Store diagnostics if needed for system cap calculations */
-                if(bm->do_syst_cap) {
-                    Store_Min_Max_Avg(bm, sp);
-                }
-                
-                /* if a group doesn't move vertically or horizontally then skip */
-                if(FunctGroupArray[sp].isMobile == FALSE && FunctGroupArray[sp].sp_geo_move == FALSE)
-                continue;
-                
-                /* Normalise proportion of total abundance in each stock */
-                for (ij = 0; ij < maxij; ij++) {
-                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                        bm->stock_struct_prop[sp][n][ij] = init_stock_struct_prop[sp][n][ij] / (totden[sp][n] + small_num);
-                        sp_amt += totden[sp][n];
-                        
-                        /**
-                        if(do_debug2){
-                        fprintf(llogfp,"Time: %e %s-%d, stock: %d (of %d), prop_stock: %e\n",
-                        bm->dayt, FunctGroupArray[sp].groupCode, n, ij, FunctGroupArray[sp].numStocks, bm->stock_struct_prop[sp][n][ij]);
-                        }
-                        **/
-                    }
-                }
-                
-                /* If non present (less than one individual present in entire system) then skip ahead */
-                if (sp_amt < bm->min_dens) {
-                    if (do_debug2 || (do_debug && (sp == bm->move_check)))
-                    fprintf(llogfp, "No %s present so skipping ahead (%e)\n", FunctGroupArray[sp].groupCode, sp_amt);
-                    continue;
-                }
-                
-                Util_Init_1D_Double(totboxden, (bm->K_num_max_cohort * bm->K_num_max_genetypes), 0.0);
-                
-                /* Note that this use of growth rate and clearance parameters is based only
-                on the default Holling type feeding relation and on surface temperatures. This
-                would need to change if other feeding types are used regularly and if depth related
-                changes in feeding efficiency guiding feeding depths */
-                sp_ddepend_move = (int) (FunctGroupArray[sp].speciesParams[ddepend_move_id]);
-                
-                // Allow for vertical movement only - over-write movement case
-                if(FunctGroupArray[sp].sp_geo_move == FALSE) {
-                    sp_ddepend_move = sedentary_move;
-                }
-                
-                age_mat = (int) (FunctGroupArray[sp].speciesParams[age_mat_id]);
-                spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
-                min_spawntemp_sp = FunctGroupArray[sp].speciesParams[min_spawn_temp_id];
-                max_spawntemp_sp = FunctGroupArray[sp].speciesParams[max_spawn_temp_id];
-                min_spawnsalt_sp = FunctGroupArray[sp].speciesParams[min_spawn_salt_id];
-                max_spawnsalt_sp = FunctGroupArray[sp].speciesParams[max_spawn_salt_id];
-                min_O2_sp = FunctGroupArray[sp].speciesParams[min_O2_id];
-                temp_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagtempsensitive_id]);
-                salt_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagSaltSensitive_id]);
-                start_n = (double)(age_mat);
-                end_n = (double)(FunctGroupArray[sp].numCohortsXnumGenes);
-                
-                if(!bm->flagtempdepend_move) { // Have turned off temperature dependent movement
-                    if(temp_sensitive_sp && bm->newmonth) {
-                        warn("Ecology_Total_Verts_And_Migration: Time: %e Zeroing temperature sensitivity for movement of %s even though flagtempsensitive %d as flagtempdepend_move = %d\n", bm->dayt, FunctGroupArray[sp].groupCode, temp_sensitive_sp, bm->flagtempdepend_move);
-                    }
-                    temp_sensitive_sp = 0;
-                }
-                
-                if (FunctGroupArray[sp].numMoveEntries != 4) {
-                    this_HowFar = FunctGroupArray[sp].HowFar;
-                } else {
-                    this_HowFar = bm->HowFar;
-                }
-                
-                /* Replicate old bec_dev results on existing models. We will remove this asap! */
-                if(bm->flag_replicated_old == FALSE){
-                    if(salt_sensitive_sp || temp_sensitive_sp) {
-                        sp_enviro_depend = 1;
-                    } else {
-                        sp_enviro_depend = 0;
-                    }
-                }
-                
-                bearlive = (int) (FunctGroupArray[sp].speciesParams[flagbearlive_id]);
-                flagmother = (int) (FunctGroupArray[sp].speciesParams[flagmother_id]);
-                flagchannel = (int) (FunctGroupArray[sp].speciesParams[flagchannel_id]);
-                spupdatemig = 0;
-                spmigrate = MIGRATION[sp].num_in_queue;
-                this_flag_recruit = (int) (FunctGroupArray[sp].speciesParams[flagrecruit_id]);
-                is_maternal_raised = 0;
-                if(!bm->flag_replicated_old && ((this_flag_recruit == linear_recruit) || (this_flag_recruit == fixed_linear_recruit))) { // For newer models make sure linear reproduces have constraints (normalisaiton) of recruit_hdistrib
-                    is_maternal_raised = 1;
-                }
-                
-                /* Make parameter adjustments due to acidification */
-                flagcontract_sp = (int)FunctGroupArray[sp].speciesParams[flagcontract_tol_id];
-                pH_scale = (FunctGroupArray[sp].pHcorr - 1.0);
-                if( flagcontract_sp  && (pH_scale > 0.0)) {
-                    contract_sp = (int)FunctGroupArray[sp].speciesParams[contract_tol_id];
-                    min_spawntemp_sp += contract_sp * pH_scale;
-                    max_spawntemp_sp -= contract_sp * pH_scale;
-                }
-                
-                /* if this group moves vertically only then work out existing % in each box */
-                if(FunctGroupArray[sp].isMobile == TRUE && FunctGroupArray[sp].sp_geo_move == FALSE){
-                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                        den = FunctGroupArray[sp].NumsTracers[n];
-                        
-                        /* Get details of feeding preferences */
-                        for (ij = 0; ij < bm->nbox; ij++) {
-                            boxden[ij][n] = 0;
-                            
-                            if (bm->boxes[ij].type != BOUNDARY) {
-                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                    boxden[ij][n] += bm->boxes[ij].tr[k][den];
-                                }
-                            }
-                            
-                            boxden[ij][n]= boxden[ij][n]/(totden[sp][n] + small_num);
-                        }
-                    }
-                }
-                
-                /* For forage and density dependent movement determine ideal forage locations */
-                /* if this group is not vertically mobile then need the currentden for use in Get_Vertical_Distribution() */
-                
-                if (sp_ddepend_move > perscribed_move || FunctGroupArray[sp].isMobile == FALSE) {
-                    
-                    /* Get general parameter values for density- and food-dependent movement,
-                    cohort specific ones are dealt with below. Note that this use of growth rate
-                    and clearance parameters is based only on the default Holling type feeding
-                    relation and on surface temperatures. This would need to change if other
-                    feeding types are used regularly and if depth related
-                    changes in feeding efficiency guiding feeding depths */
-                    
-                    E1_sp = FunctGroupArray[sp].speciesParams[E1_id];
-                    
-                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                        den = FunctGroupArray[sp].NumsTracers[n];
-                        spawn_date = EMBRYO[sp].Spawn_Now[n][EMBRYO[sp].next_spawn];
-                        spawn_period = (int) (FunctGroupArray[sp].speciesParams[spawn_period_id]);
-                        
-                        if((overall_checkday >= spawn_date) && (overall_checkday <= (spawn_date + spawn_period))){
-                            sp_spawn_now = 1;
-                        } else {
-                            sp_spawn_now = 0;
-                        }
-                        
-                        /* Initialise totroc */
-                        totroc[n] = 0.0;
-                        
-                        /* Get details of feeding preferences */
-                        for (ij = 0; ij < bm->nbox; ij++) {
-                            /* Initialise density record */
-                            boxden[ij][n] = 0.0;
-                            
-                            /* Initilaise home range information for those species using home ranges */
-                            if (sp_ddepend_move == homerange_move) {
-                                for (rij = 0; rij < bm->boxes[ij].HomeRangeInfo[sp].n; rij++) {
-                                    rangeid = bm->boxes[ij].HomeRangeInfo[sp].ids[rij];
-                                    bm->boxes[ij].HomeRangeInfo[sp].rangenum[n][rij] = 0.0;
-                                }
-                            }
-                            
-                            if(bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND) {
-                                
-                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                    currentden[sp][n][k][ij] = bm->boxes[ij].tr[k][den] / (totden[sp][n] + small_num);
-                                }
-                                if (sp_ddepend_move > sedentary_move) {
                                     
-                                    /* Calculate potential growth as an index of habitat suitability */
-                                    clear = Calculate_Species_Clearance_Rate(bm, llogfp, sp, n, ij, preyamt);
+                                    /* Update numbers for returning migrants and then update overall size,
+                                    based on contributions from returning migrants */
+                                    migtime2 = Calculate_Migration_Proportion_Back(bm, llogfp, dt, sp, MIGRATION[sp].Return_Now[qid], MIGRATION[sp].Return_Period[qid]);
+                                    migtime = MIGRATION[sp].Return_Now[qid] - MIGRATION[sp].Leave_Now[qid];
                                     
-                                    if ((int) (FunctGroupArray[sp].speciesParams[flag_id]) && (int) (FunctGroupArray[sp].speciesParams[active_id]) &&
-                                    ( bm->boxes[ij].botz <= (-1.0 * FunctGroupArray[sp].speciesParams[mindepth_id]) &&
-                                    bm->boxes[ij].botz >= (-1.0 * FunctGroupArray[sp].speciesParams[maxdepth_id]))) {
-                                        //if ((int) (FunctGroupArray[sp].speciesParams[flag_id]) && (int) (FunctGroupArray[sp].speciesParams[active_id]) &&
-                                        //    (current_depth <= (-1.0 * FunctGroupArray[sp].speciesParams[mindepth_id]) &&
-                                        //     current_depth >= (-1.0 * FunctGroupArray[sp].speciesParams[maxdepth_id]))) {
-                                        
-                                        roc[ij][n] = E1_sp * clear;
-                                    } else {
-                                        roc[ij][n] = 0.0;
-                                    }
-                                    
-                                    switch (bm->flagroc) {
-                                        case no_ddepend_id: /* No forage- and density- dependent movement so do nothing */
-                                        break;
-                                        case step_ddepend_id: /* Threshold breakpoint - base comparison vs average
-                                        sized individual */
-                                        if (roc[ij][n] > (k_roc_food * VERTinfo[sp][n][SN_id]))
-                                        /* If good feed area will clump */
-                                        roc[ij][n] = roc[ij][n] * roc_wgt;
-                                        else
-                                        /* If poor feed area will disperse */
-                                        roc[ij][n] = roc[ij][n] / roc_wgt;
-                                        break;
-                                        case decay_ddepend_id: /* Exponentially decaying effects */
-                                        roc[ij][n] = exp(-1.0 / (roc[ij][n] + small_num));
-                                        break;
-                                        default:
-                                        quit("No such forage ideal distrib model defined - how did it get here in the vertebrate migration routine?\n");
-                                        break;
-                                    }
-                                    
-                                    /* Scale outcome based on own refuge_status of local habitat */
-                                    if (bm->flaghabdepend) {
-                                        rocstage = FunctGroupArray[sp].cohort_stage[n];
-                                        roc[ij][n] *= bm->refuge_status[sp][ij][rocstage];
-                                    }
-                                    
-                                    if (roc[ij][n] < 0.0) {
-                                        
-                                        //fprintf (llogfp, "Time: %e, %s-%d  in box %d has roc < 0 (%e) with roc_wgt: %e, flagroc: %d E1_sp: %e clear: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, roc[ij][n], roc_wgt, bm->flagroc, E1_sp, clear);
-                                        
-                                        if (rocstage >= 0){
-                                            fprintf (llogfp, "Time: %e, %s-%d (stage %d) in box %d has roc < 0 (%e) with refuge_status: %e roc_wgt: %e, flagroc: %d E1_sp: %e clear: %e\n",
-                                                bm->dayt, FunctGroupArray[sp].groupCode, n, rocstage, ij, roc[ij][n], bm->refuge_status[sp][ij][rocstage], roc_wgt, bm->flagroc, E1_sp, clear);
-                                            }
-                                            quit("Negative roc for %s-%d\n", FunctGroupArray[sp].groupCode, n);
-                                            
-                                            
-                                        }
-                                        
-                                        /* Weight per-capita habitat quality by box size, so boxes of
-                                        equal quality hold equal densities rather than equal numbers */
-                                        roc[ij][n] *= bm->boxes[ij].area;
-                                        
-                                        /* Calculate total potential growth across entire area for each species */
-                                        totroc[n] += roc[ij][n];
-                                        
-                                        /**
-                                        if(do_debug2 && (sp == bm->which_check)){
-                                        fprintf(llogfp,"Time: %e box%d %s-%d totroc: %.20e, roc: %.20e, flaghabdepend: %d, refuge_status[0]: %.20e, refuge_status[1]: %.20e, roc_wgt: %.20e, E1_sp: %.20e, clear: %.20e\n",
-                                        bm->dayt, ij, FunctGroupArray[sp].groupCode, n, totroc[n], roc[ij][n], bm->flaghabdepend,
-                                        bm->refuge_status[sp][ij][0], bm->refuge_status[sp][ij][1], roc_wgt, E1_sp, clear);
-                                        }
-                                        **/
-                                    }
-                                    
-                                    if (sp_ddepend_move == sticky_ddepend) {
-                                        /* If using 'sticky' density dependent movement determine what proportion has to move
-                                        then move them. Use average sized individual for comparison purposes */
-                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                            if ((flagmother > 0) && (n < age_mat)) {
-                                                if ((roc[ij][age_mat] / roc_wgt) > (k_roc_food * VERTinfo[sp][n][SN_id])) {
-                                                    boxden[ij][n] += currentden[sp][n][k][ij];
-                                                    totboxden[n] += currentden[sp][n][k][ij];
-                                                }
-                                            } else {
-                                                if ((roc[ij][n] / roc_wgt) > (k_roc_food * VERTinfo[sp][n][SN_id])) {
-                                                    boxden[ij][n] += currentden[sp][n][k][ij];
-                                                    totboxden[n] += currentden[sp][n][k][ij];
-                                                }
-                                            }
-                                        }
-                                    } else if (sp_ddepend_move == sedentary_move) {
-                                        /* Sedentary apart from vertical movement determine current distribution */
-                                        if (!bm->t) { /* At startup read it in from fixed spatial distributions */
-                                            rocstage = FunctGroupArray[sp].cohort_stage[n];
-                                            boxden[ij][n] = FunctGroupArray[sp].distrib[ij][0][rocstage];
-                                        } else {
-                                            for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                boxden[ij][n] += currentden[sp][n][k][ij];
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    /* Initialise the total being distributed and the stock sums */
-                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                        totboxden[n] = 0.0;
-                        for (k = 0; k < FunctGroupArray[sp].numStocks; k++) {
-                            init_stock_struct_prop[sp][n][k] = 0.0;
-                        }
-                    }
-                    
-                    cells_checked = 0;
-                    cells_impacted = 0;
-                    
-                    /* Determine final movement distributions */
-                    for (ij = 0; ij < bm->nbox; ij++) {
-                        /* Vertical distribution - ignore */
-                        if(bm->terrestrial_on && bm->boxes[ij].type == LAND){
-                            
-                            /* Is group allowed to move onto land */
-                            if( FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
-                                
-                                stock_id = bm->group_stock[sp][ij][0];
-                                
-                                for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                    
-                                    stage = FunctGroupArray[sp].cohort_stage[n];
-                                    
-                                    /* Update stored vertdistrib value - so can condition catch timeseries if need be */
-                                    bm->boxes[ij].vert_vdistrib[sp][stage][0] = 1.0;
-                                    
-                                    /* Used prescribed migration routes */
-                                    newden[sp][n][0][ij] = 1.0 * (this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][stage] - FunctGroupArray[sp].distrib[ij][qrt][stage]) + FunctGroupArray[sp].distrib[ij][qrt][stage]);
-                                    
-                                    /* Leave this in for now - don't have any sort of landbased refuge yet */
-                                    if (bm->flag_move_habdepend) {
-                                        newden[sp][n][0][ij] *= bm->refuge_status[sp][ij][stage];
+                                    // Reduce prop returning if staggering (so some left for next stagger year)
+                                    stagger_scalar = 0.0;
+                                    if (MIGRATION[sp].num_stagger[qid] > 0) {
+                                        stagger_scalar = 1.0 / (double)(MIGRATION[sp].num_stagger[qid]);
+                                        migtime2 *= stagger_scalar;
                                     }
                                     
                                     /**
-                                    if(do_debug2){
-                                    fprintf(bm->logFile, "Time: %e (qrt: %d) %s-%d (stage %d) in box %d-%d newden %e, vertdistrib %e, bm->distrib %e\n",
-                                    bm->dayt, qrt, FunctGroupArray[sp].groupCode, n, stage, ij, k, newden[sp][n][k][ij], vertdistrib, FunctGroupArray[sp].distrib[ij][qrt][stage]);
+                                    //if(do_debug2){
+                                    //if ((sp == 33) || ((sp > 8) && (sp < 12))) {
+                                    if (sp == 33) {
+                                    fprintf(bm->logFile, "Time: %e, %s qid: %d migtime2 = %e, period = %d, migtime = %e, migrateReturn = %d, away = %d with original migDEN: %e stagger_scalar: %e num_stagger: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, qid, migtime2, MIGRATION[sp].Return_Period[qid], migtime, MIGRATION[sp].Return_Now[qid], MIGRATION[sp].Leave_Now[qid], MIGRATION[sp].DEN[n][qid], stagger_scalar, (double)(MIGRATION[sp].num_stagger[qid]));
                                     }
                                     **/
-                                }
-                            }
-                        } else if (bm->boxes[ij].type != BOUNDARY) {
-                            
-                            Get_Vertical_Distribution(bm, ij, sp, currentden, enviro_depend, day_part, -1, llogfp);
-                            
-                            /*
-                            if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
-                            fprintf(llogfp,"Time: %e %s is doing get_vertical_distrib for box %d\n",
-                            bm->dayt, FunctGroupArray[sp].groupCode, ij);
-                            }
-                            */
-                            
-                            /* Get final distributions per box and stock */
-                            for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                
-                                stock_id = bm->group_stock[sp][ij][k];
-                                
-                                for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                    spawn_date = EMBRYO[sp].Spawn_Now[n][EMBRYO[sp].next_spawn];
-                                    spawn_period = (int) (FunctGroupArray[sp].speciesParams[spawn_period_id]);
                                     
-                                    if((overall_checkday >= spawn_date) && (overall_checkday <= (spawn_date + spawn_period))){
-                                        sp_spawn_now = 1;
+                                    mignum = MIGRATION[sp].DEN[n][qid] * migtime2;
+                                    
+                                    /* Actual numbers returning - corrected for losses while away */
+                                    mignum_actual = MIGRATION[sp].survival[qid] * mignum;
+                                    
+                                    if(bm->track_contaminants){
+                                        ContaminantMigrationIn(bm, sp, n, qid, MIGRATION[sp].DEN[n][qid], mignum_actual);
+                                    }
+                                    
+                                    
+                                    if(!mignum)
+                                    continue;
+                                    
+                                    MIGRATION[sp].DEN[n][qid] -= mignum;
+                                    
+                                    if(MIGRATION[sp].DEN[n][qid] < 0)
+                                    MIGRATION[sp].DEN[n][qid] = 0.0;
+                                    
+                                    oldden = totden[sp][n];
+                                    totden[sp][n] += mignum_actual;
+                                    mig_returners[sp] = 1;
+                                    
+                                    /**
+                                    //if(do_debug2){
+                                    //if ((sp == 33) || ((sp > 8) && (sp < 12))) {
+                                    if (sp == 33) {
+                                    fprintf(bm->logFile,"Time: %e, %s-%d qid: %d totden: %e with mignum_actual: %e mignum: %e migtime2: %e survival: %e migDEN now: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid,  totden[sp][n], mignum_actual, mignum, migtime2, MIGRATION[sp].survival[qid], MIGRATION[sp].DEN[n][qid]);
+                                    }
+                                    **/
+                                    
+                                    /* Split across stocks */
+                                    if (stock_id < 0) {
+                                        /* Homogeneously spread across stocks */
+                                        maxstock = FunctGroupArray[sp].numStocks;
+                                        for (k = 0; k < maxstock; k++) {
+                                            init_stock_struct_prop[sp][n][k] += (mignum_actual / maxstock);
+                                        }
+                                        stock_id = 0;
                                     } else {
-                                        sp_spawn_now = 0;
+                                        /* Directed to a specific stock */
+                                        init_stock_struct_prop[sp][n][stock_id] += mignum_actual;
                                     }
-                                    stage = FunctGroupArray[sp].cohort_stage[n];
                                     
-                                    /* Update stored vertdistrib value - so can condition catch timeseries if need be */
-                                    bm->boxes[ij].vert_vdistrib[sp][stage][k] = tempdistrib[k][stage];
                                     
-                                    /*
-                                    if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
-                                    fprintf(llogfp,"Time: %e %s-%d is doing box %d-%d with sp_ddepend_move: %d\n",
-                                    bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, sp_ddepend_move);
-                                    }
-                                    */
+                                    /* Adjust average size to account for fact not all those who migrate out return (FSM_sp)
+                                    and growth during the intervening period - rather than add extra parameters
+                                    for this, assume that over the course of a year recover what is lost in spawning
+                                    so pro-rate that recovery for the period out side the model domain. Only exceptions
+                                    are juvenile FVO, which actively grow not just recover reserves during the period,
+                                    and baleen whales which on recover reserves in the summer migration as don't feed
+                                    in the winter.  */
                                     
-                                    /* Replaces the whole switch (sp_ddepend_move) block in Ecology_Total_Verts_And_Migration()
-                                    in atmovement.c, from "switch (sp_ddepend_move) {" down to the closing "}" after "default:".
-                                    
-                                    New declarations at the top of the function:
-                                    int follow_mother, nroc, mstage, use_spawn_move, prescribed_only;
-                                    double boxcur;
-                                    thiscase1 and thiscase2 are no longer used and can be removed. */
-                                    
-                                    switch (sp_ddepend_move) {
-                                        case weight_ddepend:
-                                        case switch_ddepend:
-                                        case only_ddepend:
-                                        case weight_switch_ddepend:
-                                        
-                                        /* Density dependent movement, types 2, 5,7 and 9:
-                                        weight_ddepend (2): prescribed × forage all year
-                                        switch_ddepend (5): forage-dependent; during spawning prescribed movement only
-                                        only_ddepend   (7): forage-dependent all year, prescribed distribution ignored
-                                        weight_switch_ddepend   (9): prescribed × forage, during spawning prescribed movement only
-                                        Juveniles staying with their mother (flagmother > 0) follow the first mature
-                                        cohort (age_mat) all year. Other juveniles use forage only.
-                                        feed_while_spawn is no longer used in the movement logic. */
-                                        
-                                        /* FIX -- may want to have depth based on roc too not just always at optimal,
-                                        otherwise with conditions change may not see distribution changes */
-                                        vertdistrib = tempdistrib[k][stage];
-                                        
-                                        /* Which cohort sets the horizontal movement */
-                                        follow_mother = (flagmother > 0) && (n < age_mat);
-                                        if (follow_mother) {
-                                            nroc = age_mat;
-                                            mstage = FunctGroupArray[sp].cohort_stage[age_mat];
-                                            use_spawn_move = (overall_checkday >= EMBRYO[sp].Spawn_Now[age_mat][EMBRYO[sp].next_spawn]) &&
-                                            (overall_checkday <= (EMBRYO[sp].Spawn_Now[age_mat][EMBRYO[sp].next_spawn] + spawn_period));
+                                    oldsn = VERTinfo[sp][n][SN_id];
+                                    if(MIGRATION[sp].IsAnnualMigration[qid]) {
+                                        if(bm->flag_replicated_old) {
+                                            FSMG_grow = 1.0 + (MIGRATION[sp].growth[qid] * migtime / 364.0) / FunctGroupArray[sp].X_RS[n];
                                         } else {
-                                            nroc = n;
-                                            mstage = stage;
-                                            /* Juveniles not following mother: forage only */
-                                            use_spawn_move = sp_spawn_now && stage;
+                                            FSMG_grow = 1.0 + (MIGRATION[sp].growth[qid] * migtime / 364.0);
                                         }
-                                        
-                                        /* Movement rule for this cohort and time:
-                                        weight_ddepend        (2): prescribed x forage all year
-                                        switch_ddepend        (5): forage; prescribed only in spawning
-                                        only_ddepend          (7): forage all year
-                                        weight_switch_ddepend (9): prescribed x forage; prescribed only in spawning */
-                                        weighted = 0;
-                                        prescribed_only = 0;
-                                        switch (sp_ddepend_move) {
-                                            case weight_ddepend:
-                                            weighted = 1;
-                                            break;
-                                            case switch_ddepend:
-                                            prescribed_only = use_spawn_move;
-                                            break;
-                                            case weight_switch_ddepend:
-                                            if (use_spawn_move)
-                                            prescribed_only = 1;
-                                            else
-                                            weighted = 1;
-                                            break;
-                                            default:   /* only_ddepend */
-                                            break;
+                                    } else {
+                                        FSMG_grow = 1.0;
+                                        if (FunctGroupArray[sp].isExternal == FALSE) { // If true explicitly grow without needing additional growth scaling
+                                            growth_period = (double)(MIGRATION[sp].MinYearsAway[qid]);
+                                            FSMG_grow = 1.0 + ((MIGRATION[sp].growth[qid] / growth_period) * migtime / 364.0);
                                         }
-                                        
-                                        /* Prescribed share (spawnmove = 1.0 makes no contribution: forage only) */
-                                        spawnmove = 1.0;
-                                        if (weighted || prescribed_only) {
-                                            spawnmove = this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][mstage] - FunctGroupArray[sp].distrib[ij][qrt][mstage]) + FunctGroupArray[sp].distrib[ij][qrt][mstage];
+                                    }
+                                    
+                                    if (MIGRATION[sp].SN[n][qid] > 0) {
+                                        stepSN = MIGRATION[sp].SN[n][qid] * FSMG_grow * mignum_actual;
+                                        VERTinfo[sp][n][SN_id] = (oldsn * oldden + stepSN) / (totden[sp][n] + small_num);
+                                    }
+                                    
+                                    oldrn = VERTinfo[sp][n][RN_id];
+                                    
+                                    if (MIGRATION[sp].RN[n][qid] > 0) {
+                                        stepRN = MIGRATION[sp].RN[n][qid] * FSMG_grow * mignum_actual;
+                                        VERTinfo[sp][n][RN_id] = (oldrn * oldden + stepRN) / (totden[sp][n] + small_num);
+                                    }
+                                    
+                                    /* Reset Migration matrix if all have returned or this migration period is over */  
+                                    if (MIGRATION[sp].DEN[n][qid] < 0.0) {
+                                        if (bm->flagavgmig) {
+                                            MIGRATION[sp].SN[n][qid] = 0.0;
+                                            MIGRATION[sp].RN[n][qid] = 0.0;
                                         }
-                                        
-                                        /* Normaliser for the weighted target (prescribed share x forage share),
-                                        so that it sums to 1 over boxes before the relaxation step */
-                                        wnorm = 1.0;
-                                        wnorm = 1.0;
-                                        if (weighted && totroc[nroc]) {
-                                            wnorm = 0.0;
-                                            for (bb = 0; bb < bm->nbox; bb++) {
-                                                if ((bm->boxes[bb].type == BOUNDARY) || (bm->boxes[bb].type == LAND))
-                                                continue;
-                                                wnorm += (this_HowFar * (FunctGroupArray[sp].distrib[bb][next_qrt][mstage] - FunctGroupArray[sp].distrib[bb][qrt][mstage]) + FunctGroupArray[sp].distrib[bb][qrt][mstage])
-                                                * roc[bb][nroc] / (totroc[nroc] + small_num);
-                                            }
-                                        }
-                                        
-                                        
-                                        /* Current share of this cohort in the whole box: the target is a box-level
-                                        share, so relax from the box total and split vertically afterwards */
-                                        boxcur = 0.0;
-                                        for (kk = 0; kk < bm->boxes[ij].nz; kk++)
-                                        boxcur += currentden[sp][n][kk][ij];
-                                        
-                                        
-                                        orig_newden = newden[sp][n][k][ij];
-                                        
-                                        if(bm->track_contaminants) {
-                                            spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
-                                            Get_ContamMoveEffects(bm, sp, n, ij, k);
-                                            spSpeed *= FunctGroupArray[sp].C_move_corr[n];
-                                        }
-                                        
-                                        // Relax at box level (never negative), then split vertically once, so that
-                                        // horizontal and vertical movement limitations are distinguished
-                                        newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (newden[sp][n][k][ij] - boxcur) + boxcur;
-                                        newden[sp][n][k][ij] *= vertdistrib;
+                                        MIGRATION[sp].DEN[n][qid] = 0.0;
                                         
                                         /*
-                                        if(sp == bm->which_check) {
-                                        fprintf(llogfp, "Time: %e %s-%d box %d-%d newden: %.20e ", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, newden[sp][n][k][ij]);
-                                        fprintf(llogfp, "boxcur: %.20e orig_newden: %.20e ", boxcur, orig_newden);
-                                        fprintf(llogfp, "spSpeed  = %.20e,  dt = %.20e, bm->width = %.20e, vertdistrib = %.20e ", spSpeed, dt, bm->width, vertdistrib);
-                                        fprintf(llogfp, "spawnmove = %.20e prescribed_only = %d nroc = %d roc = %.20e totroc = %.20e\n", spawnmove, prescribed_only, nroc, roc[ij][nroc], totroc[nroc]);
+                                        if ((sp == 33) || ((sp > 8) && (sp < 12))) {
+                                        fprintf(bm->logFile, "Time: %e reset DEN for %s-%d qid %d to 0 as all migrants exhausted (DEN < 0)\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid);
                                         }
                                         */
+                                    }
+                                    
+                                    if ((bm->dayt + 2) > (MIGRATION[sp].Return_Now[qid] + MIGRATION[sp].Return_Period[qid])) {
+                                        if (bm->flagavgmig) {
+                                            MIGRATION[sp].SN[n][qid] = 0.0;
+                                            MIGRATION[sp].RN[n][qid] = 0.0;
+                                        }
+                                        MIGRATION[sp].DEN[n][qid] = 0.0;
                                         
-                                        if(newden[sp][n][k][ij]  < 0){
-                                            printf("Error in Ecology_Total_Verts_And_Migration\n");
-                                            printf("newden[%s][%d][%d][%d] = %.20e\n", FunctGroupArray[sp].groupCode, n, k, ij, newden[sp][n][k][ij]);
-                                            printf("boxcur[%s][%d][%d] = %.20e orig_newden = %.20e\n",
-                                                FunctGroupArray[sp].groupCode, n, ij, boxcur, orig_newden);
-                                                printf("(spSpeed * dt / bm->width) = %.20e\n", (spSpeed * dt / bm->width));
-                                                printf("spSpeed  = %.20e,  dt = %.20e, bm->width = %.20e, vertdistrib = %.20e\n", spSpeed, dt, bm->width, vertdistrib);
-                                                printf("spawnmove = %.20e prescribed_only = %d nroc = %d roc = %.20e totroc = %.20e\n", spawnmove, prescribed_only, nroc, roc[ij][nroc], totroc[nroc]);
-                                                quit("");
+                                        /*
+                                        if ((sp == 33) || ((sp > 8) && (sp < 12))) {
+                                        fprintf(bm->logFile, "Time: %e reset DEN for %s-%d qid %d to 0 due to time test - Return_Now: %d, Return_Period: %d\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid, MIGRATION[sp].Return_Now[qid], MIGRATION[sp].Return_Period[qid]);
+                                        }
+                                        */
+                                    }
+                                    
+                                    
+                                    /** Do any young of the year returning **/
+                                    
+                                    /**
+                                    if(do_debug2){
+                                    //printf("Time; %e starting movement/migration load of recruits for %s-%d stock_id: %d\n", bm->dayt, FunctGroupArray[sp].groupCode, n, stock_id);
+                                    //printf("Time: %e, %s-%d recruit_outside: %e direct_recruit_entry: %e larval_queue_extension: %e recruit_qid: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, FunctGroupArray[sp].speciesParams[recruit_outside_id], FunctGroupArray[sp].speciesParams[direct_recruit_entry_id], FunctGroupArray[sp].speciesParams[larval_queue_extension_id], FunctGroupArray[sp].speciesParams[recruit_qid_id]);
+                                    
+                                    fprintf(bm->logFile,"Time: %e, %s-%d stock_id: %d qid: %d, recruit_outside: %e direct_recruit_entry: %e larval_queue_extension: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, stock_id, qid, FunctGroupArray[sp].speciesParams[recruit_outside_id], FunctGroupArray[sp].speciesParams[direct_recruit_entry_id], FunctGroupArray[sp].speciesParams[larval_queue_extension_id]);
+                                    }
+                                    **/
+                                    
+                                    if (stock_id < 0) {
+                                        stock_id = 0; 
+                                    }
+                                    
+                                    if ((n < FunctGroupArray[sp].numGeneTypes) && FunctGroupArray[sp].speciesParams[recruit_outside_id]) {
+                                        // First start with any that might be coming from before model started
+                                        yoy_den = 0.0;
+                                        if(FunctGroupArray[sp].speciesParams[larval_queue_extension_id] > 0) {
+                                            for (lid = 0; lid < FunctGroupArray[sp].speciesParams[larval_queue_extension_id]; lid++) {
+                                                yoy_den += EMBRYO[sp].Larvae[stock_id][n][lid];
+                                                EMBRYO[sp].Larvae[stock_id][n][lid] = 0;
+                                            }
+                                            // Reset larval_queue_extension so not called in subsequent years
+                                            if (stock_id == (FunctGroupArray[sp].numStocks - 1)) {
+                                                FunctGroupArray[sp].speciesParams[larval_queue_extension_id] = 0;
+                                            }
+                                        } else {
+                                            //lid = (int)(FunctGroupArray[sp].speciesParams[recruit_qid_id]);
+                                            //yoy_den += EMBRYO[sp].Larvae[stock_id][n][lid];
+                                            
+                                            //Nothing to do as now delivered to MIGRATION[sp].recruit[n][qid]; array direct
+                                        }
+                                        
+                                        /**
+                                        if(do_debug2){
+                                        fprintf(bm->logFile,"Time: %e, %s-%d qid: %d MIGrecruit: %e yoy_den: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid, MIGRATION[sp].recruit[n][qid], yoy_den);
+                                        }
+                                        **/
+                                        
+                                        if (FunctGroupArray[sp].speciesParams[direct_recruit_entry_id] && (MIGRATION[sp].recruit[n][qid] || yoy_den)) {
+                                            // Now direct returning recruits
+                                            yoy_den += MIGRATION[sp].recruit[n][qid];
+                                            
+                                            KWSR_sp = FunctGroupArray[sp].speciesParams[KWSR_id];
+                                            KWRR_sp = FunctGroupArray[sp].speciesParams[KWRR_id];
+                                            if (bm->flag_modify_KWSR) {
+                                                KWSR_sp = Get_Recruit_Size_Forcing(bm, sp, do_debug, llogfp);
+                                                KWRR_sp = KWSR_sp * FunctGroupArray[sp].X_RS[n];
                                             }
                                             
-                                            break;
+                                            oldsn = VERTinfo[sp][n][SN_id];
+                                            stepSN = KWSR_sp * yoy_den;
+                                            VERTinfo[sp][n][RN_id] = (oldsn * totden[sp][n] + stepSN) / (totden[sp][n] + yoy_den + small_num);
+                                            stepRN = KWRR_sp * yoy_den;
+                                            oldrn = VERTinfo[sp][n][RN_id];
+                                            VERTinfo[sp][n][RN_id] = (oldrn * totden[sp][n] + stepRN) / (totden[sp][n] + yoy_den + small_num);
                                             
-                                            case sticky_ddepend:
-                                            /* Sticky density dependent movement (as in the Atlantis manual):
-                                            cohorts in boxes passing the forage test (roc / roc_wgt > k_roc_food * SN) stay;
-                                            cohorts in boxes failing it are redistributed over the whole domain by the
-                                            forage field, including into passing boxes. Movement is gradual (rate r).
-                                            Juveniles staying with their mother follow the first mature cohort: its forage
-                                            field and size decide which boxes pass. No prescribed weighting. */
-                                            vertdistrib = tempdistrib[k][stage];
+                                            if(bm->track_contaminants){
+                                                ContaminantDirectRectuitMigrants(bm, sp, n, qid);
+                                            }
                                             
-                                            if ((flagmother > 0) && (n < age_mat))
-                                            nroc = age_mat;
-                                            else
-                                            nroc = n;
-                                            sticky_thresh = k_roc_food * VERTinfo[sp][nroc][SN_id];
+                                            totden[sp][n] += yoy_den;  // Add the recruits to tot numbers
+                                            MIGRATION[sp].recruit[n][qid] = 0;  // Reset
                                             
-                                            /* Current share of this cohort in the whole box */
-                                            boxcur = 0.0;
-                                            for (kk = 0; kk < bm->boxes[ij].nz; kk++)
-                                            boxcur += currentden[sp][n][kk][ij];
+                                            /**
+                                            //if(do_debug2){
+                                            //if ((sp == 33) || ((sp > 8) && (sp < 12))) {
+                                            fprintf(bm->logFile,"Time: %e, %s-%d qid: %d, totden: %e with yoy_den: %e SN: %e RN: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid, totden[sp][n], yoy_den, VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
+                                            //}
+                                            **/
+                                        }
+                                    }
+                                    mig_done++;
+                                }
+                            }
+                        }
+                    }
+                    
+                    //fprintf(llogfp,"%s move1 now has next_larvae set to %d\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae);
+                    //printf("%s move1 now has next_larvae set to %d\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae);
+                    
+                }
+                
+                /* Movement of vertebrates */
+                for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                    
+                    if (verbose > 0)
+                    printf("Doing movement for %s\n", FunctGroupArray[sp].groupCode);
+                    
+                    if (FunctGroupArray[sp].isVertebrate == TRUE) {
+                        
+                        spmigrate = 0;
+                        bearlive = 0;
+                        flagmother = 0;
+                        sp_amt = 0;
+                        this_tot_biom = 0;
+                        spawnmove = 1.0;
+                        
+                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                            newden_sum[n] = 0.0;
+                        }
+                        
+                        flagsp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
+                        
+                        /* Get the current season index */
+                        qrt = FunctGroupArray[sp].moveEntryIndex;
+                        //qrt = bm->QofY;
+                        next_qrt = FunctGroupArray[sp].next_moveEntryIndex;
+                        
+                        /* If which check is greater than all funct groups then show debugging for all groups */
+                        do_debug2 = 0;
+                        /**
+                        if(sp == 64)
+                        do_debug2 = 1;
+                        
+                        if (bm->debug && ((bm->debug == debug_migrate) && (((sp == bm->which_check) && (bm->dayt > bm->checkstart)) || (bm->which_check > bm->K_num_tot_sp)))) {
+                        do_debug2 = 1;
+                        }
+                        if (bm->which_check == sp)
+                        do_debug2 = 1;
+                        **/
+                        
+                        /* Skip over groups not in the model */
+                        if (!flagsp)
+                        continue;
+                        
+                        /* Store diagnostics if needed for system cap calculations */
+                        if(bm->do_syst_cap) {
+                            Store_Min_Max_Avg(bm, sp);
+                        }
+                        
+                        /* if a group doesn't move vertically or horizontally then skip */
+                        if(FunctGroupArray[sp].isMobile == FALSE && FunctGroupArray[sp].sp_geo_move == FALSE)
+                        continue;
+                        
+                        /* Normalise proportion of total abundance in each stock */
+                        for (ij = 0; ij < maxij; ij++) {
+                            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                bm->stock_struct_prop[sp][n][ij] = init_stock_struct_prop[sp][n][ij] / (totden[sp][n] + small_num);
+                                sp_amt += totden[sp][n];
+                                
+                                /**
+                                if(do_debug2){
+                                fprintf(llogfp,"Time: %e %s-%d, stock: %d (of %d), prop_stock: %e\n",
+                                bm->dayt, FunctGroupArray[sp].groupCode, n, ij, FunctGroupArray[sp].numStocks, bm->stock_struct_prop[sp][n][ij]);
+                                }
+                                **/
+                            }
+                        }
+                        
+                        /* If non present (less than one individual present in entire system) then skip ahead */
+                        if (sp_amt < bm->min_dens) {
+                            if (do_debug2 || (do_debug && (sp == bm->move_check)))
+                            fprintf(llogfp, "No %s present so skipping ahead (%e)\n", FunctGroupArray[sp].groupCode, sp_amt);
+                            continue;
+                        }
+                        
+                        Util_Init_1D_Double(totboxden, (bm->K_num_max_cohort * bm->K_num_max_genetypes), 0.0);
+                        
+                        /* Note that this use of growth rate and clearance parameters is based only
+                        on the default Holling type feeding relation and on surface temperatures. This
+                        would need to change if other feeding types are used regularly and if depth related
+                        changes in feeding efficiency guiding feeding depths */
+                        sp_ddepend_move = (int) (FunctGroupArray[sp].speciesParams[ddepend_move_id]);
+                        
+                        // Allow for vertical movement only - over-write movement case
+                        if(FunctGroupArray[sp].sp_geo_move == FALSE) {
+                            sp_ddepend_move = sedentary_move;
+                        }
+                        
+                        age_mat = (int) (FunctGroupArray[sp].speciesParams[age_mat_id]);
+                        spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
+                        min_spawntemp_sp = FunctGroupArray[sp].speciesParams[min_spawn_temp_id];
+                        max_spawntemp_sp = FunctGroupArray[sp].speciesParams[max_spawn_temp_id];
+                        min_spawnsalt_sp = FunctGroupArray[sp].speciesParams[min_spawn_salt_id];
+                        max_spawnsalt_sp = FunctGroupArray[sp].speciesParams[max_spawn_salt_id];
+                        min_O2_sp = FunctGroupArray[sp].speciesParams[min_O2_id];
+                        temp_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagtempsensitive_id]);
+                        salt_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagSaltSensitive_id]);
+                        start_n = (double)(age_mat);
+                        end_n = (double)(FunctGroupArray[sp].numCohortsXnumGenes);
+                        
+                        if(!bm->flagtempdepend_move) { // Have turned off temperature dependent movement
+                            if(temp_sensitive_sp && bm->newmonth) {
+                                warn("Ecology_Total_Verts_And_Migration: Time: %e Zeroing temperature sensitivity for movement of %s even though flagtempsensitive %d as flagtempdepend_move = %d\n", bm->dayt, FunctGroupArray[sp].groupCode, temp_sensitive_sp, bm->flagtempdepend_move);
+                            }
+                            temp_sensitive_sp = 0;
+                        }
+                        
+                        if (FunctGroupArray[sp].numMoveEntries != 4) {
+                            this_HowFar = FunctGroupArray[sp].HowFar;
+                        } else {
+                            this_HowFar = bm->HowFar;
+                        }
+                        
+                        /* Replicate old bec_dev results on existing models. We will remove this asap! */
+                        if(bm->flag_replicated_old == FALSE){
+                            if(salt_sensitive_sp || temp_sensitive_sp) {
+                                sp_enviro_depend = 1;
+                            } else {
+                                sp_enviro_depend = 0;
+                            }
+                        }
+                        
+                        bearlive = (int) (FunctGroupArray[sp].speciesParams[flagbearlive_id]);
+                        flagmother = (int) (FunctGroupArray[sp].speciesParams[flagmother_id]);
+                        flagchannel = (int) (FunctGroupArray[sp].speciesParams[flagchannel_id]);
+                        spupdatemig = 0;
+                        spmigrate = MIGRATION[sp].num_in_queue;
+                        this_flag_recruit = (int) (FunctGroupArray[sp].speciesParams[flagrecruit_id]);
+                        is_maternal_raised = 0;
+                        if(!bm->flag_replicated_old && ((this_flag_recruit == linear_recruit) || (this_flag_recruit == fixed_linear_recruit))) { // For newer models make sure linear reproduces have constraints (normalisaiton) of recruit_hdistrib
+                            is_maternal_raised = 1;
+                        }
+                        
+                        /* Make parameter adjustments due to acidification */
+                        flagcontract_sp = (int)FunctGroupArray[sp].speciesParams[flagcontract_tol_id];
+                        pH_scale = (FunctGroupArray[sp].pHcorr - 1.0);
+                        if( flagcontract_sp  && (pH_scale > 0.0)) {
+                            contract_sp = (int)FunctGroupArray[sp].speciesParams[contract_tol_id];
+                            min_spawntemp_sp += contract_sp * pH_scale;
+                            max_spawntemp_sp -= contract_sp * pH_scale;
+                        }
+                        
+                        /* if this group moves vertically only then work out existing % in each box */
+                        if(FunctGroupArray[sp].isMobile == TRUE && FunctGroupArray[sp].sp_geo_move == FALSE){
+                            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                den = FunctGroupArray[sp].NumsTracers[n];
+                                
+                                /* Get details of feeding preferences */
+                                for (ij = 0; ij < bm->nbox; ij++) {
+                                    boxden[ij][n] = 0;
+                                    
+                                    if (bm->boxes[ij].type != BOUNDARY) {
+                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                            boxden[ij][n] += bm->boxes[ij].tr[k][den];
+                                        }
+                                    }
+                                    
+                                    boxden[ij][n]= boxden[ij][n]/(totden[sp][n] + small_num);
+                                }
+                            }
+                        }
+                        
+                        /* For forage and density dependent movement determine ideal forage locations */
+                        /* if this group is not vertically mobile then need the currentden for use in Get_Vertical_Distribution() */
+                        
+                        if (sp_ddepend_move > perscribed_move || FunctGroupArray[sp].isMobile == FALSE) {
+                            
+                            /* Get general parameter values for density- and food-dependent movement,
+                            cohort specific ones are dealt with below. Note that this use of growth rate
+                            and clearance parameters is based only on the default Holling type feeding
+                            relation and on surface temperatures. This would need to change if other
+                            feeding types are used regularly and if depth related
+                            changes in feeding efficiency guiding feeding depths */
+                            
+                            E1_sp = FunctGroupArray[sp].speciesParams[E1_id];
+                            
+                            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                den = FunctGroupArray[sp].NumsTracers[n];
+                                spawn_date = EMBRYO[sp].Spawn_Now[n][EMBRYO[sp].next_spawn];
+                                spawn_period = (int) (FunctGroupArray[sp].speciesParams[spawn_period_id]);
+                                
+                                if((overall_checkday >= spawn_date) && (overall_checkday <= (spawn_date + spawn_period))){
+                                    sp_spawn_now = 1;
+                                } else {
+                                    sp_spawn_now = 0;
+                                }
+                                
+                                /* Initialise totroc */
+                                totroc[n] = 0.0;
+                                
+                                /* Get details of feeding preferences */
+                                for (ij = 0; ij < bm->nbox; ij++) {
+                                    /* Initialise density record */
+                                    boxden[ij][n] = 0.0;
+                                    
+                                    /* Initilaise home range information for those species using home ranges */
+                                    if (sp_ddepend_move == homerange_move) {
+                                        for (rij = 0; rij < bm->boxes[ij].HomeRangeInfo[sp].n; rij++) {
+                                            rangeid = bm->boxes[ij].HomeRangeInfo[sp].ids[rij];
+                                            bm->boxes[ij].HomeRangeInfo[sp].rangenum[n][rij] = 0.0;
+                                        }
+                                    }
+                                    
+                                    if(bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND) {
+                                        
+                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                            currentden[sp][n][k][ij] = bm->boxes[ij].tr[k][den] / (totden[sp][n] + small_num);
+                                        }
+                                        if (sp_ddepend_move > sedentary_move) {
                                             
-                                            if (!totroc[nroc]) {
-                                                /* No forage anywhere: stay where they are */
-                                                target = boxcur;
+                                            /* Calculate potential growth as an index of habitat suitability */
+                                            clear = Calculate_Species_Clearance_Rate(bm, llogfp, sp, n, ij, preyamt);
+                                            
+                                            if ((int) (FunctGroupArray[sp].speciesParams[flag_id]) && (int) (FunctGroupArray[sp].speciesParams[active_id]) &&
+                                            ( bm->boxes[ij].botz <= (-1.0 * FunctGroupArray[sp].speciesParams[mindepth_id]) &&
+                                            bm->boxes[ij].botz >= (-1.0 * FunctGroupArray[sp].speciesParams[maxdepth_id]))) {
+                                                //if ((int) (FunctGroupArray[sp].speciesParams[flag_id]) && (int) (FunctGroupArray[sp].speciesParams[active_id]) &&
+                                                //    (current_depth <= (-1.0 * FunctGroupArray[sp].speciesParams[mindepth_id]) &&
+                                                //     current_depth >= (-1.0 * FunctGroupArray[sp].speciesParams[maxdepth_id]))) {
+                                                
+                                                roc[ij][n] = E1_sp * clear;
                                             } else {
-                                                /* Share of the cohort in boxes failing the test: these move */
-                                                /* roc is area-weighted, so the stay/move test must divide the area out again to
-                                                compare per-capita quality with k_roc_food x SN (sticky_thresh). */
-                                                leftsum = 0.0;
-                                                for (bb = 0; bb < bm->nbox; bb++) {
-                                                    if ((bm->boxes[bb].type == BOUNDARY) || (bm->boxes[bb].type == LAND))
-                                                    continue;
-                                                    if ((roc[bb][nroc] / (roc_wgt * bm->boxes[bb].area + small_num)) > sticky_thresh)
-                                                    continue;
-                                                    for (kk = 0; kk < bm->boxes[bb].nz; kk++)
-                                                    leftsum += currentden[sp][n][kk][bb];
+                                                roc[ij][n] = 0.0;
+                                            }
+                                            
+                                            switch (bm->flagroc) {
+                                                case no_ddepend_id: /* No forage- and density- dependent movement so do nothing */
+                                                break;
+                                                case step_ddepend_id: /* Threshold breakpoint - base comparison vs average
+                                                sized individual */
+                                                if (roc[ij][n] > (k_roc_food * VERTinfo[sp][n][SN_id]))
+                                                /* If good feed area will clump */
+                                                roc[ij][n] = roc[ij][n] * roc_wgt;
+                                                else
+                                                /* If poor feed area will disperse */
+                                                roc[ij][n] = roc[ij][n] / roc_wgt;
+                                                break;
+                                                case decay_ddepend_id: /* Exponentially decaying effects */
+                                                roc[ij][n] = exp(-1.0 / (roc[ij][n] + small_num));
+                                                break;
+                                                default:
+                                                quit("No such forage ideal distrib model defined - how did it get here in the vertebrate migration routine?\n");
+                                                break;
+                                            }
+                                            
+                                            /* Scale outcome based on own refuge_status of local habitat */
+                                            if (bm->flaghabdepend) {
+                                                rocstage = FunctGroupArray[sp].cohort_stage[n];
+                                                roc[ij][n] *= bm->refuge_status[sp][ij][rocstage];
+                                            }
+                                            
+                                            if (roc[ij][n] < 0.0) {
+                                                
+                                                //fprintf (llogfp, "Time: %e, %s-%d  in box %d has roc < 0 (%e) with roc_wgt: %e, flagroc: %d E1_sp: %e clear: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, roc[ij][n], roc_wgt, bm->flagroc, E1_sp, clear);
+                                                
+                                                if (rocstage >= 0){
+                                                    fprintf (llogfp, "Time: %e, %s-%d (stage %d) in box %d has roc < 0 (%e) with refuge_status: %e roc_wgt: %e, flagroc: %d E1_sp: %e clear: %e\n",
+                                                        bm->dayt, FunctGroupArray[sp].groupCode, n, rocstage, ij, roc[ij][n], bm->refuge_status[sp][ij][rocstage], roc_wgt, bm->flagroc, E1_sp, clear);
+                                                    }
+                                                    quit("Negative roc for %s-%d\n", FunctGroupArray[sp].groupCode, n);
+                                                    
+                                                    
                                                 }
                                                 
-                                                /* Movers arrive by the forage field; stayers keep their share */
-                                                target = leftsum * roc[ij][nroc] / (totroc[nroc] + small_num);
-                                                if ((roc[ij][nroc] / (roc_wgt * bm->boxes[ij].area + small_num)) > sticky_thresh)
-                                                target += boxcur;
+                                                /* Weight per-capita habitat quality by box size, so boxes of
+                                                equal quality hold equal densities rather than equal numbers */
+                                                roc[ij][n] *= bm->boxes[ij].area;
+                                                
+                                                /* Calculate total potential growth across entire area for each species */
+                                                totroc[n] += roc[ij][n];
+                                                
+                                                /**
+                                                if(do_debug2 && (sp == bm->which_check)){
+                                                fprintf(llogfp,"Time: %e box%d %s-%d totroc: %.20e, roc: %.20e, flaghabdepend: %d, refuge_status[0]: %.20e, refuge_status[1]: %.20e, roc_wgt: %.20e, E1_sp: %.20e, clear: %.20e\n",
+                                                bm->dayt, ij, FunctGroupArray[sp].groupCode, n, totroc[n], roc[ij][n], bm->flaghabdepend,
+                                                bm->refuge_status[sp][ij][0], bm->refuge_status[sp][ij][1], roc_wgt, E1_sp, clear);
+                                                }
+                                                **/
                                             }
                                             
-                                            if(bm->track_contaminants) {
-                                                spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
-                                                Get_ContamMoveEffects(bm, sp, n, ij, k);
-                                                spSpeed *= FunctGroupArray[sp].C_move_corr[n];
+                                            if (sp_ddepend_move == sticky_ddepend) {
+                                                /* If using 'sticky' density dependent movement determine what proportion has to move
+                                                then move them. Use average sized individual for comparison purposes */
+                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                    if ((flagmother > 0) && (n < age_mat)) {
+                                                        if ((roc[ij][age_mat] / roc_wgt) > (k_roc_food * VERTinfo[sp][n][SN_id])) {
+                                                            boxden[ij][n] += currentden[sp][n][k][ij];
+                                                            totboxden[n] += currentden[sp][n][k][ij];
+                                                        }
+                                                    } else {
+                                                        if ((roc[ij][n] / roc_wgt) > (k_roc_food * VERTinfo[sp][n][SN_id])) {
+                                                            boxden[ij][n] += currentden[sp][n][k][ij];
+                                                            totboxden[n] += currentden[sp][n][k][ij];
+                                                        }
+                                                    }
+                                                }
+                                            } else if (sp_ddepend_move == sedentary_move) {
+                                                /* Sedentary apart from vertical movement determine current distribution */
+                                                if (!bm->t) { /* At startup read it in from fixed spatial distributions */
+                                                    rocstage = FunctGroupArray[sp].cohort_stage[n];
+                                                    boxden[ij][n] = FunctGroupArray[sp].distrib[ij][0][rocstage];
+                                                } else {
+                                                    for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                        boxden[ij][n] += currentden[sp][n][k][ij];
+                                                    }
+                                                }
                                             }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            /* Initialise the total being distributed and the stock sums */
+                            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                totboxden[n] = 0.0;
+                                for (k = 0; k < FunctGroupArray[sp].numStocks; k++) {
+                                    init_stock_struct_prop[sp][n][k] = 0.0;
+                                }
+                            }
+                            
+                            cells_checked = 0;
+                            cells_impacted = 0;
+                            
+                            /* Determine final movement distributions */
+                            for (ij = 0; ij < bm->nbox; ij++) {
+                                /* Vertical distribution - ignore */
+                                if(bm->terrestrial_on && bm->boxes[ij].type == LAND){
+                                    
+                                    /* Is group allowed to move onto land */
+                                    if( FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
+                                        
+                                        stock_id = bm->group_stock[sp][ij][0];
+                                        
+                                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
                                             
-                                            // Relax at box level toward the target, then split vertically once
-                                            newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (target - boxcur) + boxcur;
-                                            newden[sp][n][k][ij] *= vertdistrib;
-                                            break;
+                                            stage = FunctGroupArray[sp].cohort_stage[n];
                                             
-                                            case relax_prescribed:
-                                            /* Prescribed distribution as target, approached gradually: local depletion
-                                            (e.g. fishing) persists and is refilled at rate r instead of every step.
-                                            Juveniles staying with their mother follow the first mature cohort's
-                                            current box share. */
-                                            vertdistrib = tempdistrib[k][stage];
+                                            /* Update stored vertdistrib value - so can condition catch timeseries if need be */
+                                            bm->boxes[ij].vert_vdistrib[sp][stage][0] = 1.0;
                                             
-                                            boxcur = 0.0;
-                                            for (kk = 0; kk < bm->boxes[ij].nz; kk++)
-                                            boxcur += currentden[sp][n][kk][ij];
-                                            
-                                            if ((flagmother > 0) && (n < age_mat)) {
-                                                target = 0.0;
-                                                for (kk = 0; kk < bm->boxes[ij].nz; kk++)
-                                                target += currentden[sp][age_mat][kk][ij];
-                                            } else {
-                                                target = this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][stage] - FunctGroupArray[sp].distrib[ij][qrt][stage]) + FunctGroupArray[sp].distrib[ij][qrt][stage];
-                                            }
-                                            
-                                            if(bm->track_contaminants) {
-                                                spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
-                                                Get_ContamMoveEffects(bm, sp, n, ij, k);
-                                                spSpeed *= FunctGroupArray[sp].C_move_corr[n];
-                                            }
-                                            
-                                            // Relax at box level toward the target, then split vertically once
-                                            newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (target - boxcur) + boxcur;
-                                            newden[sp][n][k][ij] *= vertdistrib;
-                                            break;
-                                            
-                                            case sedentary_move:
-                                            vertdistrib = tempdistrib[k][stage];
-                                            newden[sp][n][k][ij] = vertdistrib * boxden[ij][n];
-                                            break;
-                                            
-                                            case perscribed_move:
                                             /* Used prescribed migration routes */
-                                            vertdistrib = tempdistrib[k][stage];
+                                            newden[sp][n][0][ij] = 1.0 * (this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][stage] - FunctGroupArray[sp].distrib[ij][qrt][stage]) + FunctGroupArray[sp].distrib[ij][qrt][stage]);
                                             
-                                            newden[sp][n][k][ij] = vertdistrib * (this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][stage] - FunctGroupArray[sp].distrib[ij][qrt][stage]) + FunctGroupArray[sp].distrib[ij][qrt][stage]);
-                                            
+                                            /* Leave this in for now - don't have any sort of landbased refuge yet */
                                             if (bm->flag_move_habdepend) {
-                                                newden[sp][n][k][ij] *= bm->refuge_status[sp][ij][stage];
-                                            }
-                                            
-                                            break;
-                                            
-                                            case homerange_move:
-                                            /* Use home ranges
-                                            
-                                            This distributes individuals across home-range based on weighted averages
-                                            (where weights are areas of boxes in the home range). The individuals are
-                                            drawn from the matrix that keeps track of the numbers of animals in each
-                                            home range.
-                                            
-                                            Note HomeRangeTotal is proportion of the total population in each home range
-                                            whereas rangewgt is the proportion of those in home range x in the current cell
-                                            */
-                                            vertdistrib = tempdistrib[k][stage];
-                                            
-                                            newden[sp][n][k][ij] = 0;
-                                            for (rij = 0; rij < bm->boxes[ij].HomeRangeInfo[sp].n; rij++) {
-                                                rangeid = bm->boxes[ij].HomeRangeInfo[sp].ids[rij];
-                                                newden[sp][n][k][ij] += vertdistrib * bm->HomeRangeTotal[sp][n][rangeid] * bm->boxes[ij].HomeRangeInfo[sp].rangewgt[rij];
-                                            }
-                                            if (bm->flag_move_habdepend) {
-                                                newden[sp][n][k][ij] *= bm->refuge_status[sp][ij][stage];
-                                            }
-                                            break;
-                                            
-                                            default:
-                                            quit("No such ddepend flag value (%d) for %s\n", sp_ddepend_move, FunctGroupArray[sp].groupCode);
-                                            break;
-                                        }                                                                                                                                                  
-                                        
-                                        
-                                        
-                                        /* Do a check to see how we are travelling so far */
-                                        if(newden[sp][n][k][ij] < 0){
-                                            quit("Vertebrate movement. Density is less than 0 for group %s, cohort %d in box %d:%d, sp_ddepend_move = %d\n",
-                                                FunctGroupArray[sp].groupCode, n, ij, k, sp_ddepend_move);
-                                            }
-                                            
-                                            /* Noise and light pollution avoidance */
-                                            if (FunctGroupArray[sp].isLightEffected) {
-                                                current_enviro = bm->boxes[ij].tr[k][Light_Pollution_i];
-                                                if (current_enviro > 0) {
-                                                    newden[sp][n][k][ij] *= (FunctGroupArray[sp].speciesParams[light_coefft_id] / (current_enviro + small_num));
-                                                }
-                                            }
-                                            
-                                            if (FunctGroupArray[sp].isNoiseEffected) {
-                                                current_enviro = bm->boxes[ij].tr[k][Noise_Pollution_i];
-                                                if (current_enviro > 0) {
-                                                    newden[sp][n][k][ij] *= (FunctGroupArray[sp].speciesParams[noise_coefft_id] / (current_enviro + small_num));
-                                                }
+                                                newden[sp][n][0][ij] *= bm->refuge_status[sp][ij][stage];
                                             }
                                             
                                             /**
-                                            if(sp ==64) {
-                                            fprintf(llogfp,"Time %e %s-%d box%d-%d before enviro_depend newden: %e\n",
-                                            bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, newden[sp][n][k][ij]);
-                                            
+                                            if(do_debug2){
+                                            fprintf(bm->logFile, "Time: %e (qrt: %d) %s-%d (stage %d) in box %d-%d newden %e, vertdistrib %e, bm->distrib %e\n",
+                                            bm->dayt, qrt, FunctGroupArray[sp].groupCode, n, stage, ij, k, newden[sp][n][k][ij], vertdistrib, FunctGroupArray[sp].distrib[ij][qrt][stage]);
                                             }
                                             **/
-                                            
-                                            cells_checked++;
-                                            numScalar_final = 1.0;
-                                            orig_newden = newden[sp][n][k][ij];
-                                            if (enviro_depend) {
-                                                /* If temperature dependent check to see if temperatures suitable here.
-                                                If not zero the entry. Similarly for salinity and oxygen.
-                                                */
-                                                numScalar_final = Check_Conditions(bm, sp, n, ij, k, newden);
-                                            }
-                                            
-                                            if(bm->track_contaminants) {
-                                                // Contaminant avoidance
-                                                numScalar = Avoid_Contaminants(bm, sp, n, ij, k);
-                                                newden[sp][n][k][ij] *= numScalar;
-                                                numScalar_final *= numScalar;
-                                            }
-                                            
-                                            if(bm->flagenviro_warn && (numScalar_final != 1.0)) {
-                                                cells_impacted++;
-                                            }
-                                            
-                                            // Potentially move elsewhere instead of simply leaving
-                                            if (enviro_depend && bm->flagenviro_displace) {
-                                                // Difference between original and final distributions
-                                                den_diff = orig_newden - newden[sp][n][k][ij];
-                                                
-                                                // Now reallocate
-                                                check_done = 0;
-                                                adbox = 0;
-                                                while ((check_done < 1) && (adbox < bm->boxes[ij].nconn)) {
-                                                    chkbox = bm->boxes[ij].ibox[adbox];
-                                                    for (kk = 0; kk < bm->boxes[chkbox].nz; kk++) {
-                                                        // Check conditions
-                                                        is_suitable = Check_Realloc_Conditions(bm, sp, n, chkbox, kk);
-                                                        if (is_suitable) {
-                                                            newden[sp][n][chkbox][kk] += den_diff;
-                                                            check_done = 1;
-                                                            den_diff = 0;
-                                                        }
-                                                    }
-                                                    adbox++;
-                                                }
-                                                
-                                            }
-                                            
-                                            // If not allowing dispersal or disappearance (original assumption) kill instead
-                                            if (enviro_depend && bm->flagenviro_kill) {
-                                                // Difference between original and final distributions
-                                                den_diff = orig_newden - newden[sp][n][k][ij];
-                                                
-                                                // Biomass killed - SN to labile detritus, RN to refractory - could parameterise like with FGDL-like parameter
-                                                DL_id = FunctGroupArray[LabDetIndex].totNTracers[0];
-                                                DR_id = FunctGroupArray[RefDetIndex].totNTracers[0];
-                                                
-                                                bm->boxes[ij].tr[k][DL_id] = VERTinfo[sp][n][SN_id] * totden[sp][n] * den_diff;
-                                                bm->boxes[ij].tr[k][DR_id] = VERTinfo[sp][n][RN_id] * totden[sp][n] * den_diff;
-                                            }
-                                            
-                                            
-                                            if(bm->track_contaminants && bm->flag_contamMaternalTransfer) {
-                                                if((flagmother > 0) && (newden[sp][n][k][ij] > 0)) {
-                                                    FunctGroupArray[sp].LocalPopCount[n] = newden[sp][n][k][ij];
-                                                }
-                                            }
-                                        }
-                                        if( bm->track_contaminants && bm->flag_contamMaternalTransfer && (flagmother > 0) && (FunctGroupArray[sp].speciesParams[suckler_contam_today_id] > 0)) {
-                                            for (n = 0; n < age_mat; n++) {
-                                                juv_num = FunctGroupArray[sp].LocalPopCount[n];
-                                                not_done = 1;
-                                                if(juv_num > bm->min_dens){ // Only do if juveniles present
-                                                    ad_start_cohort = (int)(floor(drandom(start_n, end_n))); // Find random starting point so not always the youngest adutlts feeding the young
-                                                    for (ad_cohort = ad_start_cohort; ad_cohort < FunctGroupArray[sp].numCohortsXnumGenes; ad_cohort++) { // Iterate up age classes
-                                                        ad_num = FunctGroupArray[sp].LocalPopCount[ad_cohort];
-                                                        if(ad_num > bm->min_dens) {
-                                                            Get_Suckling_Contaminants(bm, sp, ad_cohort, n);
-                                                            juv_num -= ad_num;
-                                                        }
-                                                        if(juv_num > 0) {
-                                                            // Do nothing as not finished yet
-                                                        } else {
-                                                            not_done = 0;
-                                                            break;
-                                                        }
-                                                    }
-                                                    if(not_done > 0){
-                                                        for (ad_cohort = ad_start_cohort; ad_cohort > (age_mat - 1); ad_cohort--) { // Iterate over the rest of the adults if we have to
-                                                            ad_num = FunctGroupArray[sp].LocalPopCount[ad_cohort];
-                                                            if(ad_num > bm->min_dens) {
-                                                                Get_Suckling_Contaminants(bm, sp, ad_cohort, n);
-                                                                juv_num -= ad_num;
-                                                            }
-                                                            if(juv_num > 0) {
-                                                                // Do nothing as not finished yet
-                                                            } else {
-                                                                not_done = 0;
-                                                                break;
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        FunctGroupArray[sp].speciesParams[suckler_contam_today_id] = 1;  // Reset this marker here as only skip delivery the day of the birth. May be reset in atdemography.
-                                    }
-                                }
-                            }
-                            
-                            if(bm->flagenviro_warn && cells_impacted) {
-                                fprintf(llogfp, "Time: %e %s is environmemtally constrained in %d of %d cells (box*layer*cohort combos)\n", bm->dayt, FunctGroupArray[sp].groupCode, cells_impacted, cells_checked);
-                            }
-                            
-                            /* If tidal deal with that now */
-                            if (bm->tidal) {
-                                /* If tidal move channel lovers into deeper water on ebb tide.
-                                Base distribution should put them on flats in flood tide
-                                */
-                                if (flagchannel) {
-                                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                        stage = FunctGroupArray[sp].cohort_stage[n];
-                                        for (ij = 0; ij < bm->nbox; ij++) {
-                                            if (bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND) {
-                                                
-                                                /* Find channels - any with depth > min_channel_depth */
-                                                nbox_spread = 0.0;
-                                                if (bm->boxes[ij].current_botz < bm->min_channel_depth) {
-                                                    for (adbox = 0; adbox < bm->boxes[ij].nconn; adbox++) {
-                                                        chkbox = bm->boxes[ij].ibox[adbox];
-                                                        if (bm->boxes[chkbox].current_botz > bm->min_channel_depth) {
-                                                            nbox_spread += (bm->boxes[chkbox].area * bm->boxes[chkbox].current_botz);
-                                                        }
-                                                    }
-                                                    /* Move out into the channel - based on size of channel boxes */
-                                                    if (nbox_spread > 0.0) {
-                                                        chkbox = 0;
-                                                        for (adbox = 0; adbox < bm->boxes[ij].nconn; adbox++) {
-                                                            chkbox = bm->boxes[ij].ibox[adbox];
-                                                            if (bm->boxes[chkbox].current_botz >= bm->min_channel_depth) {
-                                                                for (k = 0; k < bm->boxes[chkbox].nz; k++) {
-                                                                    newden[sp][n][k][chkbox] += newden[sp][n][k][ij] * bm->boxes[chkbox].area * bm->boxes[chkbox].dz[k] * tempdistrib[k][stage] / nbox_spread;
-                                                                }
-                                                            } else {
-                                                                /* Empty the shallows and flats */
-                                                                for (k = 0; k < bm->boxes[chkbox].nz; k++) {
-                                                                    newden[sp][n][k][chkbox] = 0;
-                                                                }
-                                                            }
-                                                        }
-                                                        /* Finishing emptying the shallows and flats */
-                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                            newden[sp][n][k][ij] = 0;
-                                                        }
-                                                    }
-                                                }
-                                            }
                                         }
                                     }
-                                }
-                            }
-                            
-                            /* Do final summation (in all cases) */
-                            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                for (ij = 0; ij < bm->nbox; ij++) {
-                                    if (bm->boxes[ij].type == LAND) {
-                                        if( FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
-                                            
-                                            /* Get stock id */
-                                            stock_id = bm->group_stock[sp][ij][0];
-                                            
-                                            /* Total up the new proportions just to make sure */
-                                            totboxden[n] += newden[sp][n][0][ij];
-                                            
-                                            /* Get new allocation per stock */
-                                            init_stock_struct_prop[sp][n][stock_id] += newden[sp][n][0][ij];
-                                        }
+                                } else if (bm->boxes[ij].type != BOUNDARY) {
+                                    
+                                    Get_Vertical_Distribution(bm, ij, sp, currentden, enviro_depend, day_part, -1, llogfp);
+                                    
+                                    /*
+                                    if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
+                                    fprintf(llogfp,"Time: %e %s is doing get_vertical_distrib for box %d\n",
+                                    bm->dayt, FunctGroupArray[sp].groupCode, ij);
+                                    }
+                                    */
+                                    
+                                    /* Get final distributions per box and stock */
+                                    for (k = 0; k < bm->boxes[ij].nz; k++) {
                                         
-                                    }else if (bm->boxes[ij].type != BOUNDARY) {
-                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                            /* Get stock id */
-                                            stock_id = bm->group_stock[sp][ij][k];
+                                        stock_id = bm->group_stock[sp][ij][k];
+                                        
+                                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                            spawn_date = EMBRYO[sp].Spawn_Now[n][EMBRYO[sp].next_spawn];
+                                            spawn_period = (int) (FunctGroupArray[sp].speciesParams[spawn_period_id]);
                                             
-                                            /* Total up the new proportions just to make sure */
-                                            totboxden[n] += newden[sp][n][k][ij];
-                                            
-                                            /* Get new allocation per stock */
-                                            init_stock_struct_prop[sp][n][stock_id] += newden[sp][n][k][ij];
-                                        }
-                                    }
-                                }
-                                /* Replicate old bec_dev results on existing models. We will remove this asap! */
-                                if(bm->flag_replicated_old == FALSE){
-                                    /* Normalise new stock prop */
-                                    for (k = 0; k < FunctGroupArray[sp].numStocks; k++) {
-                                        init_stock_struct_prop[sp][n][k] /= (totboxden[n] + small_num);
-                                    }
-                                }
-                                
-                                /* Normalise final distributions */
-                                totboxden[n] = 0;
-                                for (ij = 0; ij < bm->nbox; ij++) {
-                                    if (bm->boxes[ij].type == LAND){
-                                        if( FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
-                                            
-                                            
-                                            stock_id = bm->group_stock[sp][ij][0];
-                                            
-                                            if (init_stock_struct_prop[sp][n][stock_id] == 0) {
-                                                // Had to allow for case that this could be zero as evolution can see a genotype disappear
-                                                newden[sp][n][0][ij] = 0.0;
+                                            if((overall_checkday >= spawn_date) && (overall_checkday <= (spawn_date + spawn_period))){
+                                                sp_spawn_now = 1;
                                             } else {
-                                                newden[sp][n][0][ij] = newden[sp][n][0][ij] * bm->stock_struct_prop[sp][n][stock_id] / (init_stock_struct_prop[sp][n][stock_id]
-                                                    + small_num);
-                                                }
-                                                
-                                                if(newden[sp][n][0][ij]  < 0){
-                                                    printf("newDen - %e, stock structure = %e, init stock sturcture = %e\n", newden[sp][n][0][ij], bm->stock_struct_prop[sp][n][stock_id], init_stock_struct_prop[sp][n][stock_id]);
-                                                    quit("Vertebrate movement. Density is less than 0 for group %s, cohort %d in land box %d\n", FunctGroupArray[sp].groupCode, n, ij);
-                                                }
-                                                
-                                                totboxden[n] += newden[sp][n][0][ij];
-                                                
-                                                if(totboxden[n] < 0){
-                                                    quit("Total box density is less than 0\n");
-                                                }
+                                                sp_spawn_now = 0;
                                             }
+                                            stage = FunctGroupArray[sp].cohort_stage[n];
                                             
-                                        }else if (bm->boxes[ij].type != BOUNDARY) {
-                                            for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                stock_id = bm->group_stock[sp][ij][k];
-                                                
-                                                if (init_stock_struct_prop[sp][n][stock_id] == 0) {
-                                                    // Had to allow for case that this could be zero as evolution can see a genotype disappear
-                                                    newden[sp][n][k][ij] = 0.0;
-                                                } else {
-                                                    newden[sp][n][k][ij] = newden[sp][n][k][ij] * bm->stock_struct_prop[sp][n][stock_id] / (init_stock_struct_prop[sp][n][stock_id]
-                                                        + small_num);
-                                                    }
-                                                    
-                                                    if(newden[sp][n][k][ij]  < 0){
-                                                        printf("newDen - %e, stock structure = %e, init stock sturcture = %e\n", newden[sp][n][k][ij], bm->stock_struct_prop[sp][n][stock_id], init_stock_struct_prop[sp][n][stock_id]);
-                                                        quit("Vertebrate movement. Density is less than 0 for group %s, cohort %d in box %d:%d\n", FunctGroupArray[sp].groupCode, n, ij, k);
-                                                    }
-                                                    
-                                                    totboxden[n] += newden[sp][n][k][ij];
-                                                    
-                                                    /*
-                                                    if(sp == 64) {
-                                                    fprintf(llogfp, "Time: %e box%d-%d %s-%d newden: %e\n", bm->dayt, ij, k, FunctGroupArray[sp].groupCode, n, newden[sp][n][k][ij]);
-                                                    }
-                                                    */
-                                                    
-                                                    if(totboxden[n] < 0){
-                                                        quit("Total box density is less than 0\n");
-                                                    }
-                                                }
+                                            /* Update stored vertdistrib value - so can condition catch timeseries if need be */
+                                            bm->boxes[ij].vert_vdistrib[sp][stage][k] = tempdistrib[k][stage];
+                                            
+                                            /*
+                                            if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
+                                            fprintf(llogfp,"Time: %e %s-%d is doing box %d-%d with sp_ddepend_move: %d\n",
+                                            bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, sp_ddepend_move);
                                             }
-                                        }
-                                        
-                                        
-                                        /* Most likely need to rescale is environmental drivers invalidating some cells */
-                                        for (ij = 0; ij < bm->nbox; ij++) {
-                                            if (bm->terrestrial_on && bm->boxes[ij].type == LAND){
-                                                if( FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
-                                                    
-                                                    newden[sp][n][0][ij] /= (totboxden[n] + small_num);
+                                            */
+                                            
+                                            /* Replaces the whole switch (sp_ddepend_move) block in Ecology_Total_Verts_And_Migration()
+                                            in atmovement.c, from "switch (sp_ddepend_move) {" down to the closing "}" after "default:".
+                                            
+                                            New declarations at the top of the function:
+                                            int follow_mother, nroc, mstage, use_spawn_move, prescribed_only;
+                                            double boxcur;
+                                            thiscase1 and thiscase2 are no longer used and can be removed. */
+                                            
+                                            switch (sp_ddepend_move) {
+                                                case weight_ddepend:
+                                                case switch_ddepend:
+                                                case only_ddepend:
+                                                case weight_switch_ddepend:
+                                                
+                                                /* Density dependent movement, types 2, 5,7 and 9:
+                                                weight_ddepend (2): prescribed × forage all year
+                                                switch_ddepend (5): forage-dependent; during spawning prescribed movement only
+                                                only_ddepend   (7): forage-dependent all year, prescribed distribution ignored
+                                                weight_switch_ddepend   (9): prescribed × forage, during spawning prescribed movement only
+                                                Juveniles staying with their mother (flagmother > 0) follow the first mature
+                                                cohort (age_mat) all year. Other juveniles use forage only.
+                                                feed_while_spawn is no longer used in the movement logic. */
+                                                
+                                                /* FIX -- may want to have depth based on roc too not just always at optimal,
+                                                otherwise with conditions change may not see distribution changes */
+                                                vertdistrib = tempdistrib[k][stage];
+                                                
+                                                /* Which cohort sets the horizontal movement */
+                                                follow_mother = (flagmother > 0) && (n < age_mat);
+                                                if (follow_mother) {
+                                                    nroc = age_mat;
+                                                    mstage = FunctGroupArray[sp].cohort_stage[age_mat];
+                                                    use_spawn_move = (overall_checkday >= EMBRYO[sp].Spawn_Now[age_mat][EMBRYO[sp].next_spawn]) &&
+                                                    (overall_checkday <= (EMBRYO[sp].Spawn_Now[age_mat][EMBRYO[sp].next_spawn] + spawn_period));
+                                                } else {
+                                                    nroc = n;
+                                                    mstage = stage;
+                                                    /* Juveniles not following mother: forage only */
+                                                    use_spawn_move = sp_spawn_now && stage;
                                                 }
-                                            }else if (bm->boxes[ij].type != BOUNDARY) {
-                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                    newden[sp][n][k][ij] /= (totboxden[n] + small_num);
+                                                
+                                                /* Movement rule for this cohort and time:
+                                                weight_ddepend        (2): prescribed x forage all year
+                                                switch_ddepend        (5): forage; prescribed only in spawning
+                                                only_ddepend          (7): forage all year
+                                                weight_switch_ddepend (9): prescribed x forage; prescribed only in spawning */
+                                                weighted = 0;
+                                                prescribed_only = 0;
+                                                switch (sp_ddepend_move) {
+                                                    case weight_ddepend:
+                                                    weighted = 1;
+                                                    break;
+                                                    case switch_ddepend:
+                                                    prescribed_only = use_spawn_move;
+                                                    break;
+                                                    case weight_switch_ddepend:
+                                                    if (use_spawn_move)
+                                                    prescribed_only = 1;
+                                                    else
+                                                    weighted = 1;
+                                                    break;
+                                                    default:   /* only_ddepend */
+                                                    break;
+                                                }
+                                                
+                                                /* Prescribed share (spawnmove = 1.0 makes no contribution: forage only) */
+                                                spawnmove = 1.0;
+                                                if (weighted || prescribed_only) {
+                                                    spawnmove = this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][mstage] - FunctGroupArray[sp].distrib[ij][qrt][mstage]) + FunctGroupArray[sp].distrib[ij][qrt][mstage];
+                                                }
+                                                
+                                                /* Normaliser for the weighted target (prescribed share x forage share),
+                                                so that it sums to 1 over boxes before the relaxation step */
+                                                wnorm = 1.0;
+                                                wnorm = 1.0;
+                                                if (weighted && totroc[nroc]) {
+                                                    wnorm = 0.0;
+                                                    for (bb = 0; bb < bm->nbox; bb++) {
+                                                        if ((bm->boxes[bb].type == BOUNDARY) || (bm->boxes[bb].type == LAND))
+                                                        continue;
+                                                        wnorm += (this_HowFar * (FunctGroupArray[sp].distrib[bb][next_qrt][mstage] - FunctGroupArray[sp].distrib[bb][qrt][mstage]) + FunctGroupArray[sp].distrib[bb][qrt][mstage])
+                                                        * roc[bb][nroc] / (totroc[nroc] + small_num);
+                                                    }
+                                                }
+                                                
+                                                
+                                                /* Current share of this cohort in the whole box: the target is a box-level
+                                                share, so relax from the box total and split vertically afterwards */
+                                                boxcur = 0.0;
+                                                for (kk = 0; kk < bm->boxes[ij].nz; kk++)
+                                                boxcur += currentden[sp][n][kk][ij];
+                                                
+                                                
+                                                orig_newden = newden[sp][n][k][ij];
+                                                
+                                                if(bm->track_contaminants) {
+                                                    spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
+                                                    Get_ContamMoveEffects(bm, sp, n, ij, k);
+                                                    spSpeed *= FunctGroupArray[sp].C_move_corr[n];
+                                                }
+                                                
+                                                // Relax at box level (never negative), then split vertically once, so that
+                                                // horizontal and vertical movement limitations are distinguished
+                                                newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (newden[sp][n][k][ij] - boxcur) + boxcur;
+                                                newden[sp][n][k][ij] *= vertdistrib;
+                                                
+                                                /*
+                                                if(sp == bm->which_check) {
+                                                fprintf(llogfp, "Time: %e %s-%d box %d-%d newden: %.20e ", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, newden[sp][n][k][ij]);
+                                                fprintf(llogfp, "boxcur: %.20e orig_newden: %.20e ", boxcur, orig_newden);
+                                                fprintf(llogfp, "spSpeed  = %.20e,  dt = %.20e, bm->width = %.20e, vertdistrib = %.20e ", spSpeed, dt, bm->width, vertdistrib);
+                                                fprintf(llogfp, "spawnmove = %.20e prescribed_only = %d nroc = %d roc = %.20e totroc = %.20e\n", spawnmove, prescribed_only, nroc, roc[ij][nroc], totroc[nroc]);
+                                                }
+                                                */
+                                                
+                                                if(newden[sp][n][k][ij]  < 0){
+                                                    printf("Error in Ecology_Total_Verts_And_Migration\n");
+                                                    printf("newden[%s][%d][%d][%d] = %.20e\n", FunctGroupArray[sp].groupCode, n, k, ij, newden[sp][n][k][ij]);
+                                                    printf("boxcur[%s][%d][%d] = %.20e orig_newden = %.20e\n",
+                                                        FunctGroupArray[sp].groupCode, n, ij, boxcur, orig_newden);
+                                                        printf("(spSpeed * dt / bm->width) = %.20e\n", (spSpeed * dt / bm->width));
+                                                        printf("spSpeed  = %.20e,  dt = %.20e, bm->width = %.20e, vertdistrib = %.20e\n", spSpeed, dt, bm->width, vertdistrib);
+                                                        printf("spawnmove = %.20e prescribed_only = %d nroc = %d roc = %.20e totroc = %.20e\n", spawnmove, prescribed_only, nroc, roc[ij][nroc], totroc[nroc]);
+                                                        quit("");
+                                                    }
+                                                    
+                                                    break;
+                                                    
+                                                    case sticky_ddepend:
+                                                    /* Sticky density dependent movement (as in the Atlantis manual):
+                                                    cohorts in boxes passing the forage test (roc / roc_wgt > k_roc_food * SN) stay;
+                                                    cohorts in boxes failing it are redistributed over the whole domain by the
+                                                    forage field, including into passing boxes. Movement is gradual (rate r).
+                                                    Juveniles staying with their mother follow the first mature cohort: its forage
+                                                    field and size decide which boxes pass. No prescribed weighting. */
+                                                    vertdistrib = tempdistrib[k][stage];
+                                                    
+                                                    if ((flagmother > 0) && (n < age_mat))
+                                                    nroc = age_mat;
+                                                    else
+                                                    nroc = n;
+                                                    sticky_thresh = k_roc_food * VERTinfo[sp][nroc][SN_id];
+                                                    
+                                                    /* Current share of this cohort in the whole box */
+                                                    boxcur = 0.0;
+                                                    for (kk = 0; kk < bm->boxes[ij].nz; kk++)
+                                                    boxcur += currentden[sp][n][kk][ij];
+                                                    
+                                                    if (!totroc[nroc]) {
+                                                        /* No forage anywhere: stay where they are */
+                                                        target = boxcur;
+                                                    } else {
+                                                        /* Share of the cohort in boxes failing the test: these move */
+                                                        /* roc is area-weighted, so the stay/move test must divide the area out again to
+                                                        compare per-capita quality with k_roc_food x SN (sticky_thresh). */
+                                                        leftsum = 0.0;
+                                                        for (bb = 0; bb < bm->nbox; bb++) {
+                                                            if ((bm->boxes[bb].type == BOUNDARY) || (bm->boxes[bb].type == LAND))
+                                                            continue;
+                                                            if ((roc[bb][nroc] / (roc_wgt * bm->boxes[bb].area + small_num)) > sticky_thresh)
+                                                            continue;
+                                                            for (kk = 0; kk < bm->boxes[bb].nz; kk++)
+                                                            leftsum += currentden[sp][n][kk][bb];
+                                                        }
+                                                        
+                                                        /* Movers arrive by the forage field; stayers keep their share */
+                                                        target = leftsum * roc[ij][nroc] / (totroc[nroc] + small_num);
+                                                        if ((roc[ij][nroc] / (roc_wgt * bm->boxes[ij].area + small_num)) > sticky_thresh)
+                                                        target += boxcur;
+                                                    }
+                                                    
+                                                    if(bm->track_contaminants) {
+                                                        spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
+                                                        Get_ContamMoveEffects(bm, sp, n, ij, k);
+                                                        spSpeed *= FunctGroupArray[sp].C_move_corr[n];
+                                                    }
+                                                    
+                                                    // Relax at box level toward the target, then split vertically once
+                                                    newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (target - boxcur) + boxcur;
+                                                    newden[sp][n][k][ij] *= vertdistrib;
+                                                    break;
+                                                    
+                                                    case relax_prescribed:
+                                                    /* Prescribed distribution as target, approached gradually: local depletion
+                                                    (e.g. fishing) persists and is refilled at rate r instead of every step.
+                                                    Juveniles staying with their mother follow the first mature cohort's
+                                                    current box share. */
+                                                    vertdistrib = tempdistrib[k][stage];
+                                                    
+                                                    boxcur = 0.0;
+                                                    for (kk = 0; kk < bm->boxes[ij].nz; kk++)
+                                                    boxcur += currentden[sp][n][kk][ij];
+                                                    
+                                                    if ((flagmother > 0) && (n < age_mat)) {
+                                                        target = 0.0;
+                                                        for (kk = 0; kk < bm->boxes[ij].nz; kk++)
+                                                        target += currentden[sp][age_mat][kk][ij];
+                                                    } else {
+                                                        target = this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][stage] - FunctGroupArray[sp].distrib[ij][qrt][stage]) + FunctGroupArray[sp].distrib[ij][qrt][stage];
+                                                    }
+                                                    
+                                                    if(bm->track_contaminants) {
+                                                        spSpeed = FunctGroupArray[sp].speciesParams[Speed_id];
+                                                        Get_ContamMoveEffects(bm, sp, n, ij, k);
+                                                        spSpeed *= FunctGroupArray[sp].C_move_corr[n];
+                                                    }
+                                                    
+                                                    // Relax at box level toward the target, then split vertically once
+                                                    newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (target - boxcur) + boxcur;
+                                                    newden[sp][n][k][ij] *= vertdistrib;
+                                                    break;
+                                                    
+                                                    case sedentary_move:
+                                                    vertdistrib = tempdistrib[k][stage];
+                                                    newden[sp][n][k][ij] = vertdistrib * boxden[ij][n];
+                                                    break;
+                                                    
+                                                    case perscribed_move:
+                                                    /* Used prescribed migration routes */
+                                                    vertdistrib = tempdistrib[k][stage];
+                                                    
+                                                    newden[sp][n][k][ij] = vertdistrib * (this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][stage] - FunctGroupArray[sp].distrib[ij][qrt][stage]) + FunctGroupArray[sp].distrib[ij][qrt][stage]);
+                                                    
+                                                    if (bm->flag_move_habdepend) {
+                                                        newden[sp][n][k][ij] *= bm->refuge_status[sp][ij][stage];
+                                                    }
+                                                    
+                                                    break;
+                                                    
+                                                    case homerange_move:
+                                                    /* Use home ranges
+                                                    
+                                                    This distributes individuals across home-range based on weighted averages
+                                                    (where weights are areas of boxes in the home range). The individuals are
+                                                    drawn from the matrix that keeps track of the numbers of animals in each
+                                                    home range.
+                                                    
+                                                    Note HomeRangeTotal is proportion of the total population in each home range
+                                                    whereas rangewgt is the proportion of those in home range x in the current cell
+                                                    */
+                                                    vertdistrib = tempdistrib[k][stage];
+                                                    
+                                                    newden[sp][n][k][ij] = 0;
+                                                    for (rij = 0; rij < bm->boxes[ij].HomeRangeInfo[sp].n; rij++) {
+                                                        rangeid = bm->boxes[ij].HomeRangeInfo[sp].ids[rij];
+                                                        newden[sp][n][k][ij] += vertdistrib * bm->HomeRangeTotal[sp][n][rangeid] * bm->boxes[ij].HomeRangeInfo[sp].rangewgt[rij];
+                                                    }
+                                                    if (bm->flag_move_habdepend) {
+                                                        newden[sp][n][k][ij] *= bm->refuge_status[sp][ij][stage];
+                                                    }
+                                                    break;
+                                                    
+                                                    default:
+                                                    quit("No such ddepend flag value (%d) for %s\n", sp_ddepend_move, FunctGroupArray[sp].groupCode);
+                                                    break;
+                                                }                                                                                                                                                  
+                                                
+                                                
+                                                
+                                                /* Do a check to see how we are travelling so far */
+                                                if(newden[sp][n][k][ij] < 0){
+                                                    quit("Vertebrate movement. Density is less than 0 for group %s, cohort %d in box %d:%d, sp_ddepend_move = %d\n",
+                                                        FunctGroupArray[sp].groupCode, n, ij, k, sp_ddepend_move);
+                                                    }
+                                                    
+                                                    /* Noise and light pollution avoidance */
+                                                    if (FunctGroupArray[sp].isLightEffected) {
+                                                        current_enviro = bm->boxes[ij].tr[k][Light_Pollution_i];
+                                                        if (current_enviro > 0) {
+                                                            newden[sp][n][k][ij] *= (FunctGroupArray[sp].speciesParams[light_coefft_id] / (current_enviro + small_num));
+                                                        }
+                                                    }
+                                                    
+                                                    if (FunctGroupArray[sp].isNoiseEffected) {
+                                                        current_enviro = bm->boxes[ij].tr[k][Noise_Pollution_i];
+                                                        if (current_enviro > 0) {
+                                                            newden[sp][n][k][ij] *= (FunctGroupArray[sp].speciesParams[noise_coefft_id] / (current_enviro + small_num));
+                                                        }
+                                                    }
                                                     
                                                     /**
-                                                    if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
-                                                    fprintf(llogfp,"Time %e %s-%d box%d-%d normalised newden %e totboxden: %e\n",
-                                                    bm->dayt, FunctGroupArray[sp].groupCode, n, k, ij, newden[sp][n][k][ij], totboxden[n]);
+                                                    if(sp ==64) {
+                                                    fprintf(llogfp,"Time %e %s-%d box%d-%d before enviro_depend newden: %e\n",
+                                                    bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, newden[sp][n][k][ij]);
                                                     
                                                     }
                                                     **/
                                                     
+                                                    cells_checked++;
+                                                    numScalar_final = 1.0;
+                                                    orig_newden = newden[sp][n][k][ij];
+                                                    if (enviro_depend) {
+                                                        /* If temperature dependent check to see if temperatures suitable here.
+                                                        If not zero the entry. Similarly for salinity and oxygen.
+                                                        */
+                                                        numScalar_final = Check_Conditions(bm, sp, n, ij, k, newden);
+                                                    }
+                                                    
+                                                    if(bm->track_contaminants) {
+                                                        // Contaminant avoidance
+                                                        numScalar = Avoid_Contaminants(bm, sp, n, ij, k);
+                                                        newden[sp][n][k][ij] *= numScalar;
+                                                        numScalar_final *= numScalar;
+                                                    }
+                                                    
+                                                    if(bm->flagenviro_warn && (numScalar_final != 1.0)) {
+                                                        cells_impacted++;
+                                                    }
+                                                    
+                                                    // Potentially move elsewhere instead of simply leaving
+                                                    if (enviro_depend && bm->flagenviro_displace) {
+                                                        // Difference between original and final distributions
+                                                        den_diff = orig_newden - newden[sp][n][k][ij];
+                                                        
+                                                        // Now reallocate
+                                                        check_done = 0;
+                                                        adbox = 0;
+                                                        while ((check_done < 1) && (adbox < bm->boxes[ij].nconn)) {
+                                                            chkbox = bm->boxes[ij].ibox[adbox];
+                                                            for (kk = 0; kk < bm->boxes[chkbox].nz; kk++) {
+                                                                // Check conditions
+                                                                is_suitable = Check_Realloc_Conditions(bm, sp, n, chkbox, kk);
+                                                                if (is_suitable) {
+                                                                    newden[sp][n][chkbox][kk] += den_diff;
+                                                                    check_done = 1;
+                                                                    den_diff = 0;
+                                                                }
+                                                            }
+                                                            adbox++;
+                                                        }
+                                                        
+                                                    }
+                                                    
+                                                    // If not allowing dispersal or disappearance (original assumption) kill instead
+                                                    if (enviro_depend && bm->flagenviro_kill) {
+                                                        // Difference between original and final distributions
+                                                        den_diff = orig_newden - newden[sp][n][k][ij];
+                                                        
+                                                        // Biomass killed - SN to labile detritus, RN to refractory - could parameterise like with FGDL-like parameter
+                                                        DL_id = FunctGroupArray[LabDetIndex].totNTracers[0];
+                                                        DR_id = FunctGroupArray[RefDetIndex].totNTracers[0];
+                                                        
+                                                        bm->boxes[ij].tr[k][DL_id] = VERTinfo[sp][n][SN_id] * totden[sp][n] * den_diff;
+                                                        bm->boxes[ij].tr[k][DR_id] = VERTinfo[sp][n][RN_id] * totden[sp][n] * den_diff;
+                                                    }
+                                                    
+                                                    
+                                                    if(bm->track_contaminants && bm->flag_contamMaternalTransfer) {
+                                                        if((flagmother > 0) && (newden[sp][n][k][ij] > 0)) {
+                                                            FunctGroupArray[sp].LocalPopCount[n] = newden[sp][n][k][ij];
+                                                        }
+                                                    }
+                                                }
+                                                if( bm->track_contaminants && bm->flag_contamMaternalTransfer && (flagmother > 0) && (FunctGroupArray[sp].speciesParams[suckler_contam_today_id] > 0)) {
+                                                    for (n = 0; n < age_mat; n++) {
+                                                        juv_num = FunctGroupArray[sp].LocalPopCount[n];
+                                                        not_done = 1;
+                                                        if(juv_num > bm->min_dens){ // Only do if juveniles present
+                                                            ad_start_cohort = (int)(floor(drandom(start_n, end_n))); // Find random starting point so not always the youngest adutlts feeding the young
+                                                            for (ad_cohort = ad_start_cohort; ad_cohort < FunctGroupArray[sp].numCohortsXnumGenes; ad_cohort++) { // Iterate up age classes
+                                                                ad_num = FunctGroupArray[sp].LocalPopCount[ad_cohort];
+                                                                if(ad_num > bm->min_dens) {
+                                                                    Get_Suckling_Contaminants(bm, sp, ad_cohort, n);
+                                                                    juv_num -= ad_num;
+                                                                }
+                                                                if(juv_num > 0) {
+                                                                    // Do nothing as not finished yet
+                                                                } else {
+                                                                    not_done = 0;
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if(not_done > 0){
+                                                                for (ad_cohort = ad_start_cohort; ad_cohort > (age_mat - 1); ad_cohort--) { // Iterate over the rest of the adults if we have to
+                                                                    ad_num = FunctGroupArray[sp].LocalPopCount[ad_cohort];
+                                                                    if(ad_num > bm->min_dens) {
+                                                                        Get_Suckling_Contaminants(bm, sp, ad_cohort, n);
+                                                                        juv_num -= ad_num;
+                                                                    }
+                                                                    if(juv_num > 0) {
+                                                                        // Do nothing as not finished yet
+                                                                    } else {
+                                                                        not_done = 0;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                FunctGroupArray[sp].speciesParams[suckler_contam_today_id] = 1;  // Reset this marker here as only skip delivery the day of the birth. May be reset in atdemography.
+                                            }
+                                        }
+                                    }
+                                    
+                                    if(bm->flagenviro_warn && cells_impacted) {
+                                        fprintf(llogfp, "Time: %e %s is environmemtally constrained in %d of %d cells (box*layer*cohort combos)\n", bm->dayt, FunctGroupArray[sp].groupCode, cells_impacted, cells_checked);
+                                    }
+                                    
+                                    /* If tidal deal with that now */
+                                    if (bm->tidal) {
+                                        /* If tidal move channel lovers into deeper water on ebb tide.
+                                        Base distribution should put them on flats in flood tide
+                                        */
+                                        if (flagchannel) {
+                                            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                                stage = FunctGroupArray[sp].cohort_stage[n];
+                                                for (ij = 0; ij < bm->nbox; ij++) {
+                                                    if (bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND) {
+                                                        
+                                                        /* Find channels - any with depth > min_channel_depth */
+                                                        nbox_spread = 0.0;
+                                                        if (bm->boxes[ij].current_botz < bm->min_channel_depth) {
+                                                            for (adbox = 0; adbox < bm->boxes[ij].nconn; adbox++) {
+                                                                chkbox = bm->boxes[ij].ibox[adbox];
+                                                                if (bm->boxes[chkbox].current_botz > bm->min_channel_depth) {
+                                                                    nbox_spread += (bm->boxes[chkbox].area * bm->boxes[chkbox].current_botz);
+                                                                }
+                                                            }
+                                                            /* Move out into the channel - based on size of channel boxes */
+                                                            if (nbox_spread > 0.0) {
+                                                                chkbox = 0;
+                                                                for (adbox = 0; adbox < bm->boxes[ij].nconn; adbox++) {
+                                                                    chkbox = bm->boxes[ij].ibox[adbox];
+                                                                    if (bm->boxes[chkbox].current_botz >= bm->min_channel_depth) {
+                                                                        for (k = 0; k < bm->boxes[chkbox].nz; k++) {
+                                                                            newden[sp][n][k][chkbox] += newden[sp][n][k][ij] * bm->boxes[chkbox].area * bm->boxes[chkbox].dz[k] * tempdistrib[k][stage] / nbox_spread;
+                                                                        }
+                                                                    } else {
+                                                                        /* Empty the shallows and flats */
+                                                                        for (k = 0; k < bm->boxes[chkbox].nz; k++) {
+                                                                            newden[sp][n][k][chkbox] = 0;
+                                                                        }
+                                                                    }
+                                                                }
+                                                                /* Finishing emptying the shallows and flats */
+                                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                    newden[sp][n][k][ij] = 0;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
-                                        
-                                        /* Add some checks to make sure our new density is positive */
+                                    }
+                                    
+                                    /* Do final summation (in all cases) */
+                                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
                                         for (ij = 0; ij < bm->nbox; ij++) {
-                                            if (bm->boxes[ij].type == LAND ){
+                                            if (bm->boxes[ij].type == LAND) {
                                                 if( FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
-                                                    if(newden[sp][n][0][ij]  < 0){
-                                                        quit("Vertebrate movement. Density is less than 0 for group %s, cohort %d in land box %d\n", FunctGroupArray[sp].groupCode, n, ij);
-                                                    }
+                                                    
+                                                    /* Get stock id */
+                                                    stock_id = bm->group_stock[sp][ij][0];
+                                                    
+                                                    /* Total up the new proportions just to make sure */
+                                                    totboxden[n] += newden[sp][n][0][ij];
+                                                    
+                                                    /* Get new allocation per stock */
+                                                    init_stock_struct_prop[sp][n][stock_id] += newden[sp][n][0][ij];
                                                 }
+                                                
                                             }else if (bm->boxes[ij].type != BOUNDARY) {
                                                 for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                    if(newden[sp][n][k][ij]  < 0){
-                                                        quit("Vertebrate movement. Density is less than 0 for group %s, cohort %d in box %d:%d\n", FunctGroupArray[sp].groupCode, n, ij, k);
-                                                    }
+                                                    /* Get stock id */
+                                                    stock_id = bm->group_stock[sp][ij][k];
+                                                    
+                                                    /* Total up the new proportions just to make sure */
+                                                    totboxden[n] += newden[sp][n][k][ij];
+                                                    
+                                                    /* Get new allocation per stock */
+                                                    init_stock_struct_prop[sp][n][stock_id] += newden[sp][n][k][ij];
                                                 }
                                             }
                                         }
-                                    }
-                                    
-                                    /* For those species bearing live young update the recruit location
-                                    matrix to match adult distribution (for use in Vertebrate_Reproduction()) */
-                                    for (ngene = 0; ngene < FunctGroupArray[sp].numGeneTypes; ngene++) {
-                                        totad[ngene] = 1.0;
-                                        
-                                        update_larval_distrib = 0;
-                                        if (bearlive || (FunctGroupArray[sp].recruitType == at_parent_location) || (FunctGroupArray[sp].recruitType == larval_dispersal)) {
-                                            update_larval_distrib = 1;
+                                        /* Replicate old bec_dev results on existing models. We will remove this asap! */
+                                        if(bm->flag_replicated_old == FALSE){
+                                            /* Normalise new stock prop */
+                                            for (k = 0; k < FunctGroupArray[sp].numStocks; k++) {
+                                                init_stock_struct_prop[sp][n][k] /= (totboxden[n] + small_num);
+                                            }
                                         }
-                                        if(update_larval_distrib && bm->enviro_independ_larvae)
-                                        update_larval_distrib = 0;
                                         
-                                        /*
-                                        if(!sp) {
-                                        fprintf(llogfp,"Time: %e, %s ngene: %d StartDay to check: %d\n", bm->dayt, FunctGroupArray[sp].groupCode, ngene, EMBRYO[sp].StartDay[ngene][EMBRYO[sp].next_recruit]);
-                                        }
-                                        */
-                                        /* Due to timing of when calcualiton for recruits done vs spawning if want to reflect conditions at time of recruiting need to use StartDay but appreciate there could be up to a year lag in application depending on time between spawning and recruitment. Or if want to reflect larval conditions near spawning use the spawning day conditions so use next_spawn_any_age */
-                                        
-                                        if(bm->flag_recruit_effect) {
-                                            test_day = EMBRYO[sp].StartDay[ngene][EMBRYO[sp].next_recruit];
-                                        } else {
-                                            test_day = EMBRYO[sp].next_spawn_any_age;
-                                        }
-                                        check_day = bm->dayt;
-                                        
-                                        if ((update_larval_distrib || sp_enviro_depend) && (check_day == test_day) && (bm->t / 86400.0 > 0.0)) {
-                                            totad[ngene] = 0.0;
-                                            for (ij = 0; ij < bm->nbox; ij++) {
-                                                
-                                                if( update_larval_distrib )
-                                                bm->recruit_hdistrib[ngene][ij][sp] = 0.0;
-                                                
-                                                if (bm->terrestrial_on == TRUE && bm->boxes[ij].type == LAND) {
-                                                    if(FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
-                                                        if( update_larval_distrib ) {
-                                                            for(bcohort = age_mat; bcohort < FunctGroupArray[sp].numCohorts; bcohort++){
-                                                                n = (FunctGroupArray[sp].numGeneTypes * bcohort) + ngene;
-                                                                
-                                                                /* Sum over current distribution of adult age groups */
-                                                                bm->recruit_hdistrib[ngene][ij][sp] += newden[sp][n][0][ij];
-                                                                totad[ngene] += newden[sp][n][0][ij];
-                                                                
-                                                            }
-                                                        } else {
-                                                            bm->recruit_hdistrib[ngene][ij][sp] =  bm->recruit_hdistrib_orig[ngene][ij][sp];
-                                                            totad[ngene] += bm->recruit_hdistrib_orig[ngene][ij][sp];
-                                                            
+                                        /* Normalise final distributions */
+                                        totboxden[n] = 0;
+                                        for (ij = 0; ij < bm->nbox; ij++) {
+                                            if (bm->boxes[ij].type == LAND){
+                                                if( FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
+                                                    
+                                                    
+                                                    stock_id = bm->group_stock[sp][ij][0];
+                                                    
+                                                    if (init_stock_struct_prop[sp][n][stock_id] == 0) {
+                                                        // Had to allow for case that this could be zero as evolution can see a genotype disappear
+                                                        newden[sp][n][0][ij] = 0.0;
+                                                    } else {
+                                                        newden[sp][n][0][ij] = newden[sp][n][0][ij] * bm->stock_struct_prop[sp][n][stock_id] / (init_stock_struct_prop[sp][n][stock_id]
+                                                            + small_num);
+                                                        }
+                                                        
+                                                        if(newden[sp][n][0][ij]  < 0){
+                                                            printf("newDen - %e, stock structure = %e, init stock sturcture = %e\n", newden[sp][n][0][ij], bm->stock_struct_prop[sp][n][stock_id], init_stock_struct_prop[sp][n][stock_id]);
+                                                            quit("Vertebrate movement. Density is less than 0 for group %s, cohort %d in land box %d\n", FunctGroupArray[sp].groupCode, n, ij);
+                                                        }
+                                                        
+                                                        totboxden[n] += newden[sp][n][0][ij];
+                                                        
+                                                        if(totboxden[n] < 0){
+                                                            quit("Total box density is less than 0\n");
                                                         }
                                                     }
-                                                }
-                                                if (bm->boxes[ij].type != BOUNDARY){// && bm->boxes[ij].type != LAND) {
+                                                    
+                                                }else if (bm->boxes[ij].type != BOUNDARY) {
                                                     for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                        stock_id = bm->group_stock[sp][ij][k];
                                                         
-                                                        temp_effect = 1.0;
-                                                        current_enviro = bm->boxes[ij].tr[k][Temp_i];
-                                                        K_temp_const_sp = FunctGroupArray[sp].speciesParams[K_temp_const_id];
-                                                        temp_effect = Get_Enviro_Move_Scalar(temp_sensitive_sp, current_enviro, K_temp_const_sp, min_spawntemp_sp, max_spawntemp_sp, sp, 1, bm->dayt, llogfp);
-                                                        
-                                                        salt_effect = 1.0;
-                                                        current_enviro = bm->boxes[ij].tr[k][Salinity_i];
-                                                        K_salt_const_sp = FunctGroupArray[sp].speciesParams[K_salt_const_id];
-                                                        salt_effect = Get_Enviro_Move_Scalar(salt_sensitive_sp, current_enviro, K_salt_const_sp, min_spawnsalt_sp, max_spawnsalt_sp, sp, 2, bm->dayt, llogfp);
-                                                        
-                                                        o2_effect = 1.0;
-                                                        current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
-                                                        K_o2_const_sp = FunctGroupArray[sp].speciesParams[K_o2_const_id];
-                                                        o2_effect = Get_Enviro_Move_Scalar(bm->flagO2depend, current_enviro, K_o2_const_sp, min_O2_sp, 10000000000.0, sp, 3, bm->dayt, llogfp);
-                                                        
-                                                        // If ice dependent and no ice present then not present
-                                                        ice_effect = 1.0;
-                                                        if(bm->ice_on) {
-                                                            some_ice = Get_Ice_Presence(bm, sp, adult_id, ij, k, bm->ICE_HABITATlike);
-                                                            if(!some_ice){
-                                                                ice_effect = 0.0;
-                                                            }
-                                                        }
-                                                        
-                                                        /* Noise and light pollution avoidance */
-                                                        light_effect = 1.0;
-                                                        if (FunctGroupArray[sp].isLightEffected) {
-                                                            current_enviro = bm->boxes[ij].tr[k][Light_Pollution_i];
-                                                            if (current_enviro > 0) {
-                                                                light_effect = (FunctGroupArray[sp].speciesParams[light_coefft_id] / (current_enviro + small_num));
-                                                            }
-                                                        }
-                                                        
-                                                        noise_effect = 1.0;
-                                                        if (FunctGroupArray[sp].isNoiseEffected) {
-                                                            current_enviro = bm->boxes[ij].tr[k][Noise_Pollution_i];
-                                                            if (current_enviro > 0) {
-                                                                noise_effect = (FunctGroupArray[sp].speciesParams[noise_coefft_id] / (current_enviro + small_num));
-                                                            }
-                                                        }
-                                                        
-                                                        
-                                                        if( update_larval_distrib ) {
-                                                            for(bcohort = age_mat; bcohort < FunctGroupArray[sp].numCohorts; bcohort++){
-                                                                n = (FunctGroupArray[sp].numGeneTypes * bcohort) + ngene;
-                                                                
-                                                                /* Sum over current distribution of adult age groups */
-                                                                bm->recruit_hdistrib[ngene][ij][sp] += newden[sp][n][k][ij] * temp_effect * salt_effect * o2_effect * ice_effect;
-                                                                totad[ngene] += newden[sp][n][k][ij] * temp_effect * salt_effect * o2_effect * ice_effect * noise_effect * light_effect;
-                                                                
-                                                            }
-                                                            
-                                                            if(!totad[ngene]) {  // If no adults about set back to the prescribed distribution
-                                                                adstage = FunctGroupArray[sp].cohort_stage[age_mat];
-                                                                bm->recruit_hdistrib[ngene][ij][sp] = FunctGroupArray[sp].distrib[ij][qrt][adstage];
-                                                            }
-                                                            
-                                                            
+                                                        if (init_stock_struct_prop[sp][n][stock_id] == 0) {
+                                                            // Had to allow for case that this could be zero as evolution can see a genotype disappear
+                                                            newden[sp][n][k][ij] = 0.0;
                                                         } else {
-                                                            bm->recruit_hdistrib[ngene][ij][sp] =  bm->recruit_hdistrib_orig[ngene][ij][sp] * temp_effect * salt_effect * o2_effect * ice_effect;
-                                                            totad[ngene] += bm->recruit_hdistrib_orig[ngene][ij][sp] * temp_effect * salt_effect * o2_effect * ice_effect * noise_effect * light_effect;
+                                                            newden[sp][n][k][ij] = newden[sp][n][k][ij] * bm->stock_struct_prop[sp][n][stock_id] / (init_stock_struct_prop[sp][n][stock_id]
+                                                                + small_num);
+                                                            }
+                                                            
+                                                            if(newden[sp][n][k][ij]  < 0){
+                                                                printf("newDen - %e, stock structure = %e, init stock sturcture = %e\n", newden[sp][n][k][ij], bm->stock_struct_prop[sp][n][stock_id], init_stock_struct_prop[sp][n][stock_id]);
+                                                                quit("Vertebrate movement. Density is less than 0 for group %s, cohort %d in box %d:%d\n", FunctGroupArray[sp].groupCode, n, ij, k);
+                                                            }
+                                                            
+                                                            totboxden[n] += newden[sp][n][k][ij];
+                                                            
+                                                            /*
+                                                            if(sp == 64) {
+                                                            fprintf(llogfp, "Time: %e box%d-%d %s-%d newden: %e\n", bm->dayt, ij, k, FunctGroupArray[sp].groupCode, n, newden[sp][n][k][ij]);
+                                                            }
+                                                            */
+                                                            
+                                                            if(totboxden[n] < 0){
+                                                                quit("Total box density is less than 0\n");
+                                                            }
                                                         }
-                                                        
-                                                        /**
-                                                        if(sp == bm->which_check){
-                                                        fprintf(llogfp,"movement.c Time: %e, %s box-%d recruit_hdistrib: %e (is_maternal_raised: %d orig: %e, temp_effect: %e, salt_effect: %e, o2_effect: %e, ice_effect: %e, newden: %e totad: %e update_larval_distrib:%d)\n",
-                                                        bm->dayt, FunctGroupArray[sp].groupCode, ij, bm->recruit_hdistrib[ngene][ij][sp], is_maternal_raised, bm->recruit_hdistrib_orig[ngene][ij][sp], temp_effect, salt_effect, o2_effect, ice_effect, newden[sp][n][k][ij], totad[ngene], update_larval_distrib);
-                                                        }
-                                                        **/
-                                                        
-                                                        
                                                     }
                                                 }
-                                            }
-                                            
-                                            /* Normalise if appropriate */
-                                            if(bm->norm_larval_distrib || is_maternal_raised) {
+                                                
+                                                
+                                                /* Most likely need to rescale is environmental drivers invalidating some cells */
                                                 for (ij = 0; ij < bm->nbox; ij++) {
-                                                    bm->recruit_hdistrib[ngene][ij][sp] /= (totad[ngene] + small_num);
-                                                    
-                                                    /**/
-                                                    //if(sp == bm->which_check){
-                                                    if (sp == 23) {
-                                                        fprintf(llogfp,"movement.c line 2358 Time: %e, %s box-%d rechdistrib: %e (orig: %e)\n", bm->dayt, FunctGroupArray[sp].groupCode, ij, bm->recruit_hdistrib[ngene][ij][sp], bm->recruit_hdistrib_orig[ngene][ij][sp]);
+                                                    if (bm->terrestrial_on && bm->boxes[ij].type == LAND){
+                                                        if( FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
+                                                            
+                                                            newden[sp][n][0][ij] /= (totboxden[n] + small_num);
+                                                        }
+                                                    }else if (bm->boxes[ij].type != BOUNDARY) {
+                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                            newden[sp][n][k][ij] /= (totboxden[n] + small_num);
+                                                            
+                                                            /**
+                                                            if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
+                                                            fprintf(llogfp,"Time %e %s-%d box%d-%d normalised newden %e totboxden: %e\n",
+                                                            bm->dayt, FunctGroupArray[sp].groupCode, n, k, ij, newden[sp][n][k][ij], totboxden[n]);
+                                                            
+                                                            }
+                                                            **/
+                                                            
+                                                        }
                                                     }
-                                                    /**/
-                                                    
-                                                    
                                                 }
-                                                updated_already = 1;
+                                                
+                                                /* Add some checks to make sure our new density is positive */
+                                                for (ij = 0; ij < bm->nbox; ij++) {
+                                                    if (bm->boxes[ij].type == LAND ){
+                                                        if( FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
+                                                            if(newden[sp][n][0][ij]  < 0){
+                                                                quit("Vertebrate movement. Density is less than 0 for group %s, cohort %d in land box %d\n", FunctGroupArray[sp].groupCode, n, ij);
+                                                            }
+                                                        }
+                                                    }else if (bm->boxes[ij].type != BOUNDARY) {
+                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                            if(newden[sp][n][k][ij]  < 0){
+                                                                quit("Vertebrate movement. Density is less than 0 for group %s, cohort %d in box %d:%d\n", FunctGroupArray[sp].groupCode, n, ij, k);
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                             
-                                            /* Calculate the larval dispersion matrix  - the . */
-                                            if (FunctGroupArray[sp].recruitType == larval_dispersal)
-                                            Larval_Dispersal(bm, sp, llogfp);
-                                        }
-                                    }
-                                    
-                                    /* Initialise the sum */
-                                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                        for (k = 0; k < FunctGroupArray[sp].numStocks; k++) {
-                                            init_stock_struct_prop[sp][n][k] = 0.0;
-                                        }
-                                    }
-                                    
-                                    /* If appropriate initialise box 0 for migrant storage
-                                    - so can be read in output file */
-                                    if (spmigrate) {
-                                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                            sn = FunctGroupArray[sp].structNTracers[n];
-                                            rn = FunctGroupArray[sp].resNTracers[n];
-                                            den = FunctGroupArray[sp].NumsTracers[n];
-                                            
-                                            bm->boxes[0].tr[0][sn] = 0;
-                                            bm->boxes[0].tr[0][rn] = 0;
-                                            bm->boxes[0].tr[0][den] = 0;
-                                        }
-                                    }
-                                    finalmig = 0;
-                                    avgsn = 0;
-                                    avgrn = 0;
-                                    spupdatemig = 0;
-                                    
-                                    /* Final movement allocations - including migration out of model domain (if any) and
-                                    normalisation of any local recruitment */
-                                    for (ij = 0; ij < bm->nbox; ij++) {
-                                        if (bm->terrestrial_on == TRUE && bm->boxes[ij].type == LAND) {
-                                            if(FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
+                                            /* For those species bearing live young update the recruit location
+                                            matrix to match adult distribution (for use in Vertebrate_Reproduction()) */
+                                            for (ngene = 0; ngene < FunctGroupArray[sp].numGeneTypes; ngene++) {
+                                                totad[ngene] = 1.0;
                                                 
-                                                for (n = 0; n < FunctGroupArray[sp].numGeneTypes; n++) {
-                                                    /* Normalise localised recruitment if necessary */
-                                                    if (bm->norm_larval_distrib && !updated_already && ((bearlive || sp_enviro_depend || (FunctGroupArray[sp].recruitType == at_parent_location))
-                                                    || (!enviro_depend && (totad[n] != 1.0)))
-                                                    && (bm->dayt == EMBRYO[sp].StartDay[n][EMBRYO[sp].next_recruit]) && (bm->t / 86400.0 > 0.0)) {
-                                                        /* If not temperature dependent (when want to see effect of temperature potentially
-                                                        hitting recruits differentially), normalise result - with regard to total population.
-                                                        Shouldn't need to renormalise for stocks as already working off stock normalised basis
-                                                        and any skew due to temperature effects is desired and shouldn't be normalised away,
-                                                        but just to be safe for now */
-                                                        
-                                                        bm->recruit_hdistrib[n][ij][sp] = bm->recruit_hdistrib[n][ij][sp] / (totad[n] + small_num);
-                                                        
-                                                    }
+                                                update_larval_distrib = 0;
+                                                if (bearlive || (FunctGroupArray[sp].recruitType == at_parent_location) || (FunctGroupArray[sp].recruitType == larval_dispersal)) {
+                                                    update_larval_distrib = 1;
                                                 }
+                                                if(update_larval_distrib && bm->enviro_independ_larvae)
+                                                update_larval_distrib = 0;
                                                 
-                                                stock_id = bm->group_stock[sp][ij][0];
+                                                /*
+                                                if(!sp) {
+                                                fprintf(llogfp,"Time: %e, %s ngene: %d StartDay to check: %d\n", bm->dayt, FunctGroupArray[sp].groupCode, ngene, EMBRYO[sp].StartDay[ngene][EMBRYO[sp].next_recruit]);
+                                                }
+                                                */
+                                                /* Due to timing of when calcualiton for recruits done vs spawning if want to reflect conditions at time of recruiting need to use StartDay but appreciate there could be up to a year lag in application depending on time between spawning and recruitment. Or if want to reflect larval conditions near spawning use the spawning day conditions so use next_spawn_any_age */
                                                 
-                                                for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                                if(bm->flag_recruit_effect) {
+                                                    test_day = EMBRYO[sp].StartDay[ngene][EMBRYO[sp].next_recruit];
+                                                } else {
+                                                    test_day = EMBRYO[sp].next_spawn_any_age;
+                                                }
+                                                check_day = bm->dayt;
+                                                
+                                                if ((update_larval_distrib || sp_enviro_depend) && (check_day == test_day) && (bm->t / 86400.0 > 0.0)) {
+                                                    totad[ngene] = 0.0;
+                                                    for (ij = 0; ij < bm->nbox; ij++) {
+                                                        
+                                                        if( update_larval_distrib )
+                                                        bm->recruit_hdistrib[ngene][ij][sp] = 0.0;
+                                                        
+                                                        if (bm->terrestrial_on == TRUE && bm->boxes[ij].type == LAND) {
+                                                            if(FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
+                                                                if( update_larval_distrib ) {
+                                                                    for(bcohort = age_mat; bcohort < FunctGroupArray[sp].numCohorts; bcohort++){
+                                                                        n = (FunctGroupArray[sp].numGeneTypes * bcohort) + ngene;
+                                                                        
+                                                                        /* Sum over current distribution of adult age groups */
+                                                                        bm->recruit_hdistrib[ngene][ij][sp] += newden[sp][n][0][ij];
+                                                                        totad[ngene] += newden[sp][n][0][ij];
+                                                                        
+                                                                    }
+                                                                } else {
+                                                                    bm->recruit_hdistrib[ngene][ij][sp] =  bm->recruit_hdistrib_orig[ngene][ij][sp];
+                                                                    totad[ngene] += bm->recruit_hdistrib_orig[ngene][ij][sp];
+                                                                    
+                                                                }
+                                                            }
+                                                        }
+                                                        if (bm->boxes[ij].type != BOUNDARY){// && bm->boxes[ij].type != LAND) {
+                                                            for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                
+                                                                temp_effect = 1.0;
+                                                                current_enviro = bm->boxes[ij].tr[k][Temp_i];
+                                                                K_temp_const_sp = FunctGroupArray[sp].speciesParams[K_temp_const_id];
+                                                                temp_effect = Get_Enviro_Move_Scalar(temp_sensitive_sp, current_enviro, K_temp_const_sp, min_spawntemp_sp, max_spawntemp_sp, sp, 1, bm->dayt, llogfp);
+                                                                
+                                                                salt_effect = 1.0;
+                                                                current_enviro = bm->boxes[ij].tr[k][Salinity_i];
+                                                                K_salt_const_sp = FunctGroupArray[sp].speciesParams[K_salt_const_id];
+                                                                salt_effect = Get_Enviro_Move_Scalar(salt_sensitive_sp, current_enviro, K_salt_const_sp, min_spawnsalt_sp, max_spawnsalt_sp, sp, 2, bm->dayt, llogfp);
+                                                                
+                                                                o2_effect = 1.0;
+                                                                current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
+                                                                K_o2_const_sp = FunctGroupArray[sp].speciesParams[K_o2_const_id];
+                                                                o2_effect = Get_Enviro_Move_Scalar(bm->flagO2depend, current_enviro, K_o2_const_sp, min_O2_sp, 10000000000.0, sp, 3, bm->dayt, llogfp);
+                                                                
+                                                                // If ice dependent and no ice present then not present
+                                                                ice_effect = 1.0;
+                                                                if(bm->ice_on) {
+                                                                    some_ice = Get_Ice_Presence(bm, sp, adult_id, ij, k, bm->ICE_HABITATlike);
+                                                                    if(!some_ice){
+                                                                        ice_effect = 0.0;
+                                                                    }
+                                                                }
+                                                                
+                                                                /* Noise and light pollution avoidance */
+                                                                light_effect = 1.0;
+                                                                if (FunctGroupArray[sp].isLightEffected) {
+                                                                    current_enviro = bm->boxes[ij].tr[k][Light_Pollution_i];
+                                                                    if (current_enviro > 0) {
+                                                                        light_effect = (FunctGroupArray[sp].speciesParams[light_coefft_id] / (current_enviro + small_num));
+                                                                    }
+                                                                }
+                                                                
+                                                                noise_effect = 1.0;
+                                                                if (FunctGroupArray[sp].isNoiseEffected) {
+                                                                    current_enviro = bm->boxes[ij].tr[k][Noise_Pollution_i];
+                                                                    if (current_enviro > 0) {
+                                                                        noise_effect = (FunctGroupArray[sp].speciesParams[noise_coefft_id] / (current_enviro + small_num));
+                                                                    }
+                                                                }
+                                                                
+                                                                
+                                                                if( update_larval_distrib ) {
+                                                                    for(bcohort = age_mat; bcohort < FunctGroupArray[sp].numCohorts; bcohort++){
+                                                                        n = (FunctGroupArray[sp].numGeneTypes * bcohort) + ngene;
+                                                                        
+                                                                        /* Sum over current distribution of adult age groups */
+                                                                        bm->recruit_hdistrib[ngene][ij][sp] += newden[sp][n][k][ij] * temp_effect * salt_effect * o2_effect * ice_effect;
+                                                                        totad[ngene] += newden[sp][n][k][ij] * temp_effect * salt_effect * o2_effect * ice_effect * noise_effect * light_effect;
+                                                                        
+                                                                    }
+                                                                    
+                                                                    if(!totad[ngene]) {  // If no adults about set back to the prescribed distribution
+                                                                        adstage = FunctGroupArray[sp].cohort_stage[age_mat];
+                                                                        bm->recruit_hdistrib[ngene][ij][sp] = FunctGroupArray[sp].distrib[ij][qrt][adstage];
+                                                                    }
+                                                                    
+                                                                    
+                                                                } else {
+                                                                    bm->recruit_hdistrib[ngene][ij][sp] =  bm->recruit_hdistrib_orig[ngene][ij][sp] * temp_effect * salt_effect * o2_effect * ice_effect;
+                                                                    totad[ngene] += bm->recruit_hdistrib_orig[ngene][ij][sp] * temp_effect * salt_effect * o2_effect * ice_effect * noise_effect * light_effect;
+                                                                }
+                                                                
+                                                                /**
+                                                                if(sp == bm->which_check){
+                                                                fprintf(llogfp,"movement.c Time: %e, %s box-%d recruit_hdistrib: %e (is_maternal_raised: %d orig: %e, temp_effect: %e, salt_effect: %e, o2_effect: %e, ice_effect: %e, newden: %e totad: %e update_larval_distrib:%d)\n",
+                                                                bm->dayt, FunctGroupArray[sp].groupCode, ij, bm->recruit_hdistrib[ngene][ij][sp], is_maternal_raised, bm->recruit_hdistrib_orig[ngene][ij][sp], temp_effect, salt_effect, o2_effect, ice_effect, newden[sp][n][k][ij], totad[ngene], update_larval_distrib);
+                                                                }
+                                                                **/
+                                                                
+                                                                
+                                                            }
+                                                        }
+                                                    }
                                                     
+                                                    /* Normalise if appropriate */
+                                                    if(bm->norm_larval_distrib || is_maternal_raised) {
+                                                        for (ij = 0; ij < bm->nbox; ij++) {
+                                                            bm->recruit_hdistrib[ngene][ij][sp] /= (totad[ngene] + small_num);
+                                                            
+                                                            /**/
+                                                            //if(sp == bm->which_check){
+                                                            if (sp == 23) {
+                                                                fprintf(llogfp,"movement.c line 2358 Time: %e, %s box-%d rechdistrib: %e (orig: %e)\n", bm->dayt, FunctGroupArray[sp].groupCode, ij, bm->recruit_hdistrib[ngene][ij][sp], bm->recruit_hdistrib_orig[ngene][ij][sp]);
+                                                            }
+                                                            /**/
+                                                            
+                                                            
+                                                        }
+                                                        updated_already = 1;
+                                                    }
+                                                    
+                                                    /* Calculate the larval dispersion matrix  - the . */
+                                                    if (FunctGroupArray[sp].recruitType == larval_dispersal)
+                                                    Larval_Dispersal(bm, sp, llogfp);
+                                                }
+                                            }
+                                            
+                                            /* Initialise the sum */
+                                            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                                for (k = 0; k < FunctGroupArray[sp].numStocks; k++) {
+                                                    init_stock_struct_prop[sp][n][k] = 0.0;
+                                                }
+                                            }
+                                            
+                                            /* If appropriate initialise box 0 for migrant storage
+                                            - so can be read in output file */
+                                            if (spmigrate) {
+                                                for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
                                                     sn = FunctGroupArray[sp].structNTracers[n];
                                                     rn = FunctGroupArray[sp].resNTracers[n];
                                                     den = FunctGroupArray[sp].NumsTracers[n];
                                                     
-                                                    /* Update/assign new vertebrate sn and rn pool values */
-                                                    totdenom = 0;
-                                                    
-                                                    if (!bm->flaghomog_sp) {
-                                                        /* If not homogenising size across group/species disribution,
-                                                        but allowing for differentiation and local memory. Very hard
-                                                        to track individual movements so take new value as weighted
-                                                        mean of old residents' size and the size of the new entrants
-                                                        (assuming the new ones have size matching average across
-                                                        the entire stock) */
-                                                        totdenom = currentden[sp][n][0][ij] + totden[sp][n] * newden[sp][n][0][ij] + small_num;
+                                                    bm->boxes[0].tr[0][sn] = 0;
+                                                    bm->boxes[0].tr[0][rn] = 0;
+                                                    bm->boxes[0].tr[0][den] = 0;
+                                                }
+                                            }
+                                            finalmig = 0;
+                                            avgsn = 0;
+                                            avgrn = 0;
+                                            spupdatemig = 0;
+                                            
+                                            /* Final movement allocations - including migration out of model domain (if any) and
+                                            normalisation of any local recruitment */
+                                            for (ij = 0; ij < bm->nbox; ij++) {
+                                                if (bm->terrestrial_on == TRUE && bm->boxes[ij].type == LAND) {
+                                                    if(FunctGroupArray[sp].habitatCoeffs[LAND_BASED] > 0){
                                                         
-                                                        bm->boxes[ij].tr[0][sn] = (bm->boxes[ij].tr[0][sn] * currentden[sp][n][0][ij] + VERTinfo[sp][n][SN_id] * totden[sp][n]
-                                                            * newden[sp][n][0][ij]) / totdenom;
-                                                            bm->boxes[ij].tr[0][rn] = (bm->boxes[ij].tr[0][rn] * currentden[sp][n][0][ij] + VERTinfo[sp][n][RN_id] * totden[sp][n]
-                                                                * newden[sp][n][0][ij]) / totdenom;
+                                                        for (n = 0; n < FunctGroupArray[sp].numGeneTypes; n++) {
+                                                            /* Normalise localised recruitment if necessary */
+                                                            if (bm->norm_larval_distrib && !updated_already && ((bearlive || sp_enviro_depend || (FunctGroupArray[sp].recruitType == at_parent_location))
+                                                            || (!enviro_depend && (totad[n] != 1.0)))
+                                                            && (bm->dayt == EMBRYO[sp].StartDay[n][EMBRYO[sp].next_recruit]) && (bm->t / 86400.0 > 0.0)) {
+                                                                /* If not temperature dependent (when want to see effect of temperature potentially
+                                                                hitting recruits differentially), normalise result - with regard to total population.
+                                                                Shouldn't need to renormalise for stocks as already working off stock normalised basis
+                                                                and any skew due to temperature effects is desired and shouldn't be normalised away,
+                                                                but just to be safe for now */
                                                                 
-                                                            } else {
-                                                                /* If homogenising growth/size to reflect random movement of individuals
-                                                                within the global distribution of the group/species over the entire
-                                                                domain of the stock, set SN and RN to that mean value now */
-                                                                bm->boxes[ij].tr[0][sn] = VERTinfo[sp][n][SN_id];
-                                                                bm->boxes[ij].tr[0][rn] = VERTinfo[sp][n][RN_id];
+                                                                bm->recruit_hdistrib[n][ij][sp] = bm->recruit_hdistrib[n][ij][sp] / (totad[n] + small_num);
+                                                                
                                                             }
+                                                        }
+                                                        
+                                                        stock_id = bm->group_stock[sp][ij][0];
+                                                        
+                                                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
                                                             
-                                                            if ((bm->boxes[ij].tr[0][sn] < 0.0) || (bm->boxes[ij].tr[0][rn] < 0.0)) {
-                                                                fprintf(llogfp,"Time: %e, %s-%d in box%d-%d has newsn: %e, newrn:%e, with currentden: %e VERTinfo[sn]: %e, VERTinfo[rn]: %e, totden: %e, newden: %e, totdenom: %e\n",
-                                                                    bm->dayt, FunctGroupArray[sp].groupCode, n, bm->current_box, bm->current_layer,
-                                                                    bm->boxes[ij].tr[0][sn], bm->boxes[ij].tr[0][rn], currentden[sp][n][0][ij],
-                                                                    VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id], totden[sp][n], newden[sp][n][0][ij], totdenom);
-                                                                    printf("Time: %e, %s-%d in box%d-%d has newsn: %e, newrn:%e, with currentden: %e VERTinfo[sn]: %e, VERTinfo[rn]: %e, totden: %e, newden: %e, totdenom: %e\n",
-                                                                        bm->dayt, FunctGroupArray[sp].groupCode, n, bm->current_box, bm->current_layer,
-                                                                        bm->boxes[ij].tr[0][sn], bm->boxes[ij].tr[0][rn], currentden[sp][n][0][ij],
-                                                                        VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id], totden[sp][n], newden[sp][n][0][ij], totdenom);
+                                                            sn = FunctGroupArray[sp].structNTracers[n];
+                                                            rn = FunctGroupArray[sp].resNTracers[n];
+                                                            den = FunctGroupArray[sp].NumsTracers[n];
+                                                            
+                                                            /* Update/assign new vertebrate sn and rn pool values */
+                                                            totdenom = 0;
+                                                            
+                                                            if (!bm->flaghomog_sp) {
+                                                                /* If not homogenising size across group/species disribution,
+                                                                but allowing for differentiation and local memory. Very hard
+                                                                to track individual movements so take new value as weighted
+                                                                mean of old residents' size and the size of the new entrants
+                                                                (assuming the new ones have size matching average across
+                                                                the entire stock) */
+                                                                totdenom = currentden[sp][n][0][ij] + totden[sp][n] * newden[sp][n][0][ij] + small_num;
+                                                                
+                                                                bm->boxes[ij].tr[0][sn] = (bm->boxes[ij].tr[0][sn] * currentden[sp][n][0][ij] + VERTinfo[sp][n][SN_id] * totden[sp][n]
+                                                                    * newden[sp][n][0][ij]) / totdenom;
+                                                                    bm->boxes[ij].tr[0][rn] = (bm->boxes[ij].tr[0][rn] * currentden[sp][n][0][ij] + VERTinfo[sp][n][RN_id] * totden[sp][n]
+                                                                        * newden[sp][n][0][ij]) / totdenom;
                                                                         
-                                                                        fprintf(llogfp, "LAND ERROR Time: %e %s-%d box%d-%d this_tot_biom: %.20e, newden_sum-%d: %.20e, den: %.20e, totden: %.20e, newden: %.20e, SN-%d: %.20e, RN-%d: %.20e (vs SNinit %.20e, RNinit %.20e)\n", bm->dayt,
-                                                                            FunctGroupArray[sp].groupCode, n, ij, 0, this_tot_biom, n,
-                                                                            newden_sum[n], bm->boxes[ij].tr[0][den], totden[sp][n],
-                                                                            newden[sp][n][0][ij], n, bm->boxes[ij].tr[0][sn], n,
-                                                                            bm->boxes[ij].tr[0][rn], VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
-                                                                            
-                                                                            printf("LAND ERROR Time: %e %s-%d box%d-%d this_tot_biom: %.20e, newden_sum-%d: %.20e, den: %.20e, totden: %.20e, newden: %.20e, SN-%d: %.20e, RN-%d: %.20e (vs SNinit %.20e, RNinit %.20e)\n", bm->dayt,
-                                                                                FunctGroupArray[sp].groupCode, n, ij, 0, this_tot_biom, n,
-                                                                                newden_sum[n], bm->boxes[ij].tr[0][den], totden[sp][n],
-                                                                                newden[sp][n][0][ij], n, bm->boxes[ij].tr[0][sn], n,
-                                                                                bm->boxes[ij].tr[0][rn], VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
+                                                                    } else {
+                                                                        /* If homogenising growth/size to reflect random movement of individuals
+                                                                        within the global distribution of the group/species over the entire
+                                                                        domain of the stock, set SN and RN to that mean value now */
+                                                                        bm->boxes[ij].tr[0][sn] = VERTinfo[sp][n][SN_id];
+                                                                        bm->boxes[ij].tr[0][rn] = VERTinfo[sp][n][RN_id];
+                                                                    }
+                                                                    
+                                                                    if ((bm->boxes[ij].tr[0][sn] < 0.0) || (bm->boxes[ij].tr[0][rn] < 0.0)) {
+                                                                        fprintf(llogfp,"Time: %e, %s-%d in box%d-%d has newsn: %e, newrn:%e, with currentden: %e VERTinfo[sn]: %e, VERTinfo[rn]: %e, totden: %e, newden: %e, totdenom: %e\n",
+                                                                            bm->dayt, FunctGroupArray[sp].groupCode, n, bm->current_box, bm->current_layer,
+                                                                            bm->boxes[ij].tr[0][sn], bm->boxes[ij].tr[0][rn], currentden[sp][n][0][ij],
+                                                                            VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id], totden[sp][n], newden[sp][n][0][ij], totdenom);
+                                                                            printf("Time: %e, %s-%d in box%d-%d has newsn: %e, newrn:%e, with currentden: %e VERTinfo[sn]: %e, VERTinfo[rn]: %e, totden: %e, newden: %e, totdenom: %e\n",
+                                                                                bm->dayt, FunctGroupArray[sp].groupCode, n, bm->current_box, bm->current_layer,
+                                                                                bm->boxes[ij].tr[0][sn], bm->boxes[ij].tr[0][rn], currentden[sp][n][0][ij],
+                                                                                VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id], totden[sp][n], newden[sp][n][0][ij], totdenom);
                                                                                 
-                                                                                quit("%s-%d had negative size or numbers after movement\n", FunctGroupArray[sp].groupCode, n);
-                                                                            }
-                                                                            
-                                                                            /* Allocate vertebrates based on preferred habitat, feed conditions
-                                                                            or known migration paths - that is update numbers in current cell */
-                                                                            
-                                                                            newden_sum[n] += newden[sp][n][0][ij];
-                                                                            this_tot_biom += totden[sp][n] * newden[sp][n][0][ij] * (bm->boxes[ij].tr[0][sn] + bm->boxes[ij].tr[0][rn]);
-                                                                            bm->boxes[ij].tr[0][den] = totden[sp][n] * newden[sp][n][0][ij];
-                                                                            
-                                                                            if((bm->boxes[ij].tr[0][den] < 0) || (!_finite(bm->boxes[ij].tr[0][den]))){
-                                                                                printf("%e %s-%d land box%d den: %.20e, totden: %.20e, newden: %.20e\n", bm->dayt,
-                                                                                    FunctGroupArray[sp].groupCode, n, ij, bm->boxes[ij].tr[0][den], totden[sp][n], newden[sp][n][0][ij]);
-                                                                                    quit("Numbers of %s%d in land box %d are less than 0 or nan after movement.\n", FunctGroupArray[sp].groupCode, n, ij);
-                                                                                }
-                                                                                
-                                                                                if (totden[sp][n] > bm->min_dens) {
-                                                                                    FunctGroupArray[sp].allgone[n] = 0;
-                                                                                }
-                                                                                
-                                                                                /**
-                                                                                if((do_debug2) && (sp == bm->which_check)){
-                                                                                fprintf(llogfp, "LAND END Time: %e %s-%d box%d-%d this_tot_biom: %.20e, newden_sum-%d: %.20e, den: %.20e, totden: %.20e, newden: %.20e, SN-%d: %.20e, RN-%d: %.20e (vs SNinit %.20e, RNinit %.20e)\n", bm->dayt,
-                                                                                FunctGroupArray[sp].groupCode, n, ij, k, this_tot_biom, n,
-                                                                                newden_sum[n], bm->boxes[ij].tr[k][den], totden[sp][n],
-                                                                                newden[sp][n][k][ij], n, bm->boxes[ij].tr[k][sn], n,
-                                                                                bm->boxes[ij].tr[k][rn], VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
-                                                                                }
-                                                                                **/
-                                                                                
-                                                                                init_stock_struct_prop[sp][n][stock_id] += bm->boxes[ij].tr[0][den];
-                                                                                
-                                                                                bm->totbiom[sp] += (bm->boxes[ij].tr[0][sn] + bm->boxes[ij].tr[0][rn]) * bm->boxes[ij].tr[0][den];
-                                                                                bm->targetspbiom[sp][ij] += (bm->boxes[ij].tr[0][sn] + bm->boxes[ij].tr[0][rn]) * bm->boxes[ij].tr[0][den];
-                                                                                
-                                                                            }
-                                                                        }
-                                                                    } else if (bm->boxes[ij].type != BOUNDARY) {
-                                                                        for (n = 0; n < FunctGroupArray[sp].numGeneTypes; n++) {
-                                                                            /* Normalise localised recruitment if necessary */
-                                                                            if (bm->norm_larval_distrib && !updated_already && ((bearlive || sp_enviro_depend || (FunctGroupArray[sp].recruitType == at_parent_location))
-                                                                            || (!enviro_depend && (totad[n] != 1.0))) && (bm->dayt == EMBRYO[sp].StartDay[n][EMBRYO[sp].next_recruit]) && (bm->t / 86400.0 > 0.0)) {
-                                                                                /* If not temperature dependent (when want to see effect of temperature potentially
-                                                                                hitting recruits differentially), normalise result - with regard to total population.
-                                                                                Shouldn't need to renormalise for stocks as already working off stock normalised basis
-                                                                                and any skew due to temperature effects is desired and shouldn't be normalised away,
-                                                                                but just to be safe for now */
-                                                                                bm->recruit_hdistrib[n][ij][sp] = bm->recruit_hdistrib[n][ij][sp] / (totad[n] + small_num);
-                                                                                
-                                                                            }
-                                                                        }
-                                                                        
-                                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                            stock_id = bm->group_stock[sp][ij][k];
-                                                                            
-                                                                            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                                                                
-                                                                                sn = FunctGroupArray[sp].structNTracers[n];
-                                                                                rn = FunctGroupArray[sp].resNTracers[n];
-                                                                                den = FunctGroupArray[sp].NumsTracers[n];
-                                                                                stage = FunctGroupArray[sp].cohort_stage[n];
-                                                                                
-                                                                                if (MIGRATION[sp].ActualMigrator[stage] > 0) {
-                                                                                    for (qid = 0; qid < spmigrate; qid++) {
-                                                                                        stagger_return = MIGRATION[sp].Stagger[qid][return_stagger_id];
+                                                                                fprintf(llogfp, "LAND ERROR Time: %e %s-%d box%d-%d this_tot_biom: %.20e, newden_sum-%d: %.20e, den: %.20e, totden: %.20e, newden: %.20e, SN-%d: %.20e, RN-%d: %.20e (vs SNinit %.20e, RNinit %.20e)\n", bm->dayt,
+                                                                                    FunctGroupArray[sp].groupCode, n, ij, 0, this_tot_biom, n,
+                                                                                    newden_sum[n], bm->boxes[ij].tr[0][den], totden[sp][n],
+                                                                                    newden[sp][n][0][ij], n, bm->boxes[ij].tr[0][sn], n,
+                                                                                    bm->boxes[ij].tr[0][rn], VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
+                                                                                    
+                                                                                    printf("LAND ERROR Time: %e %s-%d box%d-%d this_tot_biom: %.20e, newden_sum-%d: %.20e, den: %.20e, totden: %.20e, newden: %.20e, SN-%d: %.20e, RN-%d: %.20e (vs SNinit %.20e, RNinit %.20e)\n", bm->dayt,
+                                                                                        FunctGroupArray[sp].groupCode, n, ij, 0, this_tot_biom, n,
+                                                                                        newden_sum[n], bm->boxes[ij].tr[0][den], totden[sp][n],
+                                                                                        newden[sp][n][0][ij], n, bm->boxes[ij].tr[0][sn], n,
+                                                                                        bm->boxes[ij].tr[0][rn], VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
+                                                                                        
+                                                                                        quit("%s-%d had negative size or numbers after movement\n", FunctGroupArray[sp].groupCode, n);
+                                                                                    }
+                                                                                    
+                                                                                    /* Allocate vertebrates based on preferred habitat, feed conditions
+                                                                                    or known migration paths - that is update numbers in current cell */
+                                                                                    
+                                                                                    newden_sum[n] += newden[sp][n][0][ij];
+                                                                                    this_tot_biom += totden[sp][n] * newden[sp][n][0][ij] * (bm->boxes[ij].tr[0][sn] + bm->boxes[ij].tr[0][rn]);
+                                                                                    bm->boxes[ij].tr[0][den] = totden[sp][n] * newden[sp][n][0][ij];
+                                                                                    
+                                                                                    if((bm->boxes[ij].tr[0][den] < 0) || (!_finite(bm->boxes[ij].tr[0][den]))){
+                                                                                        printf("%e %s-%d land box%d den: %.20e, totden: %.20e, newden: %.20e\n", bm->dayt,
+                                                                                            FunctGroupArray[sp].groupCode, n, ij, bm->boxes[ij].tr[0][den], totden[sp][n], newden[sp][n][0][ij]);
+                                                                                            quit("Numbers of %s%d in land box %d are less than 0 or nan after movement.\n", FunctGroupArray[sp].groupCode, n, ij);
+                                                                                        }
+                                                                                        
+                                                                                        if (totden[sp][n] > bm->min_dens) {
+                                                                                            FunctGroupArray[sp].allgone[n] = 0;
+                                                                                        }
                                                                                         
                                                                                         /**
-                                                                                        //if(do_debug2){
-                                                                                        if (sp == 35) {
-                                                                                        fprintf(bm->logFile, "Time: %e %s-%d box%d-%d stage: %d (num_in_queue: %d spmigrate: %d qid: %d) leave_period: %d, Leave_Now: %d ComplexMigrator: %d cohort_migrating: %d\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, stage, MIGRATION[sp].num_in_queue, spmigrate, qid, MIGRATION[sp].Leave_Period[qid], MIGRATION[sp].Leave_Now[qid], FunctGroupArray[sp].isComplexMigrator, MIGRATION[sp].cohort_migrating[n][qid]);
+                                                                                        if((do_debug2) && (sp == bm->which_check)){
+                                                                                        fprintf(llogfp, "LAND END Time: %e %s-%d box%d-%d this_tot_biom: %.20e, newden_sum-%d: %.20e, den: %.20e, totden: %.20e, newden: %.20e, SN-%d: %.20e, RN-%d: %.20e (vs SNinit %.20e, RNinit %.20e)\n", bm->dayt,
+                                                                                        FunctGroupArray[sp].groupCode, n, ij, k, this_tot_biom, n,
+                                                                                        newden_sum[n], bm->boxes[ij].tr[k][den], totden[sp][n],
+                                                                                        newden[sp][n][k][ij], n, bm->boxes[ij].tr[k][sn], n,
+                                                                                        bm->boxes[ij].tr[k][rn], VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
                                                                                         }
                                                                                         **/
                                                                                         
-                                                                                        if (MIGRATION[sp].Leave_Period[qid] > 0) {  // Only execute for cohorts that are supposed to start this migration
-                                                                                            
-                                                                                            /**
-                                                                                            //if(do_debug2){
-                                                                                            if (sp == 33) {
-                                                                                            fprintf(bm->logFile, "Time: %e %s-%d stage: %d Leave_Now = %d period: %d qid: %d\n",
-                                                                                            bm->dayt, FunctGroupArray[sp].groupCode, n, stage, MIGRATION[sp].Leave_Now[qid], MIGRATION[sp].Leave_Period[qid], qid);
-                                                                                            }
-                                                                                            **/
-                                                                                            
-                                                                                            if ((bm->dayt < MIGRATION[sp].Leave_Now[qid]) && (FunctGroupArray[sp].isComplexMigrator == FALSE))
-                                                                                            break;
-                                                                                            
-                                                                                            
-                                                                                            //if (sp == 64)
-                                                                                            //    fprintf(bm->logFile, "Time: %e %s-%d box%d-%d made it past the break\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k);
-                                                                                            
-                                                                                            if ((bm->dayt >= MIGRATION[sp].Leave_Now[qid]) && (bm->dayt < (MIGRATION[sp].Leave_Now[qid] + MIGRATION[sp].Leave_Period[qid])) && (bm->t / 86400.0 > 0.0) && (MIGRATION[sp].cohort_migrating[n][qid] > 0)) {
+                                                                                        init_stock_struct_prop[sp][n][stock_id] += bm->boxes[ij].tr[0][den];
+                                                                                        
+                                                                                        bm->totbiom[sp] += (bm->boxes[ij].tr[0][sn] + bm->boxes[ij].tr[0][rn]) * bm->boxes[ij].tr[0][den];
+                                                                                        bm->targetspbiom[sp][ij] += (bm->boxes[ij].tr[0][sn] + bm->boxes[ij].tr[0][rn]) * bm->boxes[ij].tr[0][den];
+                                                                                        
+                                                                                    }
+                                                                                }
+                                                                            } else if (bm->boxes[ij].type != BOUNDARY) {
+                                                                                for (n = 0; n < FunctGroupArray[sp].numGeneTypes; n++) {
+                                                                                    /* Normalise localised recruitment if necessary */
+                                                                                    if (bm->norm_larval_distrib && !updated_already && ((bearlive || sp_enviro_depend || (FunctGroupArray[sp].recruitType == at_parent_location))
+                                                                                    || (!enviro_depend && (totad[n] != 1.0))) && (bm->dayt == EMBRYO[sp].StartDay[n][EMBRYO[sp].next_recruit]) && (bm->t / 86400.0 > 0.0)) {
+                                                                                        /* If not temperature dependent (when want to see effect of temperature potentially
+                                                                                        hitting recruits differentially), normalise result - with regard to total population.
+                                                                                        Shouldn't need to renormalise for stocks as already working off stock normalised basis
+                                                                                        and any skew due to temperature effects is desired and shouldn't be normalised away,
+                                                                                        but just to be safe for now */
+                                                                                        bm->recruit_hdistrib[n][ij][sp] = bm->recruit_hdistrib[n][ij][sp] / (totad[n] + small_num);
+                                                                                        
+                                                                                    }
+                                                                                }
+                                                                                
+                                                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                    stock_id = bm->group_stock[sp][ij][k];
+                                                                                    
+                                                                                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                                                                        
+                                                                                        sn = FunctGroupArray[sp].structNTracers[n];
+                                                                                        rn = FunctGroupArray[sp].resNTracers[n];
+                                                                                        den = FunctGroupArray[sp].NumsTracers[n];
+                                                                                        stage = FunctGroupArray[sp].cohort_stage[n];
+                                                                                        
+                                                                                        if (MIGRATION[sp].ActualMigrator[stage] > 0) {
+                                                                                            for (qid = 0; qid < spmigrate; qid++) {
+                                                                                                stagger_return = MIGRATION[sp].Stagger[qid][return_stagger_id];
                                                                                                 
-                                                                                                IBoxProp = MIGRATION[sp].Box[ij][qid];
-                                                                                                
-                                                                                                if(MIGRATION[sp].IsPartialMigration[qid]) {
-                                                                                                    if((n < MIGRATION[sp].PartialMinAge[qid]) || (n > MIGRATION[sp].PartialMaxAge[qid])) {
-                                                                                                        IBoxProp = 0.0;
-                                                                                                    }
+                                                                                                /**
+                                                                                                //if(do_debug2){
+                                                                                                if (sp == 35) {
+                                                                                                fprintf(bm->logFile, "Time: %e %s-%d box%d-%d stage: %d (num_in_queue: %d spmigrate: %d qid: %d) leave_period: %d, Leave_Now: %d ComplexMigrator: %d cohort_migrating: %d\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, stage, MIGRATION[sp].num_in_queue, spmigrate, qid, MIGRATION[sp].Leave_Period[qid], MIGRATION[sp].Leave_Now[qid], FunctGroupArray[sp].isComplexMigrator, MIGRATION[sp].cohort_migrating[n][qid]);
                                                                                                 }
+                                                                                                **/
                                                                                                 
-                                                                                                migtime2 = Calculate_Migration_Proportion(bm, llogfp, dt, sp,
-                                                                                                    MIGRATION[sp].Leave_Now[qid], MIGRATION[sp].Leave_Period[qid], IBoxProp);
-                                                                                                    
-                                                                                                    /**
-                                                                                                    //if(do_debug2){
-                                                                                                    if (sp == 33)  {
-                                                                                                    fprintf(bm->logFile, "Time: %e qid %d %s-%d leaving box %d k: %d migtime2 = %e MigIO: %e\n", bm->dayt, qid, FunctGroupArray[sp].groupCode, n, ij, k, migtime2, IBoxProp);
-                                                                                                    }
-                                                                                                    **/
-                                                                                                    
-                                                                                                    if(!migtime2)  // None migrating so skip ahead
-                                                                                                    continue;
-                                                                                                    
-                                                                                                    /* Calculate proportion of the tot numbers that will
-                                                                                                    migrate out of the system this timestep */
-                                                                                                    
-                                                                                                    
-                                                                                                    if(newden[sp][n][k][ij] < 0){
-                                                                                                        warn("before migration newden is less than 0. Box %d;%d group %s:%d\n", ij, ij, FunctGroupArray[sp].groupCode, n);
-                                                                                                        quit("");
-                                                                                                    }
-                                                                                                    /* newden = proportion of total numbers in this box/layer for this group */
-                                                                                                    /* mignum = proportion of this box that are migrating in this time step */
-                                                                                                    
-                                                                                                    migProp = migtime2;
-                                                                                                    mignum = migProp * newden[sp][n][k][ij];   // So the proportion of the proportion of the population in the cell that leaves
+                                                                                                if (MIGRATION[sp].Leave_Period[qid] > 0) {  // Only execute for cohorts that are supposed to start this migration
                                                                                                     
                                                                                                     /**
                                                                                                     //if(do_debug2){
                                                                                                     if (sp == 33) {
-                                                                                                    fprintf(bm->logFile, "Time: %e %s-%d (stage %d) qid: %d Box-%d-%d newden: %e mignum: %e migProp: %e\n",
-                                                                                                    bm->dayt, FunctGroupArray[sp].groupCode, n, stage, qid, ij, k, newden[sp][n][k][ij], mignum, migProp);
+                                                                                                    fprintf(bm->logFile, "Time: %e %s-%d stage: %d Leave_Now = %d period: %d qid: %d\n",
+                                                                                                    bm->dayt, FunctGroupArray[sp].groupCode, n, stage, MIGRATION[sp].Leave_Now[qid], MIGRATION[sp].Leave_Period[qid], qid);
                                                                                                     }
                                                                                                     **/
                                                                                                     
-                                                                                                    newden[sp][n][k][ij] -= mignum;
+                                                                                                    if ((bm->dayt < MIGRATION[sp].Leave_Now[qid]) && (FunctGroupArray[sp].isComplexMigrator == FALSE))
+                                                                                                    break;
                                                                                                     
-                                                                                                    if(newden[sp][n][k][ij] < 0 ){
-                                                                                                        warn("after migration back into box %d:%d numbers for group %s:%d are less than 0.\n",
-                                                                                                            ij, k,FunctGroupArray[sp].groupCode, n);
-                                                                                                            warn("migProp = %e, mignum- %e, newden = %e\n", migProp, mignum, newden[sp][n][k][ij]);
-                                                                                                            warn("away = %d, period = %e, IOBox = %e\n", MIGRATION[sp].Leave_Now[qid], MIGRATION[sp].Leave_Period[qid], MIGRATION[sp].Box[ij][qid]);
-                                                                                                            
-                                                                                                            fprintf(stderr, "MigrateAway[%d][%d][%d] = %d\n", sp, stage, qid, MIGRATION[sp].Leave_Now[qid]);
-                                                                                                            fprintf(stderr, "MigratePeriod[%d][%d][%d] = %d\n",  sp, stage, qid, MIGRATION[sp].Leave_Period[qid]);
-                                                                                                            fprintf(stderr, "MigIOBox[%d][%d][%d][%d]) = %e\n", sp, ij, stage, qid, MIGRATION[sp].Box[ij][qid]);
-                                                                                                        }
+                                                                                                    
+                                                                                                    //if (sp == 64)
+                                                                                                    //    fprintf(bm->logFile, "Time: %e %s-%d box%d-%d made it past the break\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k);
+                                                                                                    
+                                                                                                    if ((bm->dayt >= MIGRATION[sp].Leave_Now[qid]) && (bm->dayt < (MIGRATION[sp].Leave_Now[qid] + MIGRATION[sp].Leave_Period[qid])) && (bm->t / 86400.0 > 0.0) && (MIGRATION[sp].cohort_migrating[n][qid] > 0)) {
                                                                                                         
+                                                                                                        IBoxProp = MIGRATION[sp].Box[ij][qid];
                                                                                                         
-                                                                                                        /* Update the Migration array to take account of the new
-                                                                                                        immigrants */
-                                                                                                        totmig = MIGRATION[sp].DEN[n][qid] + (mignum * totden[sp][n]);
-                                                                                                        
-                                                                                                        MIGRATION[sp].num_stagger[qid] = 0;
-                                                                                                        if(FunctGroupArray[sp].multiyr_mig) {
-                                                                                                            sp_Migrate_Years = (int) (MIGRATION[sp].MinYearsAway[qid]);
-                                                                                                            if ((sp_Migrate_Years > 1) && (stagger_return)) {
-                                                                                                                MIGRATION[sp].num_stagger[qid] = MIGRATION[sp].Stagger[qid][stagger_years_id];
+                                                                                                        if(MIGRATION[sp].IsPartialMigration[qid]) {
+                                                                                                            if((n < MIGRATION[sp].PartialMinAge[qid]) || (n > MIGRATION[sp].PartialMaxAge[qid])) {
+                                                                                                                IBoxProp = 0.0;
                                                                                                             }
                                                                                                         }
                                                                                                         
-                                                                                                        /**
-                                                                                                        //if (do_debug2) {
-                                                                                                        if (sp == 33) {
-                                                                                                        fprintf(llogfp, "Time: %e %s stage %d qid: %d, multiyr_mig: %d, sp_Migrate_Years: %d, stagger_return: %d, totmig: %e as MIG-den: %e mignum: %e, totden: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, stage, qid, FunctGroupArray[sp].multiyr_mig, sp_Migrate_Years, stagger_return, totmig, MIGRATION[sp].DEN[n][qid], mignum, totden[sp][n]);
-                                                                                                        }
-                                                                                                        **/
-                                                                                                        
-                                                                                                        for (agec = 0; agec < FunctGroupArray[sp].ageClassSize; agec++) {
-                                                                                                            MIGRATION[sp].pop_ratio[qid][n][agec] = MIGRATION[sp].current_pop_ratio[n][agec];
-                                                                                                        }
-                                                                                                        
-                                                                                                        // All come back together
-                                                                                                        MIGRATION[sp].SN[n][qid] = (MIGRATION[sp].SN[n][qid] * MIGRATION[sp].DEN[n][qid] + bm->boxes[ij].tr[k][sn] * (mignum * totden[sp][n])) / (totmig + small_num);
-                                                                                                        MIGRATION[sp].RN[n][qid] = (MIGRATION[sp].RN[n][qid] * MIGRATION[sp].DEN[n][qid] + bm->boxes[ij].tr[k][rn] * (mignum * totden[sp][n])) / (totmig + small_num);
-                                                                                                        
-                                                                                                        if(bm->track_contaminants){
-                                                                                                            ContaminantMigrationOut(bm, sp, n, qid, MIGRATION[sp].DEN[n][qid], (mignum * totden[sp][n]));
-                                                                                                        }
-                                                                                                        
-                                                                                                        MIGRATION[sp].DEN[n][qid] = totmig;
-                                                                                                        
-                                                                                                        /**
-                                                                                                        //if(do_debug2){
-                                                                                                        if (sp == 33) {
-                                                                                                        fprintf(llogfp, "Time: %e, sp %s (cohort %d), qid: %d totmig = %e, totden[sp][n] = %e newden: %e, migProp = %e, migrationDEN = %e, mignum = %e, totden[sp][n]= %e migSN: %e migRN: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid, totmig, totden[sp][n], newden[sp][n][k][ij], migProp, MIGRATION[sp].DEN[n][qid], mignum, totden[sp][n],  MIGRATION[sp].SN[n][qid],  MIGRATION[sp].RN[n][qid]);
-                                                                                                        }
-                                                                                                        **/
-                                                                                                        
-                                                                                                        finalmig += totmig;
-                                                                                                        avgsn = (avgsn * (finalmig - totmig) + MIGRATION[sp].SN[n][qid] * totmig) / (finalmig + small_num);
-                                                                                                        avgrn = (avgrn * (finalmig - totmig) + MIGRATION[sp].RN[n][qid] * totmig) / (finalmig + small_num);
-                                                                                                        
-                                                                                                        /**
-                                                                                                        //if(do_debug2){
-                                                                                                        if ((sp == 33) || ((sp > 8) && (sp < 12))) {
-                                                                                                        fprintf(llogfp, "Time: %e, sp %s (cohort %d), qid: %d totmig = %e, totden[sp][n] = %e migProp = %e, migration = %e, mignum = %e, totden[sp][n]= %e\n",bm->dayt, FunctGroupArray[sp].groupCode, n, qid, totmig, totden[sp][n], migProp, MIGRATION[sp].DEN[n][qid], mignum, totden[sp][n]);
-                                                                                                        
-                                                                                                        fprintf(llogfp, "Time: %e, %d:%d, sp %s (cohort %d), qid: %d num leaving: %e (%e of %e) - migrationDEN: %e (avgsn: %e, avgrn: %e, finalmig: %e), newDen = %e\n", bm->dayt, ij, k, FunctGroupArray[sp].groupCode, n, qid,  mignum * totden[sp][n], mignum, totden[sp][n], MIGRATION[sp].DEN[n][qid], MIGRATION[sp].SN[n][qid], MIGRATION[sp].RN[n][qid], finalmig, newden[sp][n][k][ij]);
-                                                                                                        
-                                                                                                        }
-                                                                                                        **/
-                                                                                                        
-                                                                                                        mig_done++;
-                                                                                                    } else if (bm->dayt == (MIGRATION[sp].Leave_Now[qid] + MIGRATION[sp].Leave_Period[qid] + 1)) {
-                                                                                                        spupdatemig++;
-                                                                                                    }
-                                                                                                }
-                                                                                            }
-                                                                                        }
-                                                                                        
-                                                                                        /* Update/assign new vertebrate sn and rn pool values */
-                                                                                        oldsn = bm->boxes[ij].tr[k][sn];
-                                                                                        if (!bm->flaghomog_sp) {
-                                                                                            /* If not homogenising size across group/species disribution,
-                                                                                            but allowing for differentiation and local memory. Very hard
-                                                                                            to track individual movements so take new value as weighted
-                                                                                            mean of old residents' size and the size of the new entrants
-                                                                                            (assuming the new ones have size matching average across
-                                                                                            the entire stock) */
-                                                                                            totdenom = currentden[sp][n][k][ij] + totden[sp][n] * newden[sp][n][k][ij] + small_num;
-                                                                                            
-                                                                                            bm->boxes[ij].tr[k][sn] = (bm->boxes[ij].tr[k][sn] * currentden[sp][n][k][ij] + VERTinfo[sp][n][SN_id] * totden[sp][n]
-                                                                                                * newden[sp][n][k][ij]) / totdenom;
-                                                                                                bm->boxes[ij].tr[k][rn] = (bm->boxes[ij].tr[k][rn] * currentden[sp][n][k][ij] + VERTinfo[sp][n][RN_id] * totden[sp][n]
-                                                                                                    * newden[sp][n][k][ij]) / totdenom;
-                                                                                                    
-                                                                                                } else {
-                                                                                                    /* If homogenising growth/size to reflect random movement of individuals
-                                                                                                    within the global distribution of the group/species over the entire
-                                                                                                    domain of the stock, set SN and RN to that mean value now */
-                                                                                                    bm->boxes[ij].tr[k][sn] = VERTinfo[sp][n][SN_id];
-                                                                                                    bm->boxes[ij].tr[k][rn] = VERTinfo[sp][n][RN_id];
-                                                                                                    
-                                                                                                }
-                                                                                                
-                                                                                                if ((bm->boxes[ij].tr[k][sn] < 0.0) || (bm->boxes[ij].tr[k][rn] < 0.0)) {
-                                                                                                    fprintf(llogfp,"Time: %e, %s-%d in box%d-%d has newsn: %e, newrn:%e, with currentden: %e VERTinfo[sn]: %e, VERTinfo[rn]: %e, totden: %e, newden: %e, totdenom: %e\n",
-                                                                                                        bm->dayt, FunctGroupArray[sp].groupCode, n, bm->current_box, bm->current_layer,
-                                                                                                        bm->boxes[ij].tr[k][sn], bm->boxes[ij].tr[k][rn], currentden[sp][n][k][ij],
-                                                                                                        VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id], totden[sp][n], newden[sp][n][k][ij], totdenom);
-                                                                                                        printf("Time: %e, %s-%d in box%d-%d has newsn: %e, newrn:%e, with currentden: %e VERTinfo[sn]: %e, VERTinfo[rn]: %e, totden: %e, newden: %e, totdenom: %e\n",
-                                                                                                            bm->dayt, FunctGroupArray[sp].groupCode, n, bm->current_box, bm->current_layer,
-                                                                                                            bm->boxes[ij].tr[k][sn], bm->boxes[ij].tr[k][rn], currentden[sp][n][k][ij],
-                                                                                                            VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id], totden[sp][n], newden[sp][n][k][ij], totdenom);
+                                                                                                        migtime2 = Calculate_Migration_Proportion(bm, llogfp, dt, sp,
+                                                                                                            MIGRATION[sp].Leave_Now[qid], MIGRATION[sp].Leave_Period[qid], IBoxProp);
                                                                                                             
-                                                                                                            fprintf(llogfp, "ERROR Time: %e %s-%d box%d-%d this_tot_biom: %.20e, newden_sum-%d: %.20e, den: %.20e, totden: %.20e, newden: %.20e, SN-%d: %.20e, RN-%d: %.20e (vs SNinit %.20e, RNinit %.20e)\n", bm->dayt,
-                                                                                                                FunctGroupArray[sp].groupCode, n, ij, k, this_tot_biom, n,
-                                                                                                                newden_sum[n], bm->boxes[ij].tr[k][den], totden[sp][n],
-                                                                                                                newden[sp][n][k][ij], n, bm->boxes[ij].tr[k][sn], n,
-                                                                                                                bm->boxes[ij].tr[k][rn], VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
-                                                                                                                
-                                                                                                                printf("ERROR Time: %e %s-%d box%d-%d this_tot_biom: %.20e, newden_sum-%d: %.20e, den: %.20e, totden: %.20e, newden: %.20e, SN-%d: %.20e, RN-%d: %.20e (vs SNinit %.20e, RNinit %.20e)\n", bm->dayt,
-                                                                                                                    FunctGroupArray[sp].groupCode, n, ij, k, this_tot_biom, n,
-                                                                                                                    newden_sum[n], bm->boxes[ij].tr[k][den], totden[sp][n],
-                                                                                                                    newden[sp][n][k][ij], n, bm->boxes[ij].tr[k][sn], n,
-                                                                                                                    bm->boxes[ij].tr[k][rn], VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
+                                                                                                            /**
+                                                                                                            //if(do_debug2){
+                                                                                                            if (sp == 33)  {
+                                                                                                            fprintf(bm->logFile, "Time: %e qid %d %s-%d leaving box %d k: %d migtime2 = %e MigIO: %e\n", bm->dayt, qid, FunctGroupArray[sp].groupCode, n, ij, k, migtime2, IBoxProp);
+                                                                                                            }
+                                                                                                            **/
+                                                                                                            
+                                                                                                            if(!migtime2)  // None migrating so skip ahead
+                                                                                                            continue;
+                                                                                                            
+                                                                                                            /* Calculate proportion of the tot numbers that will
+                                                                                                            migrate out of the system this timestep */
+                                                                                                            
+                                                                                                            
+                                                                                                            if(newden[sp][n][k][ij] < 0){
+                                                                                                                warn("before migration newden is less than 0. Box %d;%d group %s:%d\n", ij, ij, FunctGroupArray[sp].groupCode, n);
+                                                                                                                quit("");
+                                                                                                            }
+                                                                                                            /* newden = proportion of total numbers in this box/layer for this group */
+                                                                                                            /* mignum = proportion of this box that are migrating in this time step */
+                                                                                                            
+                                                                                                            migProp = migtime2;
+                                                                                                            mignum = migProp * newden[sp][n][k][ij];   // So the proportion of the proportion of the population in the cell that leaves
+                                                                                                            
+                                                                                                            /**
+                                                                                                            //if(do_debug2){
+                                                                                                            if (sp == 33) {
+                                                                                                            fprintf(bm->logFile, "Time: %e %s-%d (stage %d) qid: %d Box-%d-%d newden: %e mignum: %e migProp: %e\n",
+                                                                                                            bm->dayt, FunctGroupArray[sp].groupCode, n, stage, qid, ij, k, newden[sp][n][k][ij], mignum, migProp);
+                                                                                                            }
+                                                                                                            **/
+                                                                                                            
+                                                                                                            newden[sp][n][k][ij] -= mignum;
+                                                                                                            
+                                                                                                            if(newden[sp][n][k][ij] < 0 ){
+                                                                                                                warn("after migration back into box %d:%d numbers for group %s:%d are less than 0.\n",
+                                                                                                                    ij, k,FunctGroupArray[sp].groupCode, n);
+                                                                                                                    warn("migProp = %e, mignum- %e, newden = %e\n", migProp, mignum, newden[sp][n][k][ij]);
+                                                                                                                    warn("away = %d, period = %e, IOBox = %e\n", MIGRATION[sp].Leave_Now[qid], MIGRATION[sp].Leave_Period[qid], MIGRATION[sp].Box[ij][qid]);
                                                                                                                     
-                                                                                                                    quit("Time: %e box%d-%d %s-%d had negative size or numbers after movement\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k);
+                                                                                                                    fprintf(stderr, "MigrateAway[%d][%d][%d] = %d\n", sp, stage, qid, MIGRATION[sp].Leave_Now[qid]);
+                                                                                                                    fprintf(stderr, "MigratePeriod[%d][%d][%d] = %d\n",  sp, stage, qid, MIGRATION[sp].Leave_Period[qid]);
+                                                                                                                    fprintf(stderr, "MigIOBox[%d][%d][%d][%d]) = %e\n", sp, ij, stage, qid, MIGRATION[sp].Box[ij][qid]);
                                                                                                                 }
                                                                                                                 
-                                                                                                                /* Allocate vertebrates based on preferred habitat, feed conditions
-                                                                                                                or known migration paths - that is update numbers in current cell */
                                                                                                                 
-                                                                                                                newden_sum[n] += newden[sp][n][k][ij];
-                                                                                                                this_tot_biom += totden[sp][n] * newden[sp][n][k][ij] * (bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn]);
-                                                                                                                bm->boxes[ij].tr[k][den] = totden[sp][n] * newden[sp][n][k][ij];
-                                                                                                                totden_check[sp][n] += totden[sp][n] * newden[sp][n][k][ij];
+                                                                                                                /* Update the Migration array to take account of the new
+                                                                                                                immigrants */
+                                                                                                                totmig = MIGRATION[sp].DEN[n][qid] + (mignum * totden[sp][n]);
+                                                                                                                
+                                                                                                                MIGRATION[sp].num_stagger[qid] = 0;
+                                                                                                                if(FunctGroupArray[sp].multiyr_mig) {
+                                                                                                                    sp_Migrate_Years = (int) (MIGRATION[sp].MinYearsAway[qid]);
+                                                                                                                    if ((sp_Migrate_Years > 1) && (stagger_return)) {
+                                                                                                                        MIGRATION[sp].num_stagger[qid] = MIGRATION[sp].Stagger[qid][stagger_years_id];
+                                                                                                                    }
+                                                                                                                }
+                                                                                                                
+                                                                                                                /**
+                                                                                                                //if (do_debug2) {
+                                                                                                                if (sp == 33) {
+                                                                                                                fprintf(llogfp, "Time: %e %s stage %d qid: %d, multiyr_mig: %d, sp_Migrate_Years: %d, stagger_return: %d, totmig: %e as MIG-den: %e mignum: %e, totden: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, stage, qid, FunctGroupArray[sp].multiyr_mig, sp_Migrate_Years, stagger_return, totmig, MIGRATION[sp].DEN[n][qid], mignum, totden[sp][n]);
+                                                                                                                }
+                                                                                                                **/
+                                                                                                                
+                                                                                                                for (agec = 0; agec < FunctGroupArray[sp].ageClassSize; agec++) {
+                                                                                                                    MIGRATION[sp].pop_ratio[qid][n][agec] = MIGRATION[sp].current_pop_ratio[n][agec];
+                                                                                                                }
+                                                                                                                
+                                                                                                                // All come back together
+                                                                                                                MIGRATION[sp].SN[n][qid] = (MIGRATION[sp].SN[n][qid] * MIGRATION[sp].DEN[n][qid] + bm->boxes[ij].tr[k][sn] * (mignum * totden[sp][n])) / (totmig + small_num);
+                                                                                                                MIGRATION[sp].RN[n][qid] = (MIGRATION[sp].RN[n][qid] * MIGRATION[sp].DEN[n][qid] + bm->boxes[ij].tr[k][rn] * (mignum * totden[sp][n])) / (totmig + small_num);
                                                                                                                 
                                                                                                                 if(bm->track_contaminants){
-                                                                                                                    Apply_Contam_Return(bm, sp, n, k, ij, newden[sp][n][k][ij], totden[sp][n]);
+                                                                                                                    ContaminantMigrationOut(bm, sp, n, qid, MIGRATION[sp].DEN[n][qid], (mignum * totden[sp][n]));
                                                                                                                 }
                                                                                                                 
-                                                                                                                if((bm->boxes[ij].tr[k][den] < 0) || (!_finite(bm->boxes[ij].tr[k][den]))){
-                                                                                                                    printf("%e %s-%d movement box%d-%d den: %.20e, totden: %.20e, newden: %.20e\n", bm->dayt,
-                                                                                                                        FunctGroupArray[sp].groupCode, n, ij, k, bm->boxes[ij].tr[k][den], totden[sp][n], newden[sp][n][k][ij]);
-                                                                                                                        quit("Numbers of %s%d in box %d:%d are less than 0 or nan after movement.\n", FunctGroupArray[sp].groupCode, n, ij, k);
-                                                                                                                    }
+                                                                                                                MIGRATION[sp].DEN[n][qid] = totmig;
+                                                                                                                
+                                                                                                                /**
+                                                                                                                //if(do_debug2){
+                                                                                                                if (sp == 33) {
+                                                                                                                fprintf(llogfp, "Time: %e, sp %s (cohort %d), qid: %d totmig = %e, totden[sp][n] = %e newden: %e, migProp = %e, migrationDEN = %e, mignum = %e, totden[sp][n]= %e migSN: %e migRN: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, n, qid, totmig, totden[sp][n], newden[sp][n][k][ij], migProp, MIGRATION[sp].DEN[n][qid], mignum, totden[sp][n],  MIGRATION[sp].SN[n][qid],  MIGRATION[sp].RN[n][qid]);
+                                                                                                                }
+                                                                                                                **/
+                                                                                                                
+                                                                                                                finalmig += totmig;
+                                                                                                                avgsn = (avgsn * (finalmig - totmig) + MIGRATION[sp].SN[n][qid] * totmig) / (finalmig + small_num);
+                                                                                                                avgrn = (avgrn * (finalmig - totmig) + MIGRATION[sp].RN[n][qid] * totmig) / (finalmig + small_num);
+                                                                                                                
+                                                                                                                /**
+                                                                                                                //if(do_debug2){
+                                                                                                                if ((sp == 33) || ((sp > 8) && (sp < 12))) {
+                                                                                                                fprintf(llogfp, "Time: %e, sp %s (cohort %d), qid: %d totmig = %e, totden[sp][n] = %e migProp = %e, migration = %e, mignum = %e, totden[sp][n]= %e\n",bm->dayt, FunctGroupArray[sp].groupCode, n, qid, totmig, totden[sp][n], migProp, MIGRATION[sp].DEN[n][qid], mignum, totden[sp][n]);
+                                                                                                                
+                                                                                                                fprintf(llogfp, "Time: %e, %d:%d, sp %s (cohort %d), qid: %d num leaving: %e (%e of %e) - migrationDEN: %e (avgsn: %e, avgrn: %e, finalmig: %e), newDen = %e\n", bm->dayt, ij, k, FunctGroupArray[sp].groupCode, n, qid,  mignum * totden[sp][n], mignum, totden[sp][n], MIGRATION[sp].DEN[n][qid], MIGRATION[sp].SN[n][qid], MIGRATION[sp].RN[n][qid], finalmig, newden[sp][n][k][ij]);
+                                                                                                                
+                                                                                                                }
+                                                                                                                **/
+                                                                                                                
+                                                                                                                mig_done++;
+                                                                                                            } else if (bm->dayt == (MIGRATION[sp].Leave_Now[qid] + MIGRATION[sp].Leave_Period[qid] + 1)) {
+                                                                                                                spupdatemig++;
+                                                                                                            }
+                                                                                                        }
+                                                                                                    }
+                                                                                                }
+                                                                                                
+                                                                                                /* Update/assign new vertebrate sn and rn pool values */
+                                                                                                oldsn = bm->boxes[ij].tr[k][sn];
+                                                                                                if (!bm->flaghomog_sp) {
+                                                                                                    /* If not homogenising size across group/species disribution,
+                                                                                                    but allowing for differentiation and local memory. Very hard
+                                                                                                    to track individual movements so take new value as weighted
+                                                                                                    mean of old residents' size and the size of the new entrants
+                                                                                                    (assuming the new ones have size matching average across
+                                                                                                    the entire stock) */
+                                                                                                    totdenom = currentden[sp][n][k][ij] + totden[sp][n] * newden[sp][n][k][ij] + small_num;
+                                                                                                    
+                                                                                                    bm->boxes[ij].tr[k][sn] = (bm->boxes[ij].tr[k][sn] * currentden[sp][n][k][ij] + VERTinfo[sp][n][SN_id] * totden[sp][n]
+                                                                                                        * newden[sp][n][k][ij]) / totdenom;
+                                                                                                        bm->boxes[ij].tr[k][rn] = (bm->boxes[ij].tr[k][rn] * currentden[sp][n][k][ij] + VERTinfo[sp][n][RN_id] * totden[sp][n]
+                                                                                                            * newden[sp][n][k][ij]) / totdenom;
+                                                                                                            
+                                                                                                        } else {
+                                                                                                            /* If homogenising growth/size to reflect random movement of individuals
+                                                                                                            within the global distribution of the group/species over the entire
+                                                                                                            domain of the stock, set SN and RN to that mean value now */
+                                                                                                            bm->boxes[ij].tr[k][sn] = VERTinfo[sp][n][SN_id];
+                                                                                                            bm->boxes[ij].tr[k][rn] = VERTinfo[sp][n][RN_id];
+                                                                                                            
+                                                                                                        }
+                                                                                                        
+                                                                                                        if ((bm->boxes[ij].tr[k][sn] < 0.0) || (bm->boxes[ij].tr[k][rn] < 0.0)) {
+                                                                                                            fprintf(llogfp,"Time: %e, %s-%d in box%d-%d has newsn: %e, newrn:%e, with currentden: %e VERTinfo[sn]: %e, VERTinfo[rn]: %e, totden: %e, newden: %e, totdenom: %e\n",
+                                                                                                                bm->dayt, FunctGroupArray[sp].groupCode, n, bm->current_box, bm->current_layer,
+                                                                                                                bm->boxes[ij].tr[k][sn], bm->boxes[ij].tr[k][rn], currentden[sp][n][k][ij],
+                                                                                                                VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id], totden[sp][n], newden[sp][n][k][ij], totdenom);
+                                                                                                                printf("Time: %e, %s-%d in box%d-%d has newsn: %e, newrn:%e, with currentden: %e VERTinfo[sn]: %e, VERTinfo[rn]: %e, totden: %e, newden: %e, totdenom: %e\n",
+                                                                                                                    bm->dayt, FunctGroupArray[sp].groupCode, n, bm->current_box, bm->current_layer,
+                                                                                                                    bm->boxes[ij].tr[k][sn], bm->boxes[ij].tr[k][rn], currentden[sp][n][k][ij],
+                                                                                                                    VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id], totden[sp][n], newden[sp][n][k][ij], totdenom);
                                                                                                                     
-                                                                                                                    if (totden[sp][n] > bm->min_dens) {
-                                                                                                                        FunctGroupArray[sp].allgone[n] = 0;
-                                                                                                                    }
-                                                                                                                    
-                                                                                                                    /**
-                                                                                                                    //if((do_debug2) && (sp == bm->which_check)){
-                                                                                                                    if ((sp == 35) && ((bm->TofY > 212) && (bm->TofY < 260))) {
-                                                                                                                    fprintf(llogfp, "END Time: %e %s-%d box%d-%d this_tot_biom: %.20e, newden_sum-%d: %.20e, den: %.20e, totden: %.20e, newden: %.20e, SN-%d: %.20e, RN-%d: %.20e (vs SNinit %.20e, RNinit %.20e)\n", bm->dayt,
-                                                                                                                    FunctGroupArray[sp].groupCode, n, ij, k, this_tot_biom, n,
-                                                                                                                    newden_sum[n], bm->boxes[ij].tr[k][den], totden[sp][n],
-                                                                                                                    newden[sp][n][k][ij], n, bm->boxes[ij].tr[k][sn], n,
-                                                                                                                    bm->boxes[ij].tr[k][rn], VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
-                                                                                                                    }
-                                                                                                                    **/
-                                                                                                                    
-                                                                                                                    /* Update home range information for those species using home ranges */
-                                                                                                                    if (sp_ddepend_move == homerange_move) {
-                                                                                                                        for (rij = 0; rij < bm->boxes[ij].HomeRangeInfo[sp].n; rij++) {
-                                                                                                                            rangeid = bm->boxes[ij].HomeRangeInfo[sp].ids[rij];
+                                                                                                                    fprintf(llogfp, "ERROR Time: %e %s-%d box%d-%d this_tot_biom: %.20e, newden_sum-%d: %.20e, den: %.20e, totden: %.20e, newden: %.20e, SN-%d: %.20e, RN-%d: %.20e (vs SNinit %.20e, RNinit %.20e)\n", bm->dayt,
+                                                                                                                        FunctGroupArray[sp].groupCode, n, ij, k, this_tot_biom, n,
+                                                                                                                        newden_sum[n], bm->boxes[ij].tr[k][den], totden[sp][n],
+                                                                                                                        newden[sp][n][k][ij], n, bm->boxes[ij].tr[k][sn], n,
+                                                                                                                        bm->boxes[ij].tr[k][rn], VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
+                                                                                                                        
+                                                                                                                        printf("ERROR Time: %e %s-%d box%d-%d this_tot_biom: %.20e, newden_sum-%d: %.20e, den: %.20e, totden: %.20e, newden: %.20e, SN-%d: %.20e, RN-%d: %.20e (vs SNinit %.20e, RNinit %.20e)\n", bm->dayt,
+                                                                                                                            FunctGroupArray[sp].groupCode, n, ij, k, this_tot_biom, n,
+                                                                                                                            newden_sum[n], bm->boxes[ij].tr[k][den], totden[sp][n],
+                                                                                                                            newden[sp][n][k][ij], n, bm->boxes[ij].tr[k][sn], n,
+                                                                                                                            bm->boxes[ij].tr[k][rn], VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
                                                                                                                             
-                                                                                                                            /* If this is the first step in the iteration over layers and cohorts
-                                                                                                                            then initialise the counter
-                                                                                                                            */
-                                                                                                                            if ((n == 0) && (k == 0)) {
-                                                                                                                                bm->boxes[ij].HomeRangeInfo[sp].rangenum[n][rij] = 0.0;
+                                                                                                                            quit("Time: %e box%d-%d %s-%d had negative size or numbers after movement\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k);
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        /* Allocate vertebrates based on preferred habitat, feed conditions
+                                                                                                                        or known migration paths - that is update numbers in current cell */
+                                                                                                                        
+                                                                                                                        newden_sum[n] += newden[sp][n][k][ij];
+                                                                                                                        this_tot_biom += totden[sp][n] * newden[sp][n][k][ij] * (bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn]);
+                                                                                                                        bm->boxes[ij].tr[k][den] = totden[sp][n] * newden[sp][n][k][ij];
+                                                                                                                        totden_check[sp][n] += totden[sp][n] * newden[sp][n][k][ij];
+                                                                                                                        
+                                                                                                                        if(bm->track_contaminants){
+                                                                                                                            Apply_Contam_Return(bm, sp, n, k, ij, newden[sp][n][k][ij], totden[sp][n]);
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        if((bm->boxes[ij].tr[k][den] < 0) || (!_finite(bm->boxes[ij].tr[k][den]))){
+                                                                                                                            printf("%e %s-%d movement box%d-%d den: %.20e, totden: %.20e, newden: %.20e\n", bm->dayt,
+                                                                                                                                FunctGroupArray[sp].groupCode, n, ij, k, bm->boxes[ij].tr[k][den], totden[sp][n], newden[sp][n][k][ij]);
+                                                                                                                                quit("Numbers of %s%d in box %d:%d are less than 0 or nan after movement.\n", FunctGroupArray[sp].groupCode, n, ij, k);
                                                                                                                             }
                                                                                                                             
-                                                                                                                            prop_range = 0;
-                                                                                                                            for (prij = 0; prij < bm->boxes[ij].HomeRangeInfo[sp].n; prij++) {
-                                                                                                                                rrid = bm->boxes[ij].HomeRangeInfo[sp].ids[prij];
-                                                                                                                                prop_range += bm->HomeRangeTotal[sp][n][rrid] * bm->boxes[ij].HomeRangeInfo[sp].rangewgt[prij];
+                                                                                                                            if (totden[sp][n] > bm->min_dens) {
+                                                                                                                                FunctGroupArray[sp].allgone[n] = 0;
                                                                                                                             }
                                                                                                                             
-                                                                                                                            bm->boxes[ij].HomeRangeInfo[sp].rangenum[n][rij] += bm->boxes[ij].tr[k][den] * bm->HomeRangeTotal[sp][n][rangeid]
-                                                                                                                            * bm->boxes[ij].HomeRangeInfo[sp].rangewgt[rij] / (prop_range + small_num);
+                                                                                                                            /**
+                                                                                                                            //if((do_debug2) && (sp == bm->which_check)){
+                                                                                                                            if ((sp == 35) && ((bm->TofY > 212) && (bm->TofY < 260))) {
+                                                                                                                            fprintf(llogfp, "END Time: %e %s-%d box%d-%d this_tot_biom: %.20e, newden_sum-%d: %.20e, den: %.20e, totden: %.20e, newden: %.20e, SN-%d: %.20e, RN-%d: %.20e (vs SNinit %.20e, RNinit %.20e)\n", bm->dayt,
+                                                                                                                            FunctGroupArray[sp].groupCode, n, ij, k, this_tot_biom, n,
+                                                                                                                            newden_sum[n], bm->boxes[ij].tr[k][den], totden[sp][n],
+                                                                                                                            newden[sp][n][k][ij], n, bm->boxes[ij].tr[k][sn], n,
+                                                                                                                            bm->boxes[ij].tr[k][rn], VERTinfo[sp][n][SN_id], VERTinfo[sp][n][RN_id]);
+                                                                                                                            }
+                                                                                                                            **/
+                                                                                                                            
+                                                                                                                            /* Update home range information for those species using home ranges */
+                                                                                                                            if (sp_ddepend_move == homerange_move) {
+                                                                                                                                for (rij = 0; rij < bm->boxes[ij].HomeRangeInfo[sp].n; rij++) {
+                                                                                                                                    rangeid = bm->boxes[ij].HomeRangeInfo[sp].ids[rij];
+                                                                                                                                    
+                                                                                                                                    /* If this is the first step in the iteration over layers and cohorts
+                                                                                                                                    then initialise the counter
+                                                                                                                                    */
+                                                                                                                                    if ((n == 0) && (k == 0)) {
+                                                                                                                                        bm->boxes[ij].HomeRangeInfo[sp].rangenum[n][rij] = 0.0;
+                                                                                                                                    }
+                                                                                                                                    
+                                                                                                                                    prop_range = 0;
+                                                                                                                                    for (prij = 0; prij < bm->boxes[ij].HomeRangeInfo[sp].n; prij++) {
+                                                                                                                                        rrid = bm->boxes[ij].HomeRangeInfo[sp].ids[prij];
+                                                                                                                                        prop_range += bm->HomeRangeTotal[sp][n][rrid] * bm->boxes[ij].HomeRangeInfo[sp].rangewgt[prij];
+                                                                                                                                    }
+                                                                                                                                    
+                                                                                                                                    bm->boxes[ij].HomeRangeInfo[sp].rangenum[n][rij] += bm->boxes[ij].tr[k][den] * bm->HomeRangeTotal[sp][n][rangeid]
+                                                                                                                                    * bm->boxes[ij].HomeRangeInfo[sp].rangewgt[rij] / (prop_range + small_num);
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                            
+                                                                                                                            init_stock_struct_prop[sp][n][stock_id] += bm->boxes[ij].tr[k][den];
+                                                                                                                            
+                                                                                                                            bm->totbiom[sp] += (bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn]) * bm->boxes[ij].tr[k][den];
+                                                                                                                            bm->targetspbiom[sp][ij] += (bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn]) * bm->boxes[ij].tr[k][den];
+                                                                                                                            
                                                                                                                         }
                                                                                                                     }
+                                                                                                                }
+                                                                                                            }
+                                                                                                            
+                                                                                                            //fprintf(llogfp,"%s move2 now has next_larvae set to %d\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae);
+                                                                                                            //printf("%s move2 now has next_larvae set to %d\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae);
+                                                                                                            
+                                                                                                            /* Finalise migration now all boxes iterated through */
+                                                                                                            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                                                                                                stage = FunctGroupArray[sp].cohort_stage[n];
+                                                                                                                if (MIGRATION[sp].ActualMigrator[stage] > 0) {
+                                                                                                                    dynsn = VERTinfo[sp][n][SN_id];
+                                                                                                                    dynrn = VERTinfo[sp][n][RN_id];
                                                                                                                     
-                                                                                                                    init_stock_struct_prop[sp][n][stock_id] += bm->boxes[ij].tr[k][den];
+                                                                                                                    if (!spupdatemig) {
+                                                                                                                        avgsn = dynsn;
+                                                                                                                        avgrn = dynrn;
+                                                                                                                    }
                                                                                                                     
-                                                                                                                    bm->totbiom[sp] += (bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn]) * bm->boxes[ij].tr[k][den];
-                                                                                                                    bm->targetspbiom[sp][ij] += (bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn]) * bm->boxes[ij].tr[k][den];
-                                                                                                                    
-                                                                                                                }
-                                                                                                            }
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                    //fprintf(llogfp,"%s move2 now has next_larvae set to %d\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae);
-                                                                                                    //printf("%s move2 now has next_larvae set to %d\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae);
-                                                                                                    
-                                                                                                    /* Finalise migration now all boxes iterated through */
-                                                                                                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                                                                                        stage = FunctGroupArray[sp].cohort_stage[n];
-                                                                                                        if (MIGRATION[sp].ActualMigrator[stage] > 0) {
-                                                                                                            dynsn = VERTinfo[sp][n][SN_id];
-                                                                                                            dynrn = VERTinfo[sp][n][RN_id];
-                                                                                                            
-                                                                                                            if (!spupdatemig) {
-                                                                                                                avgsn = dynsn;
-                                                                                                                avgrn = dynrn;
-                                                                                                            }
-                                                                                                            
-                                                                                                            /* If assuming migrants just emerge into the model domain at the correct size */
-                                                                                                            if (!bm->flagavgmig && spupdatemig) {
-                                                                                                                avgsn = 0;
-                                                                                                                avgrn = 0;
-                                                                                                                /*
-                                                                                                                for (i = 0; i < spmigrate; i++) {
-                                                                                                                Migration[sp][i][n][SN_id] = KMIG[sp][n][SN_id];
-                                                                                                                Migration[sp][i][n][RN_id] = KMIG[sp][n][RN_id];
-                                                                                                                }
-                                                                                                                */
-                                                                                                                
-                                                                                                                // TODO: Fix for multiyr case
-                                                                                                                for (qid = 0; qid < spmigrate; qid++) {
-                                                                                                                    if (MIGRATION[sp].DEN[n][qid] > 0) {
-                                                                                                                        avgsn = MIGRATION[sp].SN[n][qid];
-                                                                                                                        avgrn = MIGRATION[sp].RN[n][qid];
-                                                                                                                        break;
-                                                                                                                    }
-                                                                                                                }
-                                                                                                            }
-                                                                                                            
-                                                                                                            /* Store migrants in box 0 layer 0 so can look at it in netcdf output file
-                                                                                                            - initialised above and then give average values for size and total numbers */
-                                                                                                            sn = FunctGroupArray[sp].structNTracers[n];
-                                                                                                            rn = FunctGroupArray[sp].resNTracers[n];
-                                                                                                            den = FunctGroupArray[sp].NumsTracers[n];
-                                                                                                            
-                                                                                                            finalmig = 0;
-                                                                                                            
-                                                                                                            for (qid = 0; qid < spmigrate; qid++) {
-                                                                                                                finalmig += MIGRATION[sp].DEN[n][qid];
-                                                                                                            }
-                                                                                                            
-                                                                                                            bm->boxes[0].tr[0][sn] = avgsn;
-                                                                                                            bm->boxes[0].tr[0][rn] = avgrn;
-                                                                                                            bm->boxes[0].tr[0][den] += finalmig;
-                                                                                                            
-                                                                                                            stage = FunctGroupArray[sp].cohort_stage[n];
-                                                                                                            
-                                                                                                            /**
-                                                                                                            if (do_debug2) {
-                                                                                                            if(finalmig > 0){
-                                                                                                            fprintf(llogfp, "Time: %e setting %s-%d-mig sn = %e, rn = %e, finalmig = %e (totmigDEN: %e, totden: %e), spupdatemig= %d\n", bm->dayt, FunctGroupArray[sp].groupCode, n, avgsn, avgrn, finalmig, bm->boxes[0].tr[0][den], totden[sp][n], spupdatemig);
-                                                                                                            }
-                                                                                                            }
-                                                                                                            **/
-                                                                                                            
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                    /* Store population sizes and check stock structure and contaminant levels - has to be done post migration step so have final numbers */
-                                                                                                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                                                                                        VERTabund_check[sp][n] = totden[sp][n];
-                                                                                                        
-                                                                                                        if(bm->track_contaminants && FunctGroupArray[sp].isVertebrate){
-                                                                                                            Move_Vert_Contaminated(bm, sp, n, currentden);
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                }
-                                                                                            }
-                                                                                            
-                                                                                            /**
-                                                                                            //sp = bm->which_check;
-                                                                                            sp = 33;
-                                                                                            if (sp <= bm->K_num_tot_sp){
-                                                                                            if (FunctGroupArray[sp].isVertebrate == TRUE) {
-                                                                                            for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                            if (bm->boxes[ij].type != BOUNDARY) {
-                                                                                            for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                                                                                            den = FunctGroupArray[sp].NumsTracers[n];
-                                                                                            
-                                                                                            fprintf(llogfp, "END END Time: %e, %s-%d box%d-%d totden: %e, den: %e (newden: %e totden_check: %e)\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, totden[sp][n], bm->boxes[ij].tr[k][den], newden[sp][n][k][ij], totden_check[sp][n]);
-                                                                                            }
-                                                                                            }
-                                                                                            }
-                                                                                            }
-                                                                                            }
-                                                                                            }
-                                                                                            **/
-                                                                                            
-                                                                                            if(verbose) {
-                                                                                                printf("Movement complete\n");
-                                                                                            }
-                                                                                            
-                                                                                            fflush(stdout);     /* in case stdout and stderr are the same so can track soem frees*/
-                                                                                            fflush(stderr);
-                                                                                            
-                                                                                            if (bm->debug && (mig_done && ((bm->debug == debug_migrate) || (bm->debug == debug_general)) && (bm->dayt > bm->checkstart)))
-                                                                                            Check_Gape(bm, llogfp);
-                                                                                            
-                                                                                            
-                                                                                            return;
-                                                                                        }
-                                                                                        
-                                                                                        /**
-                                                                                        *	\brief This routine calculates any movements by invertebrates
-                                                                                        *	(horizontal or vertical).
-                                                                                        *
-                                                                                        *	Incudes vertical migration for pelagic groups and broader geographic
-                                                                                        *	movements (currently on prescribed) for lobsters and age structured
-                                                                                        *	vertebrates (cephalopods and prawns)
-                                                                                        *
-                                                                                        * Basic algorithm for migration out of the model:
-                                                                                        *
-                                                                                        * For each migrating invertebrate group
-                                                                                        * Calculate the total biomass in the model
-                                                                                        * For each non-boundary box calculate the new group density in that box based on the prescribed movement and migration
-                                                                                        * Calculate the new biomass in each box as the total biomass * new biomass proportion in each box.
-                                                                                        *
-                                                                                        * Migration into the model
-                                                                                        *
-                                                                                        *
-                                                                                        */
-                                                                                        
-                                                                                        void Ecology_Invert_Migration(MSEBoxModel *bm, double dt, FILE *llogfp) {
-                                                                                            int fgIndex;
-                                                                                            int ij, k, day_part, pid, sp, flagsp, qid, sp_ddepend_move, sp_geo_move, spmigrate, spmigrate_done, cohort, flagcontract_sp, stage, maxk, stagger_return;
-                                                                                            int temp_sensitive_sp, salt_sensitive_sp;
-                                                                                            double amt, current_enviro, min_temp_sp, max_temp_sp, migperiod, FSM_sp, FSMG_sp, migtime, migbiom, migbiom_basic, FSMG_grow, totamt, min_O2_sp, min_salt_sp, max_salt_sp, contract_sp, pH_scale, K_temp_const_sp, K_salt_const_sp, K_o2_const_sp, numScalar, stagger_scalar;
-                                                                                            //double min_spawnsalt_sp, max_spawnsalt_sp, min_spawntemp_sp, max_spawntemp_sp; - TODO: Shouldn't these be used?
-                                                                                            //double origamt;
-                                                                                            //double step1, step2;
-                                                                                            double migtime2;
-                                                                                            int qrt, next_qrt, this_HowFar, agec, sp_Migrate_Years;
-                                                                                            //int sp_debug;
-                                                                                            // do_debug;
-                                                                                            int enviro_depend = 0;
-                                                                                            double some_ice, midpoint;
-                                                                                            double ldayt = bm->t / 86400.0;
-                                                                                            int cells_impacted = 0;
-                                                                                            int cells_checked = 0;
-                                                                                            double numScalar_final = 1.0;
-                                                                                            
-                                                                                            if (verbose > 0)
-                                                                                            printf("Doing invertebrate movement\n");
-                                                                                            
-                                                                                            if (bm->flagtempdepend_move || bm->flagsaltdepend || bm->flagO2depend)
-                                                                                            enviro_depend = 1;
-                                                                                            
-                                                                                            //printf("Creating invert migration arrays\n");
-                                                                                            
-                                                                                            current_enviro = 0.0;
-                                                                                            
-                                                                                            /*
-                                                                                            if (bm->debug && ((bm->debug == debug_migrate) || ((bm->debug > debug_eat) || ((bm->debug > debug_spawn) && (bm->debug < debug_biom)))) && (bm->dayt
-                                                                                            > (bm->checkstart - 1)))
-                                                                                            do_debug = 1;
-                                                                                            else
-                                                                                            do_debug = 0;
-                                                                                            */
-                                                                                            
-                                                                                            /* If the fish are also moving then the Q10 calcs will have been done then - else do it now */
-                                                                                            if (!bm->fishmove){
-                                                                                                midpoint = bm->boxes[1].inside.y;
-                                                                                                
-                                                                                                Parameter_Q10(bm, &bm->boxes[1], ldayt, 1, 0, bm->boxes[1].nz - 1, midpoint, WC, llogfp);
-                                                                                            }
-                                                                                            
-                                                                                            
-                                                                                            if (bm->flagday)
-                                                                                            day_part = 0;
-                                                                                            else
-                                                                                            day_part = 1;
-                                                                                            
-                                                                                            /* Initialise local arrays */
-                                                                                            for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-                                                                                                if (FunctGroupArray[sp].isVertebrate == FALSE && FunctGroupArray[sp].isImpacted == TRUE) {
-                                                                                                    bm->totbiom[sp] = 0.0;
-                                                                                                    for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                        bm->targetspbiom[sp][ij] = 0.0;
-                                                                                                    }
-                                                                                                }
-                                                                                            }
-                                                                                            
-                                                                                            /* Determine the new distribution for the diel vertical migrating invertebrates */
-                                                                                            for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
-                                                                                                Util_Init_1D_Double(totboxden, (bm->K_num_max_cohort * bm->K_num_max_genetypes), 0.0);
-                                                                                                
-                                                                                                sp = fgIndex;
-                                                                                                cells_impacted = 0;
-                                                                                                cells_checked = 0;
-                                                                                                numScalar_final = 1.0;
-                                                                                                
-                                                                                                if ((FunctGroupArray[sp].isVertebrate == TRUE) || (FunctGroupArray[sp].isDetritus == TRUE)) {  // As not an invertebrate (biomass pool)
-                                                                                                    continue;
-                                                                                                }
-                                                                                                
-                                                                                                flagsp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
-                                                                                                sp_ddepend_move = (int) (FunctGroupArray[sp].speciesParams[ddepend_move_id]);
-                                                                                                min_temp_sp = FunctGroupArray[sp].speciesParams[min_move_temp_id];
-                                                                                                max_temp_sp = FunctGroupArray[sp].speciesParams[max_move_temp_id];
-                                                                                                min_salt_sp = FunctGroupArray[sp].speciesParams[min_move_salt_id];
-                                                                                                max_salt_sp = FunctGroupArray[sp].speciesParams[max_move_salt_id];
-                                                                                                min_O2_sp = FunctGroupArray[sp].speciesParams[min_O2_id];
-                                                                                                
-                                                                                                temp_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagtempsensitive_id]);
-                                                                                                salt_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagSaltSensitive_id]);
-                                                                                                
-                                                                                                if (FunctGroupArray[sp].numMoveEntries != 4) {
-                                                                                                    this_HowFar = FunctGroupArray[sp].HowFar;
-                                                                                                } else {
-                                                                                                    this_HowFar = bm->HowFar;
-                                                                                                }
-                                                                                                
-                                                                                                if(!bm->flagtempdepend_move) { // Have turned off temperature dependent movement
-                                                                                                    if(temp_sensitive_sp && bm->newmonth) {
-                                                                                                        warn("Ecology_Invert_Migration: Time: %e Zeroing temperature sensitivity for movement of %s even though flagtempsensitive %d as flagtempdepend_move = %d\n", bm->dayt, FunctGroupArray[fgIndex].groupCode, temp_sensitive_sp, bm->flagtempdepend_move);
-                                                                                                    }
-                                                                                                    temp_sensitive_sp = 0;
-                                                                                                }
-                                                                                                
-                                                                                                // For non-mobile invertebrates constrain them to initial distributions
-                                                                                                if(bm->flagconstrain_epiwander && (FunctGroupArray[fgIndex].habitatType == EPIFAUNA) && !FunctGroupArray[fgIndex].sp_geo_move) {
-                                                                                                    pid = FunctGroupArray[fgIndex].totNTracers[0];
-                                                                                                    for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                        if (!FunctGroupArray[sp].distrib[ij][0][0])
-                                                                                                        bm->boxes[ij].epi[pid] = 0.0;
-                                                                                                    }
-                                                                                                }
-                                                                                                
-                                                                                                // Put in environmental limitations for non-mobile groups
-                                                                                                if (enviro_depend && flagsp && (FunctGroupArray[fgIndex].sp_geo_move == FALSE)) {
-                                                                                                    /* If temperature dependent check to see if temperatures suitable here.
-                                                                                                    If not zero the entry. Similarly for salinity and oxygen. */
-                                                                                                    for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
-                                                                                                        pid = FunctGroupArray[fgIndex].totNTracers[cohort];
-                                                                                                        for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                            if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA)
-                                                                                                            maxk = 0;
-                                                                                                            else
-                                                                                                            maxk = bm->boxes[ij].nz;
-                                                                                                            
-                                                                                                            for (k = 0; k < maxk; k++) {
-                                                                                                                /* Noise and light pollution avoidance */
-                                                                                                                if (FunctGroupArray[sp].isLightEffected) {
-                                                                                                                    current_enviro = bm->boxes[ij].tr[k][Light_Pollution_i];
-                                                                                                                    if (current_enviro > 0) {
-                                                                                                                        if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA)
-                                                                                                                        bm->boxes[ij].epi[pid] *= (FunctGroupArray[sp].speciesParams[light_coefft_id] / (current_enviro + small_num));
-                                                                                                                        else
-                                                                                                                        bm->boxes[ij].tr[k][pid] *= (FunctGroupArray[sp].speciesParams[light_coefft_id] / (current_enviro + small_num));
-                                                                                                                    }
-                                                                                                                }
-                                                                                                                
-                                                                                                                if (FunctGroupArray[sp].isNoiseEffected) {
-                                                                                                                    current_enviro = bm->boxes[ij].tr[k][Noise_Pollution_i];
-                                                                                                                    if (current_enviro > 0) {
-                                                                                                                        if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA)
-                                                                                                                        bm->boxes[ij].epi[pid] *= (FunctGroupArray[sp].speciesParams[noise_coefft_id] / (current_enviro + small_num));
-                                                                                                                        else
-                                                                                                                        bm->boxes[ij].tr[k][pid] *= (FunctGroupArray[sp].speciesParams[noise_coefft_id] / (current_enviro + small_num));
-                                                                                                                    }
-                                                                                                                }
-                                                                                                                
-                                                                                                                /* Other physical environment */
-                                                                                                                numScalar = 1.0;
-                                                                                                                current_enviro = bm->boxes[ij].tr[k][Temp_i];
-                                                                                                                K_temp_const_sp = FunctGroupArray[sp].speciesParams[K_temp_const_id];
-                                                                                                                numScalar = Get_Enviro_Move_Scalar(temp_sensitive_sp, current_enviro, K_temp_const_sp, min_temp_sp, max_temp_sp, sp, 1, bm->dayt, llogfp);
-                                                                                                                if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA) {
-                                                                                                                    bm->boxes[ij].epi[pid] *= numScalar;
-                                                                                                                } else {
-                                                                                                                    bm->boxes[ij].tr[k][pid] *= numScalar;
-                                                                                                                }
-                                                                                                                
-                                                                                                                numScalar = 1.0;
-                                                                                                                current_enviro = bm->boxes[ij].tr[k][Salinity_i];
-                                                                                                                K_salt_const_sp = FunctGroupArray[sp].speciesParams[K_salt_const_id];
-                                                                                                                numScalar = Get_Enviro_Move_Scalar(salt_sensitive_sp, current_enviro, K_salt_const_sp, min_salt_sp, max_salt_sp, sp, 2, bm->dayt, llogfp);
-                                                                                                                if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA) {
-                                                                                                                    bm->boxes[ij].epi[pid] *= numScalar;
-                                                                                                                } else {
-                                                                                                                    bm->boxes[ij].tr[k][pid] *= numScalar;
-                                                                                                                }
-                                                                                                                
-                                                                                                                numScalar = 1.0;
-                                                                                                                current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
-                                                                                                                K_o2_const_sp = FunctGroupArray[sp].speciesParams[K_o2_const_id];
-                                                                                                                numScalar = Get_Enviro_Move_Scalar(bm->flagO2depend, current_enviro, K_o2_const_sp, min_O2_sp, 10000000000.0, sp, 3, bm->dayt, llogfp);
-                                                                                                                if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA) {
-                                                                                                                    bm->boxes[ij].epi[pid] *= numScalar;
-                                                                                                                } else {
-                                                                                                                    bm->boxes[ij].tr[k][pid] *= numScalar;
-                                                                                                                }
-                                                                                                                
-                                                                                                                // If ice dependent and no ice present then not present
-                                                                                                                if(bm->ice_on) {
-                                                                                                                    some_ice = Get_Ice_Presence(bm, sp, cohort, ij, 0, bm->ICE_HABITATlike);
-                                                                                                                    if(!some_ice){
-                                                                                                                        if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA)
-                                                                                                                        bm->boxes[ij].epi[pid] = 0.0;
-                                                                                                                        else
-                                                                                                                        bm->boxes[ij].tr[k][pid] = 0.0;
-                                                                                                                    }
-                                                                                                                }
-                                                                                                                
-                                                                                                                if(bm->track_contaminants && bm->biopools_dodge_contam) {
-                                                                                                                    cells_checked++;
-                                                                                                                    
-                                                                                                                    // Contaminant avoidance
-                                                                                                                    numScalar = Avoid_Contaminants(bm, sp, cohort, ij, k);
-                                                                                                                    if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA) {
-                                                                                                                        bm->boxes[ij].epi[pid] *= numScalar;
-                                                                                                                        numScalar_final *= numScalar;
-                                                                                                                    } else {
-                                                                                                                        bm->boxes[ij].tr[k][pid] *= numScalar;
-                                                                                                                        numScalar_final *= numScalar;
-                                                                                                                    }
-                                                                                                                }
-                                                                                                                
-                                                                                                                if(bm->flagenviro_warn && (numScalar_final != 1.0)) {
-                                                                                                                    cells_impacted++;
-                                                                                                                }
-                                                                                                                
-                                                                                                            }
-                                                                                                        }
-                                                                                                    }
-                                                                                                }
-                                                                                                
-                                                                                                /* Dedicated invertebrate movements */
-                                                                                                if (flagsp && (FunctGroupArray[fgIndex].speciesParams[flag_id] == TRUE) && (FunctGroupArray[fgIndex].isVertebrate == FALSE) && (FunctGroupArray[fgIndex].isMobile == TRUE)) {
-                                                                                                    
-                                                                                                    spmigrate = MIGRATION[sp].num_in_queue;
-                                                                                                    spmigrate_done = MIGRATION[sp].num_in_queue_done;
-                                                                                                    sp_geo_move = FunctGroupArray[fgIndex].sp_geo_move;
-                                                                                                    
-                                                                                                    /* Make parameter adjustments due to acidification */
-                                                                                                    flagcontract_sp = (int)FunctGroupArray[sp].speciesParams[flagcontract_tol_id];
-                                                                                                    pH_scale = (FunctGroupArray[sp].pHcorr - 1.0);
-                                                                                                    if( flagcontract_sp  && (pH_scale > 0.0)) {
-                                                                                                        contract_sp = FunctGroupArray[sp].speciesParams[contract_tol_id];
-                                                                                                        min_temp_sp += contract_sp * pH_scale;
-                                                                                                        max_temp_sp -= contract_sp * pH_scale;
-                                                                                                    }
-                                                                                                    
-                                                                                                    if ((sp_ddepend_move > sedentary_move) && (sp_ddepend_move != no_move))
-                                                                                                    quit("No density- or forage- dependent movement for invertebrates yet, set ddepend_move flag to 0 or 1 for %s or set to 4 for no geographic movement\n", FunctGroupArray[sp].groupCode);
-                                                                                                    
-                                                                                                    /* Get the current season index */
-                                                                                                    qrt = FunctGroupArray[sp].moveEntryIndex;
-                                                                                                    next_qrt = FunctGroupArray[sp].next_moveEntryIndex;
-                                                                                                    
-                                                                                                    for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
-                                                                                                        pid = FunctGroupArray[fgIndex].totNTracers[cohort];
-                                                                                                        stage = FunctGroupArray[fgIndex].cohort_stage[cohort];
-                                                                                                        FSM_sp = 1.0;
-                                                                                                        FSMG_sp = 1.0;
-                                                                                                        
-                                                                                                        //sp_debug = do_debug;
-                                                                                                        /* Sort this out now so we don't have to keep doing this test all though this function
-                                                                                                        if (do_debug && (((bm->move_check < no_move_check) && (bm->move_check > bm->K_num_tot_sp - 1)) || (sp == bm->move_check))) {
-                                                                                                        sp_debug = 2;
-                                                                                                        }
-                                                                                                        */
-                                                                                                        
-                                                                                                        /* Starting biomass check */
-                                                                                                        totamt = 0.0;
-                                                                                                        
-                                                                                                        for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                            amt = 0;
-                                                                                                            if (bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND) {
-                                                                                                                if (FunctGroupArray[fgIndex].habitatType != EPIFAUNA) {
-                                                                                                                    for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                        amt += bm->boxes[ij].tr[k][pid];
-                                                                                                                        totamt += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
-                                                                                                                        
+                                                                                                                    /* If assuming migrants just emerge into the model domain at the correct size */
+                                                                                                                    if (!bm->flagavgmig && spupdatemig) {
+                                                                                                                        avgsn = 0;
+                                                                                                                        avgrn = 0;
                                                                                                                         /*
-                                                                                                                        if (sp_debug == 2) {
-                                                                                                                        fprintf(llogfp, "Time: %e, sp %s (%d)in box: %d layer: %d, starts with %e (%.20e)\n",
-                                                                                                                        bm->dayt, FunctGroupArray[sp].groupCode, pid, ij, k, amt, bm->boxes[ij].tr[k][pid]);
+                                                                                                                        for (i = 0; i < spmigrate; i++) {
+                                                                                                                        Migration[sp][i][n][SN_id] = KMIG[sp][n][SN_id];
+                                                                                                                        Migration[sp][i][n][RN_id] = KMIG[sp][n][RN_id];
                                                                                                                         }
                                                                                                                         */
+                                                                                                                        
+                                                                                                                        // TODO: Fix for multiyr case
+                                                                                                                        for (qid = 0; qid < spmigrate; qid++) {
+                                                                                                                            if (MIGRATION[sp].DEN[n][qid] > 0) {
+                                                                                                                                avgsn = MIGRATION[sp].SN[n][qid];
+                                                                                                                                avgrn = MIGRATION[sp].RN[n][qid];
+                                                                                                                                break;
+                                                                                                                            }
+                                                                                                                        }
                                                                                                                     }
-                                                                                                                } else {
-                                                                                                                    amt += bm->boxes[ij].epi[pid];
-                                                                                                                    totamt += bm->boxes[ij].epi[pid] * bm->boxes[ij].area;
+                                                                                                                    
+                                                                                                                    /* Store migrants in box 0 layer 0 so can look at it in netcdf output file
+                                                                                                                    - initialised above and then give average values for size and total numbers */
+                                                                                                                    sn = FunctGroupArray[sp].structNTracers[n];
+                                                                                                                    rn = FunctGroupArray[sp].resNTracers[n];
+                                                                                                                    den = FunctGroupArray[sp].NumsTracers[n];
+                                                                                                                    
+                                                                                                                    finalmig = 0;
+                                                                                                                    
+                                                                                                                    for (qid = 0; qid < spmigrate; qid++) {
+                                                                                                                        finalmig += MIGRATION[sp].DEN[n][qid];
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    bm->boxes[0].tr[0][sn] = avgsn;
+                                                                                                                    bm->boxes[0].tr[0][rn] = avgrn;
+                                                                                                                    bm->boxes[0].tr[0][den] += finalmig;
+                                                                                                                    
+                                                                                                                    stage = FunctGroupArray[sp].cohort_stage[n];
                                                                                                                     
                                                                                                                     /**
-                                                                                                                    if (sp_debug == 2) {
-                                                                                                                    fprintf(llogfp, "Time: %e, sp %s in box: %d epilayer starts with %e\n", bm->dayt, FunctGroupArray[sp].groupCode, ij, amt);
+                                                                                                                    if (do_debug2) {
+                                                                                                                    if(finalmig > 0){
+                                                                                                                    fprintf(llogfp, "Time: %e setting %s-%d-mig sn = %e, rn = %e, finalmig = %e (totmigDEN: %e, totden: %e), spupdatemig= %d\n", bm->dayt, FunctGroupArray[sp].groupCode, n, avgsn, avgrn, finalmig, bm->boxes[0].tr[0][den], totden[sp][n], spupdatemig);
+                                                                                                                    }
                                                                                                                     }
                                                                                                                     **/
-                                                                                                                }
-                                                                                                            }
-                                                                                                        }
-                                                                                                        
-                                                                                                        //origamt = totamt;
-                                                                                                        /*
-                                                                                                        if (sp_debug == 2) {
-                                                                                                        fprintf(llogfp, "Time: %e %s:%d total starting amt: %.20e ", bm->dayt, FunctGroupArray[sp].groupCode, cohort, totamt);
-                                                                                                        fprintf(llogfp, "spmigrate = %d ", spmigrate);
-                                                                                                        fprintf(llogfp, "sp_ddepend_move = %d ", sp_ddepend_move);
-                                                                                                        fprintf(llogfp, "sp_geo_move = %d\n", sp_geo_move);
-                                                                                                        
-                                                                                                        }
-                                                                                                        */
-                                                                                                        
-                                                                                                        /* Store biomass so can scale movement distributions */
-                                                                                                        totboxden[invert_biosum+cohort] = totamt;
-                                                                                                        
-                                                                                                        
-                                                                                                    }
-                                                                                                    
-                                                                                                    for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
-                                                                                                        /** Bring back migrants **/
-                                                                                                        for (qid = spmigrate_done; qid < spmigrate; qid++) {
-                                                                                                            migperiod = MIGRATION[sp].Return_Period[qid];
-                                                                                                            FSM_sp = MIGRATION[sp].survival[qid];
-                                                                                                            FSMG_sp = MIGRATION[sp].growth[qid];
-                                                                                                            stagger_return = MIGRATION[sp].Stagger[qid][return_stagger_id];
-                                                                                                            
-                                                                                                            
-                                                                                                            /**
-                                                                                                            if (sp_debug == 2) {
-                                                                                                            fprintf(llogfp, "Time: %e, %s-%d (stage %d) is moving with migrate qid %d: Return_Now: %d, migperiod: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, cohort, stage, qid, MIGRATION[sp].Return_Now[qid], migperiod);
-                                                                                                            }
-                                                                                                            **/
-                                                                                                            
-                                                                                                            // Update for stagger - so more return in the next year if any stagger left
-                                                                                                            if (bm->dayt == (MIGRATION[sp].Return_Now[qid] + migperiod + 1.0)) {
-                                                                                                                if (MIGRATION[sp].num_stagger[qid] > 0) {
-                                                                                                                    MIGRATION[sp].Return_Now[qid] += 365;
-                                                                                                                    MIGRATION[sp].num_stagger[qid] -= 1;
-                                                                                                                }
-                                                                                                            }
-                                                                                                            
-                                                                                                            /* Migration back into to model domain */
-                                                                                                            if ((bm->dayt >= MIGRATION[sp].Return_Now[qid]) && (bm->dayt < (MIGRATION[sp].Return_Now[qid] + migperiod)) && (bm->t / 86400.0 > 0.0)) {
-                                                                                                                /* Update numbers for returning migrants and then update overall size, based on contributions from returning migrants */
-                                                                                                                migtime = MIGRATION[sp].Return_Now[qid] - MIGRATION[sp].Leave_Now[qid];
-                                                                                                                
-                                                                                                                /* Calculate the proportion that are coming back in this timesetp */
-                                                                                                                migtime2 = Calculate_Migration_Proportion_Back(bm, llogfp, dt, sp, MIGRATION[sp].Return_Now[qid], migperiod);
-                                                                                                                
-                                                                                                                // Reduce prop returning if staggering (so some left for next stagger year)
-                                                                                                                if (MIGRATION[sp].num_stagger[qid] > 0) {
-                                                                                                                    stagger_scalar = 1.0 / (double)(MIGRATION[sp].num_stagger[qid]);
-                                                                                                                    migtime2 *= stagger_scalar;
-                                                                                                                }
-                                                                                                                
-                                                                                                                /* Migrants coming in all years after the first year are
-                                                                                                                based on populations that migrated out of the model domain previously,
-                                                                                                                otherwise use in KMIGa (set up in biolsetup) */
-                                                                                                                migbiom_basic = MIGRATION[sp].DEN[cohort][qid] * migtime2;
-                                                                                                                MIGRATION[sp].DEN[cohort][qid] -= migbiom_basic;
-                                                                                                                /* Reset Migration matrix if all have returned or this migration period is over */
-                                                                                                                if (MIGRATION[sp].DEN[cohort][qid] < 0.0) {
-                                                                                                                    MIGRATION[sp].DEN[cohort][qid] = 0.0;
-                                                                                                                }
-                                                                                                                
-                                                                                                                /* Correct for losses while away */
-                                                                                                                migbiom = FSM_sp * migbiom_basic;
-                                                                                                                
-                                                                                                                /* Adjust to account for growth during the intervening period */
-                                                                                                                FSMG_grow = 1.0 + (FSMG_sp * migtime / 364.0);
-                                                                                                                migbiom *= FSMG_grow;
-                                                                                                                
-                                                                                                                totboxden[invert_biosum+cohort] += migbiom;
-                                                                                                                
-                                                                                                                if ((bm->dayt + 2) > (MIGRATION[sp].Return_Now[qid] + migperiod)) {
-                                                                                                                    MIGRATION[sp].DEN[cohort][qid] = 0.0;
-                                                                                                                }
-                                                                                                                
-                                                                                                                /*
-                                                                                                                if (sp_debug == 2) {
-                                                                                                                fprintf(llogfp, "Time: %e, %s-%d Migration %d Total biomass back into model = %e ",
-                                                                                                                bm->dayt, FunctGroupArray[sp].groupCode, cohort, qid, migbiom * bm->X_CN * mg_2_tonne);
-                                                                                                                fprintf(bm->logFile, "MIGRATION[sp].DEN[stage][qid] = %e\n", MIGRATION[sp].DEN[cohort][qid] * bm->X_CN * mg_2_tonne);
-                                                                                                                }
-                                                                                                                */
-                                                                                                            }
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                    /* Store diagnostics if needed for system cap calculations */
-                                                                                                    if(bm->do_syst_cap) {
-                                                                                                        Store_Min_Max_Avg(bm, sp);
-                                                                                                    }
-                                                                                                    
-                                                                                                    for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
-                                                                                                        /** Do any horizontal movement necessary **/
-                                                                                                        /* Currently assumes prescribed migration. And deposits
-                                                                                                        the migrating individuals in lowest water column layer
-                                                                                                        and lets vertical movement routine below redistribute them.
-                                                                                                        Also note that reusing newden and totboxden arrays but as
-                                                                                                        no vertical layering or cohort loops required using on the
-                                                                                                        first cell in each of those dimensions (thus newden[n][0][0][ij],
-                                                                                                        totboxden[0]).
-                                                                                                        
-                                                                                                        TODO: Make this consistent with vertebrates and move animals at
-                                                                                                        approrpiate water column layers - have started this with the enviro checks
-                                                                                                        */
-                                                                                                        if (!sp_ddepend_move && sp_geo_move) {
-                                                                                                            totboxden[invert_propsum] = 0;
-                                                                                                            
-                                                                                                            for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                                if (bm->boxes[ij].type != BOUNDARY) {
                                                                                                                     
-                                                                                                                    // Check to see if epifauna or water column dwellers in terms of locations to check for environmental conditions
+                                                                                                                }
+                                                                                                            }
+                                                                                                            
+                                                                                                            /* Store population sizes and check stock structure and contaminant levels - has to be done post migration step so have final numbers */
+                                                                                                            for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                                                                                                VERTabund_check[sp][n] = totden[sp][n];
+                                                                                                                
+                                                                                                                if(bm->track_contaminants && FunctGroupArray[sp].isVertebrate){
+                                                                                                                    Move_Vert_Contaminated(bm, sp, n, currentden);
+                                                                                                                }
+                                                                                                            }
+                                                                                                            
+                                                                                                        }
+                                                                                                    }
+                                                                                                    
+                                                                                                    /**
+                                                                                                    //sp = bm->which_check;
+                                                                                                    sp = 33;
+                                                                                                    if (sp <= bm->K_num_tot_sp){
+                                                                                                    if (FunctGroupArray[sp].isVertebrate == TRUE) {
+                                                                                                    for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                    if (bm->boxes[ij].type != BOUNDARY) {
+                                                                                                    for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                                                                                                    den = FunctGroupArray[sp].NumsTracers[n];
+                                                                                                    
+                                                                                                    fprintf(llogfp, "END END Time: %e, %s-%d box%d-%d totden: %e, den: %e (newden: %e totden_check: %e)\n", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, totden[sp][n], bm->boxes[ij].tr[k][den], newden[sp][n][k][ij], totden_check[sp][n]);
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    **/
+                                                                                                    
+                                                                                                    if(verbose) {
+                                                                                                        printf("Movement complete\n");
+                                                                                                    }
+                                                                                                    
+                                                                                                    fflush(stdout);     /* in case stdout and stderr are the same so can track soem frees*/
+                                                                                                    fflush(stderr);
+                                                                                                    
+                                                                                                    if (bm->debug && (mig_done && ((bm->debug == debug_migrate) || (bm->debug == debug_general)) && (bm->dayt > bm->checkstart)))
+                                                                                                    Check_Gape(bm, llogfp);
+                                                                                                    
+                                                                                                    
+                                                                                                    return;
+                                                                                                }
+                                                                                                
+                                                                                                /**
+                                                                                                *	\brief This routine calculates any movements by invertebrates
+                                                                                                *	(horizontal or vertical).
+                                                                                                *
+                                                                                                *	Incudes vertical migration for pelagic groups and broader geographic
+                                                                                                *	movements (currently on prescribed) for lobsters and age structured
+                                                                                                *	vertebrates (cephalopods and prawns)
+                                                                                                *
+                                                                                                * Basic algorithm for migration out of the model:
+                                                                                                *
+                                                                                                * For each migrating invertebrate group
+                                                                                                * Calculate the total biomass in the model
+                                                                                                * For each non-boundary box calculate the new group density in that box based on the prescribed movement and migration
+                                                                                                * Calculate the new biomass in each box as the total biomass * new biomass proportion in each box.
+                                                                                                *
+                                                                                                * Migration into the model
+                                                                                                *
+                                                                                                *
+                                                                                                */
+                                                                                                
+                                                                                                void Ecology_Invert_Migration(MSEBoxModel *bm, double dt, FILE *llogfp) {
+                                                                                                    int fgIndex;
+                                                                                                    int ij, k, day_part, pid, sp, flagsp, qid, sp_ddepend_move, sp_geo_move, spmigrate, spmigrate_done, cohort, flagcontract_sp, stage, maxk, stagger_return;
+                                                                                                    int temp_sensitive_sp, salt_sensitive_sp;
+                                                                                                    double amt, current_enviro, min_temp_sp, max_temp_sp, migperiod, FSM_sp, FSMG_sp, migtime, migbiom, migbiom_basic, FSMG_grow, totamt, min_O2_sp, min_salt_sp, max_salt_sp, contract_sp, pH_scale, K_temp_const_sp, K_salt_const_sp, K_o2_const_sp, numScalar, stagger_scalar;
+                                                                                                    //double min_spawnsalt_sp, max_spawnsalt_sp, min_spawntemp_sp, max_spawntemp_sp; - TODO: Shouldn't these be used?
+                                                                                                    //double origamt;
+                                                                                                    //double step1, step2;
+                                                                                                    double migtime2;
+                                                                                                    int qrt, next_qrt, this_HowFar, agec, sp_Migrate_Years;
+                                                                                                    //int sp_debug;
+                                                                                                    // do_debug;
+                                                                                                    int enviro_depend = 0;
+                                                                                                    double some_ice, midpoint;
+                                                                                                    double ldayt = bm->t / 86400.0;
+                                                                                                    int cells_impacted = 0;
+                                                                                                    int cells_checked = 0;
+                                                                                                    double numScalar_final = 1.0;
+                                                                                                    
+                                                                                                    if (verbose > 0)
+                                                                                                    printf("Doing invertebrate movement\n");
+                                                                                                    
+                                                                                                    if (bm->flagtempdepend_move || bm->flagsaltdepend || bm->flagO2depend)
+                                                                                                    enviro_depend = 1;
+                                                                                                    
+                                                                                                    //printf("Creating invert migration arrays\n");
+                                                                                                    
+                                                                                                    current_enviro = 0.0;
+                                                                                                    
+                                                                                                    /*
+                                                                                                    if (bm->debug && ((bm->debug == debug_migrate) || ((bm->debug > debug_eat) || ((bm->debug > debug_spawn) && (bm->debug < debug_biom)))) && (bm->dayt
+                                                                                                    > (bm->checkstart - 1)))
+                                                                                                    do_debug = 1;
+                                                                                                    else
+                                                                                                    do_debug = 0;
+                                                                                                    */
+                                                                                                    
+                                                                                                    /* If the fish are also moving then the Q10 calcs will have been done then - else do it now */
+                                                                                                    if (!bm->fishmove){
+                                                                                                        midpoint = bm->boxes[1].inside.y;
+                                                                                                        
+                                                                                                        Parameter_Q10(bm, &bm->boxes[1], ldayt, 1, 0, bm->boxes[1].nz - 1, midpoint, WC, llogfp);
+                                                                                                    }
+                                                                                                    
+                                                                                                    
+                                                                                                    day_part = bm->flagday;   /* 1 = day, 0 = night, as for vertebrates; distrib_VERTICAL[1] = VERTday */
+                                                                                                    
+                                                                                                    /* Initialise local arrays */
+                                                                                                    for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+                                                                                                        if (FunctGroupArray[sp].isVertebrate == FALSE && FunctGroupArray[sp].isImpacted == TRUE) {
+                                                                                                            bm->totbiom[sp] = 0.0;
+                                                                                                            for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                                bm->targetspbiom[sp][ij] = 0.0;
+                                                                                                            }
+                                                                                                        }
+                                                                                                    }
+                                                                                                    
+                                                                                                    /* Determine the new distribution for the diel vertical migrating invertebrates */
+                                                                                                    for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
+                                                                                                        Util_Init_1D_Double(totboxden, (bm->K_num_max_cohort * bm->K_num_max_genetypes), 0.0);
+                                                                                                        
+                                                                                                        sp = fgIndex;
+                                                                                                        cells_impacted = 0;
+                                                                                                        cells_checked = 0;
+                                                                                                        numScalar_final = 1.0;
+                                                                                                        
+                                                                                                        if ((FunctGroupArray[sp].isVertebrate == TRUE) || (FunctGroupArray[sp].isDetritus == TRUE)) {  // As not an invertebrate (biomass pool)
+                                                                                                            continue;
+                                                                                                        }
+                                                                                                        
+                                                                                                        flagsp = (int) (FunctGroupArray[sp].speciesParams[flag_id]);
+                                                                                                        sp_ddepend_move = (int) (FunctGroupArray[sp].speciesParams[ddepend_move_id]);
+                                                                                                        min_temp_sp = FunctGroupArray[sp].speciesParams[min_move_temp_id];
+                                                                                                        max_temp_sp = FunctGroupArray[sp].speciesParams[max_move_temp_id];
+                                                                                                        min_salt_sp = FunctGroupArray[sp].speciesParams[min_move_salt_id];
+                                                                                                        max_salt_sp = FunctGroupArray[sp].speciesParams[max_move_salt_id];
+                                                                                                        min_O2_sp = FunctGroupArray[sp].speciesParams[min_O2_id];
+                                                                                                        
+                                                                                                        temp_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagtempsensitive_id]);
+                                                                                                        salt_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagSaltSensitive_id]);
+                                                                                                        
+                                                                                                        if (FunctGroupArray[sp].numMoveEntries != 4) {
+                                                                                                            this_HowFar = FunctGroupArray[sp].HowFar;
+                                                                                                        } else {
+                                                                                                            this_HowFar = bm->HowFar;
+                                                                                                        }
+                                                                                                        
+                                                                                                        if(!bm->flagtempdepend_move) { // Have turned off temperature dependent movement
+                                                                                                            if(temp_sensitive_sp && bm->newmonth) {
+                                                                                                                warn("Ecology_Invert_Migration: Time: %e Zeroing temperature sensitivity for movement of %s even though flagtempsensitive %d as flagtempdepend_move = %d\n", bm->dayt, FunctGroupArray[fgIndex].groupCode, temp_sensitive_sp, bm->flagtempdepend_move);
+                                                                                                            }
+                                                                                                            temp_sensitive_sp = 0;
+                                                                                                        }
+                                                                                                        
+                                                                                                        // For non-mobile invertebrates constrain them to initial distributions
+                                                                                                        if(bm->flagconstrain_epiwander && (FunctGroupArray[fgIndex].habitatType == EPIFAUNA) && !FunctGroupArray[fgIndex].sp_geo_move) {
+                                                                                                            pid = FunctGroupArray[fgIndex].totNTracers[0];
+                                                                                                            for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                                if (!FunctGroupArray[sp].distrib[ij][0][0])
+                                                                                                                bm->boxes[ij].epi[pid] = 0.0;
+                                                                                                            }
+                                                                                                        }
+                                                                                                        
+                                                                                                        // Put in environmental limitations for non-mobile groups
+                                                                                                        if (enviro_depend && flagsp && (FunctGroupArray[fgIndex].sp_geo_move == FALSE)) {
+                                                                                                            /* If temperature dependent check to see if temperatures suitable here.
+                                                                                                            If not zero the entry. Similarly for salinity and oxygen. */
+                                                                                                            for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
+                                                                                                                pid = FunctGroupArray[fgIndex].totNTracers[cohort];
+                                                                                                                for (ij = 0; ij < bm->nbox; ij++) {
                                                                                                                     if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA)
                                                                                                                     maxk = 0;
                                                                                                                     else
                                                                                                                     maxk = bm->boxes[ij].nz;
                                                                                                                     
-                                                                                                                    /* Prescribed movement */
-                                                                                                                    newden[sp][cohort][0][ij] = this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][cohort] - FunctGroupArray[sp].distrib[ij][qrt][cohort]) + FunctGroupArray[sp].distrib[ij][qrt][cohort];
-                                                                                                                    
-                                                                                                                    /*
-                                                                                                                    if(sp_debug == 2){
-                                                                                                                    fprintf(llogfp,"day: %e, %s-newden[%d][%d]: %e, HowFar: %e, distrib%s-%d-%d-%d: %e, distrib%s-%d-%d-%d: %e\n",
-                                                                                                                    bm->dayt, FunctGroupArray[sp].groupCode, cohort, ij, newden[sp][cohort][0][ij], this_HowFar, FunctGroupArray[sp].groupCode, ij, next_qrt, cohort, FunctGroupArray[sp].distrib[ij][next_qrt][cohort], FunctGroupArray[sp].groupCode, ij, qrt, cohort, FunctGroupArray[sp].distrib[ij][qrt][cohort]);
-                                                                                                                    }
-                                                                                                                    */
-                                                                                                                    
-                                                                                                                    /* Do environmental checks - FIX - This needs to be tidied up in new code where
-                                                                                                                    distinction between vertebrates and invertebrates reduced */
-                                                                                                                    
-                                                                                                                    if (enviro_depend) {
-                                                                                                                        /* If temperature dependent check to see if temperatures suitable here.
-                                                                                                                        If not zero the entry. Simialrly for salinity and oxygen. */
-                                                                                                                        for (k = 0; k < maxk; k++) {
-                                                                                                                            /* Noise and light pollution avoidance */
-                                                                                                                            if (FunctGroupArray[sp].isLightEffected) {
-                                                                                                                                current_enviro = bm->boxes[ij].tr[k][Light_Pollution_i];
-                                                                                                                                if (current_enviro > 0) {
-                                                                                                                                    newden[sp][cohort][k][ij] *= (FunctGroupArray[sp].speciesParams[light_coefft_id] / (current_enviro + small_num));
-                                                                                                                                }
+                                                                                                                    for (k = 0; k < maxk; k++) {
+                                                                                                                        /* Noise and light pollution avoidance */
+                                                                                                                        if (FunctGroupArray[sp].isLightEffected) {
+                                                                                                                            current_enviro = bm->boxes[ij].tr[k][Light_Pollution_i];
+                                                                                                                            if (current_enviro > 0) {
+                                                                                                                                if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA)
+                                                                                                                                bm->boxes[ij].epi[pid] *= (FunctGroupArray[sp].speciesParams[light_coefft_id] / (current_enviro + small_num));
+                                                                                                                                else
+                                                                                                                                bm->boxes[ij].tr[k][pid] *= (FunctGroupArray[sp].speciesParams[light_coefft_id] / (current_enviro + small_num));
                                                                                                                             }
-                                                                                                                            
-                                                                                                                            if (FunctGroupArray[sp].isNoiseEffected) {
-                                                                                                                                current_enviro = bm->boxes[ij].tr[k][Noise_Pollution_i];
-                                                                                                                                if (current_enviro > 0) {
-                                                                                                                                    newden[sp][cohort][k][ij] *= (FunctGroupArray[sp].speciesParams[noise_coefft_id] / (current_enviro + small_num));
-                                                                                                                                }
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        if (FunctGroupArray[sp].isNoiseEffected) {
+                                                                                                                            current_enviro = bm->boxes[ij].tr[k][Noise_Pollution_i];
+                                                                                                                            if (current_enviro > 0) {
+                                                                                                                                if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA)
+                                                                                                                                bm->boxes[ij].epi[pid] *= (FunctGroupArray[sp].speciesParams[noise_coefft_id] / (current_enviro + small_num));
+                                                                                                                                else
+                                                                                                                                bm->boxes[ij].tr[k][pid] *= (FunctGroupArray[sp].speciesParams[noise_coefft_id] / (current_enviro + small_num));
                                                                                                                             }
-                                                                                                                            
-                                                                                                                            /* Other physical environment */
-                                                                                                                            numScalar = 1.0;
-                                                                                                                            current_enviro = bm->boxes[ij].tr[k][Temp_i];
-                                                                                                                            K_temp_const_sp = FunctGroupArray[sp].speciesParams[K_temp_const_id];
-                                                                                                                            numScalar = Get_Enviro_Move_Scalar(temp_sensitive_sp, current_enviro, K_temp_const_sp, min_temp_sp, max_temp_sp, sp, 1, bm->dayt, llogfp);
-                                                                                                                            newden[sp][cohort][k][ij] *= numScalar;
-                                                                                                                            
-                                                                                                                            if (temp_sensitive_sp && !numScalar) {
-                                                                                                                                warn("Group %s in box %d:%d in movement code is set to 0 as the current temperature (%f) is outside the allowed range %f - %f\n", FunctGroupArray[sp].groupCode, ij, k, current_enviro, min_temp_sp, max_temp_sp);
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        /* Other physical environment */
+                                                                                                                        numScalar = 1.0;
+                                                                                                                        current_enviro = bm->boxes[ij].tr[k][Temp_i];
+                                                                                                                        K_temp_const_sp = FunctGroupArray[sp].speciesParams[K_temp_const_id];
+                                                                                                                        numScalar = Get_Enviro_Move_Scalar(temp_sensitive_sp, current_enviro, K_temp_const_sp, min_temp_sp, max_temp_sp, sp, 1, bm->dayt, llogfp);
+                                                                                                                        if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA) {
+                                                                                                                            bm->boxes[ij].epi[pid] *= numScalar;
+                                                                                                                        } else {
+                                                                                                                            bm->boxes[ij].tr[k][pid] *= numScalar;
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        numScalar = 1.0;
+                                                                                                                        current_enviro = bm->boxes[ij].tr[k][Salinity_i];
+                                                                                                                        K_salt_const_sp = FunctGroupArray[sp].speciesParams[K_salt_const_id];
+                                                                                                                        numScalar = Get_Enviro_Move_Scalar(salt_sensitive_sp, current_enviro, K_salt_const_sp, min_salt_sp, max_salt_sp, sp, 2, bm->dayt, llogfp);
+                                                                                                                        if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA) {
+                                                                                                                            bm->boxes[ij].epi[pid] *= numScalar;
+                                                                                                                        } else {
+                                                                                                                            bm->boxes[ij].tr[k][pid] *= numScalar;
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        numScalar = 1.0;
+                                                                                                                        current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
+                                                                                                                        K_o2_const_sp = FunctGroupArray[sp].speciesParams[K_o2_const_id];
+                                                                                                                        numScalar = Get_Enviro_Move_Scalar(bm->flagO2depend, current_enviro, K_o2_const_sp, min_O2_sp, 10000000000.0, sp, 3, bm->dayt, llogfp);
+                                                                                                                        if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA) {
+                                                                                                                            bm->boxes[ij].epi[pid] *= numScalar;
+                                                                                                                        } else {
+                                                                                                                            bm->boxes[ij].tr[k][pid] *= numScalar;
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        // If ice dependent and no ice present then not present
+                                                                                                                        if(bm->ice_on) {
+                                                                                                                            some_ice = Get_Ice_Presence(bm, sp, cohort, ij, 0, bm->ICE_HABITATlike);
+                                                                                                                            if(!some_ice){
+                                                                                                                                if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA)
+                                                                                                                                bm->boxes[ij].epi[pid] = 0.0;
+                                                                                                                                else
+                                                                                                                                bm->boxes[ij].tr[k][pid] = 0.0;
                                                                                                                             }
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        if(bm->track_contaminants && bm->biopools_dodge_contam) {
+                                                                                                                            cells_checked++;
                                                                                                                             
-                                                                                                                            numScalar = 1.0;
-                                                                                                                            current_enviro = bm->boxes[ij].tr[k][Salinity_i];
-                                                                                                                            K_salt_const_sp = FunctGroupArray[sp].speciesParams[K_salt_const_id];
-                                                                                                                            numScalar = Get_Enviro_Move_Scalar(salt_sensitive_sp, current_enviro, K_salt_const_sp, min_salt_sp, max_salt_sp, sp, 2, bm->dayt, llogfp);
-                                                                                                                            newden[sp][cohort][k][ij] *= numScalar;
-                                                                                                                            
-                                                                                                                            if (salt_sensitive_sp && !numScalar) {
-                                                                                                                                warn("Group %s in box %d:%d in movement code is set to 0 as the salinity is outside the allowed range %e-%e\n", FunctGroupArray[sp].groupCode, ij, k, min_salt_sp, max_salt_sp);
-                                                                                                                            }
-                                                                                                                            
-                                                                                                                            numScalar = 1.0;
-                                                                                                                            current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
-                                                                                                                            K_o2_const_sp = FunctGroupArray[sp].speciesParams[K_o2_const_id];
-                                                                                                                            numScalar = Get_Enviro_Move_Scalar(bm->flagO2depend, current_enviro, K_o2_const_sp, min_O2_sp, 10000000000.0, sp, 3, bm->dayt, llogfp);
-                                                                                                                            newden[sp][cohort][k][ij] *= numScalar;
-                                                                                                                            
-                                                                                                                            if (bm->flagO2depend && !numScalar) {
-                                                                                                                                warn("Group %s in box %d:%d in movement code is set to 0 as the oxygen is below the allowed min %e\n", FunctGroupArray[sp].groupCode, ij, k, min_O2_sp);
-                                                                                                                            }
-                                                                                                                            
-                                                                                                                            // If ice dependent and no ice present then not present
-                                                                                                                            if(bm->ice_on) {
-                                                                                                                                some_ice = Get_Ice_Presence(bm, sp, cohort, ij, 0, bm->ICE_HABITATlike);
-                                                                                                                                if(!some_ice){
-                                                                                                                                    newden[sp][cohort][k][ij] = 0.0;
-                                                                                                                                }
-                                                                                                                            }
-                                                                                                                            
-                                                                                                                            if(bm->track_contaminants && bm->biopools_dodge_contam) {
-                                                                                                                                cells_checked++;
-                                                                                                                                // Contaminant avoidance
-                                                                                                                                numScalar = Avoid_Contaminants(bm, sp, cohort, ij, k);
-                                                                                                                                newden[sp][cohort][k][ij] *= numScalar;
+                                                                                                                            // Contaminant avoidance
+                                                                                                                            numScalar = Avoid_Contaminants(bm, sp, cohort, ij, k);
+                                                                                                                            if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA) {
+                                                                                                                                bm->boxes[ij].epi[pid] *= numScalar;
+                                                                                                                                numScalar_final *= numScalar;
+                                                                                                                            } else {
+                                                                                                                                bm->boxes[ij].tr[k][pid] *= numScalar;
                                                                                                                                 numScalar_final *= numScalar;
                                                                                                                             }
-                                                                                                                            
-                                                                                                                            if(bm->flagenviro_warn && (numScalar_final != 1.0)) {
-                                                                                                                                cells_impacted++;
-                                                                                                                            }
-                                                                                                                            
-                                                                                                                        }
-                                                                                                                    }
-                                                                                                                    
-                                                                                                                    /*
-                                                                                                                    if(sp_debug == 2){
-                                                                                                                    fprintf(llogfp,"%s enviro_depend: %d, flagtempdepend: %d, current_enviro: %e, min_temp_sp: %e, max_temp_sp: %e\n",
-                                                                                                                    FunctGroupArray[sp].groupCode, enviro_depend, bm->flagtempdepend, current_enviro, min_temp_sp, max_temp_sp);
-                                                                                                                    fprintf(llogfp,"%s flagsaltdepend: %d, current_enviro: %e, min_salt_sp: %e, max_salt_sp: %e\n",
-                                                                                                                    FunctGroupArray[sp].groupCode, bm->flagsaltdepend, current_enviro, min_salt_sp, max_salt_sp);
-                                                                                                                    fprintf(llogfp,"%s flagO2depend: %d,  min_O2_sp: %e\n",
-                                                                                                                    FunctGroupArray[sp].groupCode,  bm->flagO2depend, min_O2_sp);
-                                                                                                                    
-                                                                                                                    }
-                                                                                                                    */
-                                                                                                                    
-                                                                                                                    /* Total up the new proportions just to make sure */
-                                                                                                                    totboxden[invert_propsum] += newden[sp][cohort][0][ij];
-                                                                                                                    
-                                                                                                                    for (qid = spmigrate_done; qid < spmigrate; qid++) {
-                                                                                                                        migperiod = MIGRATION[sp].Leave_Period[qid];
-                                                                                                                        
-                                                                                                                        /* Migration out of model domain */
-                                                                                                                        if ((bm->dayt >= MIGRATION[sp].Leave_Now[qid]) && (bm->dayt < (MIGRATION[sp].Leave_Now[qid] + migperiod)) && (bm->t / 86400.0 > 0.0) && (MIGRATION[sp].cohort_migrating[cohort][qid] > 0)) {
-                                                                                                                            
-                                                                                                                            /* Calculate the proportion that are leaving in this timesetp */
-                                                                                                                            migtime2 = Calculate_Migration_Proportion(bm, llogfp, dt, sp, MIGRATION[sp].Leave_Now[qid], migperiod, MIGRATION[sp].Box[ij][qid]);
-                                                                                                                            
-                                                                                                                            /* Calculate proportion of tot biomass that will
-                                                                                                                            migrate out of the system this timestep */
-                                                                                                                            migbiom = newden[sp][cohort][0][ij] * migtime2;
-                                                                                                                            newden[sp][cohort][0][ij] -= migbiom;
-                                                                                                                            
-                                                                                                                            /* Update the Migration array to take account of the new
-                                                                                                                            immigrants */
-                                                                                                                            MIGRATION[sp].DEN[cohort][qid] += migbiom * totboxden[invert_biosum];
-                                                                                                                            
-                                                                                                                            MIGRATION[sp].num_stagger[qid] = 0;
-                                                                                                                            if(FunctGroupArray[sp].multiyr_mig) {
-                                                                                                                                sp_Migrate_Years = (int) (MIGRATION[sp].MinYearsAway[qid]);
-                                                                                                                                if ((sp_Migrate_Years > 1) && (stagger_return)) {
-                                                                                                                                    MIGRATION[sp].num_stagger[qid] = MIGRATION[sp].Stagger[qid][stagger_years_id];
-                                                                                                                                }
-                                                                                                                            }                                
-                                                                                                                            
-                                                                                                                            for (agec = 0; agec < FunctGroupArray[sp].ageClassSize; agec++) {
-                                                                                                                                MIGRATION[sp].pop_ratio[qid][cohort][agec] = MIGRATION[sp].current_pop_ratio[cohort][agec];
-                                                                                                                            }
-                                                                                                                            
-                                                                                                                            /*
-                                                                                                                            if (sp_debug == 2){
-                                                                                                                            fprintf(llogfp, "%s-%d Migration %d Box:%d Biomass out of box = %e (migbiom: %e)\n",
-                                                                                                                            FunctGroupArray[sp].groupCode, cohort, qid, ij, migbiom * totboxden[invert_biosum], migbiom);
-                                                                                                                            }
-                                                                                                                            */
-                                                                                                                        }
-                                                                                                                    }
-                                                                                                                }
-                                                                                                            }
-                                                                                                            
-                                                                                                            /*
-                                                                                                            if (sp_debug == 2) {
-                                                                                                            for (qid = 0; qid < spmigrate; qid++) {
-                                                                                                            fprintf(llogfp, "Time: %e, %s-%d Migration %d Total group biomass outside model is %e\n",
-                                                                                                            bm->dayt, FunctGroupArray[sp].groupCode, stage, qid, MIGRATION[sp].DEN[cohort][qid] * bm->X_CN * mg_2_tonne);
-                                                                                                            }
-                                                                                                            }
-                                                                                                            */
-                                                                                                            
-                                                                                                            /* If something doesn't add up normalise */
-                                                                                                            if (totboxden[invert_propsum] != 1.0) {
-                                                                                                                for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                                    if (bm->boxes[ij].type != BOUNDARY) {
-                                                                                                                        newden[sp][cohort][0][ij] = newden[sp][cohort][0][ij] / (totboxden[invert_propsum] + small_num);
-                                                                                                                    }
-                                                                                                                }
-                                                                                                            }
-                                                                                                            
-                                                                                                            /* Allocate to new locations */
-                                                                                                            if (FunctGroupArray[fgIndex].habitatType != EPIFAUNA) {
-                                                                                                                /* Animals allowed in the water column - including prawns */
-                                                                                                                for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                                    if (bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND) {
-                                                                                                                        /* As benthic invertebrates or water column	invertebrates
-                                                                                                                        with vertical movement still to happen put entire biomass
-                                                                                                                        in bottom-most water layer and set all other layers
-                                                                                                                        to zero - divide by volume so back in mgN m-3 */
-                                                                                                                        bm->boxes[ij].tr[0][pid] = totboxden[invert_biosum+cohort] * newden[sp][cohort][0][ij] / (bm->boxes[ij].dz[0] * bm->boxes[ij].area + small_num);
-                                                                                                                        
-                                                                                                                        /*
-                                                                                                                        if(sp_debug == 2){
-                                                                                                                        fprintf(llogfp,"%s has totboxden: %e, newden[%d][%d]: %e\n", FunctGroupArray[sp].groupCode, totboxden[invert_biosum], cohort, ij, newden[sp][cohort][0][ij]);
-                                                                                                                        }
-                                                                                                                        */
-                                                                                                                        
-                                                                                                                        for (k = 1; k < bm->boxes[ij].nz; k++) {
-                                                                                                                            bm->boxes[ij].tr[k][pid] = 0;
-                                                                                                                        }
-                                                                                                                    }
-                                                                                                                }
-                                                                                                            } else {
-                                                                                                                /* Epibenthos */
-                                                                                                                for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                                    if (bm->boxes[ij].type != BOUNDARY) {
-                                                                                                                        bm->boxes[ij].epi[pid] = totboxden[invert_biosum+cohort] * newden[sp][cohort][0][ij] / (bm->boxes[ij].area + small_num);
-                                                                                                                    }
-                                                                                                                }
-                                                                                                            }
-                                                                                                        }
-                                                                                                        
-                                                                                                        /* Intermediate biomass check *
-                                                                                                        if (sp_debug == 2) {
-                                                                                                        totamt = 0;
-                                                                                                        for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                        if (bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND) {
-                                                                                                        amt = 0;
-                                                                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                        amt += bm->boxes[ij].tr[k][pid];
-                                                                                                        totamt += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
-                                                                                                        fprintf(llogfp, "Time: %e, sp %s in box: %d layer: %d, ends ddepend with %e (%.20e)\n",
-                                                                                                        bm->dayt, FunctGroupArray[sp].groupCode, ij, k, amt, bm->boxes[ij].tr[k][pid]);
-                                                                                                        }
-                                                                                                        }
-                                                                                                        }
-                                                                                                        
-                                                                                                        fprintf(llogfp, "Time: %e, %s total end biom: %e (%e of orig)\n", bm->dayt, FunctGroupArray[sp].groupCode, totamt, totamt / origamt);
-                                                                                                        
-                                                                                                        }
-                                                                                                        */
-                                                                                                        
-                                                                                                        /** For animals in the water column do any vertical movement necessary **/
-                                                                                                        if (FunctGroupArray[fgIndex].habitatType != EPIFAUNA) {
-                                                                                                            for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                                if (bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND) {
-                                                                                                                    
-                                                                                                                    amt = 0.0;
-                                                                                                                    
-                                                                                                                    /* Calculate total in the local watercolumn */
-                                                                                                                    for (k = 0; k < bm->boxes[ij].nz; k++){
-                                                                                                                        amt += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
-                                                                                                                        
-                                                                                                                        if (!(_finite(bm->boxes[ij].tr[k][pid] ))) {
-                                                                                                                            fprintf(stderr, "Ecology_Invert_Migration - Tracer %s in Box %d, layer %d is infinite\n", Varname[pid], ij, k);
-                                                                                                                            abort();
-                                                                                                                        }
-                                                                                                                    }
-                                                                                                                    /* Get vertical distribution - fo any non-mobile groups */
-                                                                                                                    for (k = 0; k < bm->boxes[ij].nz; k++){
-                                                                                                                        currentden[fgIndex][cohort][k][ij] = bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area / (amt + small_num);
-                                                                                                                    }
-                                                                                                                    
-                                                                                                                    /* Get vertical distribution - including environmental constraints */
-                                                                                                                    Get_Vertical_Distribution(bm, ij, sp, currentden, enviro_depend, day_part, cohort, llogfp);
-                                                                                                                    
-                                                                                                                    for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                        /* Update stored vertdistrib value - so can condition catch timeseries if need be */
-                                                                                                                        if (FunctGroupArray[sp].isImpacted == TRUE){
-                                                                                                                            bm->boxes[ij].vert_vdistrib[sp][stage][k] = tempdistrib[k][stage];
                                                                                                                         }
                                                                                                                         
-                                                                                                                        /* Redistribute accordingly */
-                                                                                                                        bm->boxes[ij].tr[k][pid] = amt * tempdistrib[k][cohort] / (bm->boxes[ij].dz[k] * bm->boxes[ij].area + small_num);
-                                                                                                                        
-                                                                                                                        if (!(_finite(bm->boxes[ij].tr[k][pid] ))) {
-                                                                                                                            printf("amt = %e,  tempdistrib[k][0] = %e, bm->boxes[ij].dz[k] = %e, bm->boxes[ij].area = %e \n",
-                                                                                                                                amt,  tempdistrib[k][cohort], bm->boxes[ij].dz[k], bm->boxes[ij].area);
-                                                                                                                                quit("Ecology_Invert_Migration - day: %e, box: %d, layer: %d %s set to %e.\n",
-                                                                                                                                    bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[sp].groupCode,
-                                                                                                                                    bm->boxes[ij].tr[k][pid] );
-                                                                                                                                }
-                                                                                                                                
-                                                                                                                                /**
-                                                                                                                                if (sp_debug == 2) {
-                                                                                                                                fprintf(llogfp, "Time: %e, sp %s in box: %d layer: %d, ends redistrib with %.20e (amt: %.20e tempdistrib: %.20e)\n",
-                                                                                                                                bm->dayt, FunctGroupArray[sp].groupCode, ij, k, bm->boxes[ij].tr[k][pid], amt, tempdistrib[k][cohort]);
-                                                                                                                                }
-                                                                                                                                **/
-                                                                                                                                
-                                                                                                                            }
-                                                                                                                        }
-                                                                                                                    }
-                                                                                                                }
-                                                                                                                
-                                                                                                                /* Final biomass check *
-                                                                                                                if (sp_debug == 2) {
-                                                                                                                totamt = 0;
-                                                                                                                for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                                if (bm->boxes[ij].type ==LAND){
-                                                                                                                amt = bm->boxes[ij].tr[0][pid];
-                                                                                                                totamt += bm->boxes[ij].tr[0][pid] * bm->boxes[ij].area;
-                                                                                                                
-                                                                                                                } else if (bm->boxes[ij].type != BOUNDARY) {
-                                                                                                                amt = 0;
-                                                                                                                if (FunctGroupArray[fgIndex].habitatType != EPIFAUNA) {
-                                                                                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                amt += bm->boxes[ij].tr[k][pid];
-                                                                                                                totamt += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
-                                                                                                                fprintf(llogfp, "Time: %e, sp %s in box: %d layer: %d, ends with %e (%e, dz: %e, area: %e)\n",
-                                                                                                                bm->dayt, FunctGroupArray[sp].groupCode, ij, k, amt, bm->boxes[ij].tr[k][pid], bm->boxes[ij].dz[k], bm->boxes[ij].area);
-                                                                                                                }
-                                                                                                                } else {
-                                                                                                                amt += bm->boxes[ij].epi[pid];
-                                                                                                                totamt += bm->boxes[ij].epi[pid] * bm->boxes[ij].area;
-                                                                                                                }
-                                                                                                                }
-                                                                                                                }
-                                                                                                                
-                                                                                                                fprintf(llogfp, "Time: %e, %s total end biom: %e (%e of orig)\n", bm->dayt, FunctGroupArray[sp].groupCode, totamt, totamt / origamt);
-                                                                                                                }
-                                                                                                                */
-                                                                                                            }
-                                                                                                        }
-                                                                                                        
-                                                                                                        
-                                                                                                        if(bm->flagenviro_warn & cells_impacted) {
-                                                                                                            fprintf(llogfp, "Time: %e %s is environmemtally constrained in %d of %d cells (box*layer*cohort combos)\n", bm->dayt, FunctGroupArray[sp].groupCode, cells_impacted, cells_checked);
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                    
-                                                                                                    /* Update fisheries target groups */
-                                                                                                    for(ij=0; ij<bm->nbox; ij++){
-                                                                                                        if(bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND){
-                                                                                                            /* Pelagic invertebrates */
-                                                                                                            for(sp = 0; sp < bm->K_num_tot_sp; sp++){
-                                                                                                                if(FunctGroupArray[sp].isVertebrate == FALSE && FunctGroupArray[sp].isImpacted == TRUE){
-                                                                                                                    
-                                                                                                                    for(cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++){
-                                                                                                                        pid = FunctGroupArray[sp].totNTracers[cohort];
-                                                                                                                        
-                                                                                                                        if(FunctGroupArray[sp].habitatType == WC) {
-                                                                                                                            for(k=0; k<bm->boxes[ij].nz; k++){
-                                                                                                                                bm->totbiom[sp] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
-                                                                                                                                bm->targetspbiom[sp][ij] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
-                                                                                                                            }
-                                                                                                                        } else if(FunctGroupArray[sp].habitatType == SED) {
-                                                                                                                            for(k=0; k<bm->boxes[ij].sm.nz; k++){
-                                                                                                                                bm->totbiom[sp] += bm->boxes[ij].sm.tr[k][pid] * bm->boxes[ij].sm.dz[k] * bm->boxes[ij].area;
-                                                                                                                                bm->targetspbiom[sp][ij] += bm->boxes[ij].sm.tr[k][pid] * bm->boxes[ij].sm.dz[k] * bm->boxes[ij].area;
-                                                                                                                            }
-                                                                                                                        } else {
-                                                                                                                            bm->totbiom[sp] += bm->boxes[ij].epi[pid] * bm->boxes[ij].area;
-                                                                                                                            bm->targetspbiom[sp][ij] += bm->boxes[ij].epi[pid] * bm->boxes[ij].area;
-                                                                                                                        }
-                                                                                                                    }
-                                                                                                                }
-                                                                                                            }
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                    return;
-                                                                                                }
-                                                                                                
-                                                                                                /**
-                                                                                                *	\brief This routine introduces invading species by scaling existing trophic group.
-                                                                                                *
-                                                                                                *	Incudes scaling for vertebrate and invertebrate groups
-                                                                                                *
-                                                                                                */
-                                                                                                void Ecology_Invading_Species(MSEBoxModel *bm, double dt, FILE *llogfp) {
-                                                                                                    int ij, k, sk, den, n, curr_ind, last_ind, b, chkbox, nb, chrtstage, habsp, go_there, found_food, prey, pn, preystage, bk;
-                                                                                                    double InvadeScalar = 0.0, InvadeHowFar = 0.0, step1 = 0.0, tot_scalar = 0.0, this_depth = 0.0,
-                                                                                                    sp_like = 0.0, dist_scalar = 1.0;
-                                                                                                    double sp_likeREEF, sp_likeFLAT, sp_likeSOFT, sp_likeCANYON, preyamt, this_scalar, dist;
-                                                                                                    
-                                                                                                    if ((bm->dayt < bm->InvaderStartDay) || (bm->dayt > bm->InvaderEndDay))
-                                                                                                    return;
-                                                                                                    
-                                                                                                    if (verbose > 0)
-                                                                                                    printf("Ecology_Invading_Species\n");
-                                                                                                    
-                                                                                                    /* Add the inital invaders */
-                                                                                                    if (bm->InvadersEntering && (bm->dayt >= bm->InvaderStartDay)) {
-                                                                                                        for (n = bm->minInvaderAge; n < bm->maxInvaderAge; n++) {
-                                                                                                            den = FunctGroupArray[bm->InvaderIndex].NumsTracers[n];
-                                                                                                            bm->boxes[bm->InvaderEntryBox].tr[bm->InvaderEntryLayer][den] = bm->InvaderStartNums[n];
-                                                                                                            bm->InvadersEntering = 0;  // So not done again next time
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                    switch (bm->invading_sp_model) {
-                                                                                                        case no_invader: /* Nothing to do so continue */
-                                                                                                        break;
-                                                                                                        case simple_invader: /* Simple invading species */
-                                                                                                        if (FunctGroupArray[bm->InvaderIndex].isVertebrate == TRUE) {
-                                                                                                            /* Invading species is a vertebrate so scale numbers in
-                                                                                                            appropriate cohorts. Do it only in first entry box as
-                                                                                                            explicit movement will move it from there
-                                                                                                            */
-                                                                                                            for (n = bm->minInvaderAge; n < bm->maxInvaderAge; n++) {
-                                                                                                                den = FunctGroupArray[bm->InvaderIndex].NumsTracers[n];
-                                                                                                                for (k = 0; k < bm->boxes[bm->InvaderEntryBox].nz; k++) {
-                                                                                                                    bm->boxes[bm->InvaderEntryBox].tr[k][den] *= (1.0 + bm->InvaderScalar);
-                                                                                                                }
-                                                                                                            }
-                                                                                                        } else {
-                                                                                                            /* Invading species is an invertebrate so scale biomass in first cell
-                                                                                                            and spill it to adjacent cells through time, if not explicitly
-                                                                                                            migrating already (done via InvadingArray, which is set up on read-in).
-                                                                                                            */
-                                                                                                            step1 = (bm->dayt - bm->InvaderStartDay) / bm->Invadedt;
-                                                                                                            InvadeHowFar = (bm->dayt - bm->InvaderStartDay) / (bm->InvaderSatDay - bm->InvaderStartDay);
-                                                                                                            curr_ind = (int) (ceil(step1));
-                                                                                                            if (curr_ind > bm->Invadendt)
-                                                                                                            curr_ind = bm->Invadendt;
-                                                                                                            last_ind = (int) (floor(step1));
-                                                                                                            if (last_ind > bm->Invadendt)
-                                                                                                            last_ind = bm->Invadendt;
-                                                                                                            
-                                                                                                            for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                                if (bm->dayt < bm->InvaderSatDay) { /* Still spreading - below saturation */
-                                                                                                                    InvadeScalar = InvadeHowFar * (bm->InvadeArray[ij][curr_ind] - bm->InvadeArray[ij][last_ind]) + bm->InvadeArray[ij][curr_ind];
-                                                                                                                } else
-                                                                                                                /* At saturation so all increasing at same rate as inflow point */
-                                                                                                                InvadeScalar = bm->InvaderScalar;
-                                                                                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                    bm->boxes[ij].tr[k][bm->InvaderPID] *= (1.0 + InvadeScalar);
-                                                                                                                }
-                                                                                                            }
-                                                                                                        }
-                                                                                                        break;
-                                                                                                        case conditional_invader:  /* Based on depth, temperature and salinity preferences, habitat and prey */
-                                                                                                        for (b = 0; b < bm->nbox; b++) {
-                                                                                                            Util_Init_2D_Double(bm->invader_spread_scalars, bm->nbox, bm->wcnz, 0.0); // has to be here because the normalisation is over all boxes not just neigbouring boxes and then use that value to immediately go round and scale all the tracers
-                                                                                                            
-                                                                                                            /* First get new entrants */
-                                                                                                            if (b == bm->InvaderEntryBox) {
-                                                                                                                for (k = 0; k < bm->boxes[b].nz; k++) {
-                                                                                                                    if (FunctGroupArray[bm->InvaderIndex].isVertebrate == TRUE) {
-                                                                                                                        /* Invading species is a vertebrate so scale numbers in appropriate cohorts. */
-                                                                                                                        for (n = bm->minInvaderAge; n < bm->maxInvaderAge; n++) {
-                                                                                                                            den = FunctGroupArray[bm->InvaderIndex].NumsTracers[n];
-                                                                                                                            bm->boxes[bm->InvaderEntryBox].tr[k][den] *= (1.0 + bm->InvaderScalar);
-                                                                                                                        }
-                                                                                                                    } else {
-                                                                                                                        /* Invading species is an invertebrate so scale biomass in first cell
-                                                                                                                        and spill it to adjacent cells through time */
-                                                                                                                        bm->boxes[b].tr[k][bm->InvaderPID] *= (1.0 + InvadeScalar);
-                                                                                                                    }
-                                                                                                                }
-                                                                                                            }
-                                                                                                            
-                                                                                                            /* Now spread to nearby boxes with correct conditions */
-                                                                                                            tot_scalar = 0.0;
-                                                                                                            
-                                                                                                            // Need to have one entry for the local box so they don't all bleed away
-                                                                                                            this_scalar = bm->InvaderScalar;  // As a place holder for now - is just a relative weighting versus what flows to other boxes, which will be downscaled by distance to be moved
-                                                                                                            for (k = 0; k < bm->boxes[b].nz; k++) {
-                                                                                                                bm->invader_spread_scalars[b][k] = this_scalar;
-                                                                                                            }
-                                                                                                            tot_scalar += this_scalar;
-                                                                                                            
-                                                                                                            // Now do neighbouring boxes
-                                                                                                            for (chkbox = 0; chkbox < bm->boxes[b].nUniqueAdj; chkbox++) {
-                                                                                                                nb = bm->boxes[b].uniqueAdjBoxes[chkbox];
-                                                                                                                this_depth = bm->boxes[nb].botz;
-                                                                                                                if ((this_depth <= (-1.0 * FunctGroupArray[bm->InvaderIndex].speciesParams[mindepth_id])) && (this_depth >= (-1.0 * bm->InvaderMaxDepth))) {
-                                                                                                                    for (n = bm->minInvaderAge; n < bm->maxInvaderAge; n++) {
-                                                                                                                        chrtstage = FunctGroupArray[bm->InvaderIndex].cohort_stage[n];
-                                                                                                                        
-                                                                                                                        // Depth ok so check habitat
-                                                                                                                        sp_like = 0;
-                                                                                                                        if (FunctGroupArray[bm->InvaderIndex].isHabDepend > 0){
-                                                                                                                            // Check geological habitats
-                                                                                                                            sp_likeREEF = bm->HABITATlike[bm->InvaderIndex][chrtstage][bm->REEFcover_id] * bm->boxes[nb].reef;
-                                                                                                                            sp_likeFLAT = bm->HABITATlike[bm->InvaderIndex][chrtstage][bm->FLATcover_id] * bm->boxes[nb].flat;
-                                                                                                                            sp_likeSOFT = bm->HABITATlike[bm->InvaderIndex][chrtstage][bm->SOFTcover_id] * bm->boxes[nb].soft;
-                                                                                                                            sp_likeCANYON = bm->HABITATlike[bm->InvaderIndex][chrtstage][bm->CANYONcover_id];
-                                                                                                                            if ((sp_likeREEF > 0.0) || (sp_likeFLAT > 0.0) || (sp_likeSOFT > 0.0) || (sp_likeCANYON > 0.0))
-                                                                                                                            sp_like = 1;
-                                                                                                                            
-                                                                                                                            // If that not enough check biogenic habitats
-                                                                                                                            if(!sp_like) {
-                                                                                                                                for(habsp = 0; habsp < bm->K_num_tot_sp; habsp++){
-                                                                                                                                    if (FunctGroupArray[habsp].isCover == TRUE) {
-                                                                                                                                        sp_like = bm->HABITATlike[bm->InvaderIndex][chrtstage][FunctGroupArray[habsp].coverID] * bm->coveramt[FunctGroupArray[habsp].coverID][nb];
-                                                                                                                                        if (sp_like)
-                                                                                                                                        break;
-                                                                                                                                    }
-                                                                                                                                }
-                                                                                                                            }
-                                                                                                                        } else {
-                                                                                                                            sp_like = 1;
+                                                                                                                        if(bm->flagenviro_warn && (numScalar_final != 1.0)) {
+                                                                                                                            cells_impacted++;
                                                                                                                         }
                                                                                                                         
-                                                                                                                        if (sp_like) {  // Habitat found in potential new location
-                                                                                                                            for (k = 0; k < bm->boxes[nb].nz; k++) {
-                                                                                                                                // Then check the environment
-                                                                                                                                go_there = Invade_Spread(bm, bm->InvaderIndex, llogfp, b, nb, k, &dist);
-                                                                                                                                found_food = 0;
-                                                                                                                                if (go_there) {  // Conditions suitable so check prey
-                                                                                                                                    for (prey = 0; prey < bm->K_num_tot_sp; prey++) {
-                                                                                                                                        if (FunctGroupArray[prey].habitatType == WC){
-                                                                                                                                            switch (FunctGroupArray[prey].groupAgeType) {
-                                                                                                                                                case AGE_STRUCTURED:
-                                                                                                                                                break;
-                                                                                                                                                case AGE_STRUCTURED_BIOMASS:	/* Intentional follow through */
-                                                                                                                                                case BIOMASS:
-                                                                                                                                                for (pn = 0; pn < FunctGroupArray[prey].numCohortsXnumGenes; pn++) {
-                                                                                                                                                    preystage = FunctGroupArray[prey].cohort_stage[pn];
-                                                                                                                                                    preyamt = bm->boxes[nb].tr[k][FunctGroupArray[prey].totNTracers[pn]] * bm->pSPVERTeat[bm->InvaderIndex] [prey][chrtstage][preystage];
-                                                                                                                                                    if (preyamt) {
-                                                                                                                                                        found_food = 1;
-                                                                                                                                                        break;
-                                                                                                                                                    }
-                                                                                                                                                }
-                                                                                                                                                break;
-                                                                                                                                            }
-                                                                                                                                        }
-                                                                                                                                        
-                                                                                                                                        if(!found_food) {  // On bother looking for other prey if haven't found anything already
-                                                                                                                                            if (FunctGroupArray[prey].habitatType == SED){
-                                                                                                                                                for (sk = 0; sk < bm->boxes[nb].sm.nz; sk++) {  // loop over sediment layers
-                                                                                                                                                    preyamt = bm->boxes[nb].sm.tr[sk][FunctGroupArray[prey].totNTracers[0]];
-                                                                                                                                                    if (preyamt) {
-                                                                                                                                                        found_food = 1;
-                                                                                                                                                        break;
-                                                                                                                                                    }
-                                                                                                                                                }
-                                                                                                                                            }
-                                                                                                                                        }
-                                                                                                                                        if (!found_food) {
-                                                                                                                                            if (FunctGroupArray[prey].habitatType == EPIFAUNA){
-                                                                                                                                                for (pn = 0; pn < FunctGroupArray[prey].numCohortsXnumGenes; pn++) {
-                                                                                                                                                    preystage = FunctGroupArray[prey].cohort_stage[pn];
-                                                                                                                                                    preyamt = bm->boxes[nb].epi[FunctGroupArray[prey].totNTracers[pn]];
-                                                                                                                                                    if (preyamt) {
-                                                                                                                                                        found_food = 1;
-                                                                                                                                                        break;
-                                                                                                                                                    }
-                                                                                                                                                }
-                                                                                                                                            }
-                                                                                                                                        }
-                                                                                                                                        if (found_food)  // Break the count as found food at the new location
-                                                                                                                                        break;
-                                                                                                                                    }
-                                                                                                                                }
-                                                                                                                                
-                                                                                                                                if (found_food ) {  // All a go so lets find out how much moves
-                                                                                                                                    dist_scalar = bm->InvaderSpeed / dist;
-                                                                                                                                    if(dist_scalar > 1.0)
-                                                                                                                                    dist_scalar = 1.0;  // So can't all evacuate the box in one go as establishing in current box and spreading not just teleporting around the map
-                                                                                                                                    this_scalar = bm->InvaderScalar * dist_scalar;   // dt already taken into account in calculation of bm->InvaderScalar
-                                                                                                                                    bm->invader_spread_scalars[nb][k] = this_scalar;
-                                                                                                                                    tot_scalar += this_scalar;
-                                                                                                                                }else{
-                                                                                                                                    bm->invader_spread_scalars[nb][k] = 0;
-                                                                                                                                }
-                                                                                                                            }
-                                                                                                                        }
                                                                                                                     }
                                                                                                                 }
                                                                                                             }
+                                                                                                        }
+                                                                                                        
+                                                                                                        /* Dedicated invertebrate movements */
+                                                                                                        if (flagsp && (FunctGroupArray[fgIndex].speciesParams[flag_id] == TRUE) && (FunctGroupArray[fgIndex].isVertebrate == FALSE) && (FunctGroupArray[fgIndex].isMobile == TRUE)) {
                                                                                                             
-                                                                                                            // Normalise the scalars
-                                                                                                            if (tot_scalar > 0.0) {
-                                                                                                                for (nb = 0; nb < bm->nbox; nb++) {
-                                                                                                                    for (k = 0; k < bm->boxes[nb].nz; k++) {
-                                                                                                                        bm->invader_spread_scalars[nb][k] /= tot_scalar;
-                                                                                                                    }
-                                                                                                                }
-                                                                                                                
-                                                                                                                // Now do the invader dispersal
-                                                                                                                for (chkbox = 0; chkbox < bm->boxes[b].nUniqueAdj; chkbox++) {
-                                                                                                                    nb = bm->boxes[b].uniqueAdjBoxes[chkbox];
-                                                                                                                    for (k = 0; k < bm->boxes[nb].nz; k++) {
-                                                                                                                        bk = k;
-                                                                                                                        if(bk >= bm->boxes[nb].nz)
-                                                                                                                        bk = bm->boxes[nb].nz - 1;
-                                                                                                                        this_scalar = bm->invader_spread_scalars[nb][k];
-                                                                                                                        
-                                                                                                                        // Proportion of numbers or biomass in local box b dispersing to destinaiton box nb
-                                                                                                                        if (FunctGroupArray[bm->InvaderIndex].isVertebrate == TRUE) {
-                                                                                                                            for (n = bm->minInvaderAge; n < bm->maxInvaderAge; n++) {
-                                                                                                                                den = FunctGroupArray[bm->InvaderIndex].NumsTracers[n];
-                                                                                                                                bm->boxes[nb].tr[k][den] += (this_scalar * bm->boxes[b].tr[bk][den]);
-                                                                                                                            }
-                                                                                                                        } else {
-                                                                                                                            bm->boxes[nb].tr[k][bm->InvaderPID] += this_scalar * bm->boxes[b].tr[bk][bm->InvaderPID];
-                                                                                                                        }
-                                                                                                                    }
-                                                                                                                }
-                                                                                                                // Reset local numbers or biomass to reflect those that dispersed
-                                                                                                                for (k = 0; k < bm->boxes[b].nz; k++) {
-                                                                                                                    this_scalar = bm->invader_spread_scalars[b][k];
-                                                                                                                    if (FunctGroupArray[bm->InvaderIndex].isVertebrate == TRUE) {
-                                                                                                                        /* Invading species is a vertebrate so scale numbers in appropriate cohorts. */
-                                                                                                                        for (n = bm->minInvaderAge; n < bm->maxInvaderAge; n++) {
-                                                                                                                            den = FunctGroupArray[bm->InvaderIndex].NumsTracers[n];
-                                                                                                                            bm->boxes[b].tr[k][den] *= this_scalar;
-                                                                                                                        }
-                                                                                                                    } else {
-                                                                                                                        /* Invading species is an invertebrate so scale biomass in first cell
-                                                                                                                        and spill it to adjacent cells through time */
-                                                                                                                        bm->boxes[b].tr[k][bm->InvaderPID] *= this_scalar;
-                                                                                                                    }
-                                                                                                                }
-                                                                                                            }
-                                                                                                        }
-                                                                                                        
-                                                                                                        break;
-                                                                                                        case complex_invader: /* More complex invading species */
-                                                                                                        quit("No such code for this invader case - only simple case (flaginvade = 1) coded to date\n");
-                                                                                                        break;
-                                                                                                        default:
-                                                                                                        quit("No such code for this invader case - only simple case (flaginvade = 1) coded to date\n");
-                                                                                                        break;
-                                                                                                    }
-                                                                                                    
-                                                                                                    return;
-                                                                                                }
-                                                                                                
-                                                                                                /**
-                                                                                                * \brief Calculate the larvaldistrib values for the given species.
-                                                                                                *
-                                                                                                * These are used in vertebrate_reproduction to calculate the num_recruits.
-                                                                                                */
-                                                                                                int Invade_Spread(MSEBoxModel *bm, int sp, FILE *llogfp, int b, int nb, int k, double *dist ) {
-                                                                                                    int temp_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagtempsensitive_id]);
-                                                                                                    int salt_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagSaltSensitive_id]);
-                                                                                                    double min_temp_sp = FunctGroupArray[sp].speciesParams[min_move_temp_id];
-                                                                                                    double max_temp_sp = FunctGroupArray[sp].speciesParams[max_move_temp_id];
-                                                                                                    double min_salt_sp = FunctGroupArray[sp].speciesParams[min_move_salt_id];
-                                                                                                    double max_salt_sp = FunctGroupArray[sp].speciesParams[max_move_salt_id];
-                                                                                                    double min_O2_sp = FunctGroupArray[sp].speciesParams[min_O2_id];
-                                                                                                    double there_temp = bm->boxes[nb].tr[k][Temp_i];
-                                                                                                    double there_salt = bm->boxes[nb].tr[k][Salinity_i];
-                                                                                                    double there_o2 = bm->boxes[nb].tr[k][Oxygen_i];
-                                                                                                    int go_there = 0;
-                                                                                                    double current_enviro;
-                                                                                                    
-                                                                                                    double xdiff = bm->boxes[b].inside.x - bm->boxes[nb].inside.x;
-                                                                                                    double ydiff = bm->boxes[b].inside.y - bm->boxes[nb].inside.y;
-                                                                                                    *dist = sqrt(xdiff * xdiff + ydiff * ydiff);
-                                                                                                    
-                                                                                                    if(!bm->flagtempdepend_move) { // Have turned off temperature dependent movement
-                                                                                                        if(temp_sensitive_sp && bm->newmonth) {
-                                                                                                            warn("Invade_Spread: Time: %e Zeroing temperature sensitivity for movement of %s even though flagtempsensitive %d as flagtempdepend_move = %d\n", bm->dayt, FunctGroupArray[sp].groupCode, temp_sensitive_sp, bm->flagtempdepend_move);
-                                                                                                        }
-                                                                                                        temp_sensitive_sp = 0;
-                                                                                                    }
-                                                                                                    
-                                                                                                    if ((!temp_sensitive_sp) && (!salt_sensitive_sp) && (!bm->flagO2depend))
-                                                                                                    go_there = 1;
-                                                                                                    
-                                                                                                    if (temp_sensitive_sp) {
-                                                                                                        if ( (min_temp_sp > there_temp ) || (max_temp_sp < there_temp ))
-                                                                                                        go_there = 0;
-                                                                                                        else
-                                                                                                        go_there = 1;
-                                                                                                    }
-                                                                                                    
-                                                                                                    if (salt_sensitive_sp) {
-                                                                                                        if ( (min_salt_sp > there_salt ) || (max_salt_sp < there_salt ))
-                                                                                                        go_there = 0;
-                                                                                                        else
-                                                                                                        go_there = 1;
-                                                                                                    }
-                                                                                                    
-                                                                                                    if (bm->flagO2depend) {
-                                                                                                        if (there_o2 > min_O2_sp )
-                                                                                                        go_there = 1;
-                                                                                                        else
-                                                                                                        go_there = 0;
-                                                                                                    }
-                                                                                                    
-                                                                                                    /* Noise and light pollution avoidance */
-                                                                                                    if (FunctGroupArray[sp].isLightEffected) {
-                                                                                                        current_enviro = bm->boxes[nb].tr[k][Light_Pollution_i];
-                                                                                                        if (current_enviro > 0) {
-                                                                                                            go_there = ceil(FunctGroupArray[sp].speciesParams[light_coefft_id] / (current_enviro + small_num));
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                    if (FunctGroupArray[sp].isNoiseEffected) {
-                                                                                                        current_enviro = bm->boxes[nb].tr[k][Noise_Pollution_i];
-                                                                                                        if (current_enviro > 0) {
-                                                                                                            go_there = ceil(FunctGroupArray[sp].speciesParams[noise_coefft_id] / (current_enviro + small_num));
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                    
-                                                                                                    return go_there;
-                                                                                                    
-                                                                                                }
-                                                                                                
-                                                                                                /**
-                                                                                                * \brief Calculate the larvaldistrib values for the given species.
-                                                                                                *
-                                                                                                * These are used in vertebrate_reproduction to calculate the num_recruits.
-                                                                                                */
-                                                                                                int Larval_Dispersal(MSEBoxModel *bm, int sp, FILE *llogfp) {
-                                                                                                    
-                                                                                                    int ngene;
-                                                                                                    int ij;
-                                                                                                    int year = (int)((bm->t / 86400.0) / 365.0);
-                                                                                                    double totlarvae = 0;
-                                                                                                    int recipientbox, donorbox;
-                                                                                                    ij = 0;
-                                                                                                    
-                                                                                                    //	fprintf(llogfp, "Larval_Dispersal - year = %d\n", year);
-                                                                                                    //	fprintf(logfp, "bm->larvalYears = %d\n", bm->larvalYears);
-                                                                                                    //	fprintf(llogfp, "bm->larval_rewind = %d\n", bm->larval_rewind);
-                                                                                                    
-                                                                                                    if (year >= bm->larvalYears) {
-                                                                                                        if (bm->larval_rewind == TRUE)
-                                                                                                        year = 0;
-                                                                                                        else
-                                                                                                        year = bm->larvalYears;
-                                                                                                        
-                                                                                                    }
-                                                                                                    
-                                                                                                    //fprintf(llogfp, "updated - year = %d\n", year);
-                                                                                                    
-                                                                                                    // Do the matrix multiplication of connectivity matrx * adults
-                                                                                                    if (!bm->larvae_connect_only) {
-                                                                                                        for (recipientbox = 0; recipientbox < bm->nbox; recipientbox++) {
-                                                                                                            bm->larvaldistrib[recipientbox][sp] = 0;
-                                                                                                            if (bm->boxes[recipientbox].type != BOUNDARY) {
-                                                                                                                for (donorbox = 0; donorbox < bm->nbox; donorbox++) {
-                                                                                                                    for( ngene = 0; ngene < FunctGroupArray[sp].numGeneTypes; ngene++){
-                                                                                                                        bm->larvaldistrib[recipientbox][sp] += bm->recruit_hdistrib[ngene][donorbox][sp] * bm->connectivitymatrix[sp][year][donorbox][recipientbox];
-                                                                                                                    }
-                                                                                                                }
-                                                                                                                totlarvae += bm->larvaldistrib[recipientbox][sp]; // Moved from within the donorbox loop
-                                                                                                            }
-                                                                                                        }
-                                                                                                    } else {
-                                                                                                        for (recipientbox = 0; recipientbox < bm->nbox; recipientbox++) {
-                                                                                                            bm->larvaldistrib[recipientbox][sp] = 0;
-                                                                                                            if (bm->boxes[recipientbox].type != BOUNDARY) {
-                                                                                                                for (donorbox = 0; donorbox < bm->nbox; donorbox++) {
-                                                                                                                    bm->larvaldistrib[recipientbox][sp] += bm->connectivitymatrix[sp][year][donorbox][recipientbox];
-                                                                                                                }
-                                                                                                                totlarvae += bm->larvaldistrib[recipientbox][sp];
-                                                                                                            }
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                    /* Normalize if appropriate */
-                                                                                                    if(bm->norm_larval_distrib) {
-                                                                                                        for (recipientbox = 0; recipientbox < bm->nbox; recipientbox++) {
-                                                                                                            bm->larvaldistrib[recipientbox][sp] = bm->larvaldistrib[recipientbox][sp] / (totlarvae + small_num);
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                    /* Print the proportional spatial dist of larvae and adults*/
-                                                                                                    if (bm->newmonth)  {
-                                                                                                        fprintf(llogfp, "Species: %s , For each box, Prop of Adults (column 1) and Prop of Recruits Settling (column 2) \n", FunctGroupArray[sp].groupCode);
-                                                                                                        for (ij = 0; ij < bm->nbox; ij++) {
-                                                                                                            for( ngene = 0; ngene < FunctGroupArray[sp].numGeneTypes; ngene++){
-                                                                                                                fprintf(llogfp, " %e  %e  \n", bm->recruit_hdistrib[ngene][ij][sp], bm->larvaldistrib[ij][sp]);
-                                                                                                            }
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                    return 0;
-                                                                                                }
-                                                                                                
-                                                                                                /**************************************************************************************************************************************************/
-                                                                                                
-                                                                                                /*
-                                                                                                * \brief Helper routine to determines vertical position in the water column - for age-structured groups (i.e. "vertebrates")
-                                                                                                *
-                                                                                                */
-                                                                                                
-                                                                                                void Get_Vertical_Distribution(MSEBoxModel *bm, int ij, int species, double ****currentden, int enviro_depend, int day_part, int cohort, FILE *llogfp){
-                                                                                                    
-                                                                                                    int layerk, diffdeep, k, tracker_id;
-                                                                                                    int flagdem = (int) (FunctGroupArray[species].speciesParams[flagdem_id]);
-                                                                                                    int maxdeep = bm->wcnz;
-                                                                                                    double sumnzj1, sumnza1, sumnzj2, sumnza2, current_enviro;
-                                                                                                    //double min_temp_sp = FunctGroupArray[species].speciesParams[min_move_temp_id];
-                                                                                                    //double max_temp_sp = FunctGroupArray[species].speciesParams[max_move_temp_id];
-                                                                                                    //double min_salt_sp = FunctGroupArray[species].speciesParams[min_move_salt_id];
-                                                                                                    //double max_salt_sp = FunctGroupArray[species].speciesParams[max_move_salt_id];
-                                                                                                    //double min_O2_sp = FunctGroupArray[species].speciesParams[min_O2_id];
-                                                                                                    int totaldeep, first_id, second_id, stage;
-                                                                                                    int age_mat = (int) (FunctGroupArray[species].speciesParams[age_mat_id]);
-                                                                                                    int do_debug = 0;
-                                                                                                    if ((species == bm->which_check) && (bm->dayt >= bm->checkstart) && (bm->debug == debug_move))
-                                                                                                    do_debug = 1;
-                                                                                                    
-                                                                                                    //do_debug = 1;
-                                                                                                    
-                                                                                                    if(cohort <= -1){
-                                                                                                        // Doing adults and juveniles in bulk
-                                                                                                        tracker_id = adult_id;
-                                                                                                    } else {
-                                                                                                        // Doing a specific cohort
-                                                                                                        stage = FunctGroupArray[species].cohort_stage[cohort];
-                                                                                                        tracker_id = stage;
-                                                                                                    }
-                                                                                                    
-                                                                                                    
-                                                                                                    // Initialise (just in case)
-                                                                                                    for (k = 0; k < bm->wcnz; k++) {
-                                                                                                        tempdistrib[k][juv_id] = 0.0;
-                                                                                                        tempdistrib[k][adult_id] = 0.0;
-                                                                                                    }
-                                                                                                    
-                                                                                                    /* Load in overwintering or normal vertical distributions */
-                                                                                                    if(FunctGroupArray[species].isMobile){
-                                                                                                        
-                                                                                                        for (k = 0; k < bm->wcnz; k++) {
-                                                                                                            step1distrib[k][juv_id] = FunctGroupArray[species].distrib_VERTICAL[day_part][k][juv_id];
-                                                                                                            step1distrib[k][tracker_id] = FunctGroupArray[species].distrib_VERTICAL[day_part][k][tracker_id];
-                                                                                                            
-                                                                                                            if (FunctGroupArray[species].speciesParams[overwintering_id] > 0) {
-                                                                                                                step1distrib[k][juv_id] = FunctGroupArray[species].distrib_OVERWINTER[k][juv_id];
-                                                                                                                step1distrib[k][tracker_id] = FunctGroupArray[species].distrib_OVERWINTER[k][tracker_id];
-                                                                                                            }
-                                                                                                        }
-                                                                                                    } else {
-                                                                                                        if(cohort == -1){
-                                                                                                            first_id = juv_id;
-                                                                                                            second_id = adult_id;
-                                                                                                        }else{
-                                                                                                            if(cohort < age_mat){
-                                                                                                                first_id = cohort;
-                                                                                                                second_id = age_mat;
-                                                                                                            } else {
-                                                                                                                first_id = juv_id;
-                                                                                                                second_id = cohort;
-                                                                                                            }
-                                                                                                        }
-                                                                                                        
-                                                                                                        for (k = 0; k < bm->wcnz; k++) {
-                                                                                                            step1distrib[k][juv_id] = currentden[species][first_id][k][ij];
-                                                                                                            step1distrib[k][tracker_id] = currentden[species][second_id][k][ij];
-                                                                                                        }
-                                                                                                    }
-                                                                                                    
-                                                                                                    if(do_debug){
-                                                                                                        for (k = 0; k < bm->wcnz; k++) {
-                                                                                                            fprintf(llogfp,"Time: %e %s box %d-%d day_part: %d, step1-juv: %e (%e), step1-tracker: %e (%e), step1-adult: %e (%e) \n",
-                                                                                                                bm->dayt, FunctGroupArray[species].groupCode, ij, k, day_part, step1distrib[k][juv_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][juv_id],
-                                                                                                                step1distrib[k][tracker_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][tracker_id],
-                                                                                                                step1distrib[k][adult_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][adult_id]);
-                                                                                                            }
-                                                                                                        }
-                                                                                                        
-                                                                                                        
-                                                                                                        
-                                                                                                        /* If considering a vertebrate group in an area that is too shallow to have
-                                                                                                        all the water column layers present rescale */
-                                                                                                        /* Calculate vertical depth contribution - start with ideal distribution */
-                                                                                                        totaldeep = bm->boxes[ij].nz;
-                                                                                                        
-                                                                                                        if (totaldeep < maxdeep) {
-                                                                                                            /* If considering a vertebrate group in an area that is too
-                                                                                                            shallow to have all the water column layers present rescale */
-                                                                                                            diffdeep = maxdeep - totaldeep;
-                                                                                                            sumnzj1 = 0.0;
-                                                                                                            sumnza1 = 0.0;
-                                                                                                            sumnzj2 = 0.0;
-                                                                                                            sumnza2 = 0.0;
-                                                                                                            for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                layerk = k + diffdeep;
-                                                                                                                
-                                                                                                                if(cohort <= -1){
-                                                                                                                    // Doing adults and juveniles in bulk - so make sure do juvenile case, adult done under tracker_id and store_id
-                                                                                                                    sumnzj1 += step1distrib[layerk][juv_id];
-                                                                                                                    sumnzj2 += step1distrib[k][juv_id];
-                                                                                                                } else {
-                                                                                                                    // Doing a specific cohort - done under tracker id and store_id
-                                                                                                                }
-                                                                                                                sumnza1 += step1distrib[layerk][tracker_id];
-                                                                                                                sumnza2 += step1distrib[k][tracker_id];
-                                                                                                                
-                                                                                                            }
-                                                                                                            
-                                                                                                            if (sumnzj1 < sumnzj2) {
-                                                                                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                    tempdistrib[k][juv_id] = step1distrib[k][juv_id] / sumnzj2;
-                                                                                                                }
-                                                                                                                
-                                                                                                            } else if (!sumnzj1) {
-                                                                                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                    tempdistrib[k][juv_id] = 0;
-                                                                                                                }
-                                                                                                                
-                                                                                                                if (!flagdem) {
-                                                                                                                    /* If pelagic */
-                                                                                                                    k = bm->boxes[ij].nz - 1;
-                                                                                                                    tempdistrib[k][juv_id] = 1;
-                                                                                                                } else {
-                                                                                                                    /* If demersal */
-                                                                                                                    k = 0;
-                                                                                                                    tempdistrib[k][juv_id] = 1;
-                                                                                                                }
-                                                                                                            } else {
-                                                                                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                    layerk = k + diffdeep;
-                                                                                                                    tempdistrib[k][juv_id] = step1distrib[layerk][juv_id] / sumnzj1;
-                                                                                                                }
-                                                                                                            }
-                                                                                                            if (sumnza1 < sumnza2) {
-                                                                                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                    tempdistrib[k][tracker_id] = step1distrib[k][tracker_id] / sumnza2;
-                                                                                                                }
-                                                                                                            } else if (!sumnza1) {
-                                                                                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                    tempdistrib[k][tracker_id] = 0;
-                                                                                                                }
-                                                                                                                
-                                                                                                                if (!flagdem) {
-                                                                                                                    /* If pelagic */
-                                                                                                                    k = bm->boxes[ij].nz - 1;
-                                                                                                                    tempdistrib[k][tracker_id] = 1;
-                                                                                                                } else {
-                                                                                                                    /* If demersal */
-                                                                                                                    k = 0;
-                                                                                                                    tempdistrib[k][tracker_id] = 1;
-                                                                                                                }
-                                                                                                            } else {
-                                                                                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                    layerk = k + diffdeep;
-                                                                                                                    tempdistrib[k][tracker_id] = step1distrib[layerk][tracker_id] / sumnza1;
-                                                                                                                }
-                                                                                                            }
-                                                                                                            
-                                                                                                        } else {
-                                                                                                            for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                tempdistrib[k][juv_id] = step1distrib[k][juv_id];
-                                                                                                                tempdistrib[k][tracker_id] = step1distrib[k][tracker_id];
-                                                                                                            }
-                                                                                                        }
-                                                                                                        
-                                                                                                        
-                                                                                                        if(do_debug){
-                                                                                                            for (k = 0; k < bm->wcnz; k++) {
-                                                                                                                fprintf(llogfp,"Time: %e %s box %d-%d day_part: %d, temp-juv: %e (%e), temp-tracker: %e (%e), temp-adult: %e (%e) \n",
-                                                                                                                    bm->dayt, FunctGroupArray[species].groupCode, ij, k, day_part, tempdistrib[k][juv_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][juv_id],
-                                                                                                                    tempdistrib[k][tracker_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][tracker_id],
-                                                                                                                    tempdistrib[k][adult_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][adult_id]);
-                                                                                                                }
-                                                                                                            }
-                                                                                                            
-                                                                                                            /* Correct for any environmental constraintts */
-                                                                                                            if (enviro_depend) {
-                                                                                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                                                                                    /* Noise and light pollution avoidance */
-                                                                                                                    if (FunctGroupArray[species].isLightEffected) {
-                                                                                                                        current_enviro = bm->boxes[ij].tr[k][Light_Pollution_i];
-                                                                                                                        if (current_enviro > 0) {
-                                                                                                                            tempdistrib[k][juv_id] *= (FunctGroupArray[species].speciesParams[light_coefft_id] / (current_enviro + small_num));
-                                                                                                                            tempdistrib[k][adult_id] *= (FunctGroupArray[species].speciesParams[light_coefft_id] / (current_enviro + small_num));
-                                                                                                                        }
-                                                                                                                    }
-                                                                                                                    
-                                                                                                                    if (FunctGroupArray[species].isNoiseEffected) {
-                                                                                                                        current_enviro = bm->boxes[ij].tr[k][Noise_Pollution_i];
-                                                                                                                        if (current_enviro > 0) {
-                                                                                                                            tempdistrib[k][juv_id] *= (FunctGroupArray[species].speciesParams[noise_coefft_id] / (current_enviro + small_num));
-                                                                                                                            tempdistrib[k][adult_id] *= (FunctGroupArray[species].speciesParams[noise_coefft_id] / (current_enviro + small_num));
-                                                                                                                        }
-                                                                                                                    }
-                                                                                                                    
-                                                                                                                    // TODO: May need to allow for renormalisation of layers so end up sandwiched into non-zero layers rather than drain them away
-                                                                                                                    // TODO: Allow for deepening of distribution as environment changes
-                                                                                                                    /* Ignore following code as handled in main movement routine with an enviro check there
-                                                                                                                    if (bm->flagtempdepend_move) {
-                                                                                                                    current_enviro = bm->boxes[ij].tr[k][Temp_i];
-                                                                                                                    if ((current_enviro < min_temp_sp) || (current_enviro > max_temp_sp)) {
-                                                                                                                    tempdistrib[k][juv_id] = 0.0;
-                                                                                                                    tempdistrib[k][adult_id] = 0.0;
-                                                                                                                    
-                                                                                                                    if(do_debug){
-                                                                                                                    fprintf(llogfp,"WARNING Time: %e %s box %d-%d day_part: %d, temp-juv: %e (%e), temp-tracker: %e (%e), temp-adult: %e (%e) current_enviro: %e, min_temp: %e, max_temp: %e\n",
-                                                                                                                    bm->dayt, FunctGroupArray[species].groupCode, ij, k, day_part, tempdistrib[k][juv_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][juv_id],
-                                                                                                                    tempdistrib[k][tracker_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][tracker_id],
-                                                                                                                    tempdistrib[k][adult_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][adult_id],
-                                                                                                                    current_enviro, min_temp_sp, max_temp_sp);
-                                                                                                                    }
-                                                                                                                    }
-                                                                                                                    }
-                                                                                                                    if (bm->flagsaltdepend) {
-                                                                                                                    current_enviro = bm->boxes[ij].tr[k][Salinity_i];
-                                                                                                                    if ((current_enviro < min_salt_sp) || (current_enviro > max_salt_sp)) {
-                                                                                                                    tempdistrib[k][juv_id] = 0.0;
-                                                                                                                    tempdistrib[k][adult_id] = 0.0;
-                                                                                                                    
-                                                                                                                    if(do_debug){
-                                                                                                                    fprintf(llogfp,"WARNING Time: %e %s box %d-%d day_part: %d, temp-juv: %e (%e), temp-tracker: %e (%e), temp-adult: %e (%e) current_enviro: %e, min_salt: %e, max_salt: %e\n",
-                                                                                                                    bm->dayt, FunctGroupArray[species].groupCode, ij, k, day_part, tempdistrib[k][juv_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][juv_id],
-                                                                                                                    tempdistrib[k][tracker_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][tracker_id],
-                                                                                                                    tempdistrib[k][adult_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][adult_id],
-                                                                                                                    current_enviro, min_salt_sp, max_salt_sp);
-                                                                                                                    }
-                                                                                                                    
-                                                                                                                    }
-                                                                                                                    }
-                                                                                                                    if (bm->flagO2depend) {
-                                                                                                                    current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
-                                                                                                                    if (current_enviro < min_O2_sp) {
-                                                                                                                    tempdistrib[k][juv_id] = 0.0;
-                                                                                                                    tempdistrib[k][adult_id] = 0.0;
-                                                                                                                    
-                                                                                                                    if(do_debug){
-                                                                                                                    fprintf(llogfp,"WARNING Time: %e %s box %d-%d day_part: %d, temp-juv: %e (%e), temp-tracker: %e (%e), temp-adult: %e (%e) current_enviro: %e, min_O2: %e\n",
-                                                                                                                    bm->dayt, FunctGroupArray[species].groupCode, ij, k, day_part, tempdistrib[k][juv_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][juv_id],
-                                                                                                                    tempdistrib[k][tracker_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][tracker_id],
-                                                                                                                    tempdistrib[k][adult_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][adult_id],
-                                                                                                                    current_enviro, min_O2_sp);
-                                                                                                                    }
-                                                                                                                    
-                                                                                                                    }
-                                                                                                                    }
-                                                                                                                    */
-                                                                                                                }
-                                                                                                            }
-                                                                                                        }
-                                                                                                        
-                                                                                                        /**************************************************************************************************************************************************/
-                                                                                                        
-                                                                                                        /*
-                                                                                                        * \brief Helper routine to check environmental conditions - for age-structured groups (i.e. "vertebrates")
-                                                                                                        *
-                                                                                                        */
-                                                                                                        double Check_Conditions(MSEBoxModel *bm, int sp, int n, int ij, int k, double ****newden) {
-                                                                                                            int flagcontract_sp, contract_sp;
-                                                                                                            double numScalar = 1.0;
-                                                                                                            double numScalar_final = 1.0;
-                                                                                                            double some_ice = 0.0;
-                                                                                                            double pH_scale = 0.0;
-                                                                                                            //double ice_effect;
-                                                                                                            double current_enviro = bm->boxes[ij].tr[k][Temp_i];
-                                                                                                            double K_temp_const_sp = FunctGroupArray[sp].speciesParams[K_temp_const_id];
-                                                                                                            double K_salt_const_sp = FunctGroupArray[sp].speciesParams[K_salt_const_id];
-                                                                                                            double K_o2_const_sp = FunctGroupArray[sp].speciesParams[K_o2_const_id];
-                                                                                                            double min_temp_sp = FunctGroupArray[sp].speciesParams[min_move_temp_id];
-                                                                                                            double max_temp_sp = FunctGroupArray[sp].speciesParams[max_move_temp_id];
-                                                                                                            double min_salt_sp = FunctGroupArray[sp].speciesParams[min_move_salt_id];
-                                                                                                            double max_salt_sp = FunctGroupArray[sp].speciesParams[max_move_salt_id];
-                                                                                                            double min_O2_sp = FunctGroupArray[sp].speciesParams[min_O2_id];
-                                                                                                            int temp_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagtempsensitive_id]);
-                                                                                                            int salt_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagSaltSensitive_id]);
-                                                                                                            int stage = FunctGroupArray[sp].cohort_stage[n];
-                                                                                                            
-                                                                                                            if(!bm->flagtempdepend_move) { // Have turned off temperature dependent movement
-                                                                                                                if(temp_sensitive_sp && bm->newmonth) {
-                                                                                                                    warn("Check_Conditions: Time: %e Zeroing temperature sensitivity for movement of %s even though flagtempsensitive %d as flagtempdepend_move = %d\n", bm->dayt, FunctGroupArray[sp].groupCode, temp_sensitive_sp, bm->flagtempdepend_move);
-                                                                                                                }
-                                                                                                                temp_sensitive_sp = 0;
-                                                                                                            }
+                                                                                                            spmigrate = MIGRATION[sp].num_in_queue;
+                                                                                                            spmigrate_done = MIGRATION[sp].num_in_queue_done;
+                                                                                                            sp_geo_move = FunctGroupArray[fgIndex].sp_geo_move;
                                                                                                             
                                                                                                             /* Make parameter adjustments due to acidification */
                                                                                                             flagcontract_sp = (int)FunctGroupArray[sp].speciesParams[flagcontract_tol_id];
                                                                                                             pH_scale = (FunctGroupArray[sp].pHcorr - 1.0);
                                                                                                             if( flagcontract_sp  && (pH_scale > 0.0)) {
-                                                                                                                contract_sp = (int)FunctGroupArray[sp].speciesParams[contract_tol_id];
+                                                                                                                contract_sp = FunctGroupArray[sp].speciesParams[contract_tol_id];
                                                                                                                 min_temp_sp += contract_sp * pH_scale;
                                                                                                                 max_temp_sp -= contract_sp * pH_scale;
                                                                                                             }
                                                                                                             
-                                                                                                            numScalar = Get_Enviro_Move_Scalar(temp_sensitive_sp, current_enviro, K_temp_const_sp, min_temp_sp, max_temp_sp, sp, 1, bm->dayt, bm->logFile);
-                                                                                                            newden[sp][n][k][ij] *= numScalar;
-                                                                                                            numScalar_final *= numScalar;
+                                                                                                            if ((sp_ddepend_move > sedentary_move) && (sp_ddepend_move != no_move))
+                                                                                                            quit("No density- or forage- dependent movement for invertebrates yet, set ddepend_move flag to 0 or 1 for %s or set to 4 for no geographic movement\n", FunctGroupArray[sp].groupCode);
                                                                                                             
-                                                                                                            numScalar = 1.0;
-                                                                                                            current_enviro = bm->boxes[ij].tr[k][Salinity_i];
-                                                                                                            numScalar = Get_Enviro_Move_Scalar(salt_sensitive_sp, current_enviro, K_salt_const_sp, min_salt_sp, max_salt_sp, sp, 2, bm->dayt, bm->logFile);
-                                                                                                            newden[sp][n][k][ij] *= numScalar;
-                                                                                                            numScalar_final *= numScalar;
+                                                                                                            /* Get the current season index */
+                                                                                                            qrt = FunctGroupArray[sp].moveEntryIndex;
+                                                                                                            next_qrt = FunctGroupArray[sp].next_moveEntryIndex;
                                                                                                             
-                                                                                                            numScalar = 1.0;
-                                                                                                            current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
-                                                                                                            numScalar = Get_Enviro_Move_Scalar(bm->flagO2depend, current_enviro, K_o2_const_sp, min_O2_sp, 10000000000.0, sp, 3, bm->dayt, bm->logFile);
-                                                                                                            newden[sp][n][k][ij] *= numScalar;
-                                                                                                            numScalar_final *= numScalar;
+                                                                                                            for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
+                                                                                                                pid = FunctGroupArray[fgIndex].totNTracers[cohort];
+                                                                                                                stage = FunctGroupArray[fgIndex].cohort_stage[cohort];
+                                                                                                                FSM_sp = 1.0;
+                                                                                                                FSMG_sp = 1.0;
+                                                                                                                
+                                                                                                                //sp_debug = do_debug;
+                                                                                                                /* Sort this out now so we don't have to keep doing this test all though this function
+                                                                                                                if (do_debug && (((bm->move_check < no_move_check) && (bm->move_check > bm->K_num_tot_sp - 1)) || (sp == bm->move_check))) {
+                                                                                                                sp_debug = 2;
+                                                                                                                }
+                                                                                                                */
+                                                                                                                
+                                                                                                                /* Starting biomass check */
+                                                                                                                totamt = 0.0;
+                                                                                                                
+                                                                                                                for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                                    amt = 0;
+                                                                                                                    if (bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND) {
+                                                                                                                        if (FunctGroupArray[fgIndex].habitatType != EPIFAUNA) {
+                                                                                                                            for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                                amt += bm->boxes[ij].tr[k][pid];
+                                                                                                                                totamt += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
+                                                                                                                                
+                                                                                                                                /*
+                                                                                                                                if (sp_debug == 2) {
+                                                                                                                                fprintf(llogfp, "Time: %e, sp %s (%d)in box: %d layer: %d, starts with %e (%.20e)\n",
+                                                                                                                                bm->dayt, FunctGroupArray[sp].groupCode, pid, ij, k, amt, bm->boxes[ij].tr[k][pid]);
+                                                                                                                                }
+                                                                                                                                */
+                                                                                                                            }
+                                                                                                                        } else {
+                                                                                                                            amt += bm->boxes[ij].epi[pid];
+                                                                                                                            totamt += bm->boxes[ij].epi[pid] * bm->boxes[ij].area;
+                                                                                                                            
+                                                                                                                            /**
+                                                                                                                            if (sp_debug == 2) {
+                                                                                                                            fprintf(llogfp, "Time: %e, sp %s in box: %d epilayer starts with %e\n", bm->dayt, FunctGroupArray[sp].groupCode, ij, amt);
+                                                                                                                            }
+                                                                                                                            **/
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                }
+                                                                                                                
+                                                                                                                //origamt = totamt;
+                                                                                                                /*
+                                                                                                                if (sp_debug == 2) {
+                                                                                                                fprintf(llogfp, "Time: %e %s:%d total starting amt: %.20e ", bm->dayt, FunctGroupArray[sp].groupCode, cohort, totamt);
+                                                                                                                fprintf(llogfp, "spmigrate = %d ", spmigrate);
+                                                                                                                fprintf(llogfp, "sp_ddepend_move = %d ", sp_ddepend_move);
+                                                                                                                fprintf(llogfp, "sp_geo_move = %d\n", sp_geo_move);
+                                                                                                                
+                                                                                                                }
+                                                                                                                */
+                                                                                                                
+                                                                                                                /* Store biomass so can scale movement distributions */
+                                                                                                                totboxden[invert_biosum+cohort] = totamt;
+                                                                                                                
+                                                                                                                
+                                                                                                            }
                                                                                                             
-                                                                                                            // If ice dependent and no ice present then not present
-                                                                                                            if(bm->ice_on) {
-                                                                                                                some_ice = Get_Ice_Presence(bm, sp, stage, ij, k, bm->ICE_HABITATlike);
-                                                                                                                if(!some_ice){
-                                                                                                                    newden[sp][n][k][ij] = 0.0;
-                                                                                                                    numScalar_final = 0.0;
+                                                                                                            for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
+                                                                                                                /** Bring back migrants **/
+                                                                                                                for (qid = spmigrate_done; qid < spmigrate; qid++) {
+                                                                                                                    migperiod = MIGRATION[sp].Return_Period[qid];
+                                                                                                                    FSM_sp = MIGRATION[sp].survival[qid];
+                                                                                                                    FSMG_sp = MIGRATION[sp].growth[qid];
+                                                                                                                    stagger_return = MIGRATION[sp].Stagger[qid][return_stagger_id];
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    /**
+                                                                                                                    if (sp_debug == 2) {
+                                                                                                                    fprintf(llogfp, "Time: %e, %s-%d (stage %d) is moving with migrate qid %d: Return_Now: %d, migperiod: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, cohort, stage, qid, MIGRATION[sp].Return_Now[qid], migperiod);
+                                                                                                                    }
+                                                                                                                    **/
+                                                                                                                    
+                                                                                                                    // Update for stagger - so more return in the next year if any stagger left
+                                                                                                                    if (bm->dayt == (MIGRATION[sp].Return_Now[qid] + migperiod + 1.0)) {
+                                                                                                                        if (MIGRATION[sp].num_stagger[qid] > 0) {
+                                                                                                                            MIGRATION[sp].Return_Now[qid] += 365;
+                                                                                                                            MIGRATION[sp].num_stagger[qid] -= 1;
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    /* Migration back into to model domain */
+                                                                                                                    if ((bm->dayt >= MIGRATION[sp].Return_Now[qid]) && (bm->dayt < (MIGRATION[sp].Return_Now[qid] + migperiod)) && (bm->t / 86400.0 > 0.0)) {
+                                                                                                                        /* Update numbers for returning migrants and then update overall size, based on contributions from returning migrants */
+                                                                                                                        migtime = MIGRATION[sp].Return_Now[qid] - MIGRATION[sp].Leave_Now[qid];
+                                                                                                                        
+                                                                                                                        /* Calculate the proportion that are coming back in this timesetp */
+                                                                                                                        migtime2 = Calculate_Migration_Proportion_Back(bm, llogfp, dt, sp, MIGRATION[sp].Return_Now[qid], migperiod);
+                                                                                                                        
+                                                                                                                        // Reduce prop returning if staggering (so some left for next stagger year)
+                                                                                                                        if (MIGRATION[sp].num_stagger[qid] > 0) {
+                                                                                                                            stagger_scalar = 1.0 / (double)(MIGRATION[sp].num_stagger[qid]);
+                                                                                                                            migtime2 *= stagger_scalar;
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        /* Migrants coming in all years after the first year are
+                                                                                                                        based on populations that migrated out of the model domain previously,
+                                                                                                                        otherwise use in KMIGa (set up in biolsetup) */
+                                                                                                                        migbiom_basic = MIGRATION[sp].DEN[cohort][qid] * migtime2;
+                                                                                                                        MIGRATION[sp].DEN[cohort][qid] -= migbiom_basic;
+                                                                                                                        /* Reset Migration matrix if all have returned or this migration period is over */
+                                                                                                                        if (MIGRATION[sp].DEN[cohort][qid] < 0.0) {
+                                                                                                                            MIGRATION[sp].DEN[cohort][qid] = 0.0;
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        /* Correct for losses while away */
+                                                                                                                        migbiom = FSM_sp * migbiom_basic;
+                                                                                                                        
+                                                                                                                        /* Adjust to account for growth during the intervening period */
+                                                                                                                        FSMG_grow = 1.0 + (FSMG_sp * migtime / 364.0);
+                                                                                                                        migbiom *= FSMG_grow;
+                                                                                                                        
+                                                                                                                        totboxden[invert_biosum+cohort] += migbiom;
+                                                                                                                        
+                                                                                                                        if ((bm->dayt + 2) > (MIGRATION[sp].Return_Now[qid] + migperiod)) {
+                                                                                                                            MIGRATION[sp].DEN[cohort][qid] = 0.0;
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        /*
+                                                                                                                        if (sp_debug == 2) {
+                                                                                                                        fprintf(llogfp, "Time: %e, %s-%d Migration %d Total biomass back into model = %e ",
+                                                                                                                        bm->dayt, FunctGroupArray[sp].groupCode, cohort, qid, migbiom * bm->X_CN * mg_2_tonne);
+                                                                                                                        fprintf(bm->logFile, "MIGRATION[sp].DEN[stage][qid] = %e\n", MIGRATION[sp].DEN[cohort][qid] * bm->X_CN * mg_2_tonne);
+                                                                                                                        }
+                                                                                                                        */
+                                                                                                                    }
                                                                                                                 }
                                                                                                             }
                                                                                                             
-                                                                                                            /**
-                                                                                                            //if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
-                                                                                                            if(sp ==64) {
-                                                                                                            fprintf(llogfp,"Time %e %s-%d box%d-%d enviro_depend: %d newden after enviro %e as current_enviro: %e min_O2_sp: %e\n",
-                                                                                                            bm->dayt, FunctGroupArray[sp].groupCode, n, k, ij, enviro_depend, newden[sp][n][k][ij], current_enviro,  min_O2_sp);
-                                                                                                            
+                                                                                                            /* Store diagnostics if needed for system cap calculations */
+                                                                                                            if(bm->do_syst_cap) {
+                                                                                                                Store_Min_Max_Avg(bm, sp);
                                                                                                             }
-                                                                                                            **/
                                                                                                             
-                                                                                                            return numScalar_final;
+                                                                                                            for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
+                                                                                                                /** Do any horizontal movement necessary **/
+                                                                                                                /* Currently assumes prescribed migration. And deposits
+                                                                                                                the migrating individuals in lowest water column layer
+                                                                                                                and lets vertical movement routine below redistribute them.
+                                                                                                                Also note that reusing newden and totboxden arrays but as
+                                                                                                                no vertical layering or cohort loops required using on the
+                                                                                                                first cell in each of those dimensions (thus newden[n][0][0][ij],
+                                                                                                                totboxden[0]).
+                                                                                                                
+                                                                                                                TODO: Make this consistent with vertebrates and move animals at
+                                                                                                                approrpiate water column layers - have started this with the enviro checks
+                                                                                                                */
+                                                                                                                if (!sp_ddepend_move && sp_geo_move) {
+                                                                                                                    totboxden[invert_propsum] = 0;
+                                                                                                                    
+                                                                                                                    for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                                        if (bm->boxes[ij].type != BOUNDARY) {
+                                                                                                                            
+                                                                                                                            // Check to see if epifauna or water column dwellers in terms of locations to check for environmental conditions
+                                                                                                                            if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA)
+                                                                                                                            maxk = 0;
+                                                                                                                            else
+                                                                                                                            maxk = bm->boxes[ij].nz;
+                                                                                                                            
+                                                                                                                            /* Prescribed movement */
+                                                                                                                            newden[sp][cohort][0][ij] = this_HowFar * (FunctGroupArray[sp].distrib[ij][next_qrt][cohort] - FunctGroupArray[sp].distrib[ij][qrt][cohort]) + FunctGroupArray[sp].distrib[ij][qrt][cohort];
+                                                                                                                            
+                                                                                                                            /*
+                                                                                                                            if(sp_debug == 2){
+                                                                                                                            fprintf(llogfp,"day: %e, %s-newden[%d][%d]: %e, HowFar: %e, distrib%s-%d-%d-%d: %e, distrib%s-%d-%d-%d: %e\n",
+                                                                                                                            bm->dayt, FunctGroupArray[sp].groupCode, cohort, ij, newden[sp][cohort][0][ij], this_HowFar, FunctGroupArray[sp].groupCode, ij, next_qrt, cohort, FunctGroupArray[sp].distrib[ij][next_qrt][cohort], FunctGroupArray[sp].groupCode, ij, qrt, cohort, FunctGroupArray[sp].distrib[ij][qrt][cohort]);
+                                                                                                                            }
+                                                                                                                            */
+                                                                                                                            
+                                                                                                                            /* Do environmental checks - FIX - This needs to be tidied up in new code where
+                                                                                                                            distinction between vertebrates and invertebrates reduced */
+                                                                                                                            
+                                                                                                                            if (enviro_depend) {
+                                                                                                                                /* If temperature dependent check to see if temperatures suitable here.
+                                                                                                                                If not zero the entry. Simialrly for salinity and oxygen. */
+                                                                                                                                for (k = 0; k < maxk; k++) {
+                                                                                                                                    /* Noise and light pollution avoidance */
+                                                                                                                                    if (FunctGroupArray[sp].isLightEffected) {
+                                                                                                                                        current_enviro = bm->boxes[ij].tr[k][Light_Pollution_i];
+                                                                                                                                        if (current_enviro > 0) {
+                                                                                                                                            newden[sp][cohort][k][ij] *= (FunctGroupArray[sp].speciesParams[light_coefft_id] / (current_enviro + small_num));
+                                                                                                                                        }
+                                                                                                                                    }
+                                                                                                                                    
+                                                                                                                                    if (FunctGroupArray[sp].isNoiseEffected) {
+                                                                                                                                        current_enviro = bm->boxes[ij].tr[k][Noise_Pollution_i];
+                                                                                                                                        if (current_enviro > 0) {
+                                                                                                                                            newden[sp][cohort][k][ij] *= (FunctGroupArray[sp].speciesParams[noise_coefft_id] / (current_enviro + small_num));
+                                                                                                                                        }
+                                                                                                                                    }
+                                                                                                                                    
+                                                                                                                                    /* Other physical environment */
+                                                                                                                                    numScalar = 1.0;
+                                                                                                                                    current_enviro = bm->boxes[ij].tr[k][Temp_i];
+                                                                                                                                    K_temp_const_sp = FunctGroupArray[sp].speciesParams[K_temp_const_id];
+                                                                                                                                    numScalar = Get_Enviro_Move_Scalar(temp_sensitive_sp, current_enviro, K_temp_const_sp, min_temp_sp, max_temp_sp, sp, 1, bm->dayt, llogfp);
+                                                                                                                                    newden[sp][cohort][k][ij] *= numScalar;
+                                                                                                                                    
+                                                                                                                                    if (temp_sensitive_sp && !numScalar) {
+                                                                                                                                        warn("Group %s in box %d:%d in movement code is set to 0 as the current temperature (%f) is outside the allowed range %f - %f\n", FunctGroupArray[sp].groupCode, ij, k, current_enviro, min_temp_sp, max_temp_sp);
+                                                                                                                                    }
+                                                                                                                                    
+                                                                                                                                    numScalar = 1.0;
+                                                                                                                                    current_enviro = bm->boxes[ij].tr[k][Salinity_i];
+                                                                                                                                    K_salt_const_sp = FunctGroupArray[sp].speciesParams[K_salt_const_id];
+                                                                                                                                    numScalar = Get_Enviro_Move_Scalar(salt_sensitive_sp, current_enviro, K_salt_const_sp, min_salt_sp, max_salt_sp, sp, 2, bm->dayt, llogfp);
+                                                                                                                                    newden[sp][cohort][k][ij] *= numScalar;
+                                                                                                                                    
+                                                                                                                                    if (salt_sensitive_sp && !numScalar) {
+                                                                                                                                        warn("Group %s in box %d:%d in movement code is set to 0 as the salinity is outside the allowed range %e-%e\n", FunctGroupArray[sp].groupCode, ij, k, min_salt_sp, max_salt_sp);
+                                                                                                                                    }
+                                                                                                                                    
+                                                                                                                                    numScalar = 1.0;
+                                                                                                                                    current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
+                                                                                                                                    K_o2_const_sp = FunctGroupArray[sp].speciesParams[K_o2_const_id];
+                                                                                                                                    numScalar = Get_Enviro_Move_Scalar(bm->flagO2depend, current_enviro, K_o2_const_sp, min_O2_sp, 10000000000.0, sp, 3, bm->dayt, llogfp);
+                                                                                                                                    newden[sp][cohort][k][ij] *= numScalar;
+                                                                                                                                    
+                                                                                                                                    if (bm->flagO2depend && !numScalar) {
+                                                                                                                                        warn("Group %s in box %d:%d in movement code is set to 0 as the oxygen is below the allowed min %e\n", FunctGroupArray[sp].groupCode, ij, k, min_O2_sp);
+                                                                                                                                    }
+                                                                                                                                    
+                                                                                                                                    // If ice dependent and no ice present then not present
+                                                                                                                                    if(bm->ice_on) {
+                                                                                                                                        some_ice = Get_Ice_Presence(bm, sp, cohort, ij, 0, bm->ICE_HABITATlike);
+                                                                                                                                        if(!some_ice){
+                                                                                                                                            newden[sp][cohort][k][ij] = 0.0;
+                                                                                                                                        }
+                                                                                                                                    }
+                                                                                                                                    
+                                                                                                                                    if(bm->track_contaminants && bm->biopools_dodge_contam) {
+                                                                                                                                        cells_checked++;
+                                                                                                                                        // Contaminant avoidance
+                                                                                                                                        numScalar = Avoid_Contaminants(bm, sp, cohort, ij, k);
+                                                                                                                                        newden[sp][cohort][k][ij] *= numScalar;
+                                                                                                                                        numScalar_final *= numScalar;
+                                                                                                                                    }
+                                                                                                                                    
+                                                                                                                                    if(bm->flagenviro_warn && (numScalar_final != 1.0)) {
+                                                                                                                                        cells_impacted++;
+                                                                                                                                    }
+                                                                                                                                    
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                            
+                                                                                                                            /*
+                                                                                                                            if(sp_debug == 2){
+                                                                                                                            fprintf(llogfp,"%s enviro_depend: %d, flagtempdepend: %d, current_enviro: %e, min_temp_sp: %e, max_temp_sp: %e\n",
+                                                                                                                            FunctGroupArray[sp].groupCode, enviro_depend, bm->flagtempdepend, current_enviro, min_temp_sp, max_temp_sp);
+                                                                                                                            fprintf(llogfp,"%s flagsaltdepend: %d, current_enviro: %e, min_salt_sp: %e, max_salt_sp: %e\n",
+                                                                                                                            FunctGroupArray[sp].groupCode, bm->flagsaltdepend, current_enviro, min_salt_sp, max_salt_sp);
+                                                                                                                            fprintf(llogfp,"%s flagO2depend: %d,  min_O2_sp: %e\n",
+                                                                                                                            FunctGroupArray[sp].groupCode,  bm->flagO2depend, min_O2_sp);
+                                                                                                                            
+                                                                                                                            }
+                                                                                                                            */
+                                                                                                                            
+                                                                                                                            /* Total up the new proportions just to make sure */
+                                                                                                                            totboxden[invert_propsum] += newden[sp][cohort][0][ij];
+                                                                                                                            
+                                                                                                                            for (qid = spmigrate_done; qid < spmigrate; qid++) {
+                                                                                                                                migperiod = MIGRATION[sp].Leave_Period[qid];
+                                                                                                                                
+                                                                                                                                /* Migration out of model domain */
+                                                                                                                                if ((bm->dayt >= MIGRATION[sp].Leave_Now[qid]) && (bm->dayt < (MIGRATION[sp].Leave_Now[qid] + migperiod)) && (bm->t / 86400.0 > 0.0) && (MIGRATION[sp].cohort_migrating[cohort][qid] > 0)) {
+                                                                                                                                    
+                                                                                                                                    /* Calculate the proportion that are leaving in this timesetp */
+                                                                                                                                    migtime2 = Calculate_Migration_Proportion(bm, llogfp, dt, sp, MIGRATION[sp].Leave_Now[qid], migperiod, MIGRATION[sp].Box[ij][qid]);
+                                                                                                                                    
+                                                                                                                                    /* Calculate proportion of tot biomass that will
+                                                                                                                                    migrate out of the system this timestep */
+                                                                                                                                    migbiom = newden[sp][cohort][0][ij] * migtime2;
+                                                                                                                                    newden[sp][cohort][0][ij] -= migbiom;
+                                                                                                                                    
+                                                                                                                                    /* Update the Migration array to take account of the new
+                                                                                                                                    immigrants */
+                                                                                                                                    MIGRATION[sp].DEN[cohort][qid] += migbiom * totboxden[invert_biosum];
+                                                                                                                                    
+                                                                                                                                    MIGRATION[sp].num_stagger[qid] = 0;
+                                                                                                                                    if(FunctGroupArray[sp].multiyr_mig) {
+                                                                                                                                        sp_Migrate_Years = (int) (MIGRATION[sp].MinYearsAway[qid]);
+                                                                                                                                        if ((sp_Migrate_Years > 1) && (stagger_return)) {
+                                                                                                                                            MIGRATION[sp].num_stagger[qid] = MIGRATION[sp].Stagger[qid][stagger_years_id];
+                                                                                                                                        }
+                                                                                                                                    }                                
+                                                                                                                                    
+                                                                                                                                    for (agec = 0; agec < FunctGroupArray[sp].ageClassSize; agec++) {
+                                                                                                                                        MIGRATION[sp].pop_ratio[qid][cohort][agec] = MIGRATION[sp].current_pop_ratio[cohort][agec];
+                                                                                                                                    }
+                                                                                                                                    
+                                                                                                                                    /*
+                                                                                                                                    if (sp_debug == 2){
+                                                                                                                                    fprintf(llogfp, "%s-%d Migration %d Box:%d Biomass out of box = %e (migbiom: %e)\n",
+                                                                                                                                    FunctGroupArray[sp].groupCode, cohort, qid, ij, migbiom * totboxden[invert_biosum], migbiom);
+                                                                                                                                    }
+                                                                                                                                    */
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    /*
+                                                                                                                    if (sp_debug == 2) {
+                                                                                                                    for (qid = 0; qid < spmigrate; qid++) {
+                                                                                                                    fprintf(llogfp, "Time: %e, %s-%d Migration %d Total group biomass outside model is %e\n",
+                                                                                                                    bm->dayt, FunctGroupArray[sp].groupCode, stage, qid, MIGRATION[sp].DEN[cohort][qid] * bm->X_CN * mg_2_tonne);
+                                                                                                                    }
+                                                                                                                    }
+                                                                                                                    */
+                                                                                                                    
+                                                                                                                    /* If something doesn't add up normalise */
+                                                                                                                    if (totboxden[invert_propsum] != 1.0) {
+                                                                                                                        for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                                            if (bm->boxes[ij].type != BOUNDARY) {
+                                                                                                                                newden[sp][cohort][0][ij] = newden[sp][cohort][0][ij] / (totboxden[invert_propsum] + small_num);
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    /* Allocate to new locations */
+                                                                                                                    if (FunctGroupArray[fgIndex].habitatType != EPIFAUNA) {
+                                                                                                                        /* Animals allowed in the water column - including prawns */
+                                                                                                                        for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                                            if (bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND) {
+                                                                                                                                /* As benthic invertebrates or water column	invertebrates
+                                                                                                                                with vertical movement still to happen put entire biomass
+                                                                                                                                in bottom-most water layer and set all other layers
+                                                                                                                                to zero - divide by volume so back in mgN m-3 */
+                                                                                                                                bm->boxes[ij].tr[0][pid] = totboxden[invert_biosum+cohort] * newden[sp][cohort][0][ij] / (bm->boxes[ij].dz[0] * bm->boxes[ij].area + small_num);
+                                                                                                                                
+                                                                                                                                /*
+                                                                                                                                if(sp_debug == 2){
+                                                                                                                                fprintf(llogfp,"%s has totboxden: %e, newden[%d][%d]: %e\n", FunctGroupArray[sp].groupCode, totboxden[invert_biosum], cohort, ij, newden[sp][cohort][0][ij]);
+                                                                                                                                }
+                                                                                                                                */
+                                                                                                                                
+                                                                                                                                for (k = 1; k < bm->boxes[ij].nz; k++) {
+                                                                                                                                    bm->boxes[ij].tr[k][pid] = 0;
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                    } else {
+                                                                                                                        /* Epibenthos */
+                                                                                                                        for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                                            if (bm->boxes[ij].type != BOUNDARY) {
+                                                                                                                                bm->boxes[ij].epi[pid] = totboxden[invert_biosum+cohort] * newden[sp][cohort][0][ij] / (bm->boxes[ij].area + small_num);
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                }
+                                                                                                                
+                                                                                                                /* Intermediate biomass check *
+                                                                                                                if (sp_debug == 2) {
+                                                                                                                totamt = 0;
+                                                                                                                for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                                if (bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND) {
+                                                                                                                amt = 0;
+                                                                                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                amt += bm->boxes[ij].tr[k][pid];
+                                                                                                                totamt += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
+                                                                                                                fprintf(llogfp, "Time: %e, sp %s in box: %d layer: %d, ends ddepend with %e (%.20e)\n",
+                                                                                                                bm->dayt, FunctGroupArray[sp].groupCode, ij, k, amt, bm->boxes[ij].tr[k][pid]);
+                                                                                                                }
+                                                                                                                }
+                                                                                                                }
+                                                                                                                
+                                                                                                                fprintf(llogfp, "Time: %e, %s total end biom: %e (%e of orig)\n", bm->dayt, FunctGroupArray[sp].groupCode, totamt, totamt / origamt);
+                                                                                                                
+                                                                                                                }
+                                                                                                                */
+                                                                                                                
+                                                                                                                /** For animals in the water column do any vertical movement necessary **/
+                                                                                                                if (FunctGroupArray[fgIndex].habitatType != EPIFAUNA) {
+                                                                                                                    for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                                        if (bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND) {
+                                                                                                                            
+                                                                                                                            amt = 0.0;
+                                                                                                                            
+                                                                                                                            /* Calculate total in the local watercolumn */
+                                                                                                                            for (k = 0; k < bm->boxes[ij].nz; k++){
+                                                                                                                                amt += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
+                                                                                                                                
+                                                                                                                                if (!(_finite(bm->boxes[ij].tr[k][pid] ))) {
+                                                                                                                                    fprintf(stderr, "Ecology_Invert_Migration - Tracer %s in Box %d, layer %d is infinite\n", Varname[pid], ij, k);
+                                                                                                                                    abort();
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                            /* Get vertical distribution - fo any non-mobile groups */
+                                                                                                                            for (k = 0; k < bm->boxes[ij].nz; k++){
+                                                                                                                                currentden[fgIndex][cohort][k][ij] = bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area / (amt + small_num);
+                                                                                                                            }
+                                                                                                                            
+                                                                                                                            /* Get vertical distribution - including environmental constraints */
+                                                                                                                            Get_Vertical_Distribution(bm, ij, sp, currentden, enviro_depend, day_part, cohort, llogfp);
+                                                                                                                            
+                                                                                                                            for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                                /* Update stored vertdistrib value - so can condition catch timeseries if need be */
+                                                                                                                                if (FunctGroupArray[sp].isImpacted == TRUE){
+                                                                                                                                    bm->boxes[ij].vert_vdistrib[sp][stage][k] = tempdistrib[k][stage];
+                                                                                                                                }
+                                                                                                                                
+                                                                                                                                /* Redistribute accordingly */
+                                                                                                                                bm->boxes[ij].tr[k][pid] = amt * tempdistrib[k][cohort] / (bm->boxes[ij].dz[k] * bm->boxes[ij].area + small_num);
+                                                                                                                                
+                                                                                                                                if (!(_finite(bm->boxes[ij].tr[k][pid] ))) {
+                                                                                                                                    printf("amt = %e,  tempdistrib[k][0] = %e, bm->boxes[ij].dz[k] = %e, bm->boxes[ij].area = %e \n",
+                                                                                                                                        amt,  tempdistrib[k][cohort], bm->boxes[ij].dz[k], bm->boxes[ij].area);
+                                                                                                                                        quit("Ecology_Invert_Migration - day: %e, box: %d, layer: %d %s set to %e.\n",
+                                                                                                                                            bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[sp].groupCode,
+                                                                                                                                            bm->boxes[ij].tr[k][pid] );
+                                                                                                                                        }
+                                                                                                                                        
+                                                                                                                                        /**
+                                                                                                                                        if (sp_debug == 2) {
+                                                                                                                                        fprintf(llogfp, "Time: %e, sp %s in box: %d layer: %d, ends redistrib with %.20e (amt: %.20e tempdistrib: %.20e)\n",
+                                                                                                                                        bm->dayt, FunctGroupArray[sp].groupCode, ij, k, bm->boxes[ij].tr[k][pid], amt, tempdistrib[k][cohort]);
+                                                                                                                                        }
+                                                                                                                                        **/
+                                                                                                                                        
+                                                                                                                                    }
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        /* Final biomass check *
+                                                                                                                        if (sp_debug == 2) {
+                                                                                                                        totamt = 0;
+                                                                                                                        for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                                        if (bm->boxes[ij].type ==LAND){
+                                                                                                                        amt = bm->boxes[ij].tr[0][pid];
+                                                                                                                        totamt += bm->boxes[ij].tr[0][pid] * bm->boxes[ij].area;
+                                                                                                                        
+                                                                                                                        } else if (bm->boxes[ij].type != BOUNDARY) {
+                                                                                                                        amt = 0;
+                                                                                                                        if (FunctGroupArray[fgIndex].habitatType != EPIFAUNA) {
+                                                                                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                        amt += bm->boxes[ij].tr[k][pid];
+                                                                                                                        totamt += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
+                                                                                                                        fprintf(llogfp, "Time: %e, sp %s in box: %d layer: %d, ends with %e (%e, dz: %e, area: %e)\n",
+                                                                                                                        bm->dayt, FunctGroupArray[sp].groupCode, ij, k, amt, bm->boxes[ij].tr[k][pid], bm->boxes[ij].dz[k], bm->boxes[ij].area);
+                                                                                                                        }
+                                                                                                                        } else {
+                                                                                                                        amt += bm->boxes[ij].epi[pid];
+                                                                                                                        totamt += bm->boxes[ij].epi[pid] * bm->boxes[ij].area;
+                                                                                                                        }
+                                                                                                                        }
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        fprintf(llogfp, "Time: %e, %s total end biom: %e (%e of orig)\n", bm->dayt, FunctGroupArray[sp].groupCode, totamt, totamt / origamt);
+                                                                                                                        }
+                                                                                                                        */
+                                                                                                                    }
+                                                                                                                }
+                                                                                                                
+                                                                                                                
+                                                                                                                if(bm->flagenviro_warn & cells_impacted) {
+                                                                                                                    fprintf(llogfp, "Time: %e %s is environmemtally constrained in %d of %d cells (box*layer*cohort combos)\n", bm->dayt, FunctGroupArray[sp].groupCode, cells_impacted, cells_checked);
+                                                                                                                }
+                                                                                                            }
                                                                                                             
+                                                                                                            
+                                                                                                            /* Update fisheries target groups */
+                                                                                                            for(ij=0; ij<bm->nbox; ij++){
+                                                                                                                if(bm->boxes[ij].type != BOUNDARY && bm->boxes[ij].type != LAND){
+                                                                                                                    /* Pelagic invertebrates */
+                                                                                                                    for(sp = 0; sp < bm->K_num_tot_sp; sp++){
+                                                                                                                        if(FunctGroupArray[sp].isVertebrate == FALSE && FunctGroupArray[sp].isImpacted == TRUE){
+                                                                                                                            
+                                                                                                                            for(cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++){
+                                                                                                                                pid = FunctGroupArray[sp].totNTracers[cohort];
+                                                                                                                                
+                                                                                                                                if(FunctGroupArray[sp].habitatType == WC) {
+                                                                                                                                    for(k=0; k<bm->boxes[ij].nz; k++){
+                                                                                                                                        bm->totbiom[sp] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
+                                                                                                                                        bm->targetspbiom[sp][ij] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
+                                                                                                                                    }
+                                                                                                                                } else if(FunctGroupArray[sp].habitatType == SED) {
+                                                                                                                                    for(k=0; k<bm->boxes[ij].sm.nz; k++){
+                                                                                                                                        bm->totbiom[sp] += bm->boxes[ij].sm.tr[k][pid] * bm->boxes[ij].sm.dz[k] * bm->boxes[ij].area;
+                                                                                                                                        bm->targetspbiom[sp][ij] += bm->boxes[ij].sm.tr[k][pid] * bm->boxes[ij].sm.dz[k] * bm->boxes[ij].area;
+                                                                                                                                    }
+                                                                                                                                } else {
+                                                                                                                                    bm->totbiom[sp] += bm->boxes[ij].epi[pid] * bm->boxes[ij].area;
+                                                                                                                                    bm->targetspbiom[sp][ij] += bm->boxes[ij].epi[pid] * bm->boxes[ij].area;
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                }
+                                                                                                            }
+                                                                                                            
+                                                                                                            return;
                                                                                                         }
                                                                                                         
-                                                                                                        /**************************************************************************************************************************************************/
-                                                                                                        
-                                                                                                        /*
-                                                                                                        * \brief Helper routine to check whether environmental conditions in the box are suitable - for age-structured groups (i.e. "vertebrates")
+                                                                                                        /**
+                                                                                                        *	\brief This routine introduces invading species by scaling existing trophic group.
+                                                                                                        *
+                                                                                                        *	Incudes scaling for vertebrate and invertebrate groups
                                                                                                         *
                                                                                                         */
-                                                                                                        int Check_Realloc_Conditions(MSEBoxModel *bm, int sp, int n, int ij, int k) {
-                                                                                                            double numScalar = 1.0;
-                                                                                                            double numScalar_final = 1.0;
-                                                                                                            int is_suitable = 1;
-                                                                                                            double some_ice = 0.0;
-                                                                                                            // double ice_effect;
-                                                                                                            double current_enviro = bm->boxes[ij].tr[k][Temp_i];
-                                                                                                            double K_temp_const_sp = FunctGroupArray[sp].speciesParams[K_temp_const_id];
-                                                                                                            double K_salt_const_sp = FunctGroupArray[sp].speciesParams[K_salt_const_id];
-                                                                                                            double K_o2_const_sp = FunctGroupArray[sp].speciesParams[K_o2_const_id];
+                                                                                                        void Ecology_Invading_Species(MSEBoxModel *bm, double dt, FILE *llogfp) {
+                                                                                                            int ij, k, sk, den, n, curr_ind, last_ind, b, chkbox, nb, chrtstage, habsp, go_there, found_food, prey, pn, preystage, bk;
+                                                                                                            double InvadeScalar = 0.0, InvadeHowFar = 0.0, step1 = 0.0, tot_scalar = 0.0, this_depth = 0.0,
+                                                                                                            sp_like = 0.0, dist_scalar = 1.0;
+                                                                                                            double sp_likeREEF, sp_likeFLAT, sp_likeSOFT, sp_likeCANYON, preyamt, this_scalar, dist;
+                                                                                                            
+                                                                                                            if ((bm->dayt < bm->InvaderStartDay) || (bm->dayt > bm->InvaderEndDay))
+                                                                                                            return;
+                                                                                                            
+                                                                                                            if (verbose > 0)
+                                                                                                            printf("Ecology_Invading_Species\n");
+                                                                                                            
+                                                                                                            /* Add the inital invaders */
+                                                                                                            if (bm->InvadersEntering && (bm->dayt >= bm->InvaderStartDay)) {
+                                                                                                                for (n = bm->minInvaderAge; n < bm->maxInvaderAge; n++) {
+                                                                                                                    den = FunctGroupArray[bm->InvaderIndex].NumsTracers[n];
+                                                                                                                    bm->boxes[bm->InvaderEntryBox].tr[bm->InvaderEntryLayer][den] = bm->InvaderStartNums[n];
+                                                                                                                    bm->InvadersEntering = 0;  // So not done again next time
+                                                                                                                }
+                                                                                                            }
+                                                                                                            
+                                                                                                            switch (bm->invading_sp_model) {
+                                                                                                                case no_invader: /* Nothing to do so continue */
+                                                                                                                break;
+                                                                                                                case simple_invader: /* Simple invading species */
+                                                                                                                if (FunctGroupArray[bm->InvaderIndex].isVertebrate == TRUE) {
+                                                                                                                    /* Invading species is a vertebrate so scale numbers in
+                                                                                                                    appropriate cohorts. Do it only in first entry box as
+                                                                                                                    explicit movement will move it from there
+                                                                                                                    */
+                                                                                                                    for (n = bm->minInvaderAge; n < bm->maxInvaderAge; n++) {
+                                                                                                                        den = FunctGroupArray[bm->InvaderIndex].NumsTracers[n];
+                                                                                                                        for (k = 0; k < bm->boxes[bm->InvaderEntryBox].nz; k++) {
+                                                                                                                            bm->boxes[bm->InvaderEntryBox].tr[k][den] *= (1.0 + bm->InvaderScalar);
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                } else {
+                                                                                                                    /* Invading species is an invertebrate so scale biomass in first cell
+                                                                                                                    and spill it to adjacent cells through time, if not explicitly
+                                                                                                                    migrating already (done via InvadingArray, which is set up on read-in).
+                                                                                                                    */
+                                                                                                                    step1 = (bm->dayt - bm->InvaderStartDay) / bm->Invadedt;
+                                                                                                                    InvadeHowFar = (bm->dayt - bm->InvaderStartDay) / (bm->InvaderSatDay - bm->InvaderStartDay);
+                                                                                                                    curr_ind = (int) (ceil(step1));
+                                                                                                                    if (curr_ind > bm->Invadendt)
+                                                                                                                    curr_ind = bm->Invadendt;
+                                                                                                                    last_ind = (int) (floor(step1));
+                                                                                                                    if (last_ind > bm->Invadendt)
+                                                                                                                    last_ind = bm->Invadendt;
+                                                                                                                    
+                                                                                                                    for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                                        if (bm->dayt < bm->InvaderSatDay) { /* Still spreading - below saturation */
+                                                                                                                            InvadeScalar = InvadeHowFar * (bm->InvadeArray[ij][curr_ind] - bm->InvadeArray[ij][last_ind]) + bm->InvadeArray[ij][curr_ind];
+                                                                                                                        } else
+                                                                                                                        /* At saturation so all increasing at same rate as inflow point */
+                                                                                                                        InvadeScalar = bm->InvaderScalar;
+                                                                                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                            bm->boxes[ij].tr[k][bm->InvaderPID] *= (1.0 + InvadeScalar);
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                }
+                                                                                                                break;
+                                                                                                                case conditional_invader:  /* Based on depth, temperature and salinity preferences, habitat and prey */
+                                                                                                                for (b = 0; b < bm->nbox; b++) {
+                                                                                                                    Util_Init_2D_Double(bm->invader_spread_scalars, bm->nbox, bm->wcnz, 0.0); // has to be here because the normalisation is over all boxes not just neigbouring boxes and then use that value to immediately go round and scale all the tracers
+                                                                                                                    
+                                                                                                                    /* First get new entrants */
+                                                                                                                    if (b == bm->InvaderEntryBox) {
+                                                                                                                        for (k = 0; k < bm->boxes[b].nz; k++) {
+                                                                                                                            if (FunctGroupArray[bm->InvaderIndex].isVertebrate == TRUE) {
+                                                                                                                                /* Invading species is a vertebrate so scale numbers in appropriate cohorts. */
+                                                                                                                                for (n = bm->minInvaderAge; n < bm->maxInvaderAge; n++) {
+                                                                                                                                    den = FunctGroupArray[bm->InvaderIndex].NumsTracers[n];
+                                                                                                                                    bm->boxes[bm->InvaderEntryBox].tr[k][den] *= (1.0 + bm->InvaderScalar);
+                                                                                                                                }
+                                                                                                                            } else {
+                                                                                                                                /* Invading species is an invertebrate so scale biomass in first cell
+                                                                                                                                and spill it to adjacent cells through time */
+                                                                                                                                bm->boxes[b].tr[k][bm->InvaderPID] *= (1.0 + InvadeScalar);
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    /* Now spread to nearby boxes with correct conditions */
+                                                                                                                    tot_scalar = 0.0;
+                                                                                                                    
+                                                                                                                    // Need to have one entry for the local box so they don't all bleed away
+                                                                                                                    this_scalar = bm->InvaderScalar;  // As a place holder for now - is just a relative weighting versus what flows to other boxes, which will be downscaled by distance to be moved
+                                                                                                                    for (k = 0; k < bm->boxes[b].nz; k++) {
+                                                                                                                        bm->invader_spread_scalars[b][k] = this_scalar;
+                                                                                                                    }
+                                                                                                                    tot_scalar += this_scalar;
+                                                                                                                    
+                                                                                                                    // Now do neighbouring boxes
+                                                                                                                    for (chkbox = 0; chkbox < bm->boxes[b].nUniqueAdj; chkbox++) {
+                                                                                                                        nb = bm->boxes[b].uniqueAdjBoxes[chkbox];
+                                                                                                                        this_depth = bm->boxes[nb].botz;
+                                                                                                                        if ((this_depth <= (-1.0 * FunctGroupArray[bm->InvaderIndex].speciesParams[mindepth_id])) && (this_depth >= (-1.0 * bm->InvaderMaxDepth))) {
+                                                                                                                            for (n = bm->minInvaderAge; n < bm->maxInvaderAge; n++) {
+                                                                                                                                chrtstage = FunctGroupArray[bm->InvaderIndex].cohort_stage[n];
+                                                                                                                                
+                                                                                                                                // Depth ok so check habitat
+                                                                                                                                sp_like = 0;
+                                                                                                                                if (FunctGroupArray[bm->InvaderIndex].isHabDepend > 0){
+                                                                                                                                    // Check geological habitats
+                                                                                                                                    sp_likeREEF = bm->HABITATlike[bm->InvaderIndex][chrtstage][bm->REEFcover_id] * bm->boxes[nb].reef;
+                                                                                                                                    sp_likeFLAT = bm->HABITATlike[bm->InvaderIndex][chrtstage][bm->FLATcover_id] * bm->boxes[nb].flat;
+                                                                                                                                    sp_likeSOFT = bm->HABITATlike[bm->InvaderIndex][chrtstage][bm->SOFTcover_id] * bm->boxes[nb].soft;
+                                                                                                                                    sp_likeCANYON = bm->HABITATlike[bm->InvaderIndex][chrtstage][bm->CANYONcover_id];
+                                                                                                                                    if ((sp_likeREEF > 0.0) || (sp_likeFLAT > 0.0) || (sp_likeSOFT > 0.0) || (sp_likeCANYON > 0.0))
+                                                                                                                                    sp_like = 1;
+                                                                                                                                    
+                                                                                                                                    // If that not enough check biogenic habitats
+                                                                                                                                    if(!sp_like) {
+                                                                                                                                        for(habsp = 0; habsp < bm->K_num_tot_sp; habsp++){
+                                                                                                                                            if (FunctGroupArray[habsp].isCover == TRUE) {
+                                                                                                                                                sp_like = bm->HABITATlike[bm->InvaderIndex][chrtstage][FunctGroupArray[habsp].coverID] * bm->coveramt[FunctGroupArray[habsp].coverID][nb];
+                                                                                                                                                if (sp_like)
+                                                                                                                                                break;
+                                                                                                                                            }
+                                                                                                                                        }
+                                                                                                                                    }
+                                                                                                                                } else {
+                                                                                                                                    sp_like = 1;
+                                                                                                                                }
+                                                                                                                                
+                                                                                                                                if (sp_like) {  // Habitat found in potential new location
+                                                                                                                                    for (k = 0; k < bm->boxes[nb].nz; k++) {
+                                                                                                                                        // Then check the environment
+                                                                                                                                        go_there = Invade_Spread(bm, bm->InvaderIndex, llogfp, b, nb, k, &dist);
+                                                                                                                                        found_food = 0;
+                                                                                                                                        if (go_there) {  // Conditions suitable so check prey
+                                                                                                                                            for (prey = 0; prey < bm->K_num_tot_sp; prey++) {
+                                                                                                                                                if (FunctGroupArray[prey].habitatType == WC){
+                                                                                                                                                    switch (FunctGroupArray[prey].groupAgeType) {
+                                                                                                                                                        case AGE_STRUCTURED:
+                                                                                                                                                        break;
+                                                                                                                                                        case AGE_STRUCTURED_BIOMASS:	/* Intentional follow through */
+                                                                                                                                                        case BIOMASS:
+                                                                                                                                                        for (pn = 0; pn < FunctGroupArray[prey].numCohortsXnumGenes; pn++) {
+                                                                                                                                                            preystage = FunctGroupArray[prey].cohort_stage[pn];
+                                                                                                                                                            preyamt = bm->boxes[nb].tr[k][FunctGroupArray[prey].totNTracers[pn]] * bm->pSPVERTeat[bm->InvaderIndex] [prey][chrtstage][preystage];
+                                                                                                                                                            if (preyamt) {
+                                                                                                                                                                found_food = 1;
+                                                                                                                                                                break;
+                                                                                                                                                            }
+                                                                                                                                                        }
+                                                                                                                                                        break;
+                                                                                                                                                    }
+                                                                                                                                                }
+                                                                                                                                                
+                                                                                                                                                if(!found_food) {  // On bother looking for other prey if haven't found anything already
+                                                                                                                                                    if (FunctGroupArray[prey].habitatType == SED){
+                                                                                                                                                        for (sk = 0; sk < bm->boxes[nb].sm.nz; sk++) {  // loop over sediment layers
+                                                                                                                                                            preyamt = bm->boxes[nb].sm.tr[sk][FunctGroupArray[prey].totNTracers[0]];
+                                                                                                                                                            if (preyamt) {
+                                                                                                                                                                found_food = 1;
+                                                                                                                                                                break;
+                                                                                                                                                            }
+                                                                                                                                                        }
+                                                                                                                                                    }
+                                                                                                                                                }
+                                                                                                                                                if (!found_food) {
+                                                                                                                                                    if (FunctGroupArray[prey].habitatType == EPIFAUNA){
+                                                                                                                                                        for (pn = 0; pn < FunctGroupArray[prey].numCohortsXnumGenes; pn++) {
+                                                                                                                                                            preystage = FunctGroupArray[prey].cohort_stage[pn];
+                                                                                                                                                            preyamt = bm->boxes[nb].epi[FunctGroupArray[prey].totNTracers[pn]];
+                                                                                                                                                            if (preyamt) {
+                                                                                                                                                                found_food = 1;
+                                                                                                                                                                break;
+                                                                                                                                                            }
+                                                                                                                                                        }
+                                                                                                                                                    }
+                                                                                                                                                }
+                                                                                                                                                if (found_food)  // Break the count as found food at the new location
+                                                                                                                                                break;
+                                                                                                                                            }
+                                                                                                                                        }
+                                                                                                                                        
+                                                                                                                                        if (found_food ) {  // All a go so lets find out how much moves
+                                                                                                                                            dist_scalar = bm->InvaderSpeed / dist;
+                                                                                                                                            if(dist_scalar > 1.0)
+                                                                                                                                            dist_scalar = 1.0;  // So can't all evacuate the box in one go as establishing in current box and spreading not just teleporting around the map
+                                                                                                                                            this_scalar = bm->InvaderScalar * dist_scalar;   // dt already taken into account in calculation of bm->InvaderScalar
+                                                                                                                                            bm->invader_spread_scalars[nb][k] = this_scalar;
+                                                                                                                                            tot_scalar += this_scalar;
+                                                                                                                                        }else{
+                                                                                                                                            bm->invader_spread_scalars[nb][k] = 0;
+                                                                                                                                        }
+                                                                                                                                    }
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    // Normalise the scalars
+                                                                                                                    if (tot_scalar > 0.0) {
+                                                                                                                        for (nb = 0; nb < bm->nbox; nb++) {
+                                                                                                                            for (k = 0; k < bm->boxes[nb].nz; k++) {
+                                                                                                                                bm->invader_spread_scalars[nb][k] /= tot_scalar;
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        // Now do the invader dispersal
+                                                                                                                        for (chkbox = 0; chkbox < bm->boxes[b].nUniqueAdj; chkbox++) {
+                                                                                                                            nb = bm->boxes[b].uniqueAdjBoxes[chkbox];
+                                                                                                                            for (k = 0; k < bm->boxes[nb].nz; k++) {
+                                                                                                                                bk = k;
+                                                                                                                                if(bk >= bm->boxes[nb].nz)
+                                                                                                                                bk = bm->boxes[nb].nz - 1;
+                                                                                                                                this_scalar = bm->invader_spread_scalars[nb][k];
+                                                                                                                                
+                                                                                                                                // Proportion of numbers or biomass in local box b dispersing to destinaiton box nb
+                                                                                                                                if (FunctGroupArray[bm->InvaderIndex].isVertebrate == TRUE) {
+                                                                                                                                    for (n = bm->minInvaderAge; n < bm->maxInvaderAge; n++) {
+                                                                                                                                        den = FunctGroupArray[bm->InvaderIndex].NumsTracers[n];
+                                                                                                                                        bm->boxes[nb].tr[k][den] += (this_scalar * bm->boxes[b].tr[bk][den]);
+                                                                                                                                    }
+                                                                                                                                } else {
+                                                                                                                                    bm->boxes[nb].tr[k][bm->InvaderPID] += this_scalar * bm->boxes[b].tr[bk][bm->InvaderPID];
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                        // Reset local numbers or biomass to reflect those that dispersed
+                                                                                                                        for (k = 0; k < bm->boxes[b].nz; k++) {
+                                                                                                                            this_scalar = bm->invader_spread_scalars[b][k];
+                                                                                                                            if (FunctGroupArray[bm->InvaderIndex].isVertebrate == TRUE) {
+                                                                                                                                /* Invading species is a vertebrate so scale numbers in appropriate cohorts. */
+                                                                                                                                for (n = bm->minInvaderAge; n < bm->maxInvaderAge; n++) {
+                                                                                                                                    den = FunctGroupArray[bm->InvaderIndex].NumsTracers[n];
+                                                                                                                                    bm->boxes[b].tr[k][den] *= this_scalar;
+                                                                                                                                }
+                                                                                                                            } else {
+                                                                                                                                /* Invading species is an invertebrate so scale biomass in first cell
+                                                                                                                                and spill it to adjacent cells through time */
+                                                                                                                                bm->boxes[b].tr[k][bm->InvaderPID] *= this_scalar;
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                }
+                                                                                                                
+                                                                                                                break;
+                                                                                                                case complex_invader: /* More complex invading species */
+                                                                                                                quit("No such code for this invader case - only simple case (flaginvade = 1) coded to date\n");
+                                                                                                                break;
+                                                                                                                default:
+                                                                                                                quit("No such code for this invader case - only simple case (flaginvade = 1) coded to date\n");
+                                                                                                                break;
+                                                                                                            }
+                                                                                                            
+                                                                                                            return;
+                                                                                                        }
+                                                                                                        
+                                                                                                        /**
+                                                                                                        * \brief Calculate the larvaldistrib values for the given species.
+                                                                                                        *
+                                                                                                        * These are used in vertebrate_reproduction to calculate the num_recruits.
+                                                                                                        */
+                                                                                                        int Invade_Spread(MSEBoxModel *bm, int sp, FILE *llogfp, int b, int nb, int k, double *dist ) {
+                                                                                                            int temp_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagtempsensitive_id]);
+                                                                                                            int salt_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagSaltSensitive_id]);
                                                                                                             double min_temp_sp = FunctGroupArray[sp].speciesParams[min_move_temp_id];
                                                                                                             double max_temp_sp = FunctGroupArray[sp].speciesParams[max_move_temp_id];
                                                                                                             double min_salt_sp = FunctGroupArray[sp].speciesParams[min_move_salt_id];
                                                                                                             double max_salt_sp = FunctGroupArray[sp].speciesParams[max_move_salt_id];
                                                                                                             double min_O2_sp = FunctGroupArray[sp].speciesParams[min_O2_id];
-                                                                                                            int temp_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagtempsensitive_id]);
-                                                                                                            int salt_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagSaltSensitive_id]);
-                                                                                                            int stage = FunctGroupArray[sp].cohort_stage[n];
+                                                                                                            double there_temp = bm->boxes[nb].tr[k][Temp_i];
+                                                                                                            double there_salt = bm->boxes[nb].tr[k][Salinity_i];
+                                                                                                            double there_o2 = bm->boxes[nb].tr[k][Oxygen_i];
+                                                                                                            int go_there = 0;
+                                                                                                            double current_enviro;
+                                                                                                            
+                                                                                                            double xdiff = bm->boxes[b].inside.x - bm->boxes[nb].inside.x;
+                                                                                                            double ydiff = bm->boxes[b].inside.y - bm->boxes[nb].inside.y;
+                                                                                                            *dist = sqrt(xdiff * xdiff + ydiff * ydiff);
                                                                                                             
                                                                                                             if(!bm->flagtempdepend_move) { // Have turned off temperature dependent movement
                                                                                                                 if(temp_sensitive_sp && bm->newmonth) {
-                                                                                                                    warn("Check_Realloc_Conditions: Time: %e Zeroing temperature sensitivity for movement of %s even though flagtempsensitive %d as flagtempdepend_move = %d\n", bm->dayt, FunctGroupArray[sp].groupCode, temp_sensitive_sp, bm->flagtempdepend_move);
+                                                                                                                    warn("Invade_Spread: Time: %e Zeroing temperature sensitivity for movement of %s even though flagtempsensitive %d as flagtempdepend_move = %d\n", bm->dayt, FunctGroupArray[sp].groupCode, temp_sensitive_sp, bm->flagtempdepend_move);
                                                                                                                 }
                                                                                                                 temp_sensitive_sp = 0;
                                                                                                             }
                                                                                                             
-                                                                                                            numScalar = Get_Enviro_Move_Scalar(temp_sensitive_sp, current_enviro, K_temp_const_sp, min_temp_sp, max_temp_sp, sp, 1, bm->dayt, bm->logFile);
-                                                                                                            numScalar_final *= numScalar;
+                                                                                                            if ((!temp_sensitive_sp) && (!salt_sensitive_sp) && (!bm->flagO2depend))
+                                                                                                            go_there = 1;
                                                                                                             
-                                                                                                            numScalar = 1.0;
-                                                                                                            current_enviro = bm->boxes[ij].tr[k][Salinity_i];
-                                                                                                            numScalar = Get_Enviro_Move_Scalar(salt_sensitive_sp, current_enviro, K_salt_const_sp, min_salt_sp, max_salt_sp, sp, 2, bm->dayt, bm->logFile);
-                                                                                                            numScalar_final *= numScalar;
+                                                                                                            if (temp_sensitive_sp) {
+                                                                                                                if ( (min_temp_sp > there_temp ) || (max_temp_sp < there_temp ))
+                                                                                                                go_there = 0;
+                                                                                                                else
+                                                                                                                go_there = 1;
+                                                                                                            }
                                                                                                             
-                                                                                                            numScalar = 1.0;
-                                                                                                            current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
-                                                                                                            numScalar = Get_Enviro_Move_Scalar(bm->flagO2depend, current_enviro, K_o2_const_sp, min_O2_sp, 10000000000.0, sp, 3, bm->dayt, bm->logFile);
-                                                                                                            numScalar_final *= numScalar;
+                                                                                                            if (salt_sensitive_sp) {
+                                                                                                                if ( (min_salt_sp > there_salt ) || (max_salt_sp < there_salt ))
+                                                                                                                go_there = 0;
+                                                                                                                else
+                                                                                                                go_there = 1;
+                                                                                                            }
                                                                                                             
-                                                                                                            // If ice dependent and no ice present then not present
-                                                                                                            if(bm->ice_on) {
-                                                                                                                some_ice = Get_Ice_Presence(bm, sp, stage, ij, k, bm->ICE_HABITATlike);
-                                                                                                                if(!some_ice){
-                                                                                                                    numScalar_final = 0.0;
+                                                                                                            if (bm->flagO2depend) {
+                                                                                                                if (there_o2 > min_O2_sp )
+                                                                                                                go_there = 1;
+                                                                                                                else
+                                                                                                                go_there = 0;
+                                                                                                            }
+                                                                                                            
+                                                                                                            /* Noise and light pollution avoidance */
+                                                                                                            if (FunctGroupArray[sp].isLightEffected) {
+                                                                                                                current_enviro = bm->boxes[nb].tr[k][Light_Pollution_i];
+                                                                                                                if (current_enviro > 0) {
+                                                                                                                    go_there = ceil(FunctGroupArray[sp].speciesParams[light_coefft_id] / (current_enviro + small_num));
                                                                                                                 }
                                                                                                             }
                                                                                                             
-                                                                                                            // TODO: FIX - Should this check be on a threshold suitability or simply non-zero enough?
-                                                                                                            if (numScalar_final > 0) {
-                                                                                                                is_suitable = 1;
-                                                                                                            } else {
-                                                                                                                is_suitable = 0;
+                                                                                                            if (FunctGroupArray[sp].isNoiseEffected) {
+                                                                                                                current_enviro = bm->boxes[nb].tr[k][Noise_Pollution_i];
+                                                                                                                if (current_enviro > 0) {
+                                                                                                                    go_there = ceil(FunctGroupArray[sp].speciesParams[noise_coefft_id] / (current_enviro + small_num));
+                                                                                                                }
                                                                                                             }
                                                                                                             
-                                                                                                            /**
-                                                                                                            //if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
-                                                                                                            if(sp ==64) {
-                                                                                                            fprintf(llogfp,"Time %e %s-%d box%d-%d enviro_depend: %d newden after enviro %e as current_enviro: %e min_O2_sp: %e\n",
-                                                                                                            bm->dayt, FunctGroupArray[sp].groupCode, n, k, ij, enviro_depend, newden[sp][n][k][ij], current_enviro,  min_O2_sp);
                                                                                                             
-                                                                                                            }
-                                                                                                            **/
-                                                                                                            
-                                                                                                            return is_suitable;
+                                                                                                            return go_there;
                                                                                                             
                                                                                                         }
                                                                                                         
+                                                                                                        /**
+                                                                                                        * \brief Calculate the larvaldistrib values for the given species.
+                                                                                                        *
+                                                                                                        * These are used in vertebrate_reproduction to calculate the num_recruits.
+                                                                                                        */
+                                                                                                        int Larval_Dispersal(MSEBoxModel *bm, int sp, FILE *llogfp) {
+                                                                                                            
+                                                                                                            int ngene;
+                                                                                                            int ij;
+                                                                                                            int year = (int)((bm->t / 86400.0) / 365.0);
+                                                                                                            double totlarvae = 0;
+                                                                                                            int recipientbox, donorbox;
+                                                                                                            ij = 0;
+                                                                                                            
+                                                                                                            //	fprintf(llogfp, "Larval_Dispersal - year = %d\n", year);
+                                                                                                            //	fprintf(logfp, "bm->larvalYears = %d\n", bm->larvalYears);
+                                                                                                            //	fprintf(llogfp, "bm->larval_rewind = %d\n", bm->larval_rewind);
+                                                                                                            
+                                                                                                            if (year >= bm->larvalYears) {
+                                                                                                                if (bm->larval_rewind == TRUE)
+                                                                                                                year = 0;
+                                                                                                                else
+                                                                                                                year = bm->larvalYears;
+                                                                                                                
+                                                                                                            }
+                                                                                                            
+                                                                                                            //fprintf(llogfp, "updated - year = %d\n", year);
+                                                                                                            
+                                                                                                            // Do the matrix multiplication of connectivity matrx * adults
+                                                                                                            if (!bm->larvae_connect_only) {
+                                                                                                                for (recipientbox = 0; recipientbox < bm->nbox; recipientbox++) {
+                                                                                                                    bm->larvaldistrib[recipientbox][sp] = 0;
+                                                                                                                    if (bm->boxes[recipientbox].type != BOUNDARY) {
+                                                                                                                        for (donorbox = 0; donorbox < bm->nbox; donorbox++) {
+                                                                                                                            for( ngene = 0; ngene < FunctGroupArray[sp].numGeneTypes; ngene++){
+                                                                                                                                bm->larvaldistrib[recipientbox][sp] += bm->recruit_hdistrib[ngene][donorbox][sp] * bm->connectivitymatrix[sp][year][donorbox][recipientbox];
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                        totlarvae += bm->larvaldistrib[recipientbox][sp]; // Moved from within the donorbox loop
+                                                                                                                    }
+                                                                                                                }
+                                                                                                            } else {
+                                                                                                                for (recipientbox = 0; recipientbox < bm->nbox; recipientbox++) {
+                                                                                                                    bm->larvaldistrib[recipientbox][sp] = 0;
+                                                                                                                    if (bm->boxes[recipientbox].type != BOUNDARY) {
+                                                                                                                        for (donorbox = 0; donorbox < bm->nbox; donorbox++) {
+                                                                                                                            bm->larvaldistrib[recipientbox][sp] += bm->connectivitymatrix[sp][year][donorbox][recipientbox];
+                                                                                                                        }
+                                                                                                                        totlarvae += bm->larvaldistrib[recipientbox][sp];
+                                                                                                                    }
+                                                                                                                }
+                                                                                                            }
+                                                                                                            
+                                                                                                            /* Normalize if appropriate */
+                                                                                                            if(bm->norm_larval_distrib) {
+                                                                                                                for (recipientbox = 0; recipientbox < bm->nbox; recipientbox++) {
+                                                                                                                    bm->larvaldistrib[recipientbox][sp] = bm->larvaldistrib[recipientbox][sp] / (totlarvae + small_num);
+                                                                                                                }
+                                                                                                            }
+                                                                                                            
+                                                                                                            /* Print the proportional spatial dist of larvae and adults*/
+                                                                                                            if (bm->newmonth)  {
+                                                                                                                fprintf(llogfp, "Species: %s , For each box, Prop of Adults (column 1) and Prop of Recruits Settling (column 2) \n", FunctGroupArray[sp].groupCode);
+                                                                                                                for (ij = 0; ij < bm->nbox; ij++) {
+                                                                                                                    for( ngene = 0; ngene < FunctGroupArray[sp].numGeneTypes; ngene++){
+                                                                                                                        fprintf(llogfp, " %e  %e  \n", bm->recruit_hdistrib[ngene][ij][sp], bm->larvaldistrib[ij][sp]);
+                                                                                                                    }
+                                                                                                                }
+                                                                                                            }
+                                                                                                            
+                                                                                                            return 0;
+                                                                                                        }
+                                                                                                        
+                                                                                                        /**************************************************************************************************************************************************/
+                                                                                                        
+                                                                                                        /*
+                                                                                                        * \brief Helper routine to determines vertical position in the water column - for age-structured groups (i.e. "vertebrates")
+                                                                                                        *
+                                                                                                        */
+                                                                                                        
+                                                                                                        void Get_Vertical_Distribution(MSEBoxModel *bm, int ij, int species, double ****currentden, int enviro_depend, int day_part, int cohort, FILE *llogfp){
+                                                                                                            
+                                                                                                            int layerk, diffdeep, k, tracker_id;
+                                                                                                            int flagdem = (int) (FunctGroupArray[species].speciesParams[flagdem_id]);
+                                                                                                            int maxdeep = bm->wcnz;
+                                                                                                            double sumnzj1, sumnza1, sumnzj2, sumnza2, current_enviro;
+                                                                                                            //double min_temp_sp = FunctGroupArray[species].speciesParams[min_move_temp_id];
+                                                                                                            //double max_temp_sp = FunctGroupArray[species].speciesParams[max_move_temp_id];
+                                                                                                            //double min_salt_sp = FunctGroupArray[species].speciesParams[min_move_salt_id];
+                                                                                                            //double max_salt_sp = FunctGroupArray[species].speciesParams[max_move_salt_id];
+                                                                                                            //double min_O2_sp = FunctGroupArray[species].speciesParams[min_O2_id];
+                                                                                                            int totaldeep, first_id, second_id, stage;
+                                                                                                            int age_mat = (int) (FunctGroupArray[species].speciesParams[age_mat_id]);
+                                                                                                            int do_debug = 0;
+                                                                                                            if ((species == bm->which_check) && (bm->dayt >= bm->checkstart) && (bm->debug == debug_move))
+                                                                                                            do_debug = 1;
+                                                                                                            
+                                                                                                            //do_debug = 1;
+                                                                                                            
+                                                                                                            if(cohort <= -1){
+                                                                                                                // Doing adults and juveniles in bulk
+                                                                                                                tracker_id = adult_id;
+                                                                                                            } else {
+                                                                                                                // Doing a specific cohort
+                                                                                                                stage = FunctGroupArray[species].cohort_stage[cohort];
+                                                                                                                tracker_id = stage;
+                                                                                                            }
+                                                                                                            
+                                                                                                            
+                                                                                                            // Initialise (just in case)
+                                                                                                            for (k = 0; k < bm->wcnz; k++) {
+                                                                                                                tempdistrib[k][juv_id] = 0.0;
+                                                                                                                tempdistrib[k][adult_id] = 0.0;
+                                                                                                            }
+                                                                                                            
+                                                                                                            /* Load in overwintering or normal vertical distributions */
+                                                                                                            if(FunctGroupArray[species].isMobile){
+                                                                                                                
+                                                                                                                for (k = 0; k < bm->wcnz; k++) {
+                                                                                                                    step1distrib[k][juv_id] = FunctGroupArray[species].distrib_VERTICAL[day_part][k][juv_id];
+                                                                                                                    step1distrib[k][tracker_id] = FunctGroupArray[species].distrib_VERTICAL[day_part][k][tracker_id];
+                                                                                                                    
+                                                                                                                    if (FunctGroupArray[species].speciesParams[overwintering_id] > 0) {
+                                                                                                                        step1distrib[k][juv_id] = FunctGroupArray[species].distrib_OVERWINTER[k][juv_id];
+                                                                                                                        step1distrib[k][tracker_id] = FunctGroupArray[species].distrib_OVERWINTER[k][tracker_id];
+                                                                                                                    }
+                                                                                                                }
+                                                                                                            } else {
+                                                                                                                if(cohort == -1){
+                                                                                                                    first_id = juv_id;
+                                                                                                                    second_id = adult_id;
+                                                                                                                }else{
+                                                                                                                    if(cohort < age_mat){
+                                                                                                                        first_id = cohort;
+                                                                                                                        second_id = age_mat;
+                                                                                                                    } else {
+                                                                                                                        first_id = juv_id;
+                                                                                                                        second_id = cohort;
+                                                                                                                    }
+                                                                                                                }
+                                                                                                                
+                                                                                                                for (k = 0; k < bm->wcnz; k++) {
+                                                                                                                    step1distrib[k][juv_id] = currentden[species][first_id][k][ij];
+                                                                                                                    step1distrib[k][tracker_id] = currentden[species][second_id][k][ij];
+                                                                                                                }
+                                                                                                            }
+                                                                                                            
+                                                                                                            if(do_debug){
+                                                                                                                for (k = 0; k < bm->wcnz; k++) {
+                                                                                                                    fprintf(llogfp,"Time: %e %s box %d-%d day_part: %d, step1-juv: %e (%e), step1-tracker: %e (%e), step1-adult: %e (%e) \n",
+                                                                                                                        bm->dayt, FunctGroupArray[species].groupCode, ij, k, day_part, step1distrib[k][juv_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][juv_id],
+                                                                                                                        step1distrib[k][tracker_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][tracker_id],
+                                                                                                                        step1distrib[k][adult_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][adult_id]);
+                                                                                                                    }
+                                                                                                                }
+                                                                                                                
+                                                                                                                
+                                                                                                                
+                                                                                                                /* If considering a vertebrate group in an area that is too shallow to have
+                                                                                                                all the water column layers present rescale */
+                                                                                                                /* Calculate vertical depth contribution - start with ideal distribution */
+                                                                                                                totaldeep = bm->boxes[ij].nz;
+                                                                                                                
+                                                                                                                if (totaldeep < maxdeep) {
+                                                                                                                    /* If considering a vertebrate group in an area that is too
+                                                                                                                    shallow to have all the water column layers present rescale */
+                                                                                                                    diffdeep = maxdeep - totaldeep;
+                                                                                                                    sumnzj1 = 0.0;
+                                                                                                                    sumnza1 = 0.0;
+                                                                                                                    sumnzj2 = 0.0;
+                                                                                                                    sumnza2 = 0.0;
+                                                                                                                    for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                        layerk = k + diffdeep;
+                                                                                                                        
+                                                                                                                        if(cohort <= -1){
+                                                                                                                            // Doing adults and juveniles in bulk - so make sure do juvenile case, adult done under tracker_id and store_id
+                                                                                                                            sumnzj1 += step1distrib[layerk][juv_id];
+                                                                                                                            sumnzj2 += step1distrib[k][juv_id];
+                                                                                                                        } else {
+                                                                                                                            // Doing a specific cohort - done under tracker id and store_id
+                                                                                                                        }
+                                                                                                                        sumnza1 += step1distrib[layerk][tracker_id];
+                                                                                                                        sumnza2 += step1distrib[k][tracker_id];
+                                                                                                                        
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    if (sumnzj1 < sumnzj2) {
+                                                                                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                            tempdistrib[k][juv_id] = step1distrib[k][juv_id] / sumnzj2;
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                    } else if (!sumnzj1) {
+                                                                                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                            tempdistrib[k][juv_id] = 0;
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        if (!flagdem) {
+                                                                                                                            /* If pelagic */
+                                                                                                                            k = bm->boxes[ij].nz - 1;
+                                                                                                                            tempdistrib[k][juv_id] = 1;
+                                                                                                                        } else {
+                                                                                                                            /* If demersal */
+                                                                                                                            k = 0;
+                                                                                                                            tempdistrib[k][juv_id] = 1;
+                                                                                                                        }
+                                                                                                                    } else {
+                                                                                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                            layerk = k + diffdeep;
+                                                                                                                            tempdistrib[k][juv_id] = step1distrib[layerk][juv_id] / sumnzj1;
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                    if (sumnza1 < sumnza2) {
+                                                                                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                            tempdistrib[k][tracker_id] = step1distrib[k][tracker_id] / sumnza2;
+                                                                                                                        }
+                                                                                                                    } else if (!sumnza1) {
+                                                                                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                            tempdistrib[k][tracker_id] = 0;
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        if (!flagdem) {
+                                                                                                                            /* If pelagic */
+                                                                                                                            k = bm->boxes[ij].nz - 1;
+                                                                                                                            tempdistrib[k][tracker_id] = 1;
+                                                                                                                        } else {
+                                                                                                                            /* If demersal */
+                                                                                                                            k = 0;
+                                                                                                                            tempdistrib[k][tracker_id] = 1;
+                                                                                                                        }
+                                                                                                                    } else {
+                                                                                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                            layerk = k + diffdeep;
+                                                                                                                            tempdistrib[k][tracker_id] = step1distrib[layerk][tracker_id] / sumnza1;
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                } else {
+                                                                                                                    for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                        tempdistrib[k][juv_id] = step1distrib[k][juv_id];
+                                                                                                                        tempdistrib[k][tracker_id] = step1distrib[k][tracker_id];
+                                                                                                                    }
+                                                                                                                }
+                                                                                                                
+                                                                                                                
+                                                                                                                if(do_debug){
+                                                                                                                    for (k = 0; k < bm->wcnz; k++) {
+                                                                                                                        fprintf(llogfp,"Time: %e %s box %d-%d day_part: %d, temp-juv: %e (%e), temp-tracker: %e (%e), temp-adult: %e (%e) \n",
+                                                                                                                            bm->dayt, FunctGroupArray[species].groupCode, ij, k, day_part, tempdistrib[k][juv_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][juv_id],
+                                                                                                                            tempdistrib[k][tracker_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][tracker_id],
+                                                                                                                            tempdistrib[k][adult_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][adult_id]);
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    /* Correct for any environmental constraintts */
+                                                                                                                    if (enviro_depend) {
+                                                                                                                        for (k = 0; k < bm->boxes[ij].nz; k++) {
+                                                                                                                            /* Noise and light pollution avoidance */
+                                                                                                                            if (FunctGroupArray[species].isLightEffected) {
+                                                                                                                                current_enviro = bm->boxes[ij].tr[k][Light_Pollution_i];
+                                                                                                                                if (current_enviro > 0) {
+                                                                                                                                    tempdistrib[k][juv_id] *= (FunctGroupArray[species].speciesParams[light_coefft_id] / (current_enviro + small_num));
+                                                                                                                                    tempdistrib[k][adult_id] *= (FunctGroupArray[species].speciesParams[light_coefft_id] / (current_enviro + small_num));
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                            
+                                                                                                                            if (FunctGroupArray[species].isNoiseEffected) {
+                                                                                                                                current_enviro = bm->boxes[ij].tr[k][Noise_Pollution_i];
+                                                                                                                                if (current_enviro > 0) {
+                                                                                                                                    tempdistrib[k][juv_id] *= (FunctGroupArray[species].speciesParams[noise_coefft_id] / (current_enviro + small_num));
+                                                                                                                                    tempdistrib[k][adult_id] *= (FunctGroupArray[species].speciesParams[noise_coefft_id] / (current_enviro + small_num));
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                            
+                                                                                                                            // TODO: May need to allow for renormalisation of layers so end up sandwiched into non-zero layers rather than drain them away
+                                                                                                                            // TODO: Allow for deepening of distribution as environment changes
+                                                                                                                            /* Ignore following code as handled in main movement routine with an enviro check there
+                                                                                                                            if (bm->flagtempdepend_move) {
+                                                                                                                            current_enviro = bm->boxes[ij].tr[k][Temp_i];
+                                                                                                                            if ((current_enviro < min_temp_sp) || (current_enviro > max_temp_sp)) {
+                                                                                                                            tempdistrib[k][juv_id] = 0.0;
+                                                                                                                            tempdistrib[k][adult_id] = 0.0;
+                                                                                                                            
+                                                                                                                            if(do_debug){
+                                                                                                                            fprintf(llogfp,"WARNING Time: %e %s box %d-%d day_part: %d, temp-juv: %e (%e), temp-tracker: %e (%e), temp-adult: %e (%e) current_enviro: %e, min_temp: %e, max_temp: %e\n",
+                                                                                                                            bm->dayt, FunctGroupArray[species].groupCode, ij, k, day_part, tempdistrib[k][juv_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][juv_id],
+                                                                                                                            tempdistrib[k][tracker_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][tracker_id],
+                                                                                                                            tempdistrib[k][adult_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][adult_id],
+                                                                                                                            current_enviro, min_temp_sp, max_temp_sp);
+                                                                                                                            }
+                                                                                                                            }
+                                                                                                                            }
+                                                                                                                            if (bm->flagsaltdepend) {
+                                                                                                                            current_enviro = bm->boxes[ij].tr[k][Salinity_i];
+                                                                                                                            if ((current_enviro < min_salt_sp) || (current_enviro > max_salt_sp)) {
+                                                                                                                            tempdistrib[k][juv_id] = 0.0;
+                                                                                                                            tempdistrib[k][adult_id] = 0.0;
+                                                                                                                            
+                                                                                                                            if(do_debug){
+                                                                                                                            fprintf(llogfp,"WARNING Time: %e %s box %d-%d day_part: %d, temp-juv: %e (%e), temp-tracker: %e (%e), temp-adult: %e (%e) current_enviro: %e, min_salt: %e, max_salt: %e\n",
+                                                                                                                            bm->dayt, FunctGroupArray[species].groupCode, ij, k, day_part, tempdistrib[k][juv_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][juv_id],
+                                                                                                                            tempdistrib[k][tracker_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][tracker_id],
+                                                                                                                            tempdistrib[k][adult_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][adult_id],
+                                                                                                                            current_enviro, min_salt_sp, max_salt_sp);
+                                                                                                                            }
+                                                                                                                            
+                                                                                                                            }
+                                                                                                                            }
+                                                                                                                            if (bm->flagO2depend) {
+                                                                                                                            current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
+                                                                                                                            if (current_enviro < min_O2_sp) {
+                                                                                                                            tempdistrib[k][juv_id] = 0.0;
+                                                                                                                            tempdistrib[k][adult_id] = 0.0;
+                                                                                                                            
+                                                                                                                            if(do_debug){
+                                                                                                                            fprintf(llogfp,"WARNING Time: %e %s box %d-%d day_part: %d, temp-juv: %e (%e), temp-tracker: %e (%e), temp-adult: %e (%e) current_enviro: %e, min_O2: %e\n",
+                                                                                                                            bm->dayt, FunctGroupArray[species].groupCode, ij, k, day_part, tempdistrib[k][juv_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][juv_id],
+                                                                                                                            tempdistrib[k][tracker_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][tracker_id],
+                                                                                                                            tempdistrib[k][adult_id], FunctGroupArray[species].distrib_VERTICAL[day_part][k][adult_id],
+                                                                                                                            current_enviro, min_O2_sp);
+                                                                                                                            }
+                                                                                                                            
+                                                                                                                            }
+                                                                                                                            }
+                                                                                                                            */
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                }
+                                                                                                                
+                                                                                                                /**************************************************************************************************************************************************/
+                                                                                                                
+                                                                                                                /*
+                                                                                                                * \brief Helper routine to check environmental conditions - for age-structured groups (i.e. "vertebrates")
+                                                                                                                *
+                                                                                                                */
+                                                                                                                double Check_Conditions(MSEBoxModel *bm, int sp, int n, int ij, int k, double ****newden) {
+                                                                                                                    int flagcontract_sp, contract_sp;
+                                                                                                                    double numScalar = 1.0;
+                                                                                                                    double numScalar_final = 1.0;
+                                                                                                                    double some_ice = 0.0;
+                                                                                                                    double pH_scale = 0.0;
+                                                                                                                    //double ice_effect;
+                                                                                                                    double current_enviro = bm->boxes[ij].tr[k][Temp_i];
+                                                                                                                    double K_temp_const_sp = FunctGroupArray[sp].speciesParams[K_temp_const_id];
+                                                                                                                    double K_salt_const_sp = FunctGroupArray[sp].speciesParams[K_salt_const_id];
+                                                                                                                    double K_o2_const_sp = FunctGroupArray[sp].speciesParams[K_o2_const_id];
+                                                                                                                    double min_temp_sp = FunctGroupArray[sp].speciesParams[min_move_temp_id];
+                                                                                                                    double max_temp_sp = FunctGroupArray[sp].speciesParams[max_move_temp_id];
+                                                                                                                    double min_salt_sp = FunctGroupArray[sp].speciesParams[min_move_salt_id];
+                                                                                                                    double max_salt_sp = FunctGroupArray[sp].speciesParams[max_move_salt_id];
+                                                                                                                    double min_O2_sp = FunctGroupArray[sp].speciesParams[min_O2_id];
+                                                                                                                    int temp_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagtempsensitive_id]);
+                                                                                                                    int salt_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagSaltSensitive_id]);
+                                                                                                                    int stage = FunctGroupArray[sp].cohort_stage[n];
+                                                                                                                    
+                                                                                                                    if(!bm->flagtempdepend_move) { // Have turned off temperature dependent movement
+                                                                                                                        if(temp_sensitive_sp && bm->newmonth) {
+                                                                                                                            warn("Check_Conditions: Time: %e Zeroing temperature sensitivity for movement of %s even though flagtempsensitive %d as flagtempdepend_move = %d\n", bm->dayt, FunctGroupArray[sp].groupCode, temp_sensitive_sp, bm->flagtempdepend_move);
+                                                                                                                        }
+                                                                                                                        temp_sensitive_sp = 0;
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    /* Make parameter adjustments due to acidification */
+                                                                                                                    flagcontract_sp = (int)FunctGroupArray[sp].speciesParams[flagcontract_tol_id];
+                                                                                                                    pH_scale = (FunctGroupArray[sp].pHcorr - 1.0);
+                                                                                                                    if( flagcontract_sp  && (pH_scale > 0.0)) {
+                                                                                                                        contract_sp = (int)FunctGroupArray[sp].speciesParams[contract_tol_id];
+                                                                                                                        min_temp_sp += contract_sp * pH_scale;
+                                                                                                                        max_temp_sp -= contract_sp * pH_scale;
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    numScalar = Get_Enviro_Move_Scalar(temp_sensitive_sp, current_enviro, K_temp_const_sp, min_temp_sp, max_temp_sp, sp, 1, bm->dayt, bm->logFile);
+                                                                                                                    newden[sp][n][k][ij] *= numScalar;
+                                                                                                                    numScalar_final *= numScalar;
+                                                                                                                    
+                                                                                                                    numScalar = 1.0;
+                                                                                                                    current_enviro = bm->boxes[ij].tr[k][Salinity_i];
+                                                                                                                    numScalar = Get_Enviro_Move_Scalar(salt_sensitive_sp, current_enviro, K_salt_const_sp, min_salt_sp, max_salt_sp, sp, 2, bm->dayt, bm->logFile);
+                                                                                                                    newden[sp][n][k][ij] *= numScalar;
+                                                                                                                    numScalar_final *= numScalar;
+                                                                                                                    
+                                                                                                                    numScalar = 1.0;
+                                                                                                                    current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
+                                                                                                                    numScalar = Get_Enviro_Move_Scalar(bm->flagO2depend, current_enviro, K_o2_const_sp, min_O2_sp, 10000000000.0, sp, 3, bm->dayt, bm->logFile);
+                                                                                                                    newden[sp][n][k][ij] *= numScalar;
+                                                                                                                    numScalar_final *= numScalar;
+                                                                                                                    
+                                                                                                                    // If ice dependent and no ice present then not present
+                                                                                                                    if(bm->ice_on) {
+                                                                                                                        some_ice = Get_Ice_Presence(bm, sp, stage, ij, k, bm->ICE_HABITATlike);
+                                                                                                                        if(!some_ice){
+                                                                                                                            newden[sp][n][k][ij] = 0.0;
+                                                                                                                            numScalar_final = 0.0;
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    /**
+                                                                                                                    //if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
+                                                                                                                    if(sp ==64) {
+                                                                                                                    fprintf(llogfp,"Time %e %s-%d box%d-%d enviro_depend: %d newden after enviro %e as current_enviro: %e min_O2_sp: %e\n",
+                                                                                                                    bm->dayt, FunctGroupArray[sp].groupCode, n, k, ij, enviro_depend, newden[sp][n][k][ij], current_enviro,  min_O2_sp);
+                                                                                                                    
+                                                                                                                    }
+                                                                                                                    **/
+                                                                                                                    
+                                                                                                                    return numScalar_final;
+                                                                                                                    
+                                                                                                                }
+                                                                                                                
+                                                                                                                /**************************************************************************************************************************************************/
+                                                                                                                
+                                                                                                                /*
+                                                                                                                * \brief Helper routine to check whether environmental conditions in the box are suitable - for age-structured groups (i.e. "vertebrates")
+                                                                                                                *
+                                                                                                                */
+                                                                                                                int Check_Realloc_Conditions(MSEBoxModel *bm, int sp, int n, int ij, int k) {
+                                                                                                                    double numScalar = 1.0;
+                                                                                                                    double numScalar_final = 1.0;
+                                                                                                                    int is_suitable = 1;
+                                                                                                                    double some_ice = 0.0;
+                                                                                                                    // double ice_effect;
+                                                                                                                    double current_enviro = bm->boxes[ij].tr[k][Temp_i];
+                                                                                                                    double K_temp_const_sp = FunctGroupArray[sp].speciesParams[K_temp_const_id];
+                                                                                                                    double K_salt_const_sp = FunctGroupArray[sp].speciesParams[K_salt_const_id];
+                                                                                                                    double K_o2_const_sp = FunctGroupArray[sp].speciesParams[K_o2_const_id];
+                                                                                                                    double min_temp_sp = FunctGroupArray[sp].speciesParams[min_move_temp_id];
+                                                                                                                    double max_temp_sp = FunctGroupArray[sp].speciesParams[max_move_temp_id];
+                                                                                                                    double min_salt_sp = FunctGroupArray[sp].speciesParams[min_move_salt_id];
+                                                                                                                    double max_salt_sp = FunctGroupArray[sp].speciesParams[max_move_salt_id];
+                                                                                                                    double min_O2_sp = FunctGroupArray[sp].speciesParams[min_O2_id];
+                                                                                                                    int temp_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagtempsensitive_id]);
+                                                                                                                    int salt_sensitive_sp = (int)(FunctGroupArray[sp].speciesParams[flagSaltSensitive_id]);
+                                                                                                                    int stage = FunctGroupArray[sp].cohort_stage[n];
+                                                                                                                    
+                                                                                                                    if(!bm->flagtempdepend_move) { // Have turned off temperature dependent movement
+                                                                                                                        if(temp_sensitive_sp && bm->newmonth) {
+                                                                                                                            warn("Check_Realloc_Conditions: Time: %e Zeroing temperature sensitivity for movement of %s even though flagtempsensitive %d as flagtempdepend_move = %d\n", bm->dayt, FunctGroupArray[sp].groupCode, temp_sensitive_sp, bm->flagtempdepend_move);
+                                                                                                                        }
+                                                                                                                        temp_sensitive_sp = 0;
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    numScalar = Get_Enviro_Move_Scalar(temp_sensitive_sp, current_enviro, K_temp_const_sp, min_temp_sp, max_temp_sp, sp, 1, bm->dayt, bm->logFile);
+                                                                                                                    numScalar_final *= numScalar;
+                                                                                                                    
+                                                                                                                    numScalar = 1.0;
+                                                                                                                    current_enviro = bm->boxes[ij].tr[k][Salinity_i];
+                                                                                                                    numScalar = Get_Enviro_Move_Scalar(salt_sensitive_sp, current_enviro, K_salt_const_sp, min_salt_sp, max_salt_sp, sp, 2, bm->dayt, bm->logFile);
+                                                                                                                    numScalar_final *= numScalar;
+                                                                                                                    
+                                                                                                                    numScalar = 1.0;
+                                                                                                                    current_enviro = bm->boxes[ij].tr[k][Oxygen_i];
+                                                                                                                    numScalar = Get_Enviro_Move_Scalar(bm->flagO2depend, current_enviro, K_o2_const_sp, min_O2_sp, 10000000000.0, sp, 3, bm->dayt, bm->logFile);
+                                                                                                                    numScalar_final *= numScalar;
+                                                                                                                    
+                                                                                                                    // If ice dependent and no ice present then not present
+                                                                                                                    if(bm->ice_on) {
+                                                                                                                        some_ice = Get_Ice_Presence(bm, sp, stage, ij, k, bm->ICE_HABITATlike);
+                                                                                                                        if(!some_ice){
+                                                                                                                            numScalar_final = 0.0;
+                                                                                                                        }
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    // TODO: FIX - Should this check be on a threshold suitability or simply non-zero enough?
+                                                                                                                    if (numScalar_final > 0) {
+                                                                                                                        is_suitable = 1;
+                                                                                                                    } else {
+                                                                                                                        is_suitable = 0;
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    /**
+                                                                                                                    //if((bm->dayt > bm->checkstart) && (sp == bm->which_check)){
+                                                                                                                    if(sp ==64) {
+                                                                                                                    fprintf(llogfp,"Time %e %s-%d box%d-%d enviro_depend: %d newden after enviro %e as current_enviro: %e min_O2_sp: %e\n",
+                                                                                                                    bm->dayt, FunctGroupArray[sp].groupCode, n, k, ij, enviro_depend, newden[sp][n][k][ij], current_enviro,  min_O2_sp);
+                                                                                                                    
+                                                                                                                    }
+                                                                                                                    **/
+                                                                                                                    
+                                                                                                                    return is_suitable;
+                                                                                                                    
+                                                                                                                }
+                                                                                                                
