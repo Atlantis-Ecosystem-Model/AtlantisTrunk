@@ -1645,23 +1645,7 @@ static void Fill_Vertical_Distributions(MSEBoxModel *bm, int enviro_depend, FILE
                                                 **/
                                             }
                                             
-                                            if (sp_ddepend_move == sticky_ddepend) {
-                                                /* If using 'sticky' density dependent movement determine what proportion has to move
-                                                then move them. Use average sized individual for comparison purposes */
-                                                for (k = 0; k < bm->boxes[ij].nz; k++) {
-                                                    if ((flagmother > 0) && (n < age_mat)) {
-                                                        if ((roc[ij][age_mat] / roc_wgt) > (k_roc_food * VERTinfo[sp][n][SN_id])) {
-                                                            boxden[ij][n] += currentden[sp][n][k][ij];
-                                                            totboxden[n] += currentden[sp][n][k][ij];
-                                                        }
-                                                    } else {
-                                                        if ((roc[ij][n] / roc_wgt) > (k_roc_food * VERTinfo[sp][n][SN_id])) {
-                                                            boxden[ij][n] += currentden[sp][n][k][ij];
-                                                            totboxden[n] += currentden[sp][n][k][ij];
-                                                        }
-                                                    }
-                                                }
-                                            } else if (sp_ddepend_move == sedentary_move) {
+                                            if (sp_ddepend_move == sedentary_move) {
                                                 /* Sedentary apart from vertical movement determine current distribution */
                                                 if (!bm->t) { /* At startup read it in from fixed spatial distributions */
                                                     rocstage = FunctGroupArray[sp].cohort_stage[n];
@@ -1832,7 +1816,6 @@ static void Fill_Vertical_Distributions(MSEBoxModel *bm, int enviro_depend, FILE
                                                 /* Normaliser for the weighted target (prescribed share x forage share),
                                                 so that it sums to 1 over boxes before the relaxation step */
                                                 wnorm = 1.0;
-                                                wnorm = 1.0;
                                                 if (weighted && totroc[nroc]) {
                                                     wnorm = 0.0;
                                                     for (bb = 0; bb < bm->nbox; bb++) {
@@ -1862,7 +1845,7 @@ static void Fill_Vertical_Distributions(MSEBoxModel *bm, int enviro_depend, FILE
                                                     /* Forage share, weighted by the prescribed share when 'weighted' */
                                                     newden[sp][n][k][ij] = spawnmove * roc[ij][nroc] / (totroc[nroc] + small_num) / wnorm;
                                                 }
-
+                                                
                                                 orig_newden = newden[sp][n][k][ij];
                                                 
                                                 if(bm->track_contaminants) {
