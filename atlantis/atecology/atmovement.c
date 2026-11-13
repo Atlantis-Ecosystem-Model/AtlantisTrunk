@@ -529,6 +529,106 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
 }
 
 /**
+ *  \brief This routine is the old way we found the preyamt for vertebrate prey
+ */
+static void Get_Vert_Diet(MSEBoxModel *bm, double ***preyamt, int ij, int k, int prey) {
+    int rij, rangeid, n, sn, rn, den, pred, predstage, preystage, spmin, spmax;
+    double preyavail;
+    double upper, lower;
+    double *boxLayerTracers;
+    int habitat;
+    int stock_id = bm->group_stock[prey][ij][k];
+
+    boxLayerTracers = bm->boxes[ij].tr[k];
+    habitat = WC;
+
+    /* Identify the stock under consideration */
+
+    /* For each cohort */
+    for (n = 0; n < FunctGroupArray[prey].numCohortsXnumGenes; n++) {
+
+        preystage = FunctGroupArray[prey].cohort_stage[n];
+        prey_counted[prey][n] = 0;
+        /* Vertebrate numbers */
+        sn = FunctGroupArray[prey].structNTracers[n];
+        rn = FunctGroupArray[prey].resNTracers[n];
+        den = FunctGroupArray[prey].NumsTracers[n];
+
+        totden[prey][n] += boxLayerTracers[den];
+
+        /*
+        if (prey == 41) {
+            fprintf(bm->logFile,"Time: %e, %s-%d box%d-%d den: %e so totden: %e\n", bm->dayt, FunctGroupArray[prey].groupCode, n, ij, k,  boxLayerTracers[den], totden[prey][n]);
+        }
+         */
+
+        /* Update home range information for those species using home ranges
+         Find proportion of population in home range x
+         As this is a 2D distribution then only do once for each box
+         (DO NOT do it for every layer)
+         */
+        if (((int)(FunctGroupArray[prey].speciesParams[ddepend_move_id]) == homerange_move) && (k == 0)) {
+            for (rij = 0; rij < bm->boxes[ij].HomeRangeInfo[prey].n; rij++) {
+                rangeid = bm->boxes[ij].HomeRangeInfo[prey].ids[rij];
+                bm->HomeRangeTotal[prey][n][rangeid] += bm->boxes[ij].HomeRangeInfo[prey].rangenum[n][rij];
+            }
+        }
+
+        /* Split across stocks */
+        init_stock_struct_prop[prey][n][stock_id] += boxLayerTracers[den];
+
+        /* Determine size of vertebrates - divide by totden below to get final values (averages) */
+        if (bm->boxes[ij].tr[k][den] > 0.0) {
+            VERTinfo[prey][n][SN_id] += boxLayerTracers[sn] * boxLayerTracers[den];
+            VERTinfo[prey][n][RN_id] += boxLayerTracers[rn] * boxLayerTracers[den];
+            VERTinfo[prey][n][DEN_id] += boxLayerTracers[den];
+        }
+
+        /** Prey and refuges available **/
+        /* Vertebrate prey */
+        for (pred = 0; pred < bm->K_num_tot_sp; pred++) {
+            if (FunctGroupArray[pred].speciesParams[flag_id] == TRUE) {
+                if (!prey_counted[prey][n]) {
+                    for (predstage = 0; predstage < FunctGroupArray[pred].numStages; predstage++) {
+                        if (bm->flag_olddiet) {
+                            preyavail = FunctGroupArray[pred].pSPEat[juv_id][prey][habitat]; // As only tested for the juvenile case originally - dumb decision!
+                        } else
+                            preyavail = bm->pSPVERTeat[pred][prey][predstage][preystage];
+
+                        if (preyavail) { // So if any predator can get the prey in the mouth store the value
+
+                            if (FunctGroupArray[pred].groupAgeType == AGE_STRUCTURED) {
+                                spmin = FunctGroupArray[pred].spMinMax[(predstage * 2)];
+                                spmax = FunctGroupArray[pred].spMinMax[(predstage * 2 + 1)];
+                                upper = FunctGroupArray[pred].speciesParams[KUP_id] * boxLayerTracers[spmax];
+                                lower = FunctGroupArray[pred].speciesParams[KLP_id] * boxLayerTracers[spmin];
+                            } else {
+                                upper = FunctGroupArray[pred].speciesParams[KUP_id] * FunctGroupArray[pred].sn[predstage];
+                                lower = FunctGroupArray[pred].speciesParams[KLP_id] * FunctGroupArray[pred].sn[predstage];
+                            }
+                            if ((bm->boxes[ij].tr[k][sn] >= lower) && (boxLayerTracers[sn] <= upper)) {
+                                preyamt[prey][ij][preystage] += (boxLayerTracers[sn] + boxLayerTracers[rn]) * boxLayerTracers[den];
+                                prey_counted[prey][n] = 1;
+                            }
+
+                            /**
+                            if(bm->dayt > bm->checkstart){
+                                    fprintf(bm->logFile, "pred: %s ij: %d prey %s-%d counted: %d stage: %d sn = %.20e rn = %.20e den = %.20e preyamt[juv_id] = %.20e preyamt[adult_id] = %.20e\n",
+                                                    FunctGroupArray[pred].groupCode, ij, FunctGroupArray[prey].groupCode, n, prey_counted[prey][n], predstage, bm->boxes[ij].tr[k][sn], bm->boxes[ij].tr[k][rn],
+                                                    bm->boxes[ij].tr[k][den], preyamt[prey][ij][juv_id], preyamt[prey][ij][adult_id]);
+                            }
+                            **/
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return;
+}
+
+/**
 * \brief Calculate the prey values. Determine tot numbers per cohort per species and total
 amount of each prey in each box.
 *
