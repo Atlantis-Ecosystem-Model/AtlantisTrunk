@@ -854,7 +854,7 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
     */
     void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp) {
         int ij, k, n, qrt, next_qrt, sp, flagmother, flagsp, /*spjmin, spjmax, spamin = 0, spamax,*/
-        age_mat, sp_ddepend_move, day_part, sn, rn, den, mig_done, spmigrate, spmigrate_done, bearlive, stage, flagimposecatch, stock_id = -1, spupdatemig, do_debug, recalc_needed, decdis, sp_feed_while_spawn, sp_spawn_now, flagchannel, desired_chrt, nf, flagcontract_sp, qid, lid, ngene, spawn_period, spawn_date, bcohort, temp_sensitive_sp=0, salt_sensitive_sp=0, update_larval_distrib, updated_already, test_day, cells_checked, cells_impacted, DR_id, DL_id;
+        age_mat, sp_ddepend_move, day_part, sn, rn, den, mig_done, spmigrate, spmigrate_done, bearlive, stage, flagimposecatch, stock_id = -1, spupdatemig, do_debug, recalc_needed, decdis, sp_spawn_now, flagchannel, desired_chrt, nf, flagcontract_sp, qid, lid, ngene, spawn_period, spawn_date, bcohort, temp_sensitive_sp=0, salt_sensitive_sp=0, update_larval_distrib, updated_already, test_day, cells_checked, cells_impacted, DR_id, DL_id;
         double ldayt = bm->t / 86400.0;
         //double migtemp = 86400.0 / dt;
         int maxij = bm->K_num_stocks_per_sp;
@@ -866,7 +866,7 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
         double ReturnPeriod;
         double IBoxProp;
         int enviro_depend = 0, sp_enviro_depend = 0, check_done = 0, is_suitable = 0;
-        int rij, rangeid, rocstage = -1, thiscase1 = 0, thiscase2 = 0, adstage, sp_Migrate_Years, stagger_return = 0, agec;
+        int rij, rangeid, rocstage = -1, adstage, sp_Migrate_Years, stagger_return = 0, agec;
         double nbox_spread, stepSN, stepRN, yoy_den, KWSR_sp, KWRR_sp;
         int adbox, chkbox, kk;
         double prop_range, juv_num, ad_num;
@@ -876,8 +876,8 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
         double migtime2;
         double some_ice = 0.0, ice_effect;
         int do_debug2;
-        double boxcur, wnorm, target, sticky_thresh, leftsum;;
-        int follow_mother, nroc, mstage, use_spawn_move, prescribed_only, bb;
+        double boxcur, wnorm, target, sticky_thresh, leftsum;
+        int follow_mother, nroc, mstage, use_spawn_move, prescribed_only, weighted, bb;
         
         
         updated_already = 0;
@@ -1470,7 +1470,6 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                 
                 bearlive = (int) (FunctGroupArray[sp].speciesParams[flagbearlive_id]);
                 flagmother = (int) (FunctGroupArray[sp].speciesParams[flagmother_id]);
-                sp_feed_while_spawn = (int) (FunctGroupArray[sp].speciesParams[feed_while_spawn_id]);
                 flagchannel = (int) (FunctGroupArray[sp].speciesParams[flagchannel_id]);
                 spupdatemig = 0;
                 spmigrate = MIGRATION[sp].num_in_queue;
@@ -1654,43 +1653,16 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                                             }
                                         }
                                     }
-                                    
-                                    if ((!sp_feed_while_spawn && sp_spawn_now) && (sp_ddepend_move == switch_ddepend)) {
-                                        /* If using the case where using forage distribution when not spawning and perscribed
-                                        spawning distribution in the spawning distribution, then if in spawning season set
-                                        roc contribution to 1.0 (set roc = 1.0 + small_num as the equation is roc / (totroc + small_num))
-                                        */
-                                        roc[ij][n] = 1.0 + small_num;
-                                        totroc[n] = 1.0;
-                                    }
                                 }
                             }
                         }
                     }
                     
-                    /* If using 'sticky' density dependent movement start by determining
-                    leftden and reinitialising totboxden */
-                    if (sp_ddepend_move == sticky_ddepend) {
-                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                            leftden[sp][n] = 1.0 - totboxden[n];
-                            if (leftden[sp][n] < 0.0)
-                            leftden[sp][n] = 0.0;
-                            else if (leftden[sp][n] > 1)
-                            leftden[sp][n] = 1.0;
-                            totboxden[n] = 0.0;
-                            /* Initialise the stock sums */
-                            for (k = 0; k < FunctGroupArray[sp].numStocks; k++) {
-                                init_stock_struct_prop[sp][n][k] = 0.0;
-                            }
-                        }
-                    } else {
-                        for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                            /* Initialise totnumber being distributed */
-                            totboxden[n] = 0.0;
-                            /* Initialise the stock sums */
-                            for (k = 0; k < FunctGroupArray[sp].numStocks; k++) {
-                                init_stock_struct_prop[sp][n][k] = 0.0;
-                            }
+                    /* Initialise the total being distributed and the stock sums */
+                    for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+                        totboxden[n] = 0.0;
+                        for (k = 0; k < FunctGroupArray[sp].numStocks; k++) {
+                            init_stock_struct_prop[sp][n][k] = 0.0;
                         }
                     }
                     
@@ -1841,9 +1813,12 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                                         /* Normaliser for the weighted target (prescribed share x forage share),
                                         so that it sums to 1 over boxes before the relaxation step */
                                         wnorm = 1.0;
+                                        wnorm = 1.0;
                                         if (weighted && totroc[nroc]) {
                                             wnorm = 0.0;
                                             for (bb = 0; bb < bm->nbox; bb++) {
+                                                if ((bm->boxes[bb].type == BOUNDARY) || (bm->boxes[bb].type == LAND))
+                                                continue;
                                                 wnorm += (this_HowFar * (FunctGroupArray[sp].distrib[bb][next_qrt][mstage] - FunctGroupArray[sp].distrib[bb][qrt][mstage]) + FunctGroupArray[sp].distrib[bb][qrt][mstage])
                                                 * roc[bb][nroc] / (totroc[nroc] + small_num);
                                             }
@@ -1870,14 +1845,14 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                                         newden[sp][n][k][ij] = min(1.0, (spSpeed * dt / bm->width)) * (newden[sp][n][k][ij] - boxcur) + boxcur;
                                         newden[sp][n][k][ij] *= vertdistrib;
                                         
-                                        
+                                        /*
                                         if(sp == bm->which_check) {
-                                            fprintf(llogfp, "Time: %e %s-%d box %d-%d newden: %.20e ", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, newden[sp][n][k][ij]);
-                                            fprintf(llogfp, "boxcur: %.20e orig_newden: %.20e ", boxcur, orig_newden);
-                                            fprintf(llogfp, "spSpeed  = %.20e,  dt = %.20e, bm->width = %.20e, vertdistrib = %.20e ", spSpeed, dt, bm->width, vertdistrib);
-                                            fprintf(llogfp, "spawnmove = %.20e prescribed_only = %d nroc = %d roc = %.20e totroc = %.20e\n", spawnmove, prescribed_only, nroc, roc[ij][nroc], totroc[nroc]);
+                                        fprintf(llogfp, "Time: %e %s-%d box %d-%d newden: %.20e ", bm->dayt, FunctGroupArray[sp].groupCode, n, ij, k, newden[sp][n][k][ij]);
+                                        fprintf(llogfp, "boxcur: %.20e orig_newden: %.20e ", boxcur, orig_newden);
+                                        fprintf(llogfp, "spSpeed  = %.20e,  dt = %.20e, bm->width = %.20e, vertdistrib = %.20e ", spSpeed, dt, bm->width, vertdistrib);
+                                        fprintf(llogfp, "spawnmove = %.20e prescribed_only = %d nroc = %d roc = %.20e totroc = %.20e\n", spawnmove, prescribed_only, nroc, roc[ij][nroc], totroc[nroc]);
                                         }
-                                        
+                                        */
                                         
                                         if(newden[sp][n][k][ij]  < 0){
                                             printf("Error in Ecology_Total_Verts_And_Migration\n");
@@ -1917,10 +1892,12 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                                                 target = boxcur;
                                             } else {
                                                 /* Share of the cohort in boxes failing the test: these move */
-                                                leftsum = 0.0;
                                                 /* roc is area-weighted, so the stay/move test must divide the area out again to
                                                 compare per-capita quality with k_roc_food x SN (sticky_thresh). */
+                                                leftsum = 0.0;
                                                 for (bb = 0; bb < bm->nbox; bb++) {
+                                                    if ((bm->boxes[bb].type == BOUNDARY) || (bm->boxes[bb].type == LAND))
+                                                    continue;
                                                     if ((roc[bb][nroc] / (roc_wgt * bm->boxes[bb].area + small_num)) > sticky_thresh)
                                                     continue;
                                                     for (kk = 0; kk < bm->boxes[bb].nz; kk++)
