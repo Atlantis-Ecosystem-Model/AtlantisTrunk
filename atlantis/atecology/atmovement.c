@@ -1851,6 +1851,18 @@ static void Fill_Vertical_Distributions(MSEBoxModel *bm, int enviro_depend, FILE
                                                 boxcur += currentden[sp][n][kk][ij];
                                                 
                                                 
+                                                /* Target box share */
+                                                if (prescribed_only || (totroc[nroc] && (wnorm <= 0.0))) {
+                                                    /* Spawning migration, or no overlap between prescribed and forage fields */
+                                                    newden[sp][n][k][ij] = spawnmove;
+                                                } else if (!totroc[nroc]) {
+                                                    /* No forage anywhere: stay where they are */
+                                                    newden[sp][n][k][ij] = boxcur;
+                                                } else {
+                                                    /* Forage share, weighted by the prescribed share when 'weighted' */
+                                                    newden[sp][n][k][ij] = spawnmove * roc[ij][nroc] / (totroc[nroc] + small_num) / wnorm;
+                                                }
+
                                                 orig_newden = newden[sp][n][k][ij];
                                                 
                                                 if(bm->track_contaminants) {
