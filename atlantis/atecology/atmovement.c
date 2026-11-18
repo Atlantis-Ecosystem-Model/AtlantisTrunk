@@ -342,21 +342,12 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
     int nz = bm->boxes[ij].nz;
     double area = bm->boxes[ij].area;
     double pred_layer_frac[bm->wcnz]; /* C99 variable-length array */
-    double food[3] = {0.0, 0.0, 0.0}; /* experienced concentration by class, averaged over half-days */
     double food_dp[3];                /* animal, plant, dead food for this half-day (mg N m-3) */
     double clear = 0.0, preyavail, step1, prey_fits, predSn, preyMinSn, preyMaxSn, conc, frac;
-    double Ddp, Ftot, food_before = 0.0, colN;
-    int prey, chrtstage, preystage, k, kb, n, dp, cls, predSNID, preyminSNID, preymaxSNID, pst;
+    double Ddp, colN;
+    int prey, chrtstage, preystage, k, kb, n, dp, predSNID, preyminSNID, preymaxSNID, pst;
 
-    /* DEBUG: per-prey contributions, printed as PREYCONTRIB lines (read with read_preycontrib_log()) */
-    int debug_this = (!strcmp(FunctGroupArray[sp].groupCode, "FCD") && (bm->dayt <= 5.0));
-    double *contrib_dp = NULL, *contrib_food = NULL, *contrib_clear = NULL;
-    if (debug_this) {
-        contrib_dp = (double *)calloc(bm->K_num_tot_sp, sizeof(double));
-        contrib_food = (double *)calloc(bm->K_num_tot_sp, sizeof(double));
-        contrib_clear = (double *)calloc(bm->K_num_tot_sp, sizeof(double));
-    }
-
+    
     chrtstage = FunctGroupArray[sp].cohort_stage[cohort];
     kb = Bottom_Layer(bm, ij);
 
@@ -372,8 +363,6 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
             if (FunctGroupArray[prey].speciesParams[flag_id] != TRUE)
                 continue;
 
-            if (debug_this)
-                food_before = food_dp[0] + food_dp[1] + food_dp[2];
 
             for (preystage = 0; preystage < FunctGroupArray[prey].numStages; preystage++) {
                 if (bm->flag_olddiet)
@@ -488,42 +477,15 @@ static double Calculate_Species_Clearance_Rate(MSEBoxModel *bm, FILE *llogfp, in
                 }
             }
 
-            if (debug_this)
-                contrib_dp[prey] = (food_dp[0] + food_dp[1] + food_dp[2]) - food_before;
         }
 
         /* Holling intake per individual for this half-day, as in feeding; averaged over half-days */
         Ddp = 1.0 + (food_dp[0] * E1_sp + food_dp[1] * E2_sp + food_dp[2] * E3_sp) * C_SP / mum_SP;
         clear += 0.5 * (food_dp[0] + food_dp[1] + food_dp[2]) * C_SP / Ddp;
 
-        for (cls = 0; cls < 3; cls++)
-            food[cls] += 0.5 * food_dp[cls];
 
-        if (debug_this) {
-            for (prey = 0; prey < bm->K_num_tot_sp; prey++) {
-                contrib_food[prey] += 0.5 * contrib_dp[prey];
-                contrib_clear[prey] += 0.5 * contrib_dp[prey] * C_SP / Ddp;
-                contrib_dp[prey] = 0.0;
-            }
-        }
     }
 
-    /* DEBUG: each prey's contribution to the experienced food term and to clear
-    (clear_contrib sums to clear) */
-    if (debug_this) {
-        Ftot = food[0] + food[1] + food[2];
-        for (prey = 0; prey < bm->K_num_tot_sp; prey++) {
-            if (contrib_food[prey] == 0.0)
-                continue;
-            fprintf(llogfp, "PREYCONTRIB Time: %e %s-%d box %d prey %s habitatType %d groupAgeType %d food: %.10e share: %.10e clear_contrib: %.10e clear: %.10e\n",
-                    bm->dayt, FunctGroupArray[sp].groupCode, cohort, ij, FunctGroupArray[prey].groupCode,
-                    (int)FunctGroupArray[prey].habitatType, (int)FunctGroupArray[prey].groupAgeType,
-                    contrib_food[prey], contrib_food[prey] / (Ftot + small_num), contrib_clear[prey], clear);
-        }
-        free(contrib_dp);
-        free(contrib_food);
-        free(contrib_clear);
-    }
 
     return clear;
 }
@@ -1900,6 +1862,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                     break;
                                 }
 
+
                                 /* Prescribed share (spawnmove = 1.0 makes no contribution: forage only) */
                                 spawnmove = 1.0;
                                 if (weighted || prescribed_only) {
@@ -2548,12 +2511,11 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                         for (ij = 0; ij < bm->nbox; ij++) {
                             bm->recruit_hdistrib[ngene][ij][sp] /= (totad[ngene] + small_num);
 
-                            /**/
-                            // if(sp == bm->which_check){
-                            if (sp == 23) {
+                            /*
+                            if(sp == bm->which_check){
                                 fprintf(llogfp, "movement.c line 2358 Time: %e, %s box-%d rechdistrib: %e (orig: %e)\n", bm->dayt, FunctGroupArray[sp].groupCode, ij, bm->recruit_hdistrib[ngene][ij][sp], bm->recruit_hdistrib_orig[ngene][ij][sp]);
                             }
-                            /**/
+                            */
                         }
                         updated_already = 1;
                     }
