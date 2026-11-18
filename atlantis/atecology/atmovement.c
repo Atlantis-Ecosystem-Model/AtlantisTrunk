@@ -990,7 +990,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
     double some_ice = 0.0, ice_effect;
     int do_debug2;
     double boxcur, wnorm, target, sticky_thresh, leftsum;
-    int follow_mother, nroc, mstage, use_spawn_move, prescribed_only, weighted, bb;
+    int follow_mother, nroc, mstage, use_spawn_move, prescribed_only, weighted, bb, sd, cd;
 
     updated_already = 0;
 
@@ -1807,14 +1807,17 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                         stock_id = bm->group_stock[sp][ij][k];
 
                         for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
-                            spawn_date = EMBRYO[sp].Spawn_Now[n][EMBRYO[sp].next_spawn];
-                            spawn_period = (int)(FunctGroupArray[sp].speciesParams[spawn_period_id]);
+                                    spawn_date = EMBRYO[sp].Spawn_Now[n][EMBRYO[sp].next_spawn];
+                                    spawn_period = (int) (FunctGroupArray[sp].speciesParams[spawn_period_id]);
 
-                            if ((overall_checkday >= spawn_date) && (overall_checkday <= (spawn_date + spawn_period))) {
-                                sp_spawn_now = 1;
-                            } else {
-                                sp_spawn_now = 0;
-                            }
+                                    /* Spawning window by day of year: Spawn_Now moves on to next year's
+                                       date as soon as the cohort has spawned, so compare days of year */
+                                    sd = spawn_date % 365;
+                                    cd = overall_checkday % 365;
+                                    if (sd + spawn_period < 365)
+                                        sp_spawn_now = (cd >= sd) && (cd <= sd + spawn_period);
+                                    else
+                                        sp_spawn_now = (cd >= sd) || (cd <= sd + spawn_period - 365);
                             stage = FunctGroupArray[sp].cohort_stage[n];
 
                             /* Update stored vertdistrib value - so can condition catch timeseries if need be */
@@ -1859,8 +1862,13 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                                 if (follow_mother) {
                                     nroc = age_mat;
                                     mstage = FunctGroupArray[sp].cohort_stage[age_mat];
-                                    use_spawn_move = (overall_checkday >= EMBRYO[sp].Spawn_Now[age_mat][EMBRYO[sp].next_spawn]) &&
-                                                     (overall_checkday <= (EMBRYO[sp].Spawn_Now[age_mat][EMBRYO[sp].next_spawn] + spawn_period));
+                                    /* Spawning window of the first mature cohort, by day of year */
+                                    sd = ((int) EMBRYO[sp].Spawn_Now[age_mat][EMBRYO[sp].next_spawn]) % 365;
+                                    cd = overall_checkday % 365;
+                                    if (sd + spawn_period < 365)
+                                        use_spawn_move = (cd >= sd) && (cd <= sd + spawn_period);
+                                    else
+                                        use_spawn_move = (cd >= sd) || (cd <= sd + spawn_period - 365);
                                 } else {
                                     nroc = n;
                                     mstage = stage;
