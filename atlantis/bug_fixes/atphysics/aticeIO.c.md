@@ -258,9 +258,13 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Layers `z..icenz-1` keep their values from the previous time step when ice thins, and nothing zeroes them. The mapping loop then adds `ice_classes[i][k]` over all `icenz` layers into `ice_prop`, so stale ice fractions get counted. Function: `Enter_IceBM()`.
 
-**Current code** (`atphysics/aticeIO.c` lines 1255–1294 (truncated)) — code appears to have moved +8 lines since the review
+**Current code** (`atphysics/aticeIO.c` lines 1251–1290 (truncated)) — code appears to have moved +4 lines since the review
 
 ```c
+ 1251: 			slush_allowed = 1;
+ 1252: 
+ 1253: 			while(ice_depth > tot_depth && z < bm->icenz){
+ 1254: 				last_depth = tot_depth;
  1255: 
  1256: 				// Sort out the ice entry
  1257: 				for(i=0; i<bm->K_num_ice_classes; i++){
@@ -297,10 +301,6 @@ When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Lay
  1288: 						ice->ice_classes[z-1][i] = ice_data_array[b][i] * depth_prop;
  1289: 					}
  1290: 				}
- 1291: 
- 1292: 			}
- 1293: 			ice->currentnz = z-1;
- 1294: 			ice->currentnz = z;
 ```
 
 **Suggested fix (from review):** After filling, zero `ice_classes[zz][*]` for `zz >= z`

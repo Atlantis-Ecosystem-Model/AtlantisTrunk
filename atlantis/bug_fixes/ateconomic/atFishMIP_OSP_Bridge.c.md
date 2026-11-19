@@ -233,14 +233,14 @@ In Mode C, `c = catchBySpFishery[k * nfishery + nf]` again uses the stale `nfish
 
 `gp` is declared `int` (l.480), but `FishMIP_Adapter_GetGlobalPriceForYear()` returns `double` (adapter .h:112). External prices are truncated to whole units, and any price below 1.0 becomes 0, which still passes `gp >= 0.0` and is written as the species price. Function: `FishMIP_OSP_Bridge_Annual()`.
 
-**Current code** (`ateconomic/atFishMIP_OSP_Bridge.c` lines 477–481)
+**Current code** (`ateconomic/atFishMIP_OSP_Bridge.c` lines 574–578) — code appears to have moved +96 lines since the review
 
 ```c
-  477:  * Main entry point.
-  478:  * ========================================================================== */
-  479: void FishMIP_OSP_Bridge_Annual(MSEBoxModel *bm, FILE *llogfp, int mode, int ftargetSource, int priceSource) {
-  480:     int nsp, k, nf, this_nf, sp, nmarket, gp, calendarYear, overridden, nfishery;
-  481:     double weightedOrigSum = 0.0, weightSum = 0.0, origprice, ratio, c, M_placeholder;
+  574:             overridden = 0;
+  575:             for (k = 0; k < OSP_PARAMS->fished_nsp; ++k) {
+  576:                 gp = FishMIP_Adapter_GetGlobalPriceForYear(FunctGroupArray[OSP_PARAMS->fishedSp[k]].groupCode, calendarYear);
+  577:                 if (gp >= 0.0) {
+  578:                     OSP_PARAMS->price_by_sp[k] = gp;
 ```
 
 **Suggested fix (from review):** Declare `double gp;`.

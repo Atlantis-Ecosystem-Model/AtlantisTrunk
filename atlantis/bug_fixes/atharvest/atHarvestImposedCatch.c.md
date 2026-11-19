@@ -29,17 +29,17 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Discard species-id matching has no `break`, so the last matching column wins, while catch matching takes the first match. This only matters if a ts file has duplicate column names. Function: `Load_Imposed_Discards()`.
 
-**Current code** (`atharvest/atHarvestImposedCatch.c` lines 127–134) — code appears to have moved -25 lines since the review
+**Current code** (`atharvest/atHarvestImposedCatch.c` lines 152–159) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Load_Imposed_Discards()` now starts at line 129
 
 ```c
-  127: }
-  128: 
-  129: int Load_Imposed_Discards(MSEBoxModel *bm) {
-  130: 	int sp, nf, b;
-  131: 
-  132: 	int flagimposediscard;
-  133: 
-  134: 	flagimposediscard = 0;
+  152: 				if (FunctGroupArray[sp].isFished == TRUE) {
+  153: 					tsdiscardid[sp] = -1;
+  154: 					for (b = 0; b < this_ts->ts.nv; b++) {
+  155: 						if (strcmp(FunctGroupArray[sp].groupCode, this_ts->ts.varname[b]) == 0)
+  156: 							tsdiscardid[sp] = b;
+  157: 					}
+  158: 					if (tsdiscardid[sp] < 0)
+  159: 						quit("Did not find time series of discards for %s - check discard ts files contain it\n", FunctGroupArray[sp].groupCode);
 ```
 
 **Suggested fix (from review):** Add `break`

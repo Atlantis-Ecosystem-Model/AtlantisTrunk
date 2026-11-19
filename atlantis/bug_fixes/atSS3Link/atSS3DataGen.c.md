@@ -405,9 +405,10 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 
 `last_wtval/last_wtai/last_lval/last_lai` are not reset per stock or sex. Because the loop order is ia (outer) then stock (inner), gap-filling interpolates using the previous stock's values. Function: `GetLengthWeightData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 391–430 (truncated)) — code appears to have moved +5 lines since the review
+**Current code** (`atSS3Link/atSS3DataGen.c` lines 390–429 (truncated)) — code appears to have moved +4 lines since the review
 
 ```c
+  390:             for (ij = 0; ij < bm->K_num_sexes; ij++) {
   391:                 if ( bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][FEMALE][ia][iyr] ) {
   392:                     last_wtval = bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][FEMALE][ia][iyr];
   393:                     last_wtai = ia;
@@ -447,7 +448,6 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
   427:                         diff_val = (next_val - last_lval) / nAgeCor;
   428:                         nstep = (double) (ia - last_lai);
   429:                         bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[stock_id][FEMALE][ia] = last_lval + nstep * diff_val;
-  430:                         
 ```
 
 **Suggested fix (from review):** Make the last_* arrays per stock, or loop stock outermost and reset
@@ -793,15 +793,15 @@ The loop `r < numStocks` is passed as the region arg `r`. The callee uses it bot
 
 `agecomp/lencomp` are reset only per `it`, not per (f,r,s). On the GenMnomial path, when `nage_sample`/`nlen_sample` is 0 for a cell, GenMnomial is skipped. The previous cell's comp is then added into `AgeComp/LenComp[f][s]` for this cell. Function: `GetFishLength_n_AgeData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 687–692) — code appears to have moved -48 lines since the review
+**Current code** (`atSS3Link/atSS3DataGen.c` lines 741–746) — code appears to have moved +6 lines since the review
 
 ```c
-  687:     vecsize = Nfleets * Nregions * Nsexes;
-  688: 
-  689:     printf("Doing GetFishLength_n_AgeData\n");
-  690:     
-  691:     Util_Init_4D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].rawdata, Nfleets, Nregions, bm->K_num_sexes, 3, 0.0);   // So data type by sex by region by fleet
-  692:     Util_Init_5D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].rawsizedata, Nfleets, Nregions, bm->K_num_sexes, Ncohorts, 3, 0.0);   // So size data type by age by sex by region by fleet
+  741:         nlen_sample = bm->RBCestimation.RBCspeciesArray[groupIndex].LengthN[it];
+  742:         Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].lencomp, Nlen, 0.0);
+  743:         Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].agecomp, Nages+1, 0.0);
+  744:         
+  745:         //printf("Doing iteration %d and about to Find Data\n", it);
+  746:  
 ```
 
 **Suggested fix (from review):** Zero agecomp/lencomp at the top of the f/r/s body
@@ -1207,18 +1207,18 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 
 In the BIOMASS case the fishery loop only assigns `sel` and `q`, and the `+=` sits after the loop, so only the last fishery's selectivity and q are used. Function: `RecordHistF()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 1242–1250) — code appears to have moved -42 lines since the review
+**Current code** (`atSS3Link/atSS3DataGen.c` lines 1284–1292) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `RecordHistF()` now starts at line 1236
 
 ```c
- 1242:     
- 1243:     if(verbose) {
- 1244:         printf("RecordHistF for %s\n", FunctGroupArray[sp].groupCode);
- 1245:     }
- 1246:     
- 1247:     for (ij = 0; ij < bm->nbox; ij++) {
- 1248:         if (bm->boxes[ij].type != BOUNDARY) {
- 1249:             for (k = 0; k < bm->boxes[ij].nz; k++) {
- 1250:                 bm->cell_vol = bm->boxes[ij].area * bm->boxes[ij].dz[k];
+ 1284:                     break;
+ 1285:                 case BIOMASS:
+ 1286:                     /* Do nothing */
+ 1287:                     pid = FunctGroupArray[sp].totNTracers[0];
+ 1288:                     spbiom = bm->boxes[ij].tr[k][pid];
+ 1289:                         
+ 1290:                     /* Consideration per fishery */
+ 1291:                     for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+ 1292:                         sel = bm->selectivity[sp][nf][0];
 ```
 
 **Suggested fix (from review):** Move the `+=` inside the loop, consistent with the other cases

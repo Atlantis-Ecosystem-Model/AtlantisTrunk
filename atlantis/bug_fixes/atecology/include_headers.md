@@ -24,8 +24,6 @@ Header checks done: all 257 other prototypes in atecology/include/*.h were compa
 **swapped arguments** · Conf H / Sev H ⭐ priority  
 **Listed lines:** atEcologyLib.h:68; atassess/atclassical.c:1218-1219, 1555-1556
 
-**Function:** `callers()`
-
 **Why it's thought to be a bug**
 
 The prototype and definition (atvertprocesses.c:342) are `Ecology_Spawn(sp, KSPA, FSP, SN, RN, X_RS, FSPB, fp)`, but the atclassical.c callers pass `..., scaled_FSPB[nc], X_RS[nc], ofp`, so X_RS and FSPB are swapped. That gives wrong `WforS = (1+X_RS)*SN` and a wrong FSPB check, so spawning biomass in the classical assessment is wrong. Function: callers in atclassical.c.

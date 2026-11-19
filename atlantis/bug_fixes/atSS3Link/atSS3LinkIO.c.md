@@ -147,33 +147,33 @@ Both readers open bare `"Report.sso"` / `"ss3.par"` in the current working dir a
 
 `varStr = strtok(NULL, seps); n++; if (n == EstBcurrIndex) ... atof(varStr)` — the NULL check is done before the strtok, so on a short/blank line `atof(NULL)` is called. Function: `Read_SS3_Report_File()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 80–103) — code appears to have moved -3 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 100–123) — code appears to have moved +17 lines since the review
 
 ```c
-   80: 		fprintf(bm->logFile,"Read_SS3_Report_File: Can't open %s/%s\n", folderName, outputFileName);
-   81:         fprintf(bm->logFile, "yr: %d WARNING - Read_SS3_Report_File - SS3 failed to generate a Report.sso output file for %s\n", year, FunctGroupArray[species].groupCode);
-   82:         printf("yr: %d WARNING - Read_SS3_Report_File - SS3 failed to generate a Report.sso output file for %s\n", year, FunctGroupArray[species].groupCode);
-   83:         bm->RBCestimation.RBCspeciesParam[species][AssessFail_id] = 1;
-   84:         free1d(values);
-   85:         return 0.0;   // Nov 2026: previously carried on and read from a NULL file pointer
-   86:     }
-   87: 
-   88: 	/* Need to read in the RBC and total catch*/
-   89: 	RBC = 0;
-   90: 
-   91: 	/* Find line that starts with 'FORECAST:_With_F_to_match_adjusted_catch' */
-   92: 	while (fgets(buf, buflen, fid) != NULL) {
-   93: 
-   94: 		if (strstr(buf, "FORECAST:_With_F_to_match_adjusted_catch") != NULL) {
-   95: 
-   96: 			/* ignore the next line */
-   97: 			fgets(buf, buflen, fid);
-   98: 
-   99: 			/* grab the data from the next line */
   100: 			fgets(buf, buflen, fid);
   101: 
   102: 			varStr = strtok(buf, seps);
   103: 			n = 0;
+  104: 
+  105: 			while (varStr != NULL) {
+  106: 
+  107: 				varStr = strtok(NULL, seps);
+  108: 				n++;
+  109:                 
+  110:                 /*
+  111:                 if ( n == year) {
+  112:                     yy = atof(varStr);
+  113:                 }
+  114:                  */
+  115:                 
+  116: 				/* The 'bio-all' column */
+  117: 				if (n == EstBcurrIndex) {
+  118: 					bm->RBCestimation.RBCspeciesParam[species][EstBcurr_id] = atof(varStr);
+  119: 				}
+  120: 
+  121: 				/* The 'Depletion' column */
+  122: 				if (n == depletionIndex) {
+  123: 					bm->RBCestimation.RBCspeciesParam[species][EstDepletion_id] = atof(varStr);
 ```
 
 **Suggested fix (from review):** Test `varStr != NULL` after each strtok before use
@@ -204,14 +204,14 @@ Both readers open bare `"Report.sso"` / `"ss3.par"` in the current working dir a
 
 In the `Biology_at_age_in_endyr_with_CV=f(LAA)` block no lines are ever read: `strtok(buffer, seps)` tokenises the never-initialised local `char buffer[1000]`, so `values[12..16]` are garbage (or uninitialised malloc memory). Also the continuation separator is `"\n"` not `seps`, so after the first token the rest of the line would be a single token; and `j` is unbounded against `values[100]`. Function: `Read_SS3_Report_File()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 50–54) — code appears to have moved +11 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 57–61) — code appears to have moved +18 lines since the review
 
 ```c
-   50: }
-   51: 
-   52: double Read_SS3_Report_File(MSEBoxModel *bm, int species, int year, char *folderName) {
-   53: 
-   54: 	char outputFileName[] = "Report.sso";
+   57: 	int buflen = STRLEN;
+   58: 	char buf[STRLEN];
+   59:     char buffer[1000]; // TODO: Set this to sensible value
+   60: 	char seps[] = " ";
+   61:     int n, j, thisID;
 ```
 
 **Suggested fix (from review):** `fgets(buffer, sizeof buffer, fid)` per sex/age row (after skipping header), use `seps` for every strtok, bound `j < size`
@@ -242,44 +242,44 @@ In the `Biology_at_age_in_endyr_with_CV=f(LAA)` block no lines are ever read: `s
 
 `for (age = 0; age < RBCspeciesParam[AccumAge_id]; age++) ... MeanLenAgeM[0][sex][age][thisID]` — MeanLenAgeM/SigmaLenAgeM/MeanWtAgeS/MeanWtAgeM are allocated `Util_Alloc_Init_4D_Double(nYears, MaxAge, Nsexes, stocks)` => `[stocks][Nsexes][MaxAge][nYears]` (atAssessTierSetup.c:281-285), and AccumAge = MaxAge + ceil(MaxAge/4) (atAssessTierSetup.c:86) > MaxAge, so `age` overruns the age dimension. Function: `Read_SS3_Report_File()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 80–114) — code appears to have moved -67 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 216–250) — code appears to have moved +69 lines since the review
 
 ```c
-   80: 		fprintf(bm->logFile,"Read_SS3_Report_File: Can't open %s/%s\n", folderName, outputFileName);
-   81:         fprintf(bm->logFile, "yr: %d WARNING - Read_SS3_Report_File - SS3 failed to generate a Report.sso output file for %s\n", year, FunctGroupArray[species].groupCode);
-   82:         printf("yr: %d WARNING - Read_SS3_Report_File - SS3 failed to generate a Report.sso output file for %s\n", year, FunctGroupArray[species].groupCode);
-   83:         bm->RBCestimation.RBCspeciesParam[species][AssessFail_id] = 1;
-   84:         free1d(values);
-   85:         return 0.0;   // Nov 2026: previously carried on and read from a NULL file pointer
-   86:     }
-   87: 
-   88: 	/* Need to read in the RBC and total catch*/
-   89: 	RBC = 0;
-   90: 
-   91: 	/* Find line that starts with 'FORECAST:_With_F_to_match_adjusted_catch' */
-   92: 	while (fgets(buf, buflen, fid) != NULL) {
-   93: 
-   94: 		if (strstr(buf, "FORECAST:_With_F_to_match_adjusted_catch") != NULL) {
-   95: 
-   96: 			/* ignore the next line */
-   97: 			fgets(buf, buflen, fid);
-   98: 
-   99: 			/* grab the data from the next line */
-  100: 			fgets(buf, buflen, fid);
-  101: 
-  102: 			varStr = strtok(buf, seps);
-  103: 			n = 0;
-  104: 
-  105: 			while (varStr != NULL) {
-  106: 
-  107: 				varStr = strtok(NULL, seps);
-  108: 				n++;
-  109:                 
-  110:                 /*
-  111:                 if ( n == year) {
-  112:                     yy = atof(varStr);
-  113:                 }
-  114:                  */
+  216:             
+  217:             for (int sex = 0; sex < bm->RBCestimation.RBCspeciesParam[species][Nsexes_id]; sex++) {
+  218:                 for (int age = 0; age < bm->RBCestimation.RBCspeciesParam[species][AccumAge_id]; age++) {
+  219:                 
+  220:                     const char* tok;
+  221:                     thisID = (int)(bm->RBCestimation.RBCspeciesParam[species][HistYrMin_id]);
+  222:                     j = 0;
+  223: 
+  224:                     // Assign values
+  225:                     for (tok = strtok(buffer, seps); tok && *tok; j++, tok = strtok(NULL, "\n")) {
+  226:                         values[j] = atof(tok);
+  227:                         //fprintf(bm->logFile, "%f\t", values[j]);
+  228:                     }
+  229: 
+  230:                     Len_mid = values[12];
+  231:                     Len_SD = values[14];
+  232:                     wt_beg = values[15];
+  233:                     wt_mid = values[16];
+  234:                     
+  235:                     fprintf(bm->logFile,"Time: %e %s sex %d age %d Len_mid: %e Len_SD: %e wt_beg: %e  wt_mid: %e\n",bm->dayt, FunctGroupArray[species].groupCode, sex, age, Len_mid, Len_SD, wt_beg, wt_mid);
+  236:                     
+  237:                     if ((fabs(bm->RBCestimation.RBCspeciesArray[species].MeanLenAgeM[0][sex][age][thisID] - Len_mid) / Len_mid) > bm->RBCestimation.ConvergeThresh) {
+  238:                         fprintf(bm->logFile,"Time: %e %s sex %d age %d - problem with  Len_mid: %e vs MeanLenAge: %e\n", bm->dayt, FunctGroupArray[species].groupCode, sex, age, Len_mid, bm->RBCestimation.RBCspeciesArray[species].MeanLenAgeM[0][sex][age][thisID]);
+  239:                     }
+  240:                     if ((fabs(bm->RBCestimation.RBCspeciesArray[species].SigmaLenAgeM[0][sex][age][thisID] - Len_SD) / Len_SD) > bm->RBCestimation.ConvergeThresh) {
+  241:                         fprintf(bm->logFile,"Time: %e %s sex %d age %d - problem with  Len_SD: %e vs SigmaLenAgeM: %e\n", bm->dayt, FunctGroupArray[species].groupCode, sex, age, Len_SD, bm->RBCestimation.RBCspeciesArray[species].SigmaLenAgeM[0][sex][age][thisID]);
+  242:                     }
+  243:                     if ((fabs(bm->RBCestimation.RBCspeciesArray[species].MeanWtAgeS[0][sex][age][thisID] - wt_beg) / wt_beg) > bm->RBCestimation.ConvergeThresh) {
+  244:                         fprintf(bm->logFile,"Time: %e %s sex %d age %d - problem with  wt_beg: %e vs MeanWtAgeS: %e\n", bm->dayt, FunctGroupArray[species].groupCode, sex, age, wt_beg, bm->RBCestimation.RBCspeciesArray[species].MeanWtAgeS[0][sex][age][thisID]);
+  245:                     }
+  246:                     if ((fabs(bm->RBCestimation.RBCspeciesArray[species].MeanWtAgeM[0][sex][age][thisID] - wt_mid) / wt_mid) > bm->RBCestimation.ConvergeThresh) {
+  247:                         fprintf(bm->logFile,"Time: %e %s sex %d age %d - problem with  wt_mid: %e vs MeanWtAgeM: %e\n", bm->dayt, FunctGroupArray[species].groupCode, sex, age, wt_mid, bm->RBCestimation.RBCspeciesArray[species].MeanWtAgeM[0][sex][age][thisID]);
+  248:                     }
+  249:                 }
+  250:             }
 ```
 
 **Suggested fix (from review):** Loop `age < MaxAge_id` (or allocate with AccumAge+1)
@@ -310,15 +310,15 @@ In the `Biology_at_age_in_endyr_with_CV=f(LAA)` block no lines are ever read: `s
 
 "Something has gone wrong reading in the SS3 report file" is printed/logged unconditionally after the loop, including on success. Function: `Read_SS3_Report_File()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 269–274) — code appears to have moved +84 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 185–190) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Read_SS3_Report_File()` now starts at line 52
 
 ```c
-  269:  *
-  270:  */
-  271: double Read_SS3_Report_File_EstBo_Only(MSEBoxModel *bm, int species, int year, char *folderName) {
-  272: 
-  273:     char outputFileName[] = "Report.sso";
-  274: 
+  185: 
+  186: 					// Skip to the fleet columns (as for the first row)
+  187: 					n = 0;
+  188: 					while (varStr != NULL) {
+  189: 						varStr = strtok(NULL, seps);
+  190: 						n++;
 ```
 
 **Suggested fix (from review):** Only print when the LAA block was not found
@@ -468,17 +468,9 @@ Searches for `MGparm[16]`, then "ignore the next line" and reads the line after.
 
 Starter file writes `"%s%s.dat", groupCode, fileName` where `fileName` is the starter's own path (`"<dir>//starter.ss"`) -> e.g. `FISdir//starter.ss.dat`. The real files written by `WriteSS330Files()` are `<dir>/<groupCode>WriteSS330Files.dat/.ctl` (lines 1142, 1151), and SS3 runs inside `<dir>`, so SS3 cannot find its data/control files. Function: `Create_Starter_File()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 421–441) — code appears to have moved +64 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 429–449) — code appears to have moved +72 lines since the review
 
 ```c
-  421: 
-  422: /**
-  423:  *	Create the SS3 run. starter file
-  424:  *
-  425:  *
-  426:  */
-  427: 
-  428: void Create_Starter_File(MSEBoxModel *bm, char *dirName, int groupIndex, int versionID) {
   429: 
   430: 	FILE *fid;
   431:     char fileName[STRLEN];
@@ -492,6 +484,14 @@ Starter file writes `"%s%s.dat", groupCode, fileName` where `fileName` is the st
   439: 
   440: 	printf("versionID = %d\n", versionID);
   441: 	/* Now start writing out the data */
+  442: 
+  443: 	fprintf(fid, "# SS starter file for %s\n", FunctGroupArray[groupIndex].groupCode);
+  444:     fprintf(fid, "#C starter comment here\n");
+  445: 	//fprintf(fid, "atlantisSS3_%d.dat\n", versionID);
+  446: 	//fprintf(fid, "atlantisSS3_%d.ctl\n", versionID);
+  447: 
+  448: 	fprintf(fid, "%s%s.dat\n", FunctGroupArray[groupIndex].groupCode, fileName);
+  449: 	fprintf(fid, "%s%s.ctl\n", FunctGroupArray[groupIndex].groupCode, fileName);
 ```
 
 **Suggested fix (from review):** Pass the dat/ctl base name into `Create_Starter_File` and write `"%s%s.dat"` with groupCode + that base name (no directory)
@@ -522,15 +522,15 @@ Starter file writes `"%s%s.dat", groupCode, fileName` where `fileName` is the st
 
 `"1 # min age for calc of summary biomass"` is written twice. SS3.30 starter expects a single value here, so every subsequent entry (Depletion basis, fraction X, SPR basis, F units, ..., check value 3.30) is shifted by one and the starter fails its end-of-file check / is misread. Function: `Create_Starter_File()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 426–431) — code appears to have moved +31 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 469–474) — code appears to have moved +74 lines since the review
 
 ```c
-  426:  */
-  427: 
-  428: void Create_Starter_File(MSEBoxModel *bm, char *dirName, int groupIndex, int versionID) {
-  429: 
-  430: 	FILE *fid;
-  431:     char fileName[STRLEN];
+  469:     fprintf(fid, "%e # final convergence criteria (e.g. 1.0e-04)\n", bm->RBCestimation.SSTol);  // 0.0001
+  470:     fprintf(fid, "0 # retrospective year relative to end year (e.g. -4)\n");
+  471:     fprintf(fid, "1 # min age for calc of summary biomass\n");
+  472:     fprintf(fid, "1 # min age for calc of summary biomass\n");
+  473:     fprintf(fid, "%d # Depletion basis:  denom is: 0=skip; 1=rel X*B0; 2=rel X*Bmsy; 3=rel X*B_styr\n", bm->RBCestimation.SSDepletionBasis); //1
+  474:     fprintf(fid, "%e # Fraction (X) for Depletion denominator (e.g. 0.4)\n", bm->RBCestimation.SSFractX); // 1.0  neil had 0.41 here
 ```
 
 **Suggested fix (from review):** Delete line 398
@@ -561,18 +561,18 @@ Starter file writes `"%s%s.dat", groupCode, fileName` where `fileName` is the st
 
 `snprintf(fileName, sizeof(fileName), ...)` where `fileName` is a `char *` parameter -> `sizeof` is 8, path truncated to 7 chars. Function: `Create_Starter_File_Orig()` (dead).
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 429–437) — code appears to have moved +12 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 491–499) — code appears to have moved +74 lines since the review
 
 ```c
-  429: 
-  430: 	FILE *fid;
-  431:     char fileName[STRLEN];
-  432:     
-  433: 	snprintf(fileName, sizeof(fileName), "%s/%sstarter.ss", dirName, FOLDER_SEP);
-  434: 
-  435: 	printf("fileName = %s\n", fileName);
-  436: 
-  437: 	if ((fid = fopen(fileName, "w")) == NULL)
+  491:  */
+  492: 
+  493: void Create_Starter_File_Orig(MSEBoxModel *bm, char *dirName, int groupIndex, char *fileName, int versionID) {
+  494: 
+  495:     FILE *fid;
+  496: 
+  497:     snprintf(fileName, sizeof(fileName), "%s/%sstarter.ss", dirName, FOLDER_SEP);
+  498: 
+  499:     printf("fileName = %s\n", fileName);
 ```
 
 **Suggested fix (from review):** Pass the buffer length or use STRLEN
@@ -864,19 +864,19 @@ All SS fleet numbers are written 0-based (`f`/`i`): catch lines `-999 1 %d`, CPU
 
 `fprintf(fid, "%d 1 %d", t, f)` has no trailing space and the next `fprintf(fid, "%e ", catch)` has no leading space, so fleet and catch merge (e.g. `1980 1 01.234e+02  0.01`) -> 4 tokens instead of 5, and the whole catch block is misread. `Write_SS_Data_File()` (line 696) has `"%d 1 %d "`. Function: `WriteSSDat()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1247–1256)
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1267–1276) — code appears to have moved +19 lines since the review
 
 ```c
- 1247: //******************************************************************************
- 1248: //
- 1249: // Name:  WriteSSDat
- 1250: // Description: write the files for input to SS v3.30.15.03
- 1251: //
- 1252: //
- 1253: // called by : WriteSSFiles
- 1254: // calls :
- 1255: // created  : Nov 2007 Sally
- 1256: // updated:   Feb 2011 Sally
+ 1267: 
+ 1268:     //  ------  Dimensions
+ 1269:     fprintf(fid, "# SS v3.30.15.03 data file for %s written by Atlantis Version\n", FunctGroupArray[sp].name);
+ 1270:     fprintf(fid, "# Model dimensions\n");
+ 1271:     fprintf(fid, "%d #_StartYr\n", (int)(bm->RBCestimation.RBCspeciesParam[sp][HistYrMin_id]));
+ 1272:     fprintf(fid, "%d #_EndYr\n", maxyr);
+ 1273:     fprintf(fid, "1 #_Nseas\n");
+ 1274:     fprintf(fid, "12 #_months/season (currently fixed at 12)\n");
+ 1275:     fprintf(fid, "2 #_Nsubseasons (even number, minimum is 2)\n");
+ 1276:     fprintf(fid, "1 #_spawn_month\n");
 ```
 
 **Suggested fix (from review):** `"%d 1 %d "`
@@ -907,16 +907,16 @@ All SS fleet numbers are written 0-based (`f`/`i`): catch lines `-999 1 %d`, CPU
 
 CPUE setup lines for non-metier fleets and all surveys (`" %d 1  0  0  # SURVEY%d"`) have no `\n`; the next fleet's setup then sits after the `#` on the same line and is ignored by SS, so with 2+ surveys the specs are missing and the data file is misread. (1300 CPUE obs and 1346 discard obs also lack `\n`; harmless token-wise but they merge with the following line.) Function: `WriteSSDat()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1258–1264) — code appears to have moved -18 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1299–1305) — code appears to have moved +23 lines since the review
 
 ```c
- 1258: //
- 1259: //******************************************************************************
- 1260: void WriteSSDat(MSEBoxModel *bm, FILE *fid, int sp, int maxyr) {
- 1261:     int t, f, s, a, l, i, num, part, it, allregion, gender, nfltdisc, iy;
- 1262:     double *emptySex;
- 1263:     double cpcv, disccv;
- 1264: 
+ 1299:             }
+ 1300:         } else {
+ 1301:             fprintf(fid, " 3   1  1  2  0  SURVEY%d # \n", (i - (int)(bm->RBCestimation.RBCspeciesParam[sp][NumFisheries_id])));
+ 1302:         }
+ 1303:     }
+ 1304:     // Bycatch fleet not currently used
+ 1305:     fprintf(fid, "#Bycatch_fleet_input_goes_next\n");
 ```
 
 **Suggested fix (from review):** Add `\n` to all four formats
@@ -1013,9 +1013,12 @@ Loops run `f < NumFisheries + NumSurvey` and index arrays sized `K_num_fisheries
 
 Writes `MaxAge+1` as `#_N_age_bins` but then only `MaxAge` bin labels (`a < MaxAge`) and `MaxAge` values per age-comp vector. SS reads MaxAge+1 bin edges (consuming the `1` of `#_N_ageerror_definitions`) and every age-comp row is one value short -> file misparsed. Function: `WriteSSDat()` (same pattern in `Write_SS_Data_File()` 936-940, 1032-1045).
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1558–1567) — code appears to have moved +74 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1555–1564) — code appears to have moved +71 lines since the review
 
 ```c
+ 1555:                     
+ 1556:     free(emptySex);
+ 1557:     emptySex = Util_Alloc_Init_1D_Double(bm->RBCestimation.RBCspeciesParam[sp][MaxAge_id], 0.0);
  1558:     // Initialise - TODO: Is emptysex dealt with properly?
  1559: 
  1560:     fprintf(fid, "%d   #_N_age_bins\n", (int)(bm->RBCestimation.RBCspeciesParam[sp][MaxAge_id]+1));
@@ -1023,9 +1026,6 @@ Writes `MaxAge+1` as `#_N_age_bins` but then only `MaxAge` bin labels (`a < MaxA
  1562:     for (a = 0; a < bm->RBCestimation.RBCspeciesParam[sp][MaxAge_id]; a++){
  1563:         fprintf(fid, "%d ", a);
  1564:     }
- 1565:     fprintf(fid, "\n");
- 1566:     fprintf(fid, "1   #_N_ageerror_definitions\n");
- 1567:     for (a = 0; a < bm->RBCestimation.RBCspeciesParam[sp][AccumAge_id]; a++) {     // bm->RBCestimation.RBCspeciesParam[sp][MaxAge_id] +6 is accumulator age + 1
 ```
 
 **Suggested fix (from review):** Make the count and the loops agree (e.g. print `MaxAge` bins, or loop `a <= MaxAge` everywhere with AgeComp sized accordingly)
@@ -1100,14 +1100,14 @@ Ageing-error definition rows must have Nages+1 entries (ages 0..accumulator age)
 
 Age-comp partition uses `it==1 -> 2, it==2 -> 0, it==3 -> 1` but `it` runs 0..2: `it==0` (retained) leaves `part` unset (uninitialised in this function — declared without init at 1187) or stale, `it==1` (whole) is labelled retained, `it==2` (discard) labelled whole. The length block a few lines up (1433-1439) uses the correct `!it -> 2, 1 -> 0, else 1`. Function: `WriteSSDat()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1193–1197) — code appears to have moved +8 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1259–1263) — code appears to have moved +74 lines since the review
 
 ```c
- 1193: //
- 1194: // called by : DoAssessment
- 1195: // calls : WriteSSDat, WriteSSCtl, WriteSSFor
- 1196: // created  :
- 1197: // updated  : Oct 2020 Maciej Golebiewski
+ 1259: //******************************************************************************
+ 1260: void WriteSSDat(MSEBoxModel *bm, FILE *fid, int sp, int maxyr) {
+ 1261:     int t, f, s, a, l, i, num, part, it, allregion, gender, nfltdisc, iy;
+ 1262:     double *emptySex;
+ 1263:     double cpcv, disccv;
 ```
 
 **Suggested fix (from review):** Copy the mapping from 1433-1439
@@ -1174,22 +1174,22 @@ Age-comp partition uses `it==1 -> 2, it==2 -> 0, it==3 -> 1` but `it` runs 0..2:
 
 Writes `NblockperPatt[i]` blocks per pattern but loops `j < NblockperPatt[i]-1` with `Blocks[i][j*2+1], Blocks[i][j*2+2]` (1-based leftover) -> one begin/end pair too few, so the ctl is misread when `NblockPattern > 0`. Also `Blocks` and `NblockperPatt` are allocated (atAssessTierSetup.c:287-288) but never filled anywhere in the repo. Function: `WriteSSCtl()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1732–1744) — code appears to have moved +29 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1775–1787) — code appears to have moved +72 lines since the review
 
 ```c
- 1732: //******************************************************************************
- 1733: //
- 1734: // Name:  WriteSSCtl
- 1735: // Description: write the files for input to SS v3.30.15.03
- 1736: //
- 1737: //
- 1738: // called by : _WriteSSFiles
- 1739: // calls :
- 1740: // created  : Nov 2007 Sally
- 1741: // updated  : Feb 2011 to write SSv3.1
- 1742: // updated  : Nov 2012 Sally for SS v3.24
- 1743: // updated  : FEb 2020 PB for SS v3.30
- 1744: //
+ 1775:     fprintf(fid, "#\n");
+ 1776:     
+ 1777:     if (bm->RBCestimation.RBCspeciesParam[sp][NblockPattern_id] > 0){
+ 1778:         fprintf(fid, "%d #_Nblock_Patterns\n", (int)(bm->RBCestimation.RBCspeciesParam[sp][NblockPattern_id]));
+ 1779:         for (i = 0; i < bm->RBCestimation.RBCspeciesParam[sp][NblockPattern_id]; i++) {
+ 1780:             fprintf(fid, "%d  ", bm->RBCestimation.RBCspeciesArray[sp].NblockperPatt[i]);
+ 1781:         }
+ 1782:         fprintf(fid, "        # Blocks per pattern\n");
+ 1783:         fprintf(fid, "# begin and end years of Blocks\n");
+ 1784:         for (i=0; i < bm->RBCestimation.RBCspeciesParam[sp][NblockPattern_id]; i++) {
+ 1785:             for (j=0; j< bm->RBCestimation.RBCspeciesArray[sp].NblockperPatt[i]-1; j++) {
+ 1786:                 fprintf(fid, "%f %f\n", bm->RBCestimation.RBCspeciesArray[sp].Blocks[i][j*2+1], bm->RBCestimation.RBCspeciesArray[sp].Blocks[i][j*2+2]);
+ 1787:             }
 ```
 
 **Suggested fix (from review):** `for (j = 0; j < NblockperPatt[i]; j++) ... Blocks[i][2*j], Blocks[i][2*j+1]` and populate the arrays
@@ -1220,14 +1220,14 @@ Writes `NblockperPatt[i]` blocks per pattern but loops `j < NblockperPatt[i]-1` 
 
 `Mat_slope_Fem` line `"    -3     3 %f %f %f     0.8    0   -3  0 0 0 0 0 0 0"` has 15 fields (three `%f` plus 0.8), whereas each MG parameter line takes 14 (cf. Mat50 line 1800). Every later ctl entry is shifted by one token. Function: `WriteSSCtl()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1744–1748) — code appears to have moved -55 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1873–1877) — code appears to have moved +74 lines since the review
 
 ```c
- 1744: //
- 1745: //******************************************************************************
- 1746: void WriteSSCtl(MSEBoxModel *bm, FILE *fid, int sp, int maxyr) {
- 1747:     int f, disc, t, i, j, phase, nsp, block_fxn, ageindex;
- 1748:     int yindex = (int)(bm->RBCestimation.RBCspeciesParam[sp][HistYrMin_id]);
+ 1873:     fprintf(fid, "# Sex: 1  BioPattern: 1  Maturity&Fecundity\n");
+ 1874:     fprintf(fid, "%f %f %f %f     10    0   -3       0       0         0         0        0     0     0     # Mat50_Fem\n", bm->RBCestimation.RBCspeciesParam[sp][Maturity_Inflect_id]/2.0, bm->RBCestimation.RBCspeciesParam[sp][Maturity_Inflect_id]*2.0, bm->RBCestimation.RBCspeciesParam[sp][Maturity_Inflect_id], bm->RBCestimation.RBCspeciesParam[sp][Maturity_Inflect_id]);
+ 1875:     fprintf(fid, "    -3     3 %f %f %f     0.8    0   -3       0       0         0         0        0     0     0     # Mat_slope_Fem\n", bm->RBCestimation.RBCspeciesParam[sp][Maturity_Slope_id], bm->RBCestimation.RBCspeciesParam[sp][Maturity_Slope_id], bm->RBCestimation.RBCspeciesParam[sp][Maturity_Slope_id]);
+ 1876:     //* the next two parameters were labeled egg/gm in the 3.24 version, howeverit doesn't look like they're doing anything important
+ 1877:      fprintf(fid, "    -3     3        1        1       0.8   0   -3       0       0         0         0        0     0     0     #   Eggs/kg_inter_Fem\n");
 ```
 
 **Suggested fix (from review):** Drop one `%f` (and its argument)
@@ -1258,14 +1258,14 @@ Writes `NblockperPatt[i]` blocks per pattern but loops `j < NblockperPatt[i]-1` 
 
 `vbk = log(VBk[0][1])/VBk[0][0];` — the male K offset should be `log(VBk[0][1]/VBk[0][0])` (cf. 1863, 1874). Wrong male K whenever Nsexes>1 and MG_offset>2. Function: `WriteSSCtl()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1744–1748) — code appears to have moved -106 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1850–1854) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `WriteSSCtl()` now starts at line 1746
 
 ```c
- 1744: //
- 1745: //******************************************************************************
- 1746: void WriteSSCtl(MSEBoxModel *bm, FILE *fid, int sp, int maxyr) {
- 1747:     int f, disc, t, i, j, phase, nsp, block_fxn, ageindex;
- 1748:     int yindex = (int)(bm->RBCestimation.RBCspeciesParam[sp][HistYrMin_id]);
+ 1850:      fprintf(fid, "%f %f %f %f       0.8  0   -3       0       0         0         0        0     0     0     # VonBert_K_Fem_GP_1\n", vbk/3.0, vbk*3.0, vbk, vbk);
+ 1851: 
+ 1852:     cvest = bm->RBCestimation.RBCspeciesArray[sp].CvLA0[0][0];
+ 1853: 
+ 1854:      fprintf(fid, "%f %f %f %f       0.8  0   -2       0       0         0         0        0     0     0     # CV_young_Fem_GP_1\n", cvest/3.0, cvest*3.0, cvest, cvest);
 ```
 
 **Suggested fix (from review):** `log(VBk[0][1] / VBk[0][0])`
@@ -1374,14 +1374,14 @@ Age-selex pattern lines for fishing fleets (`"%d  0  0  0  # FLEET %d in metier 
 
 Mirrored size-selex line `"%d %d 0 %d "` has no `\n` (no `#` so tokens still parse, but the next fleet's line is appended). Function: `WriteSSCtl()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 1744–1748) — code appears to have moved -342 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 2086–2090) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `WriteSSCtl()` now starts at line 1746
 
 ```c
- 1744: //
- 1745: //******************************************************************************
- 1746: void WriteSSCtl(MSEBoxModel *bm, FILE *fid, int sp, int maxyr) {
- 1747:     int f, disc, t, i, j, phase, nsp, block_fxn, ageindex;
- 1748:     int yindex = (int)(bm->RBCestimation.RBCspeciesParam[sp][HistYrMin_id]);
+ 2086:     for (f = 0; f < (bm->RBCestimation.RBCspeciesParam[sp][NumFisheries_id] + bm->RBCestimation.RBCspeciesParam[sp][NumSurvey_id]); f++) {
+ 2087:         //guard
+ 2088:         if (bm->RBCestimation.RBCspeciesArray[sp].CPUEqmu[f] <= 0) continue;
+ 2089:     
+ 2090:         if( f < bm->RBCestimation.RBCspeciesParam[sp][NumFisheries_id]){
 ```
 
 **Suggested fix (from review):** Add `\n`
@@ -1412,19 +1412,19 @@ Mirrored size-selex line `"%d %d 0 %d "` has no `\n` (no `#` so tokens still par
 
 `cat[f] = CatchData[f][allregion][maxyr] * RBCspeciesArray[sp].mgtTAC_old / last_catch;` — `mgtTAC_old` (atlantisboxmodel.h:2999) is never assigned anywhere in the repo, so forecast catches are 0 (or garbage); the TAC is kept in `RBCspeciesParam[sp][TAC_old_id]` (set atManageTier.c:140, 238; used by `Write_Forecast_File()` 558). Also no guard for `last_catch == 0` (NaN/inf written to forecast.ss). Function: `WriteSSFor()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 2445–2454) — code appears to have moved +79 lines since the review
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 2372–2381) — code appears to have moved +6 lines since the review
 
 ```c
- 2445:     }
- 2446:     for (f = 0; f < bm->RBCestimation.RBCspeciesParam[sp][NumFisheries_id]; f++) {
- 2447:         cat[f] = bm->RBCestimation.RBCspeciesArray[sp].CatchData[f][allregion][maxyr] * bm->RBCestimation.RBCspeciesArray[sp].mgtTAC_old / last_catch;
- 2448:          fprintf(fid, "%d 1 %d %f\n,", maxyr+1, f, cat[f]);
- 2449:     }
- 2450:     fprintf(fid, "-9999 1 1 0  # terminator_for_Fcast_catches\n");
- 2451:     fprintf(fid, "#\n");
- 2452:     fprintf(fid, "999     #  terminator_for_the_for_file \n");
- 2453: 
- 2454:     fclose(fid);
+ 2372: void WriteSSFor(MSEBoxModel *bm, FILE *fid, int sp, int maxyr) {
+ 2373:     int f,allregion;
+ 2374:     double last_catch;
+ 2375:     double *cat;
+ 2376: 
+ 2377:     // initial header block
+ 2378:     fprintf(fid, "# SS v3.30.15.03 forcast file for %s written by Atlantis\n", FunctGroupArray[sp].name);
+ 2379: 
+ 2380:     fprintf(fid, "1 # Benchmarks: 0=skip; 1=calc F_spr,F_btgt,F_msy; 2=calc F_spr,F0.1,F_msy \n");
+ 2381:     fprintf(fid, "3 # MSY: 1= set to F(SPR); 2=calc F(MSY); 3=set to F(Btgt) or F0.1; 4=set to F(endyr) \n");
 ```
 
 **Suggested fix (from review):** Use `RBCspeciesParam[sp][TAC_old_id]` and guard `last_catch > 0`
@@ -1455,14 +1455,14 @@ Mirrored size-selex line `"%d %d 0 %d "` has no `\n` (no `#` so tokens still par
 
 `fprintf(fid, "%d 1 %d %f\n,", ...)` — stray comma after the newline, so each following line starts with `,` (e.g. `,-9999 1 1 0`), corrupting the forecast catch list and its terminator. Function: `WriteSSFor()`.
 
-**Current code** (`atSS3Link/atSS3LinkIO.c` lines 2370–2374)
+**Current code** (`atSS3Link/atSS3LinkIO.c` lines 2376–2380) — code appears to have moved +4 lines since the review
 
 ```c
- 2370: //
- 2371: //******************************************************************************
- 2372: void WriteSSFor(MSEBoxModel *bm, FILE *fid, int sp, int maxyr) {
- 2373:     int f,allregion;
- 2374:     double last_catch;
+ 2376: 
+ 2377:     // initial header block
+ 2378:     fprintf(fid, "# SS v3.30.15.03 forcast file for %s written by Atlantis\n", FunctGroupArray[sp].name);
+ 2379: 
+ 2380:     fprintf(fid, "1 # Benchmarks: 0=skip; 1=calc F_spr,F_btgt,F_msy; 2=calc F_spr,F0.1,F_msy \n");
 ```
 
 **Suggested fix (from review):** `"%d 1 %d %f\n"`

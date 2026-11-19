@@ -30,18 +30,18 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Existing entries store absolute days: `newArray[...][start_id] = start + bm->dayt` here and atharvest/atHarvest.c:1933. But the insertion point is chosen with `originalArray[i][start_id] > start`, using the relative `start`. Once `dayt > 0`, the new change goes in the wrong place, and `Util_Get_Change_Scale` (which assumes ascending start dates) picks the wrong active change. Callers: atHarvest.c:1943/1984, atbiolUtil.c:149. Function: `Util_Copy_Change_Values()`.
 
-**Current code** (`atlantisUtil/atUtil.c` lines 804–812) — code appears to have moved -35 lines since the review
+**Current code** (`atlantisUtil/atUtil.c` lines 875–883) — code appears to have moved +36 lines since the review
 
 ```c
-  804:  *
-  805:  */
-  806: double Util_Get_Change_Scale(MSEBoxModel *bm, int num_changes, double **changeArray) {
-  807: 
-  808: 	int now_change = 0, past_change, i;
-  809: 	double scale = 0.0, end_date, multB, multA, start, period;
-  810: 
-  811: 	if ((bm->dayt >= changeArray[0][start_id]) && (changeArray[0][start_id] != 0)) {
-  812: 		now_change = 0;
+  875: }
+  876: 
+  877: void Util_Copy_Change_Values(MSEBoxModel *bm, double **originalArray, double **newArray, int size, double start, double period, double mult) {
+  878: 
+  879: 	int arrayIndex, i;
+  880: 	int beenInserted = FALSE;
+  881: 
+  882: 	/* Now copy the values across inserting the new value in the correct place.*/
+  883: 	arrayIndex = 0;
 ```
 
 **Suggested fix (from review):** Compare against `start + bm->dayt`.
@@ -72,25 +72,25 @@ Existing entries store absolute days: `newArray[...][start_id] = start + bm->day
 
 The comment says "random number from lognormal distribution", but the function draws `x_b ~ U(0,1)` and returns the lognormal density f(x_b), not a lognormal variate. The values are mostly not lognormally distributed, and `x_b = 0` gives division by zero / log(0). Used as a recruitment multiplier at atecology/atannualbiology.c:1116 and 1206. Function: `Util_Logx_Result()`.
 
-**Current code** (`atlantisUtil/atUtil.c` lines 1026–1041) — code appears to have moved +30 lines since the review
+**Current code** (`atlantisUtil/atUtil.c` lines 1042–1057) — code appears to have moved +46 lines since the review
 
 ```c
- 1026:  *
- 1027:  */
- 1028: double Util_Normx_Result(double mu, double sigma) {
- 1029:     double result, step_a, step_b, step_c;
- 1030: 
- 1031:     step_a = drandom(0.0, 1.0);
- 1032:     step_b = drandom(0.0, 1.0);
- 1033:     step_c = sqrt(-2.0 * log(step_a)) * cos(2.0 * 3.1415926 * step_b);
- 1034:     result = step_c * sigma + mu;
- 1035: 
- 1036:     return (result);
- 1037: 
- 1038: }
- 1039: 
- 1040: /**
- 1041:  *	\brief random number from lognormal distribution
+ 1042:  *
+ 1043:  */
+ 1044: double Util_Logx_Result(double mu, double sigma) {
+ 1045: 	double x_b, result, step_a, step_b, step_c;
+ 1046: 
+ 1047: 	x_b = drandom(0.0, 1.0);
+ 1048: 	step_a = 1.0 / (x_b * sigma * sqrt(2.0 * 3.141592654));
+ 1049: 	step_b = (log(x_b) - mu) * (log(x_b) - mu);
+ 1050: 	step_c = 2.0 * sigma * sigma;
+ 1051: 	result = step_a * exp(-step_b / step_c);
+ 1052: 
+ 1053: 	return (result);
+ 1054: 
+ 1055: }
+ 1056: 
+ 1057: /**
 ```
 
 **Suggested fix (from review):** Return `exp(mu + sigma * Util_Normx_Result(0,1))` (confirm intent with author).
@@ -121,14 +121,14 @@ The comment says "random number from lognormal distribution", but the function d
 
 Inside the loop over `changeIndex` the guard tests `changeArray[0][start_id] != 0` rather than `changeArray[changeIndex][start_id]`. This was copied from `Util_Get_Change_Scale`, which has no loop. Function: `Util_Get_Accumulative_Change_Scale()`.
 
-**Current code** (`atlantisUtil/atUtil.c` lines 804–808) — code appears to have moved -3 lines since the review
+**Current code** (`atlantisUtil/atUtil.c` lines 846–850) — code appears to have moved +39 lines since the review
 
 ```c
-  804:  *
-  805:  */
-  806: double Util_Get_Change_Scale(MSEBoxModel *bm, int num_changes, double **changeArray) {
-  807: 
-  808: 	int now_change = 0, past_change, i;
+  846:  *
+  847:  */
+  848: double Util_Get_Accumulative_Change_Scale(MSEBoxModel *bm, int num_changes, double **changeArray) {
+  849: 
+  850: 	int changeIndex;
 ```
 
 **Suggested fix (from review):** Use `changeArray[changeIndex][start_id]`, if the per-entry test was intended.
@@ -197,11 +197,9 @@ Inside the loop over `changeIndex` the guard tests `changeArray[0][start_id] != 
 
 `*strstr(tempStr, ".nc") = '\0'` crashes if the file name has no ".nc". The stat-failure message prints `fileName` rather than the `fname` actually checked. Function: `Util_Check_NetCDF_Size()`.
 
-**Current code** (`atlantisUtil/atUtil.c` lines 1216–1238) — code appears to have moved +33 lines since the review
+**Current code** (`atlantisUtil/atUtil.c` lines 1218–1240) — code appears to have moved +35 lines since the review
 
 ```c
- 1216: }
- 1217: 
  1218: int Util_Check_NetCDF_Size(MSEBoxModel *bm, int fid, int *dump, char *fileName, int *index, int type){
  1219: 	struct stat buffer;
  1220: 	char fname[STRLEN*2];
@@ -223,6 +221,8 @@ Inside the loop over `changeIndex` the guard tests `changeArray[0][start_id] != 
  1236: 		snprintf(fname, sizeof(fname), "%s%s", bm->destFolder, fileName);
  1237: 	}
  1238: 
+ 1239: 
+ 1240: 	/* Might need to close the file and then open it after we have checked its size */
 ```
 
 **Suggested fix (from review):** Check strstr for NULL; print `fname`.

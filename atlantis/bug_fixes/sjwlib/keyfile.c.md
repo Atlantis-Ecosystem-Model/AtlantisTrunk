@@ -65,9 +65,10 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `fscanf(fp,"%s",val)` into `char val[1024]` has no width limit. `*p` is always malloc'd, which ignores and leaks any existing array (unlike the d/i variants), and is leaked on the error returns. Function: `readkeyprm_sarray()`.
 
-**Current code** (`sjwlib/keyfile.c` lines 366–383) — code appears to have moved -5 lines since the review
+**Current code** (`sjwlib/keyfile.c` lines 365–382) — code appears to have moved -6 lines since the review
 
 ```c
+  365: 	return(0);
   366: 
   367:     if( fscanf(fp,"%d",size) != 1  || *size < 0) {
   368:     	keyprm_errfn("readkeyprm_sarray: Parameter %s array size format bad\n", key);
@@ -85,7 +86,6 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   380:        }
   381: 
   382:        /**** Now populate the array, if we run out of values, then pad
-  383:         **** to end with the last value
 ```
 
 **Suggested fix (from review):** Use `"%1023s"`; free `*p` on error.

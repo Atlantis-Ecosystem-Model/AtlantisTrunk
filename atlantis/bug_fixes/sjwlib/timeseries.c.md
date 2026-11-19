@@ -140,20 +140,20 @@ After converting units, `ts->t_units`, `df->rec_units` and `df->variables[ri].un
 
 If the file has no record variable and no `t`/`time` variable, `ts->t` stays NULL, and `tsMultiCheck`/`tsMultiEvalXYZ` dereference `ts->t[0]`. For NetCDF with `nd > 3`, `ts->type` is left unset (`default: break`). Function: `tsRead()`.
 
-**Current code** (`sjwlib/timeseries.c` lines 133–143) — code appears to have moved +27 lines since the review
+**Current code** (`sjwlib/timeseries.c` lines 110–120) — code appears to have moved +4 lines since the review
 
 ```c
-  133: 			break;
-  134: 
-  135: 		default:
-  136: 			break;
-  137: 		}
-  138: 	} else
-  139: 		ts->type = TS_ASCII;
-  140: 
-  141: 	ts->name = df->name;
-  142: 	ts->nt = df->nrecords;
-  143: 	ts->ti = df->ri;
+  110: 		if (index >= 0)
+  111: 			dfSetRecord(df, index);
+  112: 		else if ((index = dfIndex(df, "time")) >= 0)
+  113: 			dfSetRecord(df, index);
+  114: 	}
+  115: 
+  116: 	/* Copy the convenience variables over */
+  117: 	if (df->type == DFT_NETCDF) {
+  118: 		switch (df->nd) {
+  119: 		case 0:
+  120: 			ts->type = TS_NC0;
 ```
 
 **Suggested fix (from review):** Quit if `ts->t == NULL`; set a type or quit in the default branch.

@@ -1,0 +1,35 @@
+Merge origin/main into atlantis_update (to PR #95)
+
+Bring in the 137 commits on main since the branch point at 834c6a8
+(PR #11, Nov 2025): contaminant maternal-transfer, timing and carrion
+changes; effort displacement with MPAs (JMK fixes, #22); atdemography
+index fixes; git-tag release version via configure.ac; OS-conditional
+compiler warnings; example/ and docs/CI updates.
+
+Conflict resolutions (see atlantis/bug_fixes/00_merge_from_main.md):
+- atmovement.c: use main's ordering for returning migrants, so
+  ContaminantMigrationIn gets the migrant pool before returners are
+  removed. Removed the branch's second call that would have run it twice.
+- atContaminants.c: take main's prey/predator tracer array declarations.
+- atHarvestIO.c: keep snprintf; adopt main's DetailedEffort.txt name.
+- atUtilIO.c, atUtilXML.c, atlantismain.c, atManage.c, atManageSetup.c:
+  branch versions of whitespace/comment-only conflicts.
+- PreRules.am: main's OS_MACOS/OS_LINUX structure and $(INCLUDES), plus
+  the branch's FISHMIP_OSP_DIR block and OPT = -O2 -mtune=generic.
+- Makefile.in files regenerated with autoreconf -i (automake 1.16.5).
+- .gitignore: union of both sides; .DS_Store files removed from git
+  as on main.
+
+Fix on top of main:
+- atdemography.c Get_Latest_Additions: _finite check used
+  tempPopRatio[stock_id][ngene][cohort][0] (ngene in the species slot).
+  Now [stock_id][species][ngene][0] to match the line it checks.
+
+Also regenerates the bug_fixes/ review files against the merged code
+and flags (🔀) the 21 to-do findings whose code main changed.
+
+Behaviour changes from main: CARRION and PWN diagTol now 1, which
+affects the adaptive timestep. Contaminant runs need the new required
+biology parameter min_pool_cont.
+
+Built clean (configure && make) in a scratch copy on macOS arm64.

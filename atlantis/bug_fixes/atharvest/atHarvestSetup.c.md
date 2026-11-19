@@ -111,33 +111,33 @@ The comparison uses the age class (`basechrt < age50`, and `age50 = basechrt`), 
 
 Average catch size tracers get the long name "Total effort of (recreational) fishery ...", copied from the effort tracer block. Line 408 even says "This should be different but is not!". Units "mg N" are questionable too. Function: `Build_Fishery_Tracers()`.
 
-**Current code** (`atharvest/atHarvestSetup.c` lines 268–291) — code appears to have moved -123 lines since the review
+**Current code** (`atharvest/atHarvestSetup.c` lines 391–414) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Build_Fishery_Tracers()` now starts at line 261
 
 ```c
-  268: 	/* Allocate space for statistics info */
-  269: 	if ((bm->finfo = (FstatInfo *) malloc((long unsigned int)bm->nfstat * sizeof(FstatInfo))) == NULL)
-  270: 		quit("atHarvest - Build_Fishery_Tracers: Can't allocate memory for info\n");
-  271: 
-  272: 	/* Clear tracer info */
-  273: 	memset(bm->finfo, 0, (long unsigned int)bm->nfstat * (int)sizeof(FstatInfo));
-  274: 
-  275: 	/* Catch tracers */
-  276: 	for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
-  277: 		if (FunctGroupArray[fgIndex].isVertebrate == TRUE) {
-  278: 			for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
-  279: 
-  280: 				snprintf(name, sizeof(name), "%s%d_Catch", FunctGroupArray[fgIndex].name, cohort + 1);
-  281: 				snprintf(longName, sizeof(longName), "Catch of age class %d %s", cohort + 1, FunctGroupArray[fgIndex].fullName);
-  282: 
-  283: 				if( FunctGroupArray[fgIndex].numGeneTypes > 1 )
-  284: 					snprintf(longName, sizeof(longName), "Catch of age class by gene type %d %s", cohort + 1, FunctGroupArray[fgIndex].fullName);
-  285: 
-  286: 				Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Numbers", 0, 3, &FunctGroupArray[fgIndex].CatchTracers[cohort], 0, 2, 0);
-  287: 			}
-  288: 		}
-  289: 	}
-  290: 
-  291: 	/* Discard tracers */
+  391: 		Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Days", 0, 1, &FisheryArray[nf].totalEffortTracer, 0, 2, 0);
+  392: 	}
+  393: 	/* The average catch tracer */
+  394: 	FCindex = 0;
+  395: 	for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+  396: 		if (FisheryArray[nf].isRec == TRUE) {
+  397: 			if(recCount > 1){
+  398: 				snprintf(name, sizeof(name), "Avg_Catch_Sze_Recfish%d", FCindex + 1);
+  399: 				snprintf(longName, sizeof(longName), "Total effort of recreational fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
+  400: 				FCindex++;
+  401: 			}else{
+  402: 				snprintf(name, sizeof(name), "Avg_Catch_Sze_Recfish");
+  403: 				snprintf(longName, sizeof(longName), "Total effort of recreational fishery");
+  404: 			}
+  405: 		} else {
+  406: 			snprintf(name, sizeof(name), "Avg_Catch_Sze_FC%d", FCindex + 1);
+  407: 
+  408: 			/* This should be different but is not!*/
+  409: 			snprintf(longName, sizeof(longName), "Total effort of fishery %d (%s)", FCindex + 1, FisheryArray[nf].fisheryCode);
+  410: 			FCindex++;
+  411: 		}
+  412: 		Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "mg N", 0, 1, &FisheryArray[nf].averageCatchSizeTracer, 0, 2, 0);
+  413: 	}
+  414: 
 ```
 
 **Suggested fix (from review):** Use "Average catch size of fishery %d (%s)"

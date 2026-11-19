@@ -29,21 +29,21 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `Fishery_Last_XMLFunction()` takes the text after the last `_` as the fishery code. Real models have fishery codes with underscores (`EffortChange_start_Astoria_Generic`, `..._Com_boat` in /Users/ful083/runs), which resolve to `Generic`/`boat`. `Util_Get_Fishery_Index()` then quits or picks the wrong fishery. This affects every caller: mEff_, habitat_, SELchange_*, EffortChange_*, Effort_mult_, among others. Function: `Fishery_Last_XMLFunction()`.
 
-**Current code** (`ConvertAtlantis/atHarvesttoXML.c` lines 40–51) — code appears to have moved -5 lines since the review
+**Current code** (`ConvertAtlantis/atHarvesttoXML.c` lines 51–62) — code appears to have moved +6 lines since the review
 
 ```c
-   40:  *
-   41:  */
-   42: void Fishery_Last_XMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *str, char *valueStr) {
-   43: 
-   44: 	char *fisheryStr;
-   45: 	int fisheryIndex;
-   46: 
-   47: 	fisheryStr = strchr(str, '_');
-   48: 	fisheryStr++;
-   49: 	while (strchr(fisheryStr, '_') != NULL) {
-   50: 		fisheryStr = strchr(fisheryStr, '_');
    51: 		fisheryStr++;
+   52: 	}
+   53: 	fisheryIndex = Util_Get_Fishery_Index(bm, fisheryStr);
+   54: 	Util_XML_Set_Node_Value(ATLANTIS_FISHERY_ATTRIBUTE, parent, FisheryArray[fisheryIndex].fisheryCode, valueStr);
+   55: }
+   56: 
+   57: /**
+   58:  * \brief Create a node for each fishery.
+   59:  */
+   60: void Create_Fishery_XMLNodes(MSEBoxModel *bm,  xmlNodePtr parent) {
+   61: 	int index;
+   62: 
 ```
 
 **Suggested fix (from review):** Strip the known parameter prefix (pass it in) instead of using the last `_`
@@ -74,14 +74,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The lookup for option 4 ("Conditional on catch of other species") is created with value `"2"`, which duplicates the "Size based" entry. Function: `FisheryFlagXML()`.
 
-**Current code** (`ConvertAtlantis/atHarvesttoXML.c` lines 248–252) — code appears to have moved -80 lines since the review
+**Current code** (`ConvertAtlantis/atHarvesttoXML.c` lines 328–332) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `FisheryFlagXML()` now starts at line 250
 
 ```c
-  248: 
-  249: 
-  250: void FisheryFlagXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc, xmlNodePtr rootnode) {
-  251: 
-  252: 	xmlNodePtr groupingNode, node, lookupNode;
+  328: 	Util_XML_Create_Lookup_Value_Node(lookupNode, "2", "Size based");
+  329: 	Util_XML_Create_Lookup_Value_Node(lookupNode, "3", "Loaded from timeseries file");
+  330: 	Util_XML_Create_Lookup_Value_Node(lookupNode, "2", "Conditional on catch of other species");
+  331: 
+  332: 	node = Create_Harvest_Fishery_Group_ParamXML(bm, fp, fileName, groupingNode, flagescapement_id,
 ```
 
 **Suggested fix (from review):** Change `"2"` to `"4"`

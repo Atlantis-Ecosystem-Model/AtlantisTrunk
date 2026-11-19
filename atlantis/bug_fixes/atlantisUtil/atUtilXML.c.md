@@ -40,14 +40,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `if ((*p)[i] < 0.0 && (*p)[i] > 1.0)`: a value can't be both <0 and >1, so the range check in `probability_check` never fires. Only the sum test runs, so negative entries that are offset by entries >1 still pass. The `proportion_check` case just above (line 692) correctly uses `||`. Function: `Check_Input_Array()`.
 
-**Current code** (`atlantisUtil/atUtilXML.c` lines 718–722) — code appears to have moved +18 lines since the review
+**Current code** (`atlantisUtil/atUtilXML.c` lines 734–738) — code appears to have moved +34 lines since the review
 
 ```c
-  718:         {"StringArray" }};
-  719: 
-  720: static int Check_Input_Array(double **p, int sized, int entry_type, char *key) {
-  721: 	int returnValue = TRUE;
-  722: 	int i;
+  734: 		}
+  735: 		break;
+  736: 	case proportion_check:
+  737: 		/* Values are between 0 and 1 */
+  738: 		for (i = 0; i < sized; i++) {
 ```
 
 **Suggested fix (from review):** Change `&&` to `||`.
@@ -78,19 +78,19 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `Util_XML_Get_Node_Value_Double` returns -1 when the value attribute is missing and 1 on success. The caller tests `if(!Util_XML_Get_Node_Value_Double(...))`, but `!(-1)` is 0, so a missing value is never caught. `value` stays 0, `Check_Value` runs on 0, and the function returns TRUE even when `isRequired` is TRUE. Function: `Util_XML_Get_Value_Double()`.
 
-**Current code** (`atlantisUtil/atUtilXML.c` lines 1197–1206) — code appears to have moved -18 lines since the review
+**Current code** (`atlantisUtil/atUtilXML.c` lines 1247–1256) — code appears to have moved +32 lines since the review
 
 ```c
- 1197: }
- 1198: 
- 1199: int Util_XML_Get_Node_Value_Double(int type, xmlNodePtr node, double *returnValue) {
- 1200: 	char *value = Get_Node_Property(node, AtlantisXMLObjectNAMES[type][ATTRIBUTE_VALUE]);
- 1201: 
- 1202: 	if(value == NULL){
- 1203: 		return -1;
- 1204: 	}
- 1205: 	*returnValue = atof(value);
- 1206: 
+ 1247:  *
+ 1248:  */
+ 1249: int Util_XML_Get_Value_Double(char *fileName, int type, int localecotest, int isRequired, xmlNodePtr parent, int entry_type, char *valueName,
+ 1250: 		double *returnValue) {
+ 1251: 	double value = 0;
+ 1252: 	xmlNodePtr attributeNode;
+ 1253: 
+ 1254: 	attributeNode = Util_XML_Get_Node(type, parent, valueName);
+ 1255: 
+ 1256: 	if (attributeNode == NULL) {
 ```
 
 **Suggested fix (from review):** Use `if (Util_XML_Get_Node_Value_Double(...) < 0)`.
@@ -204,19 +204,9 @@ When the value attribute is missing and `isRequired == FALSE`, `value` is NULL a
 
 `set_keyprm_errfn(quiet)` is set for the duplicate check but only restored at 1391, after the missing-value checks. `keyprm_errfn(...)` at 1380/1382 is therefore `quiet` and doesn't stop execution, so a missing value (`valuestr == NULL`) reaches `strlen(valuestr)` and then `Util_XML_Create_Node`, which crashes. Function: `Util_XML_Parse_Create_Node()`.
 
-**Current code** (`atlantisUtil/atUtilXML.c` lines 1380–1416) — code appears to have moved +23 lines since the review
+**Current code** (`atlantisUtil/atUtilXML.c` lines 1390–1426) — code appears to have moved +33 lines since the review
 
 ```c
- 1380:  *
- 1381:  */
- 1382: xmlNodePtr Util_XML_Parse_Create_Node(FILE *infile, char *fileName, xmlNodePtr cur, char *valueName, char *comment, char *units, int type,
- 1383: 		char *recommendedValue) {
- 1384: 	char ch, buf[STRLEN], seps[] = " ,\t\n";
- 1385: 	char *varstr, *valuestr, *unitstr;
- 1386: 	int buflen = STRLEN;
- 1387: 	xmlNodePtr returnNode;
- 1388: 	char tempBuf[STRLEN];
- 1389: 	char *unitTypes[] =  { "us", "usec",  "ms",  "msec",  "s",  "sec",  "second",  "min", "minute",  "h",  "hr", "hour",  "d",  "day",  "week"};
  1390: 	int numUnits = 15;
  1391: 	int i;
  1392: 	void (*fn)(char *format, ...) = keyprm_errfn;
@@ -244,6 +234,16 @@ When the value attribute is missing and `isRequired == FALSE`, `value` is NULL a
  1414: 				unitstr = strtok(NULL, seps);
  1415: 
  1416: 				if(unitstr != NULL){
+ 1417: 					for(i = 0; i < numUnits; i++){
+ 1418: 						if(strcmp(unitstr, unitTypes[i]) == 0){
+ 1419: 							snprintf(tempBuf, sizeof(tempBuf), "%s %s", valuestr, unitstr);
+ 1420: 							strcpy(valuestr, tempBuf);
+ 1421: 							break;
+ 1422: 						}
+ 1423: 					}
+ 1424: 				}
+ 1425: 
+ 1426: 				if (valuestr == NULL)
 ```
 
 **Suggested fix (from review):** Call `set_keyprm_errfn(fn)` right after the duplicate check, or use `quit` for the missing-value errors.
@@ -274,16 +274,16 @@ When the value attribute is missing and `isRequired == FALSE`, `value` is NULL a
 
 `valueCopy = malloc(STRLEN)` (STRLEN=2000, atlantisboxmodel.h:331), then `strcpy(valueCopy, valueStr)` copies the full XML array string with no length check. Long arrays (per-box arrays in large models, long prey/diet vectors) easily go past 2000 chars and overflow the heap. The copy is only used in an error message. Function: `Parse_Into_Array()`.
 
-**Current code** (`atlantisUtil/atUtilXML.c` lines 1557–1563) — code appears to have moved -42 lines since the review
+**Current code** (`atlantisUtil/atUtilXML.c` lines 1642–1648) — code appears to have moved +43 lines since the review
 
 ```c
- 1557: static int *Parse_Into_Int_Array(char *fileName, char *paramName, char *valueStr, int size, int entry_type) {
- 1558: 	int i;
- 1559: 	int *values = (int *) malloc((size_t)size * sizeof(int));
- 1560: 	char *varStr;
- 1561: 	char seps[] = " ,\t";
- 1562: 	int val;
- 1563: 	int lastval = 0;
+ 1642: double *Parse_Into_Array(char *fileName, char *paramName, char *valueStr, int size, int entry_type) {
+ 1643: 	int i;
+ 1644: 	double *values = (double *) malloc((size_t)size * sizeof(double));
+ 1645: 	char *varStr;
+ 1646: 	char seps[] = " ,\t";
+ 1647: 	double val, lastval = 0.0;
+ 1648: 	char *valueCopy = (char *)malloc(sizeof(char) *STRLEN);
 ```
 
 **Suggested fix (from review):** Use `valueCopy = strdup(valueStr)` (or malloc `strlen(valueStr)+1`).
@@ -314,13 +314,9 @@ When the value attribute is missing and `isRequired == FALSE`, `value` is NULL a
 
 Each step rebuilds the whole growing output in `char tempStr[256]` with `snprintf(tempStr, sizeof(tempStr), "%s %s", returnString, ...)` and copies it back. Once the string passes 255 chars it is silently truncated, so the rewritten array loses its later entries and has the wrong length. `returnString` itself is `size*100` bytes. Function: `Replace_String_Entry()` (used by `Util_XML_Replace_Node_Value`).
 
-**Current code** (`atlantisUtil/atUtilXML.c` lines 1511–1541) — code appears to have moved +43 lines since the review
+**Current code** (`atlantisUtil/atUtilXML.c` lines 1515–1545) — code appears to have moved +47 lines since the review
 
 ```c
- 1511:  *
- 1512:  */
- 1513: static char *Replace_String_Entry(char *valueStr, char *replaceStr, int size, int replaceIndex) {
- 1514: 	char *varStr;
  1515: 	char seps[] = " ";
  1516: 	int i;
  1517: 	char tempStr[256];
@@ -348,6 +344,10 @@ Each step rebuilds the whole growing output in `char tempStr[256]` with `snprint
  1539: 			if (i == 0)
  1540: 				strcpy(tempStr, varStr);
  1541: 			else
+ 1542: 				snprintf(tempStr, sizeof(tempStr), "%s %s", returnString, varStr);
+ 1543: 			strcpy(returnString, tempStr);
+ 1544: 		}
+ 1545: 	}
 ```
 
 **Suggested fix (from review):** Append directly into `returnString` (strcat, or track an offset) and drop `tempStr`.
@@ -419,17 +419,17 @@ Each step rebuilds the whole growing output in `char tempStr[256]` with `snprint
 
 On context-creation failure, `Execute_Xpath_Expression` calls `xmlFreeDoc(doc)` on a document it doesn't own. The caller keeps using and later frees the doc, so this is a use-after-free or double free. Function: `Execute_Xpath_Expression()`.
 
-**Current code** (`atlantisUtil/atUtilXML.c` lines 842–849) — code appears to have moved +29 lines since the review
+**Current code** (`atlantisUtil/atUtilXML.c` lines 862–869) — code appears to have moved +49 lines since the review
 
 ```c
-  842: 
-  843: /**
-  844:  * Execute_Xpath_Expression:
-  845:  * @filename:       the input XML filename.
-  846:  * @xpathExpr:      the xpath expression for evaluation.
-  847:  * @nsList:     the optional list of known namespaces in
-  848:  *          "<prefix1>=<href1> <prefix2>=href2> ..." format.
-  849:  *
+  862: 	if (xpathCtx == NULL) {
+  863: 		fprintf(stderr, "Error: unable to create new XPath context\n");
+  864: 		xmlFreeDoc(doc);
+  865: 		return (NULL);
+  866: 	}
+  867: 
+  868: 	/* Register namespaces from list (if any) */
+  869: 	if ((nsList != NULL) && (Register_Namespaces(xpathCtx, nsList) < 0)) {
 ```
 
 **Suggested fix (from review):** Remove `xmlFreeDoc(doc)`.
@@ -460,14 +460,14 @@ On context-creation failure, `Execute_Xpath_Expression` calls `xmlFreeDoc(doc)` 
 
 `if(strcmp((char *)node->name, AtlantisXMLObjectNAMES[i][0]))` is true when the names differ, so the function returns the name property of the first node type that doesn't match (usually NULL), not the matching one. It's used for error-message node names in atManageParamIO.c/atassessParamIO.c. Function: `Util_Get_Node_Name()`.
 
-**Current code** (`atlantisUtil/atUtilXML.c` lines 2210–2214) — code appears to have moved +43 lines since the review
+**Current code** (`atlantisUtil/atUtilXML.c` lines 2214–2218) — code appears to have moved +47 lines since the review
 
 ```c
- 2210:  *
- 2211:  */
- 2212: char *Util_Get_Node_Name(xmlNodePtr node){
- 2213: 	int i;
  2214: 
+ 2215: 	for(i = 0; i < NUM_ATLANTIS_NODE_TYPES; i++){
+ 2216: 		if(strcmp((char *)node->name, AtlantisXMLObjectNAMES[i][0]))
+ 2217: 			return Get_Node_Property(node, AtlantisXMLObjectNAMES[i][ATTRIBUTE_NAME]);
+ 2218: 	}
 ```
 
 **Suggested fix (from review):** Use `strcmp(...) == 0`.
@@ -536,23 +536,23 @@ On context-creation failure, `Execute_Xpath_Expression` calls `xmlFreeDoc(doc)` 
 
 `%e` is given `values[i]`, which is an `int`. This is undefined behaviour and prints garbage in the error message. Function: `Parse_Into_Int_Array()`.
 
-**Current code** (`atlantisUtil/atUtilXML.c` lines 1548–1561) — code appears to have moved +3 lines since the review
+**Current code** (`atlantisUtil/atUtilXML.c` lines 1557–1570) — code appears to have moved +12 lines since the review
 
 ```c
- 1548: 
- 1549: /**
- 1550:  * 	\brief Parse the values in the valueStr and return a newly allocated integer array.
- 1551:  *
- 1552:  * Note this function allocates memory and the caller is responsible for freeing this memory.
- 1553:  *
- 1554:  *
- 1555:  *
- 1556:  */
  1557: static int *Parse_Into_Int_Array(char *fileName, char *paramName, char *valueStr, int size, int entry_type) {
  1558: 	int i;
  1559: 	int *values = (int *) malloc((size_t)size * sizeof(int));
  1560: 	char *varStr;
  1561: 	char seps[] = " ,\t";
+ 1562: 	int val;
+ 1563: 	int lastval = 0;
+ 1564: 	double diff, base;
+ 1565: 
+ 1566: 	/* Read in value until size is reached. */
+ 1567: 	for (i = 0; i < size; ++i) {
+ 1568: 
+ 1569: 		if (i == 0)
+ 1570: 			varStr = strtok(valueStr, seps);
 ```
 
 **Suggested fix (from review):** Use `%d`.

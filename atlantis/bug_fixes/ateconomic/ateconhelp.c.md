@@ -64,14 +64,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `if (ir - 1 + i >= j - l)`: NR has `ir - i + 1`. The wrong test picks the wrong subarray to push, so the stack can grow linearly and hit the NSTACK quit or ECON-28. The sort order itself is still correct. Function: `Quicksort_Dir()`.
 
-**Current code** (`ateconomic/ateconhelp.c` lines 158–162)
+**Current code** (`ateconomic/ateconhelp.c` lines 159–163) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Quicksort_Dir()` now starts at line 42
 
 ```c
-  158: 			/* Push pointers to larger subarray on stack, process smaller subarray immediately */
   159: 			if (jstack > NSTACK)
   160: 				quit("NSTACK too small in Quicksort_Dir() in economics library. Recode define statement.\n");
   161: 			if (ir - 1 + i >= j - l) {
   162: 				istack[jstack] = ir;
+  163: 				istack[jstack - 1] = i;
 ```
 
 **Suggested fix (from review):** `if (ir - i + 1 >= j - l)`

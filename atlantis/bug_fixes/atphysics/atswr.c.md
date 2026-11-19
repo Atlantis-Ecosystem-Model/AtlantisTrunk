@@ -64,16 +64,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `char buf[200]` is filled by `readkeyprm_s(fp,"Solar_radiation",buf)`, while the caller `readSolar` uses `buf[STRLEN]` (2000) for the same key. A long path overflows. Function: `init_SolarData()`.
 
-**Current code** (`atphysics/atswr.c` lines 77–97)
+**Current code** (`atphysics/atswr.c` lines 84–104) — code appears to have moved +6 lines since the review
 
 ```c
-   77: 
-   78: 
-   79: void init_SolarData(MSEBoxModel *bm, FILE *fp, PhyPropertyData *propInput, char *variableName, char *shortName, char *longName, double minValue, double maxValue){
-   80: 	char buf[200];
-   81: 
-   82: 	if (propInput->tracerID == -1)
-   83: 		quit("init_PhyPropertyData: no %sid set\n", variableName);
    84: 
    85: 	propInput->is_valid_z = FALSE;
    86: 	readkeyprm_s(fp, "Solar_radiation", buf);
@@ -88,6 +81,13 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
    95:     
    96: 	strcpy(propInput->fname[0], buf);
    97: 	propInput->variableName = c_alloc1d(BMSLEN);
+   98: 	strcpy(propInput->variableName, variableName);
+   99: 	snprintf(buf, sizeof(buf), "%s_rewind", shortName);
+  100: 	readkeyprm_i(fp, buf, &propInput->rewind);
+  101: 
+  102:     if(propInput->rewind == FALSE) {  // Just inc case looking for swr_rewind and its Solar_radiation_rewind
+  103:         snprintf(buf, sizeof(buf), "Solar_radiation_rewind");
+  104:         readkeyprm_i(fp, buf, &propInput->rewind);
 ```
 
 **Suggested fix (from review):** Use `char buf[STRLEN]`

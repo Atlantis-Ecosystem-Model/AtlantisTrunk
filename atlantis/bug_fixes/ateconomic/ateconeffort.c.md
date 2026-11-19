@@ -509,14 +509,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Debug fprintf prints `ns` (stale; equals nsubfleets after the loop) instead of `nss`. Function: `Holland_Effort_Final_Allocation()`.
 
-**Current code** (`ateconomic/ateconeffort.c` lines 897–901) — code appears to have moved -559 lines since the review
+**Current code** (`ateconomic/ateconeffort.c` lines 1456–1460) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Holland_Effort_Final_Allocation()` now starts at line 899
 
 ```c
-  897:  * \brief Dan Holland effort model - originally developed for the northern california current
-  898:  */
-  899: void Holland_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
-  900: 	int nf, ij, ns, sp, do_debug_base, do_debug = 0, regid, trip_length, do_biTAC, mth, nss, use_history, need_to_init, do_consoldation = 0;
-  901: 	double cumcatch, toteffort, FCpressure, spbiom, q, tolerable_debt, TotCC, use_minprob, minprob, maxprob, totallowedcatch, totscore, max_hold, regTAC_scale, totTAC, catchleft, totcatch, regcatch_nf, regcatch, diff_catch, max_quota_left, totmaxland, totland_overall, maxland, catch_here, hold_size;
+ 1456:                                                     fprintf(llogfp,
+ 1457:                                                             "Time: %e, reg: %d (box: %d), %s-%d on %s in month %d regcatch: %e, SpatialBB: %e, BB: %e)\n",
+ 1458:                                                             bm->dayt, regid, ij, FisheryArray[nf].fisheryCode, ns, FunctGroupArray[sp].groupCode, bm->MofY,
+ 1459:                                                             regcatch_nf, bm->SpatialBlackBook[nf][nss][bm->MofY][ij][hist_id],
+ 1460:                                                             bm->BlackBook[nf][nss][sp][bm->MofY][hist_id]);
 ```
 
 **Suggested fix (from review):** Use `nss`

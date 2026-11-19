@@ -195,20 +195,20 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 In the old-diet multi-cohort branch for EPIFAUNA groups: `grazeEaten += preyEaten[ct][WC]; grazeEaten *= localWCTracers[...totNTracers[cohort]] / totalBiomass;`. But `totalBiomass` is summed from `localEPITracers` (2602) and the single-cohort branch uses `preyEaten[0][EPIFAUNA]` (2624). So predation is taken from the wrong habitat and split by the wrong tracer. Function: `Epibenthic_Box()`.
 
-**Current code** (`atecology/atecology.c` lines 2607–2617) — code appears to have moved -7 lines since the review
+**Current code** (`atecology/atecology.c` lines 2613–2623)
 
 ```c
- 2607: 											grazeEaten += FunctGroupArray[guild].preyEaten[ct][WC];
- 2608: 										}
- 2609: 										grazeEaten *= (boxLayerInfo->localWCTracers[FunctGroupArray[guild].totNTracers[cohort]] / totalBiomass);
- 2610: 									}else{
- 2611: 										grazeEaten = FunctGroupArray[guild].preyEaten[0][EPIFAUNA];
- 2612: 									}
  2613: 
  2614: 								} else {
  2615: 									grazeEaten = FunctGroupArray[guild].preyEaten[cohort][EPIFAUNA];
  2616: 								}
  2617: 
+ 2618: 								if(FunctGroupArray[guild].groupType == SEAGRASS && bm->flag_macro_model == TRUE){
+ 2619: 									grazeEaten = FunctGroupArray[guild].preyEaten[0][cohort];   // TODO: check this is really around the right way
+ 2620: 								}
+ 2621: 								boxLayerInfo->localEPIFlux[FunctGroupArray[guild].totNTracers[cohort]] = FunctGroupArray[guild].growth[cohort]
+ 2622: 										- FunctGroupArray[guild].mortality[cohort] - dead - (double)grazeEaten;
+ 2623: 
 ```
 
 **Suggested fix (from review):** Use `preyEaten[ct][EPIFAUNA]` and `localEPITracers[...]`
@@ -748,17 +748,17 @@ The epibenthic pseudo-M only uses `mortality[0]` and `preyEaten[0][...]`, so mul
 
 `for (k = 0; k < numStages; k++) grow[kij][k] = 0.0;`. `grow` is allocated `[numCohortsXnumGenes][RN_id+1]` (atUtilGroupIO.c:748), and the index is SN_id/RN_id, not life stage. If numStages==1, `grow[][RN_id]` is not reset. If numStages>2, the loop writes past the row. Function: `Reset_Arrays()`.
 
-**Current code** (`atecology/atecology.c` lines 3960–3967) — code appears to have moved -23 lines since the review
+**Current code** (`atecology/atecology.c` lines 3972–3979) — code appears to have moved -11 lines since the review
 
 ```c
- 3960: 						FunctGroupArray[guild].GrazeLive[kij] = 0;
- 3961: 						if(FunctGroupArray[guild].isVertebrate == TRUE){
- 3962: 							for (k = 0; k < FunctGroupArray[guild].numStages; k++)
- 3963: 								FunctGroupArray[guild].grow[kij][k] = 0.0;
- 3964: 						}
- 3965: 						/* Initalise consumption, catch, detritus and nutrient flow arrays */
- 3966: 						for (k = 0; k < bm->K_num_fisheries; k++) {
- 3967: 							bm->FCcaughttemp[guild][k][kij] = 0.0;
+ 3972: 
+ 3973: 			for (hab = 0; hab < bm->num_active_habitats; hab++) {
+ 3974: 				for (cohort = 0; cohort < FunctGroupArray[guild].numCohortsXnumGenes; cohort++) {
+ 3975: 					PREYinfo[guild][cohort][hab] = 0.0;
+ 3976: 					FunctGroupArray[guild].preyEaten[cohort][hab] = 0.0;
+ 3977: 					/* Set the global value to zero on the first iteration in this time step */
+ 3978: 					if (it_count == 1)
+ 3979: 						FunctGroupArray[guild].preyEatenGlobal[cohort][habitat_type][hab] = 0.0;
 ```
 
 **Suggested fix (from review):** Loop `k <= RN_id`

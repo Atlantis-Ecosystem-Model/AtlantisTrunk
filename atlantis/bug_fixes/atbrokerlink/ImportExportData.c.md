@@ -75,49 +75,49 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `epi = 0` is only set in the first (fraction) loop. In the second loop `epi += boxValues[i]` keeps accumulating across boxes and cohorts, so box n is set to the sum of boxes 0..n. Function: `Link_SetBiomass()`.
 
-**Current code** (`atbrokerlink/ImportExportData.c` lines 65–104 (truncated)) — code appears to have moved -21 lines since the review
+**Current code** (`atbrokerlink/ImportExportData.c` lines 124–163 (truncated)) — code appears to have moved +38 lines since the review
 
 ```c
-   65: 	}
-   66: 
-   67: 	fprintf(bm->logFile, "Link_SetBiomass \n");
-   68: 
-   69: 	/* Initialise column fractions outside main logic, because
-   70: 	 * they are need for all types of calculations: we may
-   71: 	 * need to initialse the array containing the original
-   72: 	 * fraction of biomass for that particular level in the
-   73: 	 * water column, for those whose habitat is vertically
-   74: 	 * distributed, to redistribute the imported value in the
-   75: 	 * same proportions.  For safety, if there is no biomass
-   76: 	 * left in that box (ie, a total of 0) we initialise to 0
-   77: 	 * to avoid NaN or div-by-zero errors. */
-   78: 	for (cohort = 0; cohort < FunctGroupArray[guild].numCohortsXnumGenes; cohort++) {
-   79: 		bid = FunctGroupArray[guild].totNTracers[cohort];
-   80: 
-   81: 		for (i = 0; i < numBoxes; i++) {
-   82: 			b = boxIndexValues[i];
-   83: 
-   84: 			totalValue[b][cohort] = 0.0;
-   85: 
-   86: 			if (FunctGroupArray[guild].habitatType == EPIFAUNA) {
-   87: 				totalValue[b][cohort] = bm->boxes[b].epi[bid];
-   88: 				epi = 0;
-   89: 			} else {
-   90: 
-   91: 				if (FunctGroupArray[guild].habitatCoeffs[WC] > 0) {
-   92: 					for (k = 0; k < bm->boxes[b].nz; k++)
-   93: 						totalValue[b][cohort] += bm->boxes[b].tr[k][bid];
-   94: 				}
-   95: 				if (FunctGroupArray[guild].habitatCoeffs[SED] > 0) {
-   96: 					for (k = 0; k < bm->boxes[b].sm.nz; k++)
-   97: 						totalValue[b][cohort] += bm->boxes[b].sm.tr[k][bid];
-   98: 				}
-   99: 
-  100: 				/* Now work out the fractions */
-  101: 				if (FunctGroupArray[guild].habitatCoeffs[WC] > 0) {
-  102: 					for (k = 0; k < bm->boxes[b].nz; k++)
-  103: 						columnFractions[b][k] = totalValue[b][cohort] ? (bm->boxes[b].tr[k][bid] / totalValue[b][cohort]) : 0.0;
-  104: 				}
+  124: 			if (FunctGroupArray[guild].habitatType == EPIFAUNA) {
+  125: 				/* bm->boxes[b].epi[bid] += */
+  126: 				epi += boxValues[i];
+  127: 			} else {
+  128: 				if (FunctGroupArray[guild].habitatCoeffs[WC] > 0) {
+  129: 					for (k = 0; k < bm->boxes[b].nz; k++) {
+  130: 						tr[k] += boxValues[i] * columnFractions[b][k];
+  131: 					}
+  132: 				}
+  133: 				if (FunctGroupArray[guild].habitatCoeffs[SED] > 0) {
+  134: 					for (k = 0; k < bm->boxes[b].sm.nz; k++) {
+  135: 						smtr[k] += boxValues[i] * sedColumnFractions[b][k];
+  136: 					}
+  137: 				}
+  138: 			}
+  139: 
+  140: 			/* Now do the comparisons, and see if we want
+  141: 			 * to update, change slightly, or quit, etc
+  142: 			 */
+  143: 			if (FunctGroupArray[guild].habitatType == EPIFAUNA) {
+  144: 				difference = epi - bm->boxes[b].epi[bid];
+  145: 				if (fabs(difference) / (bm->boxes[b].epi[bid] + small_num) > tolerance) {
+  146: 					warn("box %2d:group %s cohort %d:EPIFAUNA: Imported value %lf and current value %lf are too far apart; pruning.\n", b, groupCode, cohort,
+  147: 							epi, bm->boxes[b].epi[bid]);
+  148: 					/* note if difference is negative this subtracts from the existing value, which is what we want: */
+  149: 					bm->boxes[b].epi[bid] += tolerance * difference;
+  150: 				} else
+  151: 					bm->boxes[b].epi[bid] = epi;
+  152: 			} else {
+  153: 				for (k = 0; k < bm->boxes[b].nz; k++) {
+  154: 					difference = tr[k] - bm->boxes[b].tr[k][bid];
+  155: 					if (fabs(difference) / (bm->boxes[b].tr[k][bid] + small_num) > tolerance) {
+  156: 						warn("box %2d:group %s cohort %d: WC, layer %d: Imported value %lf and current value %lf are too far apart; pruning.\n", b, groupCode,
+  157: 								cohort, k, tr[k], bm->boxes[b].tr[k][bid]);
+  158: 
+  159: 						/* note if difference is negative this subtracts from the existing value, which is what we want: */
+  160: 						bm->boxes[b].tr[k][bid] += tolerance * difference;
+  161: 					} else
+  162: 						bm->boxes[b].tr[k][bid] = tr[k];
+  163: 				}
 ```
 
 **Suggested fix (from review):** Set `epi = boxValues[i];` (or reset epi = 0 at the start of each box iteration).

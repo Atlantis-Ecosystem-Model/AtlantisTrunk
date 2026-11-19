@@ -10,7 +10,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 | ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [EMISC-01](#emisc-01) | 63, 306 | H/M | uninitialised variable | `if(propInput->curFile + 1 >= propInput->nFiles)` — `forceMoveEntryInput` is `malloc`ed (line 63) and `nFiles`… |  | [ ] |
+| [EMISC-01](#emisc-01) 🔀 | 63, 306 | H/M | uninitialised variable | `if(propInput->curFile + 1 >= propInput->nFiles)` — `forceMoveEntryInput` is `malloc`ed (line 63) and `nFiles`… |  | [ ] |
 | [EMISC-02](#emisc-02) | 80-92, 115-117 | H/M | NULL/invalid index | `tracerID = -1` stays -1 when no `<code>_stage_<n>` name matches, then `FunctGroupArray[speciesIndex].moveEntr… |  | [ ] |
 | [EMISC-03](#emisc-03) | 467, 482 | M/M | float equality / logic | `if (bm->dayt != ...movetstart)` uses exact double equality. If `<code>_tstart` is not exactly on a model step… |  | [ ] |
 | [EMISC-04](#emisc-04) | 225-255 | M/L | wrong order of checks | The `nctypelen(daty)` type check runs before `status` is checked. When `missing_value`/`valid_max`/`valid_min`… |  | [ ] |
@@ -29,14 +29,16 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `if(propInput->curFile + 1 >= propInput->nFiles)` — `forceMoveEntryInput` is `malloc`ed (line 63) and `nFiles` is never assigned (grep: no `forceMoveEntryInput[..].nFiles` anywhere; local `nFiles=1` is never stored). The end-of-file test reads garbage: if garbage > 1, `atEnd` is never set, and the read goes on past `nstep` with `count[0] = nstep - tstepnum <= 0` (line 320/332), so a zero/negative alloc and a fatal ncvarget. Function: `get_move_property()` (set in `init_forceMoveEntries()`).
 
+> 🔀 **Changed by the merge of main (Nov 2026):** forceMoveEntryInput malloc -> calloc. Check whether this finding is now fixed before acting.
+
 **Current code** (`atecology/atForcedMovement.c` lines 61–65)
 
 ```c
    61:         /* Read in the names of the tracers */
    62:         readkeyprm_sarray(fp, "MoveGroupCodes", &buf, &size);
-   63:         bm->forceMoveEntryInput = (PhyPropertyData *) malloc(sizeof(PhyPropertyData) * (long unsigned int)bm->numForceMoveEntries);
-   64:         
-   65:         /* Now read in the files for each tracer */
+   63:         /* Replace malloc with calloc */
+   64:         bm->forceMoveEntryInput = (PhyPropertyData *) calloc(bm->numForceMoveEntries, sizeof(PhyPropertyData));
+   65:         
 ```
 
 **Suggested fix (from review):** Add `bm->forceMoveEntryInput[tracerIndex].nFiles = nFiles;` in init (and init `fid=-1`)
@@ -70,46 +72,46 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 **Current code** (`atecology/atForcedMovement.c` lines 78–117 (truncated))
 
 ```c
-   78:             strcpy(bm->forceMoveEntryInput[tracerIndex].variableName, buf[tracerIndex]);
-   79:             
-   80:             bm->forceMoveEntryInput[tracerIndex].tracerID = -1;
-   81:             stageID = 0;
-   82:             for (i = 0; i < bm->K_num_tot_sp; i++) {
-   83:                 for (stage = 0; stage < FunctGroupArray[i].numStages; stage++) {
-   84:                     stageID = stage;
-   85:                     snprintf(checkname, sizeof(checkname), "%s_stage_%d", FunctGroupArray[i].groupCode, stageID);
-   86:                     if(strcmp(checkname, bm->forceMoveEntryInput[tracerIndex].variableName) == 0){
-   87:                         bm->forceMoveEntryInput[tracerIndex].tracerID = i;
-   88:                         bm->forceMoveEntryInput[tracerIndex].stageID = stage;
-   89:                         break;
-   90:                     }
-   91:                 }
-   92:             }
-   93: 
-   94:             snprintf(key, sizeof(key), "%s_File.name", bm->forceMoveEntryInput[tracerIndex].variableName);
-   95:             readkeyprm_s(fp, key, bm->forceMoveEntryInput[tracerIndex].fname[0]);
-   96:             
-   97:             snprintf(key, sizeof(key), "%s_tstart", bm->forceMoveEntryInput[tracerIndex].variableName);
-   98:             readkeyprm_d(fp, key, &bm->forceMoveEntryInput[tracerIndex].movetstart);
-   99:             
-  100:             bm->forceMoveEntryInput[tracerIndex].rewind = 0;
-  101:             bm->forceMoveEntryInput[tracerIndex].wgt_coefft = 1.0;
-  102:             bm->forceMoveEntryInput[tracerIndex].curFile = 0;
-  103:             bm->forceMoveEntryInput[tracerIndex].ResetTol = 0.0;
-  104:             bm->forceMoveEntryInput[tracerIndex].total_input = 0.0;
-  105:             
-  106:             bm->forceMoveEntryInput[tracerIndex].use_resets = (int *)i_alloc1d(nFiles);
-  107:             bm->forceMoveEntryInput[tracerIndex].use_resets[0] = 0;
-  108:             
+   78:             bm->forceMoveEntryInput[tracerIndex].is_valid_z = FALSE;
+   79:             strcpy(bm->forceMoveEntryInput[tracerIndex].variableName, buf[tracerIndex]);
+   80:             
+   81:             bm->forceMoveEntryInput[tracerIndex].tracerID = -1;
+   82:             stageID = 0;
+   83:             for (i = 0; i < bm->K_num_tot_sp; i++) {
+   84:                 for (stage = 0; stage < FunctGroupArray[i].numStages; stage++) {
+   85:                     stageID = stage;
+   86:                     snprintf(checkname, sizeof(checkname), "%s_stage_%d", FunctGroupArray[i].groupCode, stageID);
+   87:                     if(strcmp(checkname, bm->forceMoveEntryInput[tracerIndex].variableName) == 0){
+   88:                         bm->forceMoveEntryInput[tracerIndex].tracerID = i;
+   89:                         bm->forceMoveEntryInput[tracerIndex].stageID = stage;
+   90:                         break;
+   91:                     }
+   92:                 }
+   93:             }
+   94: 
+   95:             snprintf(key, sizeof(key), "%s_File.name", bm->forceMoveEntryInput[tracerIndex].variableName);
+   96:             readkeyprm_s(fp, key, bm->forceMoveEntryInput[tracerIndex].fname[0]);
+   97:             
+   98:             snprintf(key, sizeof(key), "%s_tstart", bm->forceMoveEntryInput[tracerIndex].variableName);
+   99:             readkeyprm_d(fp, key, &bm->forceMoveEntryInput[tracerIndex].movetstart);
+  100:             
+  101:             bm->forceMoveEntryInput[tracerIndex].rewind = 0;
+  102:             bm->forceMoveEntryInput[tracerIndex].wgt_coefft = 1.0;
+  103:             bm->forceMoveEntryInput[tracerIndex].curFile = 0;
+  104:             bm->forceMoveEntryInput[tracerIndex].ResetTol = 0.0;
+  105:             bm->forceMoveEntryInput[tracerIndex].total_input = 0.0;
+  106:             
+  107:             bm->forceMoveEntryInput[tracerIndex].use_resets = (int *)i_alloc1d(nFiles);
+  108:             bm->forceMoveEntryInput[tracerIndex].use_resets[0] = 0;
   109:             
-  110:             /* Set the min and max values */
-  111:             bm->forceMoveEntryInput[tracerIndex].min_value = 0;
-  112:             bm->forceMoveEntryInput[tracerIndex].max_value = 1.0;
-  113:             
-  114:             /* Setting move index */
-  115:             speciesIndex = bm->forceMoveEntryInput[tracerIndex].tracerID;
-  116:             FunctGroupArray[speciesIndex].moveEntryIndex = 0;
-  117:             FunctGroupArray[speciesIndex].next_moveEntryIndex = 1;
+  110:             
+  111:             /* Set the min and max values */
+  112:             bm->forceMoveEntryInput[tracerIndex].min_value = 0;
+  113:             bm->forceMoveEntryInput[tracerIndex].max_value = 1.0;
+  114:             
+  115:             /* Setting move index */
+  116:             speciesIndex = bm->forceMoveEntryInput[tracerIndex].tracerID;
+  117:             FunctGroupArray[speciesIndex].moveEntryIndex = 0;
 ```
 
 **Suggested fix (from review):** `if (tracerID < 0) quit("...%s not recognised...")`
@@ -143,26 +145,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 **Current code** (`atecology/atForcedMovement.c` lines 465–484)
 
 ```c
-  465:         for (tracerIndex = 0; tracerIndex < bm->numForceMoveEntries; tracerIndex++) {
-  466:             if (!bm->forceMoveEntryInput[tracerIndex].moveInitDone) {
-  467:                 if (bm->dayt != bm->forceMoveEntryInput[tracerIndex].movetstart) {
-  468:                     // Nothing to do as too early
-  469:                 } else {
-  470:                     Init_full_move_array(bm, &(bm->forceMoveEntryInput[tracerIndex]), tracerIndex);
-  471:                     bm->forceMoveEntryInput[tracerIndex].moveInitDone = 1;
-  472:                     speciesIndex = bm->forceMoveEntryInput[tracerIndex].tracerID;
-  473:                     for (stageIndex = 0; stageIndex < FunctGroupArray[speciesIndex].numStages; stageIndex++) {
-  474:                         FunctGroupArray[speciesIndex].NeedMoveUpdate[stageIndex] = 0;
-  475:                     }
-  476:                 }
-  477:             }
-  478:         }
-  479:         
-  480:         /* Move read-in value to the movement arrays */
-  481:         for (tracerIndex = 0; tracerIndex < bm->numForceMoveEntries; tracerIndex++) {
-  482:             if(bm->dayt > bm->forceMoveEntryInput[tracerIndex].movetstart) {
-  483:                 speciesIndex = bm->forceMoveEntryInput[tracerIndex].tracerID;
-  484:                 stageIndex = bm->forceMoveEntryInput[tracerIndex].stageID;
+  465:         /* Initialise the forced movement arrays - once get to tstart */
+  466:         for (tracerIndex = 0; tracerIndex < bm->numForceMoveEntries; tracerIndex++) {
+  467:             if (!bm->forceMoveEntryInput[tracerIndex].moveInitDone) {
+  468:                 if (bm->dayt != bm->forceMoveEntryInput[tracerIndex].movetstart) {
+  469:                     // Nothing to do as too early
+  470:                 } else {
+  471:                     Init_full_move_array(bm, &(bm->forceMoveEntryInput[tracerIndex]), tracerIndex);
+  472:                     bm->forceMoveEntryInput[tracerIndex].moveInitDone = 1;
+  473:                     speciesIndex = bm->forceMoveEntryInput[tracerIndex].tracerID;
+  474:                     for (stageIndex = 0; stageIndex < FunctGroupArray[speciesIndex].numStages; stageIndex++) {
+  475:                         FunctGroupArray[speciesIndex].NeedMoveUpdate[stageIndex] = 0;
+  476:                     }
+  477:                 }
+  478:             }
+  479:         }
+  480:         
+  481:         /* Move read-in value to the movement arrays */
+  482:         for (tracerIndex = 0; tracerIndex < bm->numForceMoveEntries; tracerIndex++) {
+  483:             if(bm->dayt > bm->forceMoveEntryInput[tracerIndex].movetstart) {
+  484:                 speciesIndex = bm->forceMoveEntryInput[tracerIndex].tracerID;
 ```
 
 **Suggested fix (from review):** Use `bm->dayt >= movetstart && !moveInitDone`
@@ -197,40 +199,40 @@ The `nctypelen(daty)` type check runs before `status` is checked. When `missing_
 
 ```c
   223: 
-  224:     /* Get the missing value */
-  225:     status = ncattinq(propInput->fid, propInput->prop_vid, "missing_value", &daty, &len);
-  226:     if (nctypelen(daty) != sizeof(doubleINPUT)){
-  227:         quit("open_move_prop: %s missing_value attribute wrong type\n", propInput->variableName);
-  228:     }
-  229:     if (status >= 0){
-  230:         /* go ahead and grab the value */
-  231:         status = ncattget(propInput->fid, propInput->prop_vid, "missing_value",&propInput->missing_value);
-  232:         propInput->missing_value_set = 1;
-  233:     } else {
-  234:         propInput->missing_value_set = 0;
-  235:         propInput->missing_value = -1; /* Set so we are not referencing invalid memory */
-  236:     }
-  237: 
-  238:     status = ncattinq(propInput->fid, propInput->prop_vid, "valid_max", &daty, &len);
-  239:     if (nctypelen(daty) != sizeof(doubleINPUT)){
-  240:         quit("open_move_prop: %s valid_max attribute wrong type\n", propInput->variableName);
-  241:     }
-  242:     if (status >= 0){
-  243:         /* go ahead and grab the value */
-  244:         status = ncattget(propInput->fid, propInput->prop_vid, "valid_max", &propInput->max_value);
-  245:     }
-  246: 
+  224: 
+  225:     /* Get the missing value */
+  226:     status = ncattinq(propInput->fid, propInput->prop_vid, "missing_value", &daty, &len);
+  227:     if (nctypelen(daty) != sizeof(doubleINPUT)){
+  228:         quit("open_move_prop: %s missing_value attribute wrong type\n", propInput->variableName);
+  229:     }
+  230:     if (status >= 0){
+  231:         /* go ahead and grab the value */
+  232:         status = ncattget(propInput->fid, propInput->prop_vid, "missing_value",&propInput->missing_value);
+  233:         propInput->missing_value_set = 1;
+  234:     } else {
+  235:         propInput->missing_value_set = 0;
+  236:         propInput->missing_value = -1; /* Set so we are not referencing invalid memory */
+  237:     }
+  238: 
+  239:     status = ncattinq(propInput->fid, propInput->prop_vid, "valid_max", &daty, &len);
+  240:     if (nctypelen(daty) != sizeof(doubleINPUT)){
+  241:         quit("open_move_prop: %s valid_max attribute wrong type\n", propInput->variableName);
+  242:     }
+  243:     if (status >= 0){
+  244:         /* go ahead and grab the value */
+  245:         status = ncattget(propInput->fid, propInput->prop_vid, "valid_max", &propInput->max_value);
+  246:     }
   247: 
-  248:     status = ncattinq(propInput->fid, propInput->prop_vid, "valid_min", &daty, &len);
-  249:     if (nctypelen(daty) != sizeof(doubleINPUT)){
-  250:         quit("open_move_prop: %s valid_min attribute wrong type\n", propInput->variableName);
-  251:     }
-  252:     if (status >= 0){
-  253:         /* go ahead and grab the value */
-  254:         status = ncattget(propInput->fid, propInput->prop_vid, "valid_min", &propInput->min_value);
-  255:     }
-  256: 
-  257:     /* Grab the units of the tracer and check that its the same as the units of the tracer in the model */
+  248: 
+  249:     status = ncattinq(propInput->fid, propInput->prop_vid, "valid_min", &daty, &len);
+  250:     if (nctypelen(daty) != sizeof(doubleINPUT)){
+  251:         quit("open_move_prop: %s valid_min attribute wrong type\n", propInput->variableName);
+  252:     }
+  253:     if (status >= 0){
+  254:         /* go ahead and grab the value */
+  255:         status = ncattget(propInput->fid, propInput->prop_vid, "valid_min", &propInput->min_value);
+  256:     }
+  257: 
 ```
 
 **Suggested fix (from review):** Test `status >= 0` first, then the type
@@ -264,24 +266,24 @@ The `nctypelen(daty)` type check runs before `status` is checked. When `missing_
 **Current code** (`atecology/atForcedMovement.c` lines 266–283)
 
 ```c
-  266: 
-  267: /* Routine to close an already open forced movement input file */
-  268: void close_move_prop(MSEBoxModel *bm, PhyPropertyData *propInput) {
-  269: 
-  270:     /* Close movement property file */
-  271:     if (propInput->fid >= 0)
-  272:         ncclose(propInput->fid);
-  273:     propInput->fid = -1;
-  274: 
-  275:     /* Free buffers */
-  276:     free1d(propInput->tbuf);
-  277:     free3d((double ***) propInput->valuebuf);
-  278: 
-  279:     propInput->tbuf = NULL;
-  280:     propInput->valuebuf = NULL;
-  281: }
-  282: 
-  283: /**
+  266: }
+  267: 
+  268: /* Routine to close an already open forced movement input file */
+  269: void close_move_prop(MSEBoxModel *bm, PhyPropertyData *propInput) {
+  270: 
+  271:     /* Close movement property file */
+  272:     if (propInput->fid >= 0)
+  273:         ncclose(propInput->fid);
+  274:     propInput->fid = -1;
+  275: 
+  276:     /* Free buffers */
+  277:     free1d(propInput->tbuf);
+  278:     free3d((double ***) propInput->valuebuf);
+  279: 
+  280:     propInput->tbuf = NULL;
+  281:     propInput->valuebuf = NULL;
+  282: }
+  283: 
 ```
 
 **Suggested fix (from review):** Call it on shutdown / at atEnd

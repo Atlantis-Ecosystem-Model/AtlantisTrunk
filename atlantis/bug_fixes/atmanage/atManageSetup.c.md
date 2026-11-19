@@ -11,7 +11,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 | ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [MNGA-24](#mnga-24) ⭐ | 1083-1085 | H/H | wrong variable / OOB | Inside `for (i = 0; i < K_num_fisheries; i++)` the test uses `bm->TACamt[sp][nf][now_id]`. `nf` is stale from … |  | [ ] |
-| [MNGA-25](#mnga-25) | 1080 (alloc 1195) | M/M | OOB | `for (nreg = 0; nreg < bm->K_num_active_reg; nreg++) BiTAC_sp[bim][nreg]...`. BiTAC_sp has only `totalreg_id+1… |  | [ ] |
+| [MNGA-25](#mnga-25) 🔀 | 1080 (alloc 1195) | M/M | OOB | `for (nreg = 0; nreg < bm->K_num_active_reg; nreg++) BiTAC_sp[bim][nreg]...`. BiTAC_sp has only `totalreg_id+1… |  | [ ] |
 | [MNGA-26](#mnga-26) | 1007-1008 | H/L | format mismatch | `warn("... id number %d\n", ..., FunctGroupArray[sp].groupCode)` passes a `char*` to `%d`. Function: `Calculat… |  | [ ] |
 | [MNGA-27](#mnga-27) | 1477-1480 | H/M | logic (every class incremented) | `for (nimp...) if (flagimposecatch > 0) impose_classes[nimp] += 1;` increments every class equally, so the max… |  | [ ] |
 | [MNGA-28](#mnga-28) | 1552 | H/M | copy-paste | The "top" skipper CDF uses `cpue_cdf_top_r_id` with `cpue_cdf_poor_p_id`. `cpue_cdf_top_p_id` exists (atlantis… |  | [ ] |
@@ -72,6 +72,8 @@ Inside `for (i = 0; i < K_num_fisheries; i++)` the test uses `bm->TACamt[sp][nf]
 **Why it's thought to be a bug**
 
 `for (nreg = 0; nreg < bm->K_num_active_reg; nreg++) BiTAC_sp[bim][nreg]...`. BiTAC_sp has only `totalreg_id+1 = 3` region rows, but K_num_active_reg can be any number of regions (atbiolsetup.c:583). With more than 3 regions this writes out of bounds, and with exactly 3 it overwrites the total row. The earlier loop clamps to `Kreg` (max 2). Function: `Calculate_BiTAC()`.
+
+> 🔀 **Changed by the merge of main (Nov 2026):** BiTAC_sp now zero-initialised. Check whether this finding is now fixed before acting.
 
 **Current code** (`atmanage/atManageSetup.c` lines 1078–1082)
 

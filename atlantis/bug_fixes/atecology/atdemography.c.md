@@ -25,7 +25,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 | [DEMO-13](#demo-13) | 921-934 | H/M | flag not reset | `allowed_to_spawn` is set to 0 inside the `mid` loop when one migrant group is too small (`li < min_li_mat`) a… |  | [ ] |
 | [DEMO-14](#demo-14) | 1077-1108 | M/M | logic | The death factor `(1 - scaled_FSPB[cohort])` is applied to every cohort with FSPB > 0 whenever any cohort spaw… |  | [ ] |
 | [DEMO-15](#demo-15) | 1904-1958 | M/M | OOB index / logic | `mid = migIDmatch[qid]; if (mid < 0) recruit_outside = 0; ... else { MIGRATION[species].recruit[ngene][mid] = … |  | [ ] |
-| [DEMO-16](#demo-16) | 523-532 | M/M | stale variable | The comment says that if general aging happens here too, this step should be skipped. But `need_update > -1` t… |  | [ ] |
+| [DEMO-16](#demo-16) 🔀 | 523-532 | M/M | stale variable | The comment says that if general aging happens here too, this step should be skipped. But `need_update > -1` t… |  | [ ] |
 | [DEMO-17](#demo-17) | 3157-3159, 3290-3292 | H/M | stale loop variable | `do_test = 0; if(rec_related) do_test = 1; else if(cohort \|\| (!cohort && k)) do_test = 1;` is evaluated outsid… |  | [ ] |
 | [DEMO-18](#demo-18) | 3081-3114 | H/M | flag not reset / wrong index | `stock_done[s_id]` is reset once per call (2992) but is shared across all `cohort` and `qid` iterations. After… |  | [ ] |
 | [DEMO-19](#demo-19) | 5259-5268, 5288-5289 | H/M | wrong variable / logic | The loop runs over `sp` but the body uses `species` throughout (`FunctGroupArray[species].isCover`, `.coverID`… |  | [ ] |
@@ -34,7 +34,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 | [DEMO-22](#demo-22) | 2237-2254, 2284-2285 | M/M | double count / inconsistent | `if (fished_chrt == ngene) biomass += tr[k][den]; ... biomass += tr[k][den];` counts the fished cohort twice a… |  | [ ] |
 | [DEMO-23](#demo-23) | 2550-2581 (used 389-392, 2682) | M/L | uninitialised | In the evolution branch, `*this_p_ageup` is never set. The caller's `this_prop_ageup` (declared without an ini… |  | [ ] |
 | [DEMO-24](#demo-24) | 1742-1826 | H/L | dead code / log spam | `direct_recruit_entry` is only ever set to 1, inside the same `if` that sets `recruit_outside = 1` (1775-1780)… |  | [ ] |
-| [DEMO-25](#demo-25) | 2848-2853, 2872-2874, 2883-2885 | H/L | swapped index / format args | The debug check `bm->tempPopRatio[stock_id][ngene][cohort][0]` swaps dimensions: it should be `[stock_id][spec… |  | [ ] |
+| [DEMO-25](#demo-25) 🔀 | 2848-2853, 2872-2874, 2883-2885 | H/L | swapped index / format args | The debug check `bm->tempPopRatio[stock_id][ngene][cohort][0]` swaps dimensions: it should be `[stock_id][spec… |  | [ ] |
 | [DEMO-26](#demo-26) | 2649-2653 | H/L | wrong index / log spam | The check `!_finite(bm->tempPopRatio[stock_id][species][cohort][i])` uses `i == 0` after the loop and the wron… |  | [ ] |
 | [DEMO-27](#demo-27) | 1610-1613 | H/L | copy-paste message | The warning says "...as flagtempdepend_move = %d" and passes `bm->flagtempdepend_move`, but the guarding flag … |  | [ ] |
 | [DEMO-28](#demo-28) | 1641-1645 | L/L | identical branches | `if (sp_q10receff == 1) enviro_scalar *= Tscalar; else if (sp_q10receff == 2) enviro_scalar *= Tscalar;` has i… |  | [ ] |
@@ -189,18 +189,18 @@ Semelparous case: `spawning_biomass_contrib = this_biom * (1.0 - scaled_FSPB[coh
 
 `for (stk = 0; stk < maxstock_id + 1; stk++) tot_yoy[species][stk] = 0.0;` and `tot_yoy[species][maxstock_id] += ...`. `tot_yoy` is `Util_Alloc_Init_2D_Double(nstock, K_num_tot_sp)`, i.e. `[sp][K_num_stocks_per_sp]` (atbiolsetup.c:2931, nstock = K_num_stocks_per_sp at 2799). It has no extra "aggregate" slot. When a species has the maximum number of stocks, this writes into the next species' row, or past the end of the heap block for the last species. Function: `Invertebrate_Reproduction()`.
 
-**Current code** (`atecology/atdemography.c` lines 4225–4233) — code appears to have moved -114 lines since the review
+**Current code** (`atecology/atdemography.c` lines 4343–4351) — code appears to have moved +4 lines since the review
 
 ```c
- 4225:  *
- 4226:  */
- 4227: void Invertebrate_Reproduction(MSEBoxModel *bm, int wclayer, int maxdeep, int totaldeep, double *localWCTracers, FILE *llogfp) {
- 4228: 
- 4229: 	double biomass_newly_mature, spawned_biomass, spawn_active, spawning_biomass, plankton, CHLa, vertdistrib,
- 4230: 		p_ageup, this_biom, amt, prop_biom_spawn_lost, spawning_biomass_contrib;
- 4231: 	double enviro_scalar = 1.0;
- 4232: 	int species, sp_Spawn_Now, sp_Age_Now, sp_active, flagSP, do_debug, additional_day, maxstock_id, did_something, num_cohorts, stock_id, sp_checkday,
- 4233: 		flagmother, ngene, stk, sp_spawnday, stuff_to_do;
+ 4343: 				}
+ 4344: 
+ 4345: 				/* Initialise YOY sum - including aggregate one stored in maxstock_id slot */
+ 4346: 				if (sp_Spawn_Now && ((bm->current_box == bm->first_box) && (bm->current_layer == bm->top_layer))) {
+ 4347: 					for ( stk = 0; stk < maxstock_id + 1; stk++) {
+ 4348: 						tot_yoy[species][stk] = 0.0;
+ 4349: 					}
+ 4350: 				}
+ 4351: 
 ```
 
 **Suggested fix (from review):** Allocate `tot_yoy` with nstock+1 columns, or drop the aggregate slot.
@@ -342,10 +342,9 @@ Semelparous case: `spawning_biomass_contrib = this_biom * (1.0 - scaled_FSPB[coh
 
 `MigSpawn = flag_allow_spawn * spawn_active * prop_mat * MIGRATION[species].DEN[cohort][qid];` is assigned, not accumulated, inside the qid loop. Only the last migration-queue entry's spawn is returned, but DEN is still reduced for every entry. Function: `Ecology_Do_External_InVert_Spawning()`.
 
-**Current code** (`atecology/atdemography.c` lines 4627–4656) — code appears to have moved +5 lines since the review
+**Current code** (`atecology/atdemography.c` lines 4628–4657) — code appears to have moved +6 lines since the review
 
 ```c
- 4627:  *
  4628:  */
  4629: double Ecology_Do_External_InVert_Spawning(MSEBoxModel *bm, int species, int cohort, int do_debug, FILE *llogfp) {
  4630: 	double MigSpawn = 0.0;
@@ -375,6 +374,7 @@ Semelparous case: `spawning_biomass_contrib = this_biom * (1.0 - scaled_FSPB[coh
  4654: 	return MigSpawn;
  4655: }
  4656: 
+ 4657: /**
 ```
 
 **Suggested fix (from review):** Use `MigSpawn +=` with a per-qid temporary for the DEN update.
@@ -562,10 +562,9 @@ The `ngene` parameter is immediately overwritten by `for (ngene = 0; ngene < num
 
 `sp_Spawn_Now` and `sp_Age_Now` are set to 1 when any cohort matches its Spawn_Now/Age_Now day and are never reset per cohort. Every later cohort in the loop is then treated as spawning and aging, so `Get_Proportion_Aging` and aging shifts are applied to cohorts not due to age today. The second loop inherits the value too. Function: `Invertebrate_Reproduction()`.
 
-**Current code** (`atecology/atdemography.c` lines 4293–4317) — code appears to have moved -7 lines since the review
+**Current code** (`atecology/atdemography.c` lines 4294–4318) — code appears to have moved -6 lines since the review
 
 ```c
- 4293: 
  4294: 			/* Initialisation */
  4295: 			sp_Spawn_Now = 0;
  4296: 			sp_Age_Now = 0;
@@ -590,6 +589,7 @@ The `ngene` parameter is immediately overwritten by `for (ngene = 0; ngene < num
  4315: 					additional_day = 1;
  4316: 
  4317: 				sp_checkday = EMBRYO[species].Spawn_Now[cohort][EMBRYO[species].next_spawn];
+ 4318: 				qid = EMBRYO[species].next_spawn;
 ```
 
 **Suggested fix (from review):** Reset `sp_Spawn_Now = sp_Age_Now = 0` at the top of each cohort iteration, and keep a separate "any" flag for the queue update.
@@ -880,6 +880,8 @@ The death factor `(1 - scaled_FSPB[cohort])` is applied to every cohort with FSP
 
 The comment says that if general aging happens here too, this step should be skipped. But `need_update > -1` tests the local copy read at 522, before `Update_Age_Distrib(...,0)` sets `speciesParams[need_update_id] = -1` (3396-3397). The test is always true (0 or 1), so the recruit-related update also runs. It then overwrites the youngest cohorts' tempPopRatio/boxPopRatio with `recVERTpopratio`, which was not refreshed this step: when need_update = 1, Get_Latest_Additions takes the tempPopRatio branch (2846). Function: `Vertebrate_Reproduction()`.
 
+> 🔀 **Changed by the merge of main (Nov 2026):** Update_Age_Distrib b-loop / [b] index (A-02). Check whether this finding is now fixed before acting.
+
 **Current code** (`atecology/atdemography.c` lines 521–534)
 
 ```c
@@ -967,9 +969,11 @@ The comment says that if general aging happens here too, this step should be ski
 
 `stock_done[s_id]` is reset once per call (2992) but is shared across all `cohort` and `qid` iterations. After the first cohort marks a stock done, no later cohort or queue entry updates tempPopRatio for that stock. The outer `for (i < maxstock_id)` loop is also redundant. In the same block, the `recVERTpopratio[stock_id]...` update (3104) uses the function argument `stock_id` instead of `s_id`. Function: `Update_Age_Distrib()`.
 
-**Current code** (`atecology/atdemography.c` lines 3103–3140) — code appears to have moved +24 lines since the review
+**Current code** (`atecology/atdemography.c` lines 3101–3138) — code appears to have moved +22 lines since the review
 
 ```c
+ 3101: 									for (k = 0; k < bm->boxes[ij].nz; k++) {
+ 3102: 										/* Identify the stock under consideration */
  3103: 										s_id = bm->group_stock[species][ij][k];
  3104: 
  3105: 										if(!stock_done[s_id]){
@@ -1006,8 +1010,6 @@ The comment says that if general aging happens here too, this step should be ski
  3136: 
  3137: 				if (!totsum[stock_id]) {
  3138: 					totsum[stock_id] = small_num;
- 3139: 					//quit("%s-%d had ltotsum = 0 in box: %d-%d \n", FunctGroupArray[species].groupCode, cohort, bm->current_box, bm->current_layer);
- 3140: 				}
 ```
 
 **Suggested fix (from review):** Reset `stock_done` at the start of each cohort/qid iteration, and use `s_id` in 3104.
@@ -1402,6 +1404,8 @@ In the evolution branch, `*this_p_ageup` is never set. The caller's `this_prop_a
 
 The debug check `bm->tempPopRatio[stock_id][ngene][cohort][0]` swaps dimensions: it should be `[stock_id][species][ngene][0]`, because tempPopRatio is `[nstock][sp][ncxg][maxspage]` (atbiolsetup.c:2899). In all three fprintfs the format `"%s-%d in Box%d-%d (ngene %d)"` is given `cohort, ngene, box, layer`, so the labels are misaligned. 2850 also prints every call for which_check without do_debug. Function: `Get_Latest_Additions()`.
 
+> 🔀 **Changed by the merge of main (Nov 2026):** code shown above was changed by the merge. Check whether this finding is now fixed before acting.
+
 **Current code** (`atecology/atdemography.c` lines 2846–2885 (truncated))
 
 ```c
@@ -1414,7 +1418,7 @@ The debug check `bm->tempPopRatio[stock_id][ngene][cohort][0]` swaps dimensions:
  2852: 		for ( ngene = 0; ngene < sp_numGeneTypes; ngene++ ){
  2853: 			bm->tempPopRatio[stock_id][species][ngene][0] += coming_SPden[ngene]; //Used to say cohort for tempPopRatio
  2854: 
- 2855: 			if((!_finite(bm->tempPopRatio[stock_id][ngene][cohort][0])) || (species == bm->which_check)){
+ 2855: 			if((!_finite(bm->tempPopRatio[stock_id][species][ngene][0])) || (species == bm->which_check)){  // Nov 2026: main had [stock_id][ngene][cohort][0] (ngene in species slot)
  2856: 				fprintf(llogfp,"Time: %e %s-%d in Box%d-%d (ngene %d) has tempPopRatio %e for stock %d subclass %d as dennow: %e\n",
  2857: 						bm->dayt, FunctGroupArray[species].groupCode, cohort, ngene, bm->current_box, bm->current_layer,
  2858: 						bm->tempPopRatio[stock_id][species][ngene][0], stock_id, 0, coming_SPden[ngene]);
@@ -1638,14 +1642,14 @@ The warning says "...as flagtempdepend_move = %d" and passes `bm->flagtempdepend
 
 `bm->calcTrackedMort[species][0][stock_id][start_id] += spawned_biomass;` always credits genotype 0. Elsewhere, recruits for genotype `ngene` live in cohort index `ngene`. Function: `Invertebrate_Reproduction()`.
 
-**Current code** (`atecology/atdemography.c` lines 4430–4434) — code appears to have moved +5 lines since the review
+**Current code** (`atecology/atdemography.c` lines 4424–4428)
 
 ```c
- 4430: 						tot_yoy[species][maxstock_id] += spawned_biomass;
- 4431: 						tot_yoy[species][stock_id] += spawned_biomass;
- 4432: 						bm->calcTrackedMort[species][0][stock_id][start_id] += spawned_biomass;  // TODO: Is this covered in general update anyways?
- 4433: 					}
- 4434: 
+ 4424:                      */
+ 4425:                     
+ 4426: 					Find_Final_Invert_Recruit_Distribtuion(bm, species, ngene, qid, stock_id, spawned_biomass, wclayer, llogfp);
+ 4427: 
+ 4428: 					/* Update yoy sum - only if localised recruit as all other cases done in Store_Recruitment_Diagnostics() */
 ```
 
 **Suggested fix (from review):** Use `[ngene]`.

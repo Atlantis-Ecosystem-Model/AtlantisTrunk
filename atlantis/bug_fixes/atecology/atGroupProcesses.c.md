@@ -16,7 +16,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 | [PROC-22](#proc-22) | 1533-1550 | M/M | wrong habitat index | Dinoflag_Process handles `case WC: case ICE_BASED:` together, but all flux updates are hard-coded to `[WC]` (N… |  | [ ] |
 | [PROC-23](#proc-23) | 604 vs 616/620; 1550 vs 1562/1571 | M/M | inconsistent fluxes | `DetritusProd[..][DLdet_id] += lysis + mortality[0]`, but the element gain (Gain_Element), and the DebugInfo D… |  | [ ] |
 | [PROC-24](#proc-24) | 714 | M/M | unit mismatch | `cysts[...][cystenter_id] = (1.0 - (mS_sp + mL_sp + mE_sp)) * cysts[...]`. The mortality rates are per second … |  | [ ] |
-| [PROC-25](#proc-25) | 299-303, 338 | M/M | inverted condition / double count | In the EPIFAUNA case, for SED_EP groups: `if (diagTol==2 && it_count==1) NutsProd[SED] += releaseNH; else Nuts… |  | [ ] |
+| [PROC-25](#proc-25) 🔀 | 299-303, 338 | M/M | inverted condition / double count | In the EPIFAUNA case, for SED_EP groups: `if (diagTol==2 && it_count==1) NutsProd[SED] += releaseNH; else Nuts… |  | [ ] |
 | [PROC-26](#proc-26) | 2157-2166 | M/M | inconsistent reset | After temporarily overwriting phytoplankton PREYinfo with sediment availability, the reset sets `PREYinfo[sp][… |  | [ ] |
 | [PROC-27](#proc-27) | 1679-1680, 1811-1812 | M/M | division by zero | With flagkdrop: `pow(PB_DL/(XPB_DL*DL), 3.0)` and `pow(BB_DL/(XBB_DL*DL), 3.0)` have no small_num. When DL (or… |  | [ ] |
 | [PROC-28](#proc-28) | 317-322, 346-352 | M/L | ungated debug | `if((bm->dayt > bm->checkstart) && (bm->checkbox == bm->current_box)) fprintf(bm->logFile, ...)` is not gated … |  | [ ] |
@@ -152,31 +152,31 @@ With track_atomic_ratio, `Gain_Element(... LabDetIndex ..., lysis[0] ...)` is ca
 
 Dinoflag_Process handles `case WC: case ICE_BASED:` together, but all flux updates are hard-coded to `[WC]` (NutsLost[WC], DetritusLost[WC], DetritusProd[WC], `GRAZEinfo[RefDetIndex][0][WC]`). For ice dinoflagellates the uptake and detritus fluxes go to the water column, and the ice detritus grazing is not removed. Phytoplankton_Process (865-870) correctly uses `habitatType`. Function: `Dinoflag_Process()`.
 
-**Current code** (`atecology/atGroupProcesses.c` lines 1558–1579) — code appears to have moved +27 lines since the review
+**Current code** (`atecology/atGroupProcesses.c` lines 1514–1535) — code appears to have moved -17 lines since the review
 
 ```c
- 1558: 			boxLayerInfo->NutsLost[WC][Fe_id] += uptakeFe;
- 1559: 
- 1560: 			boxLayerInfo->DetritusLost[WC][DRdet_id] += GRAZEinfo[RefDetIndex][0][WC];
- 1561: 			boxLayerInfo->DetritusLost[WC][DLdet_id] += GRAZEinfo[LabDetIndex][0][WC];
- 1562: 
- 1563: 			boxLayerInfo->DetritusProd[WC][DLdet_id] += FunctGroupArray[guild].lysis[cohort] + FunctGroupArray[guild].mortality[0];
- 1564: 
- 1565: 			/* Contaminants transfer */
- 1566: 			if(bm->track_contaminants){
- 1567: 				/* Gains in DL due to mortality */
- 1568:                 //fprintf(bm->logFile,"Calling Group_Transfer_Contaminant from Update_Detritus WC WC - %s-%d with initialBiomass: %e lysis: %e\n", FunctGroupArray[guild].groupCode, cohort, initialBiomass, FunctGroupArray[guild].lysis[cohort]);
- 1569:                 
- 1570:                 Group_Transfer_Contaminant(bm, boxLayerInfo, WC, WC, LabDetIndex, 0, guild, cohort, (FunctGroupArray[guild].lysis[cohort] + FunctGroupArray[guild].mortality[0]), 0, initialBiomass, bm->dtsz_stored, 1, 27);   // Was case 0 for need_prop
- 1571: 			}
- 1572: 
- 1573: 			if(bm->track_atomic_ratio == TRUE){
- 1574: 				/* Change in bysisiomass due to lysys handled in final flux calc so just need to account for gain in DL here */
- 1575: 				Gain_Element(bm, boxLayerInfo, WC, LabDetIndex, 0, guild, cohort,FunctGroupArray[guild].lysis[cohort], WC, isGlobal);
- 1576: 				boxLayerInfo->NutsLost[WC][P_id] += uptakeP;
- 1577: 				boxLayerInfo->NutsLost[WC][C_id] += uptakeC;
- 1578: 			}
- 1579: 
+ 1514: 				for (prey_chrt = 0; prey_chrt < FunctGroupArray[preyID].numCohortsXnumGenes; prey_chrt++) {
+ 1515: 					for (hab = WC; hab <  bm->num_active_habitats; hab++) {
+ 1516: 						if(GRAZEinfo[preyID][prey_chrt][hab] > 0){
+ 1517: 							if(bm->flag_olddiet)
+ 1518: 								UpdateTrackedMort(bm, llogfp, guild, cohort, habitatType, (HABITAT_TYPES)hab, preyID, prey_chrt, boxLayerInfo, DFscale, 1);
+ 1519: 							else
+ 1520: 								UpdateTrackedMort(bm, llogfp, guild, cohort, habitatType, (HABITAT_TYPES)hab, preyID, prey_chrt, boxLayerInfo, DFscale, 0);
+ 1521: 						}
+ 1522: 					}
+ 1523: 				}
+ 1524: 			}
+ 1525: 			/* If there is a scalar to apply then grab it now */
+ 1526: 			if(bm->scale_all_mortality == TRUE){
+ 1527: 				mortality_scalar = Ecology_Get_Mortality_Scalar(bm, guild, cohort);
+ 1528: 			} else {
+ 1529: 				mortality_scalar = 1.0;
+ 1530: 			}
+ 1531: 
+ 1532: 			//DFgrazeTot = FunctGroupArray[guild].GrazeLive[cohort] * DFscale;
+ 1533: 
+ 1534: 			/* Must modify nutrient stress related lysis of dinoflagellates to take
+ 1535: 			 into account mitigating effects of phagotrophy) - if grazing more than
 ```
 
 **Suggested fix (from review):** Use `habitatType` in place of `WC`
@@ -281,6 +281,8 @@ Dinoflag_Process handles `case WC: case ICE_BASED:` together, but all flux updat
 
 In the EPIFAUNA case, for SED_EP groups: `if (diagTol==2 && it_count==1) NutsProd[SED] += releaseNH; else NutsProdGlobal[EPIFAUNA][SED] += releaseNH;`. Every other case updates the local flux always and the global flux only when diagTol==2 && it_count==1. Here the non-global groups never get a local NH flux, and in the global case NutsProdGlobal[EPIFAUNA][SED] is incremented again at 338. Function: `Update_Detritus()`.
 
+> 🔀 **Changed by the merge of main (Nov 2026):** diagTol for CARRION/PWN changed. Check whether this finding is now fixed before acting.
+
 **Current code** (`atecology/atGroupProcesses.c` lines 297–336 (truncated))
 
 ```c
@@ -354,23 +356,23 @@ In the EPIFAUNA case, for SED_EP groups: `if (diagTol==2 && it_count==1) NutsPro
 
 After temporarily overwriting phytoplankton PREYinfo with sediment availability, the reset sets `PREYinfo[sp][chrt][WC] = localWCTracers[...]` without the `habitatCoeffs[WC]` (and ice MIXED) scaling used by Construct_Prey_Info (atprocess.c:2404, 2423), and leaves `PREYinfo[...][SED] = 0`. Predators processed later in the same cell see different phytoplankton availability. Function: `Sediment_Epi_Other_Process()`.
 
-**Current code** (`atecology/atGroupProcesses.c` lines 2169–2182) — code appears to have moved +14 lines since the review
+**Current code** (`atecology/atGroupProcesses.c` lines 2139–2152) — code appears to have moved -16 lines since the review
 
 ```c
- 2169: 		if (bm->debug == debug_prey_biology_process && bm->dayt >= bm->checkstart && bm->dayt < bm->checkstop) {
- 2170: 			Print_Eat_Diagnostics(bm, logfp, guild, habitatType, 1);
- 2171: 			fprintf(llogfp, "Sediment_Epi_Other_Process outcome %s DetritusProd[SED][DLdet_id = %.20Le, NutsProd[SED][NH_id] = %.20Le\n",
- 2172: 					FunctGroupArray[guild].groupCode, boxLayerInfo->DetritusProd[SED][DLdet_id], boxLayerInfo->NutsProd[SED][NH_id]);
- 2173: 		}
- 2174: 	}
- 2175: 
- 2176: 	/* reset planktonic groups to the values set in Epibenthic_Box() for the other predators -
- 2177: 	 * water column value scaled by habitat coefficient, phytoplankton are not put in the sediment slot there */
- 2178: 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
- 2179: 		if(FunctGroupArray[sp].speciesParams[flag_id] == TRUE){
- 2180: 			if (FunctGroupArray[sp].groupType == LG_PHY || FunctGroupArray[sp].groupType == DINOFLAG || FunctGroupArray[sp].groupType == SM_PHY) {
- 2181: 				for (prey_chrt = 0; prey_chrt < FunctGroupArray[sp].numCohortsXnumGenes; prey_chrt++) {
- 2182: 					PREYinfo[sp][prey_chrt][WC] = boxLayerInfo->localWCTracers[FunctGroupArray[sp].totNTracers[prey_chrt]] * FunctGroupArray[sp].habitatCoeffs[WC];
+ 2139: 		 the total population size that benthic deposit feeders can grow to, as they are
+ 2140: 		 restricted to the oxygenated zone and so have a limited habitat  */
+ 2141: 		Eat(bm, llogfp, predcase_sp, guild, cohort, eatBiomass, FunctGroupArray[guild].scaled_C[cohort] * hO_SP, realised_mum, FunctGroupArray[guild].speciesParams[KL_id], FunctGroupArray[guild].speciesParams[KU_id], FunctGroupArray[guild].speciesParams[vl_id], FunctGroupArray[guild].speciesParams[ht_id], (int) (FunctGroupArray[guild].speciesParams[flag_satiation_id]), FunctGroupArray[guild].speciesParams[E1_id], FunctGroupArray[guild].speciesParams[E2_id], FunctGroupArray[guild].speciesParams[E3_id], FunctGroupArray[guild].speciesParams[E4_id], inv_feed_while_spawn, inv_spawn_now, inv_mat_pcnt, PREYinfo, GRAZEinfo, CATCHGRAZEinfo, eatBiomass);
+ 2142: 
+ 2143: 		for (preyID = 0; preyID < bm->K_num_tot_sp; preyID++) {
+ 2144: 			for (prey_chrt = 0; prey_chrt < FunctGroupArray[preyID].numCohortsXnumGenes; prey_chrt++) {
+ 2145: 				for (hab = WC; hab <  bm->num_active_habitats; hab++) {
+ 2146: 					if(GRAZEinfo[preyID][prey_chrt][hab] > 0){
+ 2147: 						if(bm->flag_olddiet)
+ 2148: 							UpdateTrackedMort(bm, llogfp, guild, cohort, habitatType, (HABITAT_TYPES)hab, preyID, prey_chrt, boxLayerInfo, 1.0, 1);
+ 2149: 						else
+ 2150: 							UpdateTrackedMort(bm, llogfp, guild, cohort, habitatType, (HABITAT_TYPES)hab, preyID, prey_chrt, boxLayerInfo, 1.0, 0);
+ 2151: 					}
+ 2152: 				}
 ```
 
 **Suggested fix (from review):** Save and restore the original values (or reapply the habitatCoeffs)

@@ -184,41 +184,42 @@ Weight at age is `sum_k N*w*boxPopRatio / sum_k N`. The numerator is weighted by
 
 In `writeBMAnnAgeCatData` the species filter lacks the `isFished || isImpacted` test used in `writeBMAnnAgeCatInfo` (335). If `FisherySpeciesCatchFlags[sp][nf]` is TRUE for a species with neither flag set, `ncvarid` hits an undefined variable and is fatal under NC_FATAL. Function: `writeBMAnnAgeCatData()`.
 
-**Current code** (`atphysics/atagetracerIO.c` lines 511–542) — code appears to have moved +37 lines since the review
+**Current code** (`atphysics/atagetracerIO.c` lines 481–513) — code appears to have moved +7 lines since the review
 
 ```c
+  481:                                 
+  482:                                 for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+  483:                                     if (FisherySpeciesCatchFlags[sp][nf] == TRUE) {
+  484:                                         rel_access = Harvest_How_Much_Fishery_Access(bm,sp,cohort,nf,avgsze[b]);
+  485:                                         switch (propit) {
+  486:                                             case out_catch_id:
+  487:                                                 snprintf(strname, sizeof(strname), "%s%d_Catch_%s", FunctGroupArray[sp].name, this_cohort+1,FisheryArray[nf].fisheryCode);
+  488:                                                 tid = FunctGroupArray[sp].CaughtByFisheryTracers[nf];
+  489:                                                 id = FunctGroupArray[sp].CatchTracers[cohort];  // This points to numbers caught at that age
+  490:                                                 break;
+  491:                                             case out_discards_id:
+  492:                                                 snprintf(strname, sizeof(strname), "%s%d_Discard_%s", FunctGroupArray[sp].name, this_cohort+1,FisheryArray[nf].fisheryCode);
+  493:                                                 tid = FunctGroupArray[sp].DiscardedByFisheryTracers[nf];
+  494:                                                 id = FunctGroupArray[sp].DiscardTracers[cohort];  // This points to numbers discarded at that age
+  495:                                                 break;
+  496:                                             default:
+  497:                                                 quit("writeBMAnnAgeCatInfo: How did you get this value as only 3 classes (propit: %d)\n", propit);
+  498:                                                 break;
+  499:                                         }
+  500:                                     
+  501:                                         if (verbose > 1)
+  502:                                             printf("writeBMAnnAgeCatData: writing %s\n", strname);
+  503:                                     
+  504:                                         val[b] = (doubleINPUT)(avgpopratio[b] * bm->fishstat[b][id] * (rel_access * bm->fishstat[b][tid] / tot));
+  505:                                         
+  506:                                         /** dummy = val[b] * (avgsze[b] * bm->X_CN * mg_2_tonne);
+  507: 
+  508:                                         if(sp == 2)
+  509:                                             fprintf(bm->logFile,"Time: %e printing out fishstats %s-%d (%d) fishery: %d box%d val: %e avgpopratio: %e rel_access: %e fishstatDEN: %e fishstatTIDratio: %e (equivalent to %e t as avgsze: %e X_CN: %e mg_2_tonne: %e)\n", bm->dayt, FunctGroupArray[sp].groupCode, cohort, ai, nf, b, val[b], avgpopratio[b], rel_access, bm->fishstat[b][id], bm->fishstat[b][tid] / tot, dummy, avgsze[b], bm->X_CN, mg_2_tonne);
+  510:                                        **/
   511:                                     
   512:                                         /* Get netCDF variable id */
   513:                                         vid = ncvarid(fid, strname);
-  514:                                     
-  515:                                         /* Check double compatibility */
-  516:                                         if ((n = ncvarsize(fid, vid)) != sizeof(doubleINPUT))
-  517:                                             quit("writeBMAnnAgeCatData: %s has %d bytes per value in file, code compiled with %d\n", strname, n, sizeof(doubleINPUT));
-  518:                                     
-  519:                                         /* Write data */
-  520:                                         ncvarput(fid, vid, start, count, val);
-  521:                                     }
-  522:                                 }
-  523:                             }
-  524:                         }
-  525:                         
-  526:                         
-  527:                         // Update counter
-  528:                         this_cohort++;
-  529:                     }
-  530:                 }
-  531:             }
-  532:         }
-  533:     }
-  534:     
-  535:     /* Free temporary storage */
-  536:     free1dInput((doubleINPUT *) val);
-  537:     free1d(avgpopratio);
-  538:     free1d(avgsze);
-  539:     
-  540: }
-  541: 
-  542: 
 ```
 
 **Suggested fix (from review):** Apply the same species filter in both routines

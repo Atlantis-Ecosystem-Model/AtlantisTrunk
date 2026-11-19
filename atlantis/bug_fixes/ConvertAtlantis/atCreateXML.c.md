@@ -81,17 +81,17 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The value line is read with a raw `fgets(buf, buflen, inputFP)` (return value unchecked). Comment and blank lines between key and values are not skipped, the trailing `\n` is not trimmed, there is no numeric check, and the declared length is not checked. Every other array reader in this file uses `Get_Next_Line` + `trim` + `CheckIsDigits`. A comment line under a `sel_XXX`/`q_XXX` key is silently stored as the parameter value. Function: `Create_Harvest_Fishery_Group_ParamXML()`.
 
-**Current code** (`ConvertAtlantis/atCreateXML.c` lines 1647–1654) — code appears to have moved -187 lines since the review
+**Current code** (`ConvertAtlantis/atCreateXML.c` lines 1837–1844) — code appears to have moved +3 lines since the review
 
 ```c
- 1647: 
- 1648: 					/* Check the value string is only numbers */
- 1649: 					if(CheckIsDigits(buf) < 0)
- 1650: 						quit("ERROR: Value for parameter %s in input file %s is not valid %s\n", spawnSpeciesParamStructArray[index].tag, fileName, buf);
- 1651: 					fp(bm, fileName, newNode, varStr, buf);
- 1652: 				} else {
- 1653: 
- 1654: 					/* Get the next token. */
+ 1837: 					guildCheck[guild] = TRUE;
+ 1838: 					// Get the next line.
+ 1839: 					fgets(buf, buflen, inputFP);
+ 1840: 					/* Set the group attribute - if the node does not already exist it will be created */
+ 1841: 					Util_XML_Set_Node_Value(ATLANTIS_GROUP_ATTRIBUTE, newNode, FunctGroupArray[guild].groupCode, buf);
+ 1842: 				} else {
+ 1843: 					quit("Create_Harvest_Fishery_Group_ParamXML: SpeciesString not recognised '%s'.\n varStr = %s, bm->SP_FISHERYprmsName[%d] = %s\n", speciesStr,
+ 1844: 							varStr, paramID, bm->SP_FISHERYprmsName[paramID]);
 ```
 
 **Suggested fix (from review):** Use `Get_Next_Line(bm,inputFP,buf); trim(buf);` + `CheckIsDigits`, and validate the token count against K_num_fisheries.

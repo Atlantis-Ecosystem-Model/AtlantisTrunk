@@ -339,19 +339,9 @@ When clamping at the upper end: `nrecs -= ((int)df->nrecords - (nstart + v->nrec
 
 The leading-trim loop skips `' '`, `'\t'` and `'\n'` but not `'\r'`, while the trailing loop also strips `'\r'`. A string of only `"\r"` characters (e.g. a CRLF `.ts` header line with an empty value) is not emptied by the first pass, so the trailing loop decrements `i` below 0 and reads `s[-1]`. Function: `trim()`.
 
-**Current code** (`sjwlib/datafile.c` lines 1104–1128) — code appears to have moved -10 lines since the review
+**Current code** (`sjwlib/datafile.c` lines 1114–1138) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `trim()` now starts at line 1106
 
 ```c
- 1104: }
- 1105: 
- 1106: void trim(char *s)
- 1107: {
- 1108: 	// Trim spaces and tabs from beginning:
- 1109: 	int i=0,j;
- 1110: 
- 1111: 	if(s == NULL)
- 1112: 		return;
- 1113: 	if(strlen(s) <= 0)
  1114: 		return;
  1115: 
  1116: 	while((s[i]==' ')||(s[i]=='\t') ||(s[i]=='\n')) {
@@ -367,6 +357,16 @@ The leading-trim loop skips `' '`, `'\t'` and `'\n'` but not `'\r'`, while the t
  1126: 	if(s == NULL)
  1127: 		return;
  1128: 	if(strlen(s) <= 0)
+ 1129: 		return;
+ 1130: 
+ 1131: 	// Trim spaces and tabs from end:
+ 1132: 	i=(int)strlen(s)-1;
+ 1133: 
+ 1134: 	while((s[i]==' ')||(s[i]=='\t') || (s[i]=='\n')|| (s[i]=='\r')) {
+ 1135: 		i--;
+ 1136: 	}
+ 1137: 	if(i<((int)strlen(s)-1)) {
+ 1138: 		s[i + 1]='\0';
 ```
 
 **Suggested fix (from review):** Add `i >= 0 &&` to the trailing loop condition and `'\r'` to the leading set.

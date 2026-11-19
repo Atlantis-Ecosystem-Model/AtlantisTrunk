@@ -2852,7 +2852,7 @@ void Get_Latest_Additions(MSEBoxModel *bm, int wclayer, int species, int maxstoc
 		for ( ngene = 0; ngene < sp_numGeneTypes; ngene++ ){
 			bm->tempPopRatio[stock_id][species][ngene][0] += coming_SPden[ngene]; //Used to say cohort for tempPopRatio
 
-			if((!_finite(bm->tempPopRatio[stock_id][ngene][cohort][0])) || (species == bm->which_check)){
+			if((!_finite(bm->tempPopRatio[stock_id][species][ngene][0])) || (species == bm->which_check)){  // Nov 2026: main had [stock_id][ngene][cohort][0] (ngene in species slot)
 				fprintf(llogfp,"Time: %e %s-%d in Box%d-%d (ngene %d) has tempPopRatio %e for stock %d subclass %d as dennow: %e\n",
 						bm->dayt, FunctGroupArray[species].groupCode, cohort, ngene, bm->current_box, bm->current_layer,
 						bm->tempPopRatio[stock_id][species][ngene][0], stock_id, 0, coming_SPden[ngene]);

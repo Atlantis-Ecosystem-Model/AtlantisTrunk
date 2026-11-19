@@ -389,7 +389,7 @@ The "incomplete set of entries" checks can never fire. For T: `counter = base = 
 
 Error messages name the wrong node. 855: "Chemical_Limitation" (node is PhysicalChemical). 964: "Physical_Change" (node is Temperature_Effects). 981 and 1041: "Salinity_Effects/vertTchange_mult" and ".../vertPHchange_mult" (should be Temperature_Effects and pH_Effects). 1314, 1332, 1349 and 1366: all say "Bleaching" (should be Calcification, ReefGrowth, ReefRecruit and RugosityModel). 1604: "Group_Ice_Preference" (should be Group_IceReprod_Preference). 3652: prints "Reading the Reproduction values" in `Read_Ice_Values()`. Functions: as listed.
 
-**Current code** (`atecology/atBiologyXMLParamIO.c` lines 853–857) — ⚠ quoted code not found in current file (changed or already fixed?)
+**Current code** (`atecology/atBiologyXMLParamIO.c` lines 853–857) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code
 
 ```c
   853: 	/** Biophysical constants ************/

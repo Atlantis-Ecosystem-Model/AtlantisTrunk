@@ -205,14 +205,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The quit text says "q10 effect method can only be 0-2", but there are 4 methods (base, humped Griffith, Heinichen, CEATTLE). Function: `Get_Tcorr()`.
 
-**Current code** (`atecology/atq10.c` lines 183–187) — code appears to have moved -69 lines since the review
+**Current code** (`atecology/atq10.c` lines 252–256) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Get_Tcorr()` now starts at line 185
 
 ```c
-  183:  * Equation from Gary G - Tdep_di=log(2)*0.851*(1.066.^T_i).*exp(-((abs(T_i-T_opt_nitzschia)).^3)./1000);
-  184:  */
-  185: double Get_Tcorr(MSEBoxModel *bm, int sp, double current_temp, double *current_corr) {
-  186: 	double ans = 1.0;
-  187: 	double step1, step2, step3, step4, stepA, stepB, stepC;
+  252:                 ans = pow(step4, step3) * exp(step3 * (1 - step4));
+  253: 
+  254:                 break;
+  255:             default:
+  256:                 quit("How got here as code option not possible - q10 effect method can only be 0-2 and you have %d\n", (int)(FunctGroupArray[sp].speciesParams[q10_method_id]));
 ```
 
 **Suggested fix (from review):** Update the text

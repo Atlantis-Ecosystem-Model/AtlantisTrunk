@@ -159,7 +159,7 @@ No `K_num_*`, `num_*` or `tot_*` count is smaller than or equal to an id in its 
 
 Eight prototypes have no definition anywhere in the source tree (externalLibs/netcdf excluded) and no call sites: `alloc_names`, `readRunParams`, `readSourceSink`, `writeBMSummaryEpiInfo`, `setfisheryNameID`, `setfisheryParamNameID`, `setspNameID`, `setSPid`. The code says some were removed on purpose: atmanage/atManageSetup.c:157 "Deleted the setSPid function", and atphysics/atparamIO.c:32 says readRunParams was replaced (now `Util_Read_Run_XML`). They are harmless today, but if someone adds a call, the build fails at link time instead of at compile time. Functions: as listed.
 
-**Current code** (`atmanage/atManageSetup.c` lines 6108–1605) — ⚠ quoted code not found in current file (changed or already fixed?)
+**Current code** (`atmanage/atManageSetup.c` lines 6108–1605) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code
 
 ```c
 
@@ -191,7 +191,7 @@ Eight prototypes have no definition anywhere in the source tree (externalLibs/ne
 
 `freeRedus()` and `REDUS_management()` are each defined twice, in atRlink.c and in atRlinkRedus.c. Both copies have identical signatures and both sit under `#ifdef RASSESS_LINK_ENABLED`. atRlink.c is not listed in atmanage/Makefile.am (line 11 lists only atRlinkRedus.c, atRlinkRBC.c and atRlinkRAssess.c) or in any other build file, so it is a stale copy that does not link today. If it is ever added back to the sources, the build gets duplicate-symbol link errors, and in the meantime the two copies can drift apart. Callers (atlantismain.c:751, atmanage/atManageAnnual.c:2176) bind to the atRlinkRedus.c versions. Functions: `freeRedus()`, `REDUS_management()`.
 
-**Current code** (`atmanage/atRlink.c` lines 6278–442) — ⚠ quoted code not found in current file (changed or already fixed?)
+**Current code** (`atmanage/atRlink.c` lines 6278–442) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code
 
 ```c
 

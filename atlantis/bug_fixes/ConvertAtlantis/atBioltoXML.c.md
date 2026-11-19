@@ -214,15 +214,15 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 
 `quit("...(%d)... (value of %d)...", numGroups, convertedXMLFileName, bm->K_num_tot_sp)`: the 2nd `%d` gets a `char*` (UB on the error path). Separately, the check itself (`numGroups > K_num_tot_sp`) is wrong: each CSV row is one (group, stage, MigID) migration, so a valid file can have more rows than species (e.g. juv + adult rows for many groups), and this would quit spuriously. Function: `Util_Read_Migration_XML()`.
 
-**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 4076–4081)
+**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 4079–4084) — code appears to have moved +3 lines since the review
 
 ```c
- 4076:     if (groupList && groupList->nodesetval->nodeNr > 0) {
- 4077:         
- 4078:         /* Check the number of groups match the values in the run input file*/
- 4079:         numGroups = groupList->nodesetval->nodeNr;
- 4080:         if (numGroups > bm->K_num_tot_sp) {
- 4081:             quit("Util_Read_Migration_XML: Number of groups specified (%d) in your migration definition file is greater than the number of species - K_num_tot_sp (value of %d) in your run file\n", numGroups, convertedXMLFileName, bm->K_num_tot_sp);
+ 4079:         
+ 4080:         /* Check the number of groups match the values in the run input file*/
+ 4081:         numGroups = groupList->nodesetval->nodeNr;
+ 4082:         if (numGroups > bm->K_num_tot_sp) {
+ 4083:             quit("Util_Read_Migration_XML: Number of groups specified (%d) in your migration definition file is greater than the number of species - K_num_tot_sp (value of %d) in your run file\n", numGroups, convertedXMLFileName, bm->K_num_tot_sp);
+ 4084:         }
 ```
 
 **Suggested fix (from review):** Remove or replace the check (e.g. validate per group against numStages*num_migs). Fix the format string to match its arguments.
@@ -253,49 +253,49 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 
 `start_stage` and `migrationID` come straight from the CSV and are used unchecked as `MIGRATION[sp].X_Prm[start_stage][migrationID]`. Those arrays are `[numStages][num_migrate+1]` (atBiologyXMLParamIO.c:4331, 4402-4421) and Stagger_Prm is `[numStages][num_migs][2]`. A stage >= numStages, a negative value, or a MigID > num_migrate gives a silent heap write out of bounds. Function: `Util_Read_Migration_XML()`.
 
-**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 4090–4129 (truncated))
+**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 4094–4133 (truncated)) — code appears to have moved +4 lines since the review
 
 ```c
- 4090: 
- 4091:             if (verbose > 0)
- 4092:                 printf("Reading in migration definition of %s\n", FunctGroupArray[speciesIndex].groupCode);
- 4093: 
- 4094:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "StartStage", &start_stage);
- 4095:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "MigID", &migrationID);
- 4096:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "StartTofY", &start_tofy);
- 4097:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "EndTofY", &end_tofy);
- 4098:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "Leave_Period", &mig_period);
- 4099:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "Return_Period", &mig_period2);
- 4100:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "IsAnnualMigration", &isAnnual);
- 4101:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "MinTimeAway", &minaway);
- 4102:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "MaxTimeAway", &maxaway);
- 4103:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "MigrateStockReturn", &ret_stock);
- 4104:             Util_XML_Get_Value_Double(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, no_checking, "MigPropSizeInc", &grow_rate);
- 4105:             Util_XML_Get_Value_Double(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, no_checking, "MigPropSurvive", &survive_rate);
- 4106: 
- 4107:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, no_checking, "PartialExit", &flagPartialExit);
- 4108:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, no_checking, "MinAgeLeave", &MinAgePartial);
- 4109:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, no_checking, "MaxAgeLeave", &MaxAgePartial);
- 4110:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, no_checking, "ReprodAllowed", &ReprodAllowedPartial);
- 4111:             
- 4112:             // Set parameters
- 4113:             MIGRATION[speciesIndex].StartDay_Prm[start_stage][migrationID] = start_tofy;
- 4114:             MIGRATION[speciesIndex].EndDay_Prm[start_stage][migrationID] = end_tofy;
- 4115:             MIGRATION[speciesIndex].Leave_Period_Prm[start_stage][migrationID] = mig_period;
- 4116:             MIGRATION[speciesIndex].Return_Period_Prm[start_stage][migrationID] = mig_period2;
- 4117:             MIGRATION[speciesIndex].MinYearsAway_Prm[start_stage][migrationID] = minaway;
- 4118:             MIGRATION[speciesIndex].MaxYearsAway_Prm[start_stage][migrationID] = maxaway;
- 4119:             MIGRATION[speciesIndex].IsAnnualMigration_Prm[start_stage][migrationID] = isAnnual;
- 4120:             MIGRATION[speciesIndex].survival_Prm[start_stage][migrationID] = survive_rate;
- 4121:             MIGRATION[speciesIndex].growth_Prm[start_stage][migrationID] = grow_rate;
- 4122:             MIGRATION[speciesIndex].returnstock_Prm[start_stage][migrationID] = ret_stock;
- 4123:             MIGRATION[speciesIndex].IsPartialMigration_Prm[start_stage][migrationID] = flagPartialExit;
- 4124:             MIGRATION[speciesIndex].PartialMigration_MinPrm[start_stage][migrationID] = MinAgePartial;
- 4125:             MIGRATION[speciesIndex].PartialMigration_MaxPrm[start_stage][migrationID] = MaxAgePartial;
- 4126:             MIGRATION[speciesIndex].ReprodAllowedPrm[start_stage][migrationID] = ReprodAllowedPartial;
- 4127:             
- 4128:             MIGRATION[speciesIndex].Stagger_Prm[start_stage][migrationID][stagger_years_id] = MIGRATION[speciesIndex].MaxYearsAway_Prm[start_stage][migrationID] - MIGRATION[speciesIndex].MinYearsAway_Prm[start_stage][migrationID];
- 4129:             if( MIGRATION[speciesIndex].Stagger_Prm[start_stage][migrationID][stagger_years_id] > 0) {
+ 4094:                 printf("Reading in migration definition of %s\n", FunctGroupArray[speciesIndex].groupCode);
+ 4095: 
+ 4096:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "StartStage", &start_stage);
+ 4097:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "MigID", &migrationID);
+ 4098:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "StartTofY", &start_tofy);
+ 4099:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "EndTofY", &end_tofy);
+ 4100:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "Leave_Period", &mig_period);
+ 4101:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "Return_Period", &mig_period2);
+ 4102:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "IsAnnualMigration", &isAnnual);
+ 4103:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "MinTimeAway", &minaway);
+ 4104:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "MaxTimeAway", &maxaway);
+ 4105:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "MigrateStockReturn", &ret_stock);
+ 4106:             Util_XML_Get_Value_Double(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, no_checking, "MigPropSizeInc", &grow_rate);
+ 4107:             Util_XML_Get_Value_Double(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, no_checking, "MigPropSurvive", &survive_rate);
+ 4108: 
+ 4109:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, no_checking, "PartialExit", &flagPartialExit);
+ 4110:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, no_checking, "MinAgeLeave", &MinAgePartial);
+ 4111:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, no_checking, "MaxAgeLeave", &MaxAgePartial);
+ 4112:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, no_checking, "ReprodAllowed", &ReprodAllowedPartial);
+ 4113:             
+ 4114:             // Set parameters
+ 4115:             MIGRATION[speciesIndex].StartDay_Prm[start_stage][migrationID] = start_tofy;
+ 4116:             MIGRATION[speciesIndex].EndDay_Prm[start_stage][migrationID] = end_tofy;
+ 4117:             MIGRATION[speciesIndex].Leave_Period_Prm[start_stage][migrationID] = mig_period;
+ 4118:             MIGRATION[speciesIndex].Return_Period_Prm[start_stage][migrationID] = mig_period2;
+ 4119:             MIGRATION[speciesIndex].MinYearsAway_Prm[start_stage][migrationID] = minaway;
+ 4120:             MIGRATION[speciesIndex].MaxYearsAway_Prm[start_stage][migrationID] = maxaway;
+ 4121:             MIGRATION[speciesIndex].IsAnnualMigration_Prm[start_stage][migrationID] = isAnnual;
+ 4122:             MIGRATION[speciesIndex].survival_Prm[start_stage][migrationID] = survive_rate;
+ 4123:             MIGRATION[speciesIndex].growth_Prm[start_stage][migrationID] = grow_rate;
+ 4124:             MIGRATION[speciesIndex].returnstock_Prm[start_stage][migrationID] = ret_stock;
+ 4125:             MIGRATION[speciesIndex].IsPartialMigration_Prm[start_stage][migrationID] = flagPartialExit;
+ 4126:             MIGRATION[speciesIndex].PartialMigration_MinPrm[start_stage][migrationID] = MinAgePartial;
+ 4127:             MIGRATION[speciesIndex].PartialMigration_MaxPrm[start_stage][migrationID] = MaxAgePartial;
+ 4128:             MIGRATION[speciesIndex].ReprodAllowedPrm[start_stage][migrationID] = ReprodAllowedPartial;
+ 4129:             
+ 4130:             MIGRATION[speciesIndex].Stagger_Prm[start_stage][migrationID][stagger_years_id] = MIGRATION[speciesIndex].MaxYearsAway_Prm[start_stage][migrationID] - MIGRATION[speciesIndex].MinYearsAway_Prm[start_stage][migrationID];
+ 4131:             if( MIGRATION[speciesIndex].Stagger_Prm[start_stage][migrationID][stagger_years_id] > 0) {
+ 4132:                 MIGRATION[speciesIndex].Stagger_Prm[start_stage][migrationID][return_stagger_id] = 1;
+ 4133:             }
 ```
 
 **Suggested fix (from review):** Add `if(start_stage<0 || start_stage>=numStages || migrationID<0 || migrationID>num_migrate) quit(...)`.
@@ -399,9 +399,12 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 
 `cohortNode = ...cohortStrings[i]` (753) runs *before* the `i == -1` check at 755. `cohortStrings` has only 2 entries (atUtil.c:175), and neither `i` (last char) nor `j` (leading digit) is range-checked. The error message at 756 names `spInvertEatXMLFunction` (copy-paste). `finalValues[STRLEN]` with `%.10e` (17 chars/value) also overflows for more than about 117 groups. Function: `spVERTEatXMLFunction()`.
 
-**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 754–781) — code appears to have moved +12 lines since the review
+**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 751–778) — code appears to have moved +9 lines since the review
 
 ```c
+  751: 	speciesIndex = Util_Get_FG_Index_From_Token(bm, speciesStr, fileName, str, TRUE);
+  752: 	speciesNode = Util_XML_Get_Or_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode);
+  753: 	cohortNode = Util_XML_Get_Or_Create_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, speciesNode, cohortStrings[i]);
   754: 
   755: 	if(i ==-1 && FunctGroupArray[speciesIndex].numCohorts > 1){
   756: 		quit("spInvertEatXMLFunction - %s - Age structured invertebrate groups must have cohort structured diet matrix values\n", FunctGroupArray[speciesIndex].groupCode);
@@ -427,9 +430,6 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
   776: 	Util_XML_Set_Node_Value(ATLANTIS_AGE_CLASS_ATTRIBUTE, cohortNode, cohortStrings[j], finalValues);
   777: 
   778: 	/* Now set the sediment detritus values.*/
-  779: 	attributeGroupNode = parent->parent;
-  780: 	attributeNode = Util_XML_Get_Or_Create_Node(ATLANTIS_ATTRIBUTE, attributeGroupNode, "DetritusSedimentFoodAvail");
-  781: 	speciesNode = Util_XML_Get_Or_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, attributeNode, FunctGroupArray[speciesIndex].groupCode);
 ```
 
 **Suggested fix (from review):** Validate `0<=i<=1 && 0<=j<=1` before using them. Fix the message text. Bound the strcat.
@@ -744,15 +744,15 @@ Copy-pasted descriptions or units: FLAG_LYSIS_RATE units "mg O2 m-3" (rate is d-
 **Current code** (`ConvertAtlantis/atBioltoXML.c` lines 3758–3766)
 
 ```c
- 3758:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderMinDepth", "", "", XML_TYPE_FLOAT, "");
- 3759:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderMaxDepth", "", "", XML_TYPE_FLOAT, "");
- 3760:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderStartDay", "", "", XML_TYPE_FLOAT, "");
- 3761:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderEndDay", "", "", XML_TYPE_FLOAT, "");
- 3762:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvadersEntering", "", "", XML_TYPE_INTEGER, "");
- 3763:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderScalar", "", "", XML_TYPE_FLOAT, "");
- 3764:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderSpeed", "", "", XML_TYPE_FLOAT, "");
- 3765: 
- 3766:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvadersEntering", "", "", XML_TYPE_INTEGER, "");
+ 3758:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "maxInvaderAge", "", "", XML_TYPE_INTEGER, "");
+ 3759:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderEntryBox", "", "", XML_TYPE_INTEGER, "");
+ 3760:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderMinDepth", "", "", XML_TYPE_FLOAT, "");
+ 3761:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderMaxDepth", "", "", XML_TYPE_FLOAT, "");
+ 3762:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderStartDay", "", "", XML_TYPE_FLOAT, "");
+ 3763:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderEndDay", "", "", XML_TYPE_FLOAT, "");
+ 3764:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvadersEntering", "", "", XML_TYPE_INTEGER, "");
+ 3765:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderScalar", "", "", XML_TYPE_FLOAT, "");
+ 3766:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderSpeed", "", "", XML_TYPE_FLOAT, "");
 ```
 
 **Suggested fix (from review):** Delete the first call (3760).
@@ -786,41 +786,41 @@ Each of the 17 `strtok(NULL, seps)` results is passed straight to `Util_XML_Crea
 **Current code** (`ConvertAtlantis/atBioltoXML.c` lines 3951–3985 (range truncated))
 
 ```c
- 3951:             /* Create the node for the group */
- 3952:             groupNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, rootnode, "MigrationGroup", "The defintion of a migration", "", "");
- 3953:             
- 3954:             /* Group Code value. */
- 3955:             varStr = strtok(buf, seps);
- 3956:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "GroupCode", "", "", varStr);
- 3957:             
- 3958:             /* Starting stage */
- 3959:             varStr = strtok(NULL, seps);
- 3960:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "StartStage", "", "", varStr);
- 3961:             
- 3962:             /* MigID - in case multiple migrations per calendar year */
- 3963:             varStr = strtok(NULL, seps);
- 3964:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "MigID", "", "", varStr);
- 3965:             
- 3966:             /* Start TofY */
- 3967:             varStr = strtok(NULL, seps);
- 3968:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "StartTofY", "", "", varStr);
- 3969:             
- 3970:             /* End TofY */
- 3971:             varStr = strtok(NULL, seps);
- 3972:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "EndTofY", "", "", varStr);
- 3973:             
- 3974:             /* Leave_Period */
- 3975:             varStr = strtok(NULL, seps);
- 3976:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "Leave_Period", "", "", varStr);
- 3977:             
- 3978:             /* Return_Period */
- 3979:             varStr = strtok(NULL, seps);
- 3980:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "Return_Period", "", "", varStr);
- 3981:             
- 3982:             /* IsAnnualMigration */
- 3983:             varStr = strtok(NULL, seps);
- 3984:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "IsAnnualMigration", "", "", varStr);
- 3985:             
+ 3951:         if (ch != '\t' && ch != '\n' && ch != '#' && ch != ',') {
+ 3952:             
+ 3953:             /* Create the node for the group */
+ 3954:             groupNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, rootnode, "MigrationGroup", "The defintion of a migration", "", "");
+ 3955:             
+ 3956:             /* Group Code value. */
+ 3957:             varStr = strtok(buf, seps);
+ 3958:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "GroupCode", "", "", varStr);
+ 3959:             
+ 3960:             /* Starting stage */
+ 3961:             varStr = strtok(NULL, seps);
+ 3962:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "StartStage", "", "", varStr);
+ 3963:             
+ 3964:             /* MigID - in case multiple migrations per calendar year */
+ 3965:             varStr = strtok(NULL, seps);
+ 3966:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "MigID", "", "", varStr);
+ 3967:             
+ 3968:             /* Start TofY */
+ 3969:             varStr = strtok(NULL, seps);
+ 3970:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "StartTofY", "", "", varStr);
+ 3971:             
+ 3972:             /* End TofY */
+ 3973:             varStr = strtok(NULL, seps);
+ 3974:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "EndTofY", "", "", varStr);
+ 3975:             
+ 3976:             /* Leave_Period */
+ 3977:             varStr = strtok(NULL, seps);
+ 3978:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "Leave_Period", "", "", varStr);
+ 3979:             
+ 3980:             /* Return_Period */
+ 3981:             varStr = strtok(NULL, seps);
+ 3982:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "Return_Period", "", "", varStr);
+ 3983:             
+ 3984:             /* IsAnnualMigration */
+ 3985:             varStr = strtok(NULL, seps);
 ```
 
 **Suggested fix (from review):** Check each token for NULL and quit with row info. Add `\r\n` to seps.
@@ -921,17 +921,17 @@ Each of the 17 `strtok(NULL, seps)` results is passed straight to `Util_XML_Crea
 
 `if (doc == NULL) { ... return; }` returns without `fclose(fp)` / `fclose(inputFP)`. Functions: `Convert_Biol_To_XML()`, `Convert_Migration_To_XML()`.
 
-**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 3780–3787) — code appears to have moved -13 lines since the review
+**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 3782–3789) — code appears to have moved -11 lines since the review
 
 ```c
- 3780: 
- 3781: 
- 3782: void Convert_Biol_To_XML(MSEBoxModel *bm, char *fileName, char *outputFileName) {
- 3783: 	xmlDocPtr doc;
- 3784: 	xmlNodePtr rootnode;
- 3785:     FILE *fp;
- 3786: 
- 3787: 	/* Init libxml */
+ 3782: 
+ 3783: 
+ 3784: void Convert_Biol_To_XML(MSEBoxModel *bm, char *fileName, char *outputFileName) {
+ 3785: 	xmlDocPtr doc;
+ 3786: 	xmlNodePtr rootnode;
+ 3787:     FILE *fp;
+ 3788: 
+ 3789: 	/* Init libxml */
 ```
 
 **Suggested fix (from review):** fclose before returning (or quit).

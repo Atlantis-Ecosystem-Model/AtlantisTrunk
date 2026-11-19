@@ -127,44 +127,44 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The SR switch handles `case ice_wimd_based`, but the first (larvae) switch has no such case, so the run reaches `default: quit("No such flagrecruit defined...")` whenever `flag_old_embryo_init` is off and a larval-queue extension exists. The same omission appears in atdemography.c's first switch. Function: `Get_Init_Embryos()`.
 
-**Current code** (`atecology/atannualbiology.c` lines 1180–1214 (range truncated)) — code appears to have moved +84 lines since the review
+**Current code** (`atecology/atannualbiology.c` lines 1102–1136 (range truncated)) — code appears to have moved +6 lines since the review
 
 ```c
- 1180:             }
- 1181:             break;
- 1182:         default:
- 1183:             quit("No such flagrecruit defined for vertebrates (i.e. value must be between 1 ands 10 at present)\n");
- 1184:             break;
- 1185:     }
- 1186: 
- 1187:     /* Apply stock-recruit relationship */
- 1188:     switch (recruit_sp) {
- 1189:         case no_recruit:
- 1190:             quit("No such flagrecruit defined (i.e. value must be > 0)\n");
- 1191:             break;
- 1192:         case const_recruit: /* Fixed set of constants */
- 1193:         case chl_recruit: /* Proportional to primary productivity */
- 1194:         case rand_recruit: /* Random - follows lognormal */
- 1195:         case plank_recruit: /* Spawn is based on plankton levels (not just CHLa) */
- 1196:         case linear_recruit:/* Pupping or calving linearly dependent on maternal condition */
- 1197:         case fixed_linear_recruit:/* Pupping or calving a fixed number per adult spawning */
- 1198:         case ts_recruit:/* Read in timeseries of recruitment */
- 1199:         case multiple_ts_recruit: /* Read in timeseries of recruitment */
- 1200:             temprec = EMBRYO[species].Larvae[stock_id][ngene][qid];
- 1201:             break;
- 1202:         case BevHolt_recruit: /* Beverton-Holt stock-recruit relationship - Atlantis basic version (mix numebrs and biomass) */
- 1203:             temprec = (recSTOCK[species][stock_id] * BHalpha_sp * EMBRYO[species].Larvae[stock_id][ngene][qid] / (BHbeta_sp + bm->totfishpop[species] * stock_prop[species][stock_id]));
- 1204:             break;
- 1205:         case BevHolt_direct_num_recruit: /* Beverton-Holt stock-recruit relationship using spawn directly proportional to number of spawners */
- 1206:         case BevHolt_num_recruit: /* Beverton-Holt stock-recruit relationship - numbers only case */
- 1207:             temprec = (recSTOCK[species][stock_id] * BHalpha_sp * EMBRYO[species].Larvae[stock_id][ngene][qid] / (BHbeta_sp  + recSTOCK[species][stock_id] * EMBRYO[species].Larvae[stock_id][ngene][qid]));
- 1208:             break;
- 1209:         case BevHolt_rand_recruit: /* Spawn is based on Beverton Holt with lognormal variation and dependence on plankton levels */
- 1210:             step1 = Util_Logx_Result(-lognorm_mu, lognorm_sigma);
- 1211:             step2 = (recSTOCK[species][stock_id] * BHalpha_sp * EMBRYO[species].Larvae[stock_id][ngene][qid] / (BHbeta_sp + bm->totfishpop[species] * stock_prop[species][stock_id])) * (plankton / bm->ref_chl);
- 1212:             temprec = step2 * step1;
- 1213:             break;
- 1214:         case recover_recruit: /* Spawn is allowed a recovery encouraging boost of recruits after "recovery_span" years of depressed stock levels */
+ 1102:     switch (recruit_sp) {
+ 1103:         case no_recruit:
+ 1104:             quit("No such flagrecruit defined (i.e. value must be > 0)\n");
+ 1105:             break;
+ 1106:         case const_recruit: /* Fixed set of constants */
+ 1107:             if (EMBRYO[species].readytospawn[stock_id] == 1)
+ 1108:                 EMBRYO[species].Larvae[stock_id][ngene][qid] = KDENR_sp / ng;
+ 1109:             
+ 1110:             if(species == 9) {
+ 1111:                 fprintf(bm->logFile,"Init for %s qid: %d ngene: %d Larvae: %e KDENR_sp: %e ng: %e\n", FunctGroupArray[species].groupCode, qid, ngene,  EMBRYO[species].Larvae[stock_id][ngene][qid], KDENR_sp, ng);
+ 1112:             }
+ 1113:             
+ 1114:             break;
+ 1115:         case chl_recruit: /* Proportional to primary productivity */
+ 1116:             EMBRYO[species].Larvae[stock_id][ngene][qid] += recSTOCK[species][stock_id] * PP_sp * bm->avg_cell_vol * (CHLa / bm->ref_chl);
+ 1117:             break;
+ 1118:         case rand_recruit: /* Random - follows lognormal */
+ 1119:             if (EMBRYO[species].readytospawn[stock_id] == 1)
+ 1120:                 EMBRYO[species].Larvae[stock_id][ngene][qid] = recSTOCK[species][stock_id] * sp_log_mult * Util_Logx_Result(-lognorm_mu, lognorm_sigma);
+ 1121:             break;
+ 1122:         case plank_recruit: /* Spawn is based on plankton levels (not just CHLa) */
+ 1123:             EMBRYO[species].Larvae[stock_id][ngene][qid] += recSTOCK[species][stock_id] * PP_sp * plankton / bm->ref_chl;
+ 1124:             break;
+ 1125:         case BevHolt_recruit: /* basical Atlantis Beverton-Holt stock-recruit relationship - so uses spawn calculated above */
+ 1126:         case BevHolt_rand_recruit: /* Spawn is based on Beverton Holt with lognormal variation and dependence on plankton levels  - so uses spawn calculated above */
+ 1127:         case BevHolt_num_recruit: /* Beverton-Holt stock-recruit relationship using numbers only - uses spawn calculated above */
+ 1128:         case recover_recruit: /* Beverton-Holt stock-recruit relationship - so uses spawn calculated above */
+ 1129:         case force_recover_recruit: /* Beverton-Holt stock-recruit relationship - so uses spawn calculated above */
+ 1130:         case Ricker_recruit: /* Ricker - so uses spawn calculated above */
+ 1131:         case baltic_ricker: /* Baltic version of the ricker */
+ 1132:         case SSB_ricker: /* SSB based ricker version - for senescent and short lived species */
+ 1133:         case SSB_BevHolt_recruit:/* Standard Beverton Holt */
+ 1134:         case linear_recruit:/* Pupping or calving linearly dependent on maternal condition */
+ 1135:             
+ 1136:             // Evolution only works for these spawning cases for now - TODO: Generalise so evolution works in all cases
 ```
 
 **Suggested fix (from review):** Add `case ice_wimd_based:` alongside the BevHolt/Ricker cases (Larvae += TotSpawn)

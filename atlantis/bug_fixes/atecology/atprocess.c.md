@@ -432,28 +432,28 @@ eat_minmax: `rel_scalar = EATINGinfo/(EATINGinfo + catch_addition)` is 0/0 = NaN
 
 `if((bm->dayt > 3633) && (groupType == TURF) && (current_box == 24)) fprintf(llogfp, ...)` is live code (the surrounding `/** ... **/` closes at 1642). Any model with a TURF group and a box 24 writes two long lines per call after day 3633, which bloats the log. Function: `Primary_Production()`.
 
-**Current code** (`atecology/atprocess.c` lines 1727–1745) — code appears to have moved +86 lines since the review
+**Current code** (`atecology/atprocess.c` lines 1667–1685) — code appears to have moved +26 lines since the review
 
 ```c
- 1727: 
- 1728: 	/* For dinoflagellates calculate maximum growth rate possible if nutrients non-limiting */
- 1729: 	if (FunctGroupArray[sp_id].groupType == DINOFLAG){
- 1730: 		if(E_sp > 0)
- 1731: 			FunctGroupArray[sp_id].maxPhagotrophy = sp_biom * (mum / E_sp) * hI_sp * (1.0 - hN_sp);
- 1732: 		else
- 1733: 			FunctGroupArray[sp_id].maxPhagotrophy = 0.0;
- 1734: 	}
- 1735: 	else{
- 1736: 		FunctGroupArray[sp_id].maxPhagotrophy = 0.0;
- 1737: 	}
- 1738: 
- 1739: 	/**
- 1740: 	 if(bm->debug && ((bm->debug > debug_stock) && (sp_id == bm->which_check))){
- 1741: 	 fprintf(llogfp,"sp: %s, uptakeNH: %e, uptakeNO: %e, uptakeSi: %e\n",
- 1742: 	 FunctGroupArray[sp_id].groupCode, *sp_uptakeNH,  *sp_uptakeNO,  *sp_uptakeSi);
- 1743: 	 fprintf(llogfp,"uptakeFE: %e, growth: %e, mort: %e, lysis: %e, scale_uptake: %e\n",
- 1744: 	 *sp_uptakeFe, *sp_growth, *sp_mortality, *sp_lysis, scale_uptake);
- 1745: 	 }
+ 1667:     
+ 1668:     /*
+ 1669:     //if ((bm->dayt >= bm->checkstart) && (bm->checkbox == bm->current_box)) {
+ 1670:     if (bm->dayt >= bm->checkstart) {
+ 1671:         fprintf(llogfp, "Time %e box%d-%d %s sp_uptakeNH: %e uptakeNH: %e scale_uptake: %e\n", bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[sp_id].groupCode, FunctGroupArray[sp_id].uptakeNH[0], uptakeNH, scale_uptake);
+ 1672:     }
+ 1673:     */
+ 1674: 
+ 1675: 	/* If there is a scalar to apply then grab it now */
+ 1676: 	if(bm->scale_all_mortality == TRUE){
+ 1677: 		mortality_scalar = Ecology_Get_Mortality_Scalar(bm, sp_id, 0);
+ 1678: 	}else{
+ 1679: 		mortality_scalar = 1.0;
+ 1680: 	}
+ 1681:     
+ 1682:     if(bm->flagbayHAB == TRUE){
+ 1683:         if(HAB_boxi[bm->current_box] > 0) {
+ 1684:             mortality_scalar *= FunctGroupArray[sp_id].speciesParams[HAB_mort_scalar_id];
+ 1685:         }
 ```
 
 **Suggested fix (from review):** Comment out, or gate on bm->debug/which_check/checkbox
@@ -484,45 +484,45 @@ eat_minmax: `rel_scalar = EATINGinfo/(EATINGinfo + catch_addition)` is 0/0 = NaN
 
 Wrap handling: when `encyst_TofY + encyst_period > 365`, it sets `encyst_TofY = 0; encyst_period = rollover`, which drops the days from encyst_TofY to 365 from the window entirely. The hatch block then reuses the already-modified `encyst_period`, so the hatch window length is wrong whenever the encyst window wrapped. Function: `Encystment()`.
 
-**Current code** (`atecology/atprocess.c` lines 1611–1646) — code appears to have moved -72 lines since the review
+**Current code** (`atecology/atprocess.c` lines 1771–1806) — code appears to have moved +88 lines since the review
 
 ```c
- 1611: 	FunctGroupArray[sp_id].speciesParams[overwintering_id] = Check_OverWintering(bm, llogfp, sp_id);
- 1612: 	if (FunctGroupArray[sp_id].speciesParams[overwintering_id] > 0){
- 1613: 		Encystment(bm, llogfp, sp_id, sp_biom, DIN, &sp_grow, &cyst_transfer);
- 1614: 	}
- 1615: 
- 1616: 	FunctGroupArray[sp_id].growth[0] = sp_grow;
- 1617: 
- 1618: 	/* End loop over strata */
- 1619: 
- 1620: 	/* Calculate nutrient uptake */
- 1621: 	uptakeNH = sp_grow * (NH / (FunctGroupArray[sp_id].speciesParams[KN_id] + NH)) * ((FunctGroupArray[sp_id].speciesParams[KN_id] + DIN) / DIN);
- 1622: 	uptakeNO = sp_grow * (NO / (FunctGroupArray[sp_id].speciesParams[KN_id] + DIN))
- 1623: 			* (FunctGroupArray[sp_id].speciesParams[KN_id]	/ (FunctGroupArray[sp_id].speciesParams[KN_id] + NH))
- 1624: 			* (1.0 + FunctGroupArray[sp_id].speciesParams[KN_id] / DIN);
- 1625: 
- 1626:     if (lim_case != one_nut_lim) {
- 1627:         uptakeSi = sp_grow * bm->X_SiN;
- 1628:     } else {
- 1629:         uptakeSi = 0.0;
- 1630:     }
- 1631: 
- 1632:     if (micro_case) {
- 1633:         uptakeFe = sp_grow * bm->X_FeN;
- 1634:     } else {
- 1635:         uptakeFe = 0.0;
- 1636:     }
- 1637: 
- 1638: 	/* Cap nutrient uptake to what is available - this intentionally a max as it is rescaling the NH uptake based on which is the least limiting of the limiting nutients */
- 1639: 	scale_uptake = 1.0;
- 1640:     if(uptakeNH > 0) {
- 1641:         if (uptakeNH > NH) {
- 1642:             scale_uptake_NH = NH / uptakeNH;
- 1643:         }
- 1644:         scale_uptake = min(scale_uptake, scale_uptake_NH);
- 1645:         if (uptakeNO > NO) {
- 1646:             scale_uptake_NO = max(scale_uptake, NO / uptakeNO);
+ 1771: void Encystment(MSEBoxModel *bm, FILE *llogfp, int sp_id, double sp_biom, double DIN, double *sp_grow, double *cyst_transfer)
+ 1772: {
+ 1773: 	int encyst_rollover;
+ 1774: 	double this_grow = *sp_grow;
+ 1775: 	double encyst_rate = FunctGroupArray[sp_id].speciesParams[encyst_rate_id];
+ 1776: 	double hatch_rate = FunctGroupArray[sp_id].speciesParams[hatch_rate_id];
+ 1777: 	double crit_growth = FunctGroupArray[sp_id].speciesParams[crit_mum_id];
+ 1778: 	double crit_nut = FunctGroupArray[sp_id].speciesParams[crit_nut_id];
+ 1779: 	double crit_temp = FunctGroupArray[sp_id].speciesParams[crit_temp_id];
+ 1780: 	int hatch_TofY = (int)(FunctGroupArray[sp_id].speciesParams[overwinterEndTofY_id]);
+ 1781: 	int encyst_TofY = (int)(FunctGroupArray[sp_id].speciesParams[overwinterStartTofY_id]);
+ 1782: 	int encyst_period = (int)(FunctGroupArray[sp_id].speciesParams[encyst_period_id]);
+ 1783: 	int flagencyst = (int)(FunctGroupArray[sp_id].speciesParams[flagencyst_id]);
+ 1784: 
+ 1785: 	double this_cyst_hatch = 0.0;
+ 1786: 	double this_encyst = 0.0;
+ 1787: 
+ 1788: 	/* Deal with wrapping event */
+ 1789: 	if((encyst_TofY + encyst_period) > 365) {
+ 1790: 		encyst_rollover = (encyst_TofY + encyst_period) - 365;
+ 1791: 		encyst_TofY = 0;
+ 1792: 		encyst_period = encyst_rollover;
+ 1793: 	}
+ 1794: 
+ 1795: 	/* Form cysts */
+ 1796: 	switch(flagencyst){
+ 1797: 	case no_overwintering: // Do nothing
+ 1798: 		break;
+ 1799: 	case date_overwintering:
+ 1800: 		if((encyst_TofY <= bm->TofY) && (bm->TofY <= (encyst_TofY + encyst_period))) {
+ 1801: 			this_encyst = encyst_rate * sp_biom;
+ 1802: 			cysts[sp_id][bm->current_box][cystenter_id] += this_encyst;
+ 1803: 		}
+ 1804: 		break;
+ 1805: 	case enviro_overwintering:
+ 1806: 		if(this_grow < crit_growth){
 ```
 
 **Suggested fix (from review):** Test `TofY >= start || TofY <= rollover` for wrapping windows and use separate period variables
@@ -553,20 +553,20 @@ Wrap handling: when `encyst_TofY + encyst_period > 365`, it sets `encyst_TofY = 
 
 `overStartTemp = (int)(speciesParams[overwinterStartTemp_id])` truncates fractional temperature thresholds (2.5 becomes 2). `ans` is a local starting at 0, so when start < temp < end it returns 0: there is no hysteresis, even though the start/end pair implies one. Function: `Check_OverWintering()`.
 
-**Current code** (`atecology/atprocess.c` lines 1351–1361) — code appears to have moved -48 lines since the review
+**Current code** (`atecology/atprocess.c` lines 1477–1487) — code appears to have moved +78 lines since the review
 
 ```c
- 1351:     
- 1352:     //* Check whether overwintering or not */
- 1353: 	FunctGroupArray[guild].speciesParams[overwintering_id] = Check_OverWintering(bm, llogfp, guild);
- 1354: 	if (FunctGroupArray[guild].speciesParams[overwintering_id] > 0)
- 1355: 		Encystment(bm, llogfp, guild, SP, dummy, &cyst_growth, &cyst_transfer);  // Enter nutrients as MAXDOUBLE as invertebrate consumers don't trigger on this
- 1356: 	else {
- 1357: 		cyst_growth = 0.0;
- 1358: 		cyst_transfer = 0.0;
- 1359: 	}
- 1360: 
- 1361:     /* Get Aquaculture fry additions - correcting from total biomass to mg/m3 */
+ 1477: 	int overStartDay = 0;
+ 1478: 	int overEndDay = 0;
+ 1479: 	double overStartTemp = 0.0;
+ 1480: 	double overEndTemp = 0.0;
+ 1481: 
+ 1482: 	switch(FunctGroupArray[sp_id].isOverWinter) {
+ 1483: 	case no_overwintering:
+ 1484: 		ans = 0;
+ 1485: 		break;
+ 1486: 	case date_overwintering:
+ 1487: 		overStartDay = (int)(FunctGroupArray[sp_id].speciesParams[overwinterStartTofY_id]);
 ```
 
 **Suggested fix (from review):** Remove the `(int)` casts; return the previous overwintering state when between the thresholds
@@ -597,28 +597,28 @@ Wrap handling: when `encyst_TofY + encyst_period > 365`, it sets `encyst_TofY = 
 
 `BB_DL = BB*Bact_stim*XBB_DL*hO_BB/(Bact_stim*XBB_DL*DLsed*hO_BB + ...)`: the numerator is missing `DLsed` (same for BB_DR/DRsed), and for habitatType==SED it hard-codes `DLsed = DRsed = 1.0`. Compare Calculate_PelagicBact_Scale (2165, `PB*XPB_DL*DL/(...)`) and Sediment_Bacterica_Process (atGroupProcesses.c:1807, numerator includes DL). Callers then divide by DLsed again (Invert_Activities 1238), so sediment bacteria grazing is mis-scaled. Function: `Calculate_SedBact_Scale()`.
 
-**Current code** (`atecology/atprocess.c` lines 2280–2298) — code appears to have moved +103 lines since the review
+**Current code** (`atecology/atprocess.c` lines 2297–2315) — code appears to have moved +120 lines since the review
 
 ```c
- 2280:  *	\brief Sediment Bacteria partitioning
- 2281:  */
- 2282: void Calculate_SedBact_Scale(MSEBoxModel *bm, HABITAT_TYPES habitatType, BoxLayerValues *boxLayerInfo) {
- 2283: 	double BB, O2, DLsed, DRsed, hO_BB;
- 2284: 	int flag_sp = (int) (FunctGroupArray[SedBactIndex].speciesParams[flag_id]);
- 2285: 
- 2286: 	if (habitatType == SED) {
- 2287: 		O2 = boxLayerInfo->localSEDTracers[Oxygen_i];
- 2288: 		DLsed = 1.0;
- 2289: 		DRsed = 1.0;
- 2290: 	} else {
- 2291: 		O2 = boxLayerInfo->localWCTracers[Oxygen_i];
- 2292: 		DLsed = boxLayerInfo->localSEDTracers[FunctGroupArray[LabDetIndex].totNTracers[0]];
- 2293: 		DRsed = boxLayerInfo->localSEDTracers[FunctGroupArray[RefDetIndex].totNTracers[0]];
- 2294: 	}
- 2295: 	if (flag_sp) {
- 2296: 		BB = boxLayerInfo->localSEDTracers[FunctGroupArray[SedBactIndex].totNTracers[0]];
  2297: 
  2298: 		hO_BB = Oxygen(1, O2, 0.0, 0.0, FunctGroupArray[SedBactIndex].speciesParams[mD_id]);
+ 2299: 		boxLayerInfo->BB_DL = BB * Bact_stim * XBB_DL * hO_BB / (Bact_stim * XBB_DL * DLsed * hO_BB + Bact_stim * XBB_DR * DRsed * hO_BB + small_num);
+ 2300: 		boxLayerInfo->BB_DR = BB * Bact_stim * XBB_DR * hO_BB / (Bact_stim * XBB_DL * DLsed * hO_BB + Bact_stim * XBB_DR * DRsed * hO_BB + small_num);
+ 2301: 	} else {
+ 2302: 		boxLayerInfo->BB_DL = 0.0;
+ 2303: 		boxLayerInfo->BB_DR = 0.0;
+ 2304: 	}
+ 2305: }
+ 2306: 
+ 2307: /**
+ 2308:  * \brief Update the tracked mortality record after Eat()
+ 2309:  *
+ 2310:  *
+ 2311:  */
+ 2312: void UpdateTrackedMort(MSEBoxModel *bm, FILE *llogfp, int guildcase, int cohort, HABITAT_TYPES level_id, HABITAT_TYPES habitat, int prey, int prey_chrt,
+ 2313: 		BoxLayerValues *boxLayerInfo, double scalar, int global_contrib) {
+ 2314: 	double biomass_correction, step1;
+ 2315:     int preystock, stock_id, this_layer;
 ```
 
 **Suggested fix (from review):** Use the actual sediment DL/DR and include them in the numerator, as at atGroupProcesses.c:1807
@@ -722,20 +722,20 @@ For invertebrates, `biomassToDL` is added to `DetritusProd[WC][DCdet_id]` (1996)
 
 McElhany-Bush: `annualSurvivalNoAcid = exp(-pHmortB)` is annual, so `-log(1-annualSurvivalDecrement)` is an annual instantaneous rate. Dividing by 86400 alone (named `mortDueToAcidPerDay`) treats it as a daily rate, which makes acidification mortality about 365x too high. Function: `Acidif_Mort()`.
 
-**Current code** (`atecology/atprocess.c` lines 2551–2561) — code appears to have moved +94 lines since the review
+**Current code** (`atecology/atprocess.c` lines 2547–2557) — code appears to have moved +90 lines since the review
 
 ```c
- 2551:     double sp_pHmortstart = FunctGroupArray[species].speciesParams[pHmortstart_id];
- 2552:     double sp_pHmortA = FunctGroupArray[species].speciesParams[pHmortA_id];
- 2553:     double sp_pHmortB = FunctGroupArray[species].speciesParams[pHmortB_id];
- 2554:     double sp_pHmortmid = FunctGroupArray[species].speciesParams[pHmortmid_id];
- 2555:     double annualSurvivalNoAcid, scalarOfSurvival, annualSurvivalScaled, annualSurvivalDecrement, mortDueToAcidPerDay;
- 2556:     int pHmortcase = bm->flagPHmortcase;
- 2557: 
- 2558:     if (current_PH < sp_pHmortstart ) {
- 2559:         switch (pHmortcase) {
- 2560:             case ph_no_mort:
- 2561:                 ans = 0.0;
+ 2547:     double sp_pHmortstart = FunctGroupArray[species].speciesParams[pHmortstart_id];
+ 2548:     double sp_pHmortA = FunctGroupArray[species].speciesParams[pHmortA_id];
+ 2549:     double sp_pHmortB = FunctGroupArray[species].speciesParams[pHmortB_id];
+ 2550:     double sp_pHmortmid = FunctGroupArray[species].speciesParams[pHmortmid_id];
+ 2551:     double annualSurvivalNoAcid, scalarOfSurvival, annualSurvivalScaled, annualSurvivalDecrement, mortDueToAcidPerDay;
+ 2552:     int pHmortcase = bm->flagPHmortcase;
+ 2553: 
+ 2554:     if (current_PH < sp_pHmortstart ) {
+ 2555:         switch (pHmortcase) {
+ 2556:             case ph_no_mort:
+ 2557:                 ans = 0.0;
 ```
 
 **Suggested fix (from review):** Divide by `365.0*86400.0` (or document pHmortB as a daily rate)
@@ -823,17 +823,17 @@ McElhany-Bush: `annualSurvivalNoAcid = exp(-pHmortB)` is annual, so `-log(1-annu
 
 `uptakeNH = sp_grow*(NH/(KN+NH))*((KN+DIN)/DIN)`, and uptakeNO also divides by DIN. When DIN == 0, sp_grow is 0, so this is 0*inf = NaN. NaN fails both `>0` and `<0`, so it is stored in uptakeNH and NutsLost. Function: `Primary_Production()`.
 
-**Current code** (`atecology/atprocess.c` lines 1524–1531) — code appears to have moved +9 lines since the review
+**Current code** (`atecology/atprocess.c` lines 1530–1537) — code appears to have moved +15 lines since the review
 
 ```c
- 1524:  *
- 1525:  */
- 1526: void Primary_Production(MSEBoxModel *bm, FILE *llogfp, int sp_id, int micro_case, int lim_case, int macro_producer, double sp_biom,
- 1527: 		double DIN, double NH, double NO, double Si, double Fe, double P, double PRatio, double C, double CRatio,
- 1528: 		double IRR, double mum, double E_sp, double mL_other, double SPmax,
- 1529: 		double area_hab, double *spUptakeNO,
  1530: 		double *spUptakeSi, double *spUptakeFe, double *spUptakeP,  double *spUptakeC, double *sphN) {
  1531: 
+ 1532: 	double hN_sp, hI_sp, sp_grow, scale_uptake, uptakeNH, uptakeNO, uptakeSi, uptakeFe, uptakeP = 0, uptakeC = 0;
+ 1533: 	double mL_sp = Ecology_Get_Linear_Mortality(bm, sp_id, 0, 0) + mL_other;
+ 1534: 	double mE_sp = FunctGroupArray[sp_id].cohortSpeciesParams[0][mE_id];
+ 1535:     double mS_sp = Acidif_Mort(bm, sp_id);
+ 1536: 	double cyst_transfer = 0.0;
+ 1537: 	double prop_daylight;
 ```
 
 **Suggested fix (from review):** Guard with `DIN > 0` (else uptake = 0)
@@ -864,12 +864,9 @@ McElhany-Bush: `annualSurvivalNoAcid = exp(-pHmortB)` is annual, so `-log(1-annu
 
 Unreachable for now (Eat quits before calling it), but: the habitat coefficients use `FunctGroupArray[sp_id]` rather than `[predID]`; the else branch indexes `sm.tr[bm->current_layer]` with a water-column layer index (can exceed sediment nz); the epi biomass is indexed by `totNTracers` regardless of tracer type; and the loop includes non-predator groups. Function: `Get_Predator_Competition()`.
 
-**Current code** (`atecology/atprocess.c` lines 588–600) — code appears to have moved +30 lines since the review
+**Current code** (`atecology/atprocess.c` lines 591–603) — code appears to have moved +33 lines since the review
 
 ```c
-  588:  *
-  589:  */
-  590: void Get_Predator_Competition(MSEBoxModel *bm, int sp_id, int cohort, long double *tot_pred, long double *tot_pred_comp, FILE *llogfp) {
   591:     double ans_tot_pred = 0.0;
   592:     double ans_tot_pred_comp = 0.0;
   593:     int predID, pid, predCohort;
@@ -880,6 +877,9 @@ Unreachable for now (Eat quits before calling it), but: the habitat coefficients
   598:     if (!bm->need_predcomp_params ) { // Just need total predation but not competition
   599:         for (predID = 0; predID < bm->K_num_tot_sp; predID++) {
   600:             for (predCohort = 0; predCohort < FunctGroupArray[predID].numCohortsXnumGenes; predCohort++) {
+  601:                 pid = FunctGroupArray[predID].totNTracers[predCohort];
+  602:             
+  603:                 if ( !bm->current_layer ) { // Need sediment based predators
 ```
 
 **Suggested fix (from review):** Fix before enabling the ratio-dependent/HV/CM cases

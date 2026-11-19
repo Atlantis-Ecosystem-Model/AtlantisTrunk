@@ -67,24 +67,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `Write_Real_Effort_Schedule()` writes a block of `EffortSchedule[..][expect_id]` rows (a copy of `Write_Effort_Schedule()`) and then a block of `[current_id]` rows. Both blocks have the same key columns (Time Fishery Subfleet) and the header (l.276) has no column saying which is which, so the expected and realised rows can't be told apart in RealEffortSchedIndx.txt. The expected values are already written to EffortSchedIndx.txt. Function: `Write_Real_Effort_Schedule()`.
 
-**Current code** (`ateconomic/ateconio.c` lines 305–337) — code appears to have moved -6 lines since the review
+**Current code** (`ateconomic/ateconio.c` lines 320–352) — code appears to have moved +9 lines since the review
 
 ```c
-  305: }
-  306: 
-  307: void Write_Real_Effort_Schedule(FILE *fid, MSEBoxModel *bm) {
-  308: 	int nf, ns, month;
-  309: 
-  310: 	if (verbose > 1)
-  311:         printf( "Write realised gross effort schedule\n");
-  312: 
-  313: 	/* Write predicted effort schedule values */
-  314: 	for (nf = 0; nf < bm->K_num_fisheries; nf++) {
-  315: 		for (ns = 0; ns < max(1,bm->FISHERYprms[nf][nsubfleets_id]); ns++) {
-  316: 
-  317: 			/* Write time and port */
-  318: 			fprintf(fid, "%e %s %d", bm->dayt, FisheryArray[nf].fisheryCode, ns);
-  319: 
   320: 			/* Economic effort schedule */
   321: 			for (month = 0; month < 12; month++) {
   322: 				fprintf(fid, " %e", bm->EffortSchedule[nf][ns][month][expect_id]);
@@ -103,6 +88,21 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   335: 			/* Realised effort schedule */
   336: 			for (month = 0; month < 12; month++) {
   337: 				fprintf(fid, " %e", bm->EffortSchedule[nf][ns][month][current_id]);
+  338: 			}
+  339: 			fprintf(fid, "\n");
+  340: 		}
+  341: 	}
+  342: 	fflush(fid);
+  343: 
+  344: 	return;
+  345: }
+  346: 
+  347: /**
+  348:  *
+  349:  *	\brief Quota trade reporting
+  350:  *
+  351:  */
+  352: void Economic_Output_Trades(MSEBoxModel *bm) {
 ```
 
 **Suggested fix (from review):** Drop the first (expect_id) block, or add a "Type" column.

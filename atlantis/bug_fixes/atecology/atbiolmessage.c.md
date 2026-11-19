@@ -174,20 +174,20 @@ For vertebrates, the first `n` loop adds `MIGRATION[sp].DEN/SN/RN[n][i]` into `j
 
 For invertebrate migrators the header writes 3 columns for each `n` and for each `i < num_migrate`. The writer writes 3 values for each `n` and each `i` in `[num_in_queue_done, num_in_queue)`, which is a different, time-varying count. Migration.txt columns are misaligned and the row width changes from row to row. Function: `Init_Migration_File()` / `Write_Migration_File()`.
 
-**Current code** (`atecology/atbiolmessage.c` lines 2673–2683) — code appears to have moved -22 lines since the review
+**Current code** (`atecology/atbiolmessage.c` lines 2682–2692) — code appears to have moved -13 lines since the review
 
 ```c
- 2673:     /** Create file **/
- 2674:     if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
- 2675:         quit("Init_Migration_File: Can't open %s\n",fname);
- 2676: 
- 2677:     /** Column definitions **/
- 2678:     fprintf(fid,"Time");
- 2679: 
- 2680:     /* Absolute values */
- 2681:     for (sp=0; sp<bm->K_num_tot_sp; sp++) {
  2682: 
  2683:         if ( (int)(FunctGroupArray[sp].speciesParams[flag_id])){
+ 2684:         	 spmigrate = (int)(FunctGroupArray[sp].num_migrate);
+ 2685:         	 if(spmigrate > 0){
+ 2686: 				 if(FunctGroupArray[sp].isVertebrate == TRUE){
+ 2687: 					 for(i = 0; i < spmigrate; i++){
+ 2688: 						 fprintf(fid, " %s_juv_%d_Migrating_Biomass(tonnes)", FunctGroupArray[sp].groupCode, i);
+ 2689: 						 fprintf(fid, " %s_juv_%d_Total_biomass(tonnes)", FunctGroupArray[sp].groupCode, i);
+ 2690: 						 fprintf(fid, " %s_juv_%d_Prop_Migrating", FunctGroupArray[sp].groupCode, i);
+ 2691: 
+ 2692: 						 fprintf(fid, " %s_ad_%d_Migrating_Biomass(tonnes)", FunctGroupArray[sp].groupCode, i);
 ```
 
 **Suggested fix (from review):** Use the same loop bound in both, e.g. aggregate over the queue per `i < num_migrate` as the vertebrate branch does.

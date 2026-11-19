@@ -139,23 +139,23 @@ In the endangered-species loop, the "Use assessment model output" `else` (221) b
 
 In the "Disable TAC check" block, `TAC_scale` is computed via Util_Get_Change_Scale but never used. Nothing is assigned to TACamt, so disabling TACs has no effect. Function: `Apply_Annual_Fisheries_Mgmt()`.
 
-**Current code** (`atimplementation/atImplementationAnnual.c` lines 349–362) — code appears to have moved -6 lines since the review
+**Current code** (`atimplementation/atImplementationAnnual.c` lines 360–373) — code appears to have moved +5 lines since the review
 
 ```c
-  349: 
-  350:                         fprintf(llogfp, "%e, %s TAC set to %e (TACorig: %e, TAC_scale: %e\n", bm->dayt, FunctGroupArray[sp].groupCode,
-  351: 							bm->TACamt[sp][fishery_id][now_id], TACorig, TAC_scale);
-  352:                     }
-  353: 				}
-  354: 			}
-  355:             
-  356:             /* Disable TAC check */
-  357:             if(bm->flagdisableTAC) {
-  358:                 for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-  359:                     if (FunctGroupArray[sp].isTAC) {
   360:                         if (flagTACchange == disable_tac ) {
   361:                             TAC_num_changes = (int) (bm->SP_FISHERYprms[sp][fishery_id][TAC_num_changes_id]);
   362:                             TAC_scale = Util_Get_Change_Scale(bm, TAC_num_changes, TACchange[sp][fishery_id]);
+  363:                         }
+  364:                     }
+  365:                 }
+  366:             }
+  367: 		}
+  368: 
+  369: 		/* Set regional TAC - can't have regional TACs or stocks for invertebrates as yet
+  370: 		 FIX - allow multiple stocks and regional TACs for all groups
+  371: 		 */
+  372:         if (!bm->flagecon_on || bm->MultiPlanEffort) {
+  373:             if (bm->manage_reg) {
 ```
 
 **Suggested fix (from review):** Apply the scale (e.g. set `TACamt[sp][fishery_id][now_id]`) or remove

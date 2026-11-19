@@ -35,13 +35,13 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 **Current code** (`atlantisUtil/atUtilGroupIO.c` lines 908–914)
 
 ```c
-  908: 
-  909: 		if(bm->track_contaminants){
-  910: 			FunctGroupArray[i].contaminantTracers = Util_Alloc_Init_2D_Int(bm->num_contaminants, FunctGroupArray[i].numCohorts, 0);
-  911:             FunctGroupArray[i].contamPropTracers = Util_Alloc_Init_2D_Int(bm->num_contaminants, FunctGroupArray[i].numCohorts, 0);
-  912: 			FunctGroupArray[i].contaminantSpMort = Util_Alloc_Init_1D_Double(FunctGroupArray[i].numCohorts, 0.0);
-  913: 			FunctGroupArray[i].calcCLinearMort = Util_Alloc_Init_2D_Double(3, FunctGroupArray[i].numCohortsXnumGenes, 0.0);
-  914:             FunctGroupArray[i].agingContam = Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, bm->num_contaminants, FunctGroupArray[i].numCohorts, 0);
+  908: 		if(bm->track_contaminants){
+  909: 			FunctGroupArray[i].contaminantTracers = Util_Alloc_Init_2D_Int(bm->num_contaminants, FunctGroupArray[i].numCohorts, 0);
+  910:             FunctGroupArray[i].contamPropTracers = Util_Alloc_Init_2D_Int(bm->num_contaminants, FunctGroupArray[i].numCohorts, 0);
+  911: 			FunctGroupArray[i].contaminantSpMort = Util_Alloc_Init_1D_Double(FunctGroupArray[i].numCohorts, 0.0);
+  912: 			FunctGroupArray[i].calcCLinearMort = Util_Alloc_Init_2D_Double(3, FunctGroupArray[i].numCohortsXnumGenes, 0.0);
+  913:             FunctGroupArray[i].agingContam = Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, bm->num_contaminants, FunctGroupArray[i].numCohorts, 0);
+  914: 		}
 ```
 
 **Suggested fix (from review):** Allocate with `numCohortsXnumGenes` (or bound the loops by `numCohorts`, depending on design).
@@ -75,22 +75,22 @@ The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCx
 **Current code** (`atlantisUtil/atUtilGroupIO.c` lines 892–907)
 
 ```c
-  892: 			FunctGroupArray[i].addRatioFluxes = Util_Alloc_Init_2D_Double(num_atomic_id + 1, FunctGroupArray[i].numCohortsXnumGenes, 0.0);
-  893: 
-  894: 			FunctGroupArray[i].ratioLost = Util_Alloc_Init_3D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohortsXnumGenes, 3, 0.0);
-  895: 			FunctGroupArray[i].ratioLostGlobal = Util_Alloc_Init_4D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohortsXnumGenes, 3, 3, 0.0);
-  896: 			FunctGroupArray[i].ratioGainedPred = Util_Alloc_Init_2D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohortsXnumGenes, 0.0);
-  897: 			//FunctGroupArray[i].ratioGainedPredGlobal = Util_Alloc_Init_4D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohorts, 3, 3, 0.0);
-  898: 
-  899: 			FunctGroupArray[i].addRatioLost = Util_Alloc_Init_2D_Double(num_atomic_id, FunctGroupArray[i].numCohortsXnumGenes, 0);
-  900: 
-  901: 			FunctGroupArray[i].ratioLostPred = Util_Alloc_Init_3D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohorts, 3, 0.0);
-  902: 			FunctGroupArray[i].ratioLostPredGlobal = Util_Alloc_Init_4D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohorts, 3, 3, 0.0);
-  903: 
-  904: 			FunctGroupArray[i].ratioGained = Util_Alloc_Init_3D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohorts, 3, 0.0);
-  905: 			FunctGroupArray[i].ratioGainedGlobal = Util_Alloc_Init_4D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohorts, 3, 3, 0.0);
-  906: 
-  907: 		}
+  892: 
+  893: 			FunctGroupArray[i].ratioLost = Util_Alloc_Init_3D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohortsXnumGenes, 3, 0.0);
+  894: 			FunctGroupArray[i].ratioLostGlobal = Util_Alloc_Init_4D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohortsXnumGenes, 3, 3, 0.0);
+  895: 			FunctGroupArray[i].ratioGainedPred = Util_Alloc_Init_2D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohortsXnumGenes, 0.0);
+  896: 			//FunctGroupArray[i].ratioGainedPredGlobal = Util_Alloc_Init_4D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohorts, 3, 3, 0.0);
+  897: 
+  898: 			FunctGroupArray[i].addRatioLost = Util_Alloc_Init_2D_Double(num_atomic_id, FunctGroupArray[i].numCohortsXnumGenes, 0);
+  899: 
+  900: 			FunctGroupArray[i].ratioLostPred = Util_Alloc_Init_3D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohorts, 3, 0.0);
+  901: 			FunctGroupArray[i].ratioLostPredGlobal = Util_Alloc_Init_4D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohorts, 3, 3, 0.0);
+  902: 
+  903: 			FunctGroupArray[i].ratioGained = Util_Alloc_Init_3D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohorts, 3, 0.0);
+  904: 			FunctGroupArray[i].ratioGainedGlobal = Util_Alloc_Init_4D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohorts, 3, 3, 0.0);
+  905: 
+  906: 		}
+  907: 
 ```
 
 **Suggested fix (from review):** Use `bm->num_active_habitats` in place of 3 and `numCohortsXnumGenes` in place of `numCohorts` (fix the matching Init/free calls too).
@@ -124,17 +124,17 @@ The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCx
 **Current code** (`atlantisUtil/atUtilGroupIO.c` lines 1427–1437)
 
 ```c
- 1427: 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
- 1428: 
- 1429: 		FunctGroupArray[guild].habitatCoeffs = Util_Alloc_Init_1D_Int(bm->num_active_habitats, 0);
- 1430: 
- 1431: 		FunctGroupArray[guild].habitatCoeffs[WC] = 0;
- 1432: 		FunctGroupArray[guild].habitatCoeffs[SED] = 0;
- 1433: 		FunctGroupArray[guild].habitatCoeffs[EPIFAUNA] = 0;
- 1434: 		FunctGroupArray[guild].habitatCoeffs[ICE_BASED] = 0;
- 1435: 		FunctGroupArray[guild].habitatCoeffs[LAND_BASED] = 0;
+ 1427: 
+ 1428: 		FunctGroupArray[guild].habitatCoeffs = Util_Alloc_Init_1D_Int(bm->num_active_habitats, 0);
+ 1429: 
+ 1430: 		FunctGroupArray[guild].habitatCoeffs[WC] = 0;
+ 1431: 		FunctGroupArray[guild].habitatCoeffs[SED] = 0;
+ 1432: 		FunctGroupArray[guild].habitatCoeffs[EPIFAUNA] = 0;
+ 1433: 		FunctGroupArray[guild].habitatCoeffs[ICE_BASED] = 0;
+ 1434: 		FunctGroupArray[guild].habitatCoeffs[LAND_BASED] = 0;
+ 1435: 
  1436: 
- 1437: 
+ 1437: 		if(bm->terrestrial_on){
 ```
 
 **Suggested fix (from review):** Allocate `nTotHabTypes` entries, or make `num_active_habitats` cover LAND_BASED/MIXED when those features are on.
@@ -334,13 +334,13 @@ If `groupList` is NULL or empty, `FunctGroupArray` is never allocated and the co
 **Current code** (`atlantisUtil/atUtilGroupIO.c` lines 1081–1087)
 
 ```c
- 1081: 
- 1082: 	//for (i = 0; i < bm->K_num_vert_sp; i++) {
- 1083:     for (guild = 0; guild < bm->K_num_tot_sp; guild++){
- 1084:         if (FunctGroupArray[guild].groupAgeType == AGE_STRUCTURED)
- 1085:             TLorder2[eatIndex++] = i;
- 1086: 	}
- 1087: 	TLorder2[eatIndex++] = DLguild_id;
+ 1081: 	//for (i = 0; i < bm->K_num_vert_sp; i++) {
+ 1082:     for (guild = 0; guild < bm->K_num_tot_sp; guild++){
+ 1083:         if (FunctGroupArray[guild].groupAgeType == AGE_STRUCTURED)
+ 1084:             TLorder2[eatIndex++] = i;
+ 1085: 	}
+ 1086: 	TLorder2[eatIndex++] = DLguild_id;
+ 1087: 	TLorder2[eatIndex++] = DRguild_id;
 ```
 
 **Suggested fix (from review):** Use `guild`.

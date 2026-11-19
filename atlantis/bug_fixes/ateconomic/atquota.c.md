@@ -511,19 +511,19 @@ Inside the `month` loop, `expectedCPUE` uses `BlackBook[..][bm->MofY]` and `Effo
 
 `ax[idp] = ...; idp++` runs once per (buyer subfleet, seller subfleet) pair, so idp can reach ~(nf*ns)^2. But ax..ex are sized `totpi = K_max_num_subfleet*K_num_fisheries*12` (ateconomicsetup.c:990-1004). With more than about 13 active fishery-subfleets that all pass the filters, this writes past the end of the arrays. Function: `Quota_trade()`.
 
-**Current code** (`ateconomic/atquota.c` lines 912–921) — code appears to have moved -413 lines since the review
+**Current code** (`ateconomic/atquota.c` lines 1381–1390) — code appears to have moved +56 lines since the review
 
 ```c
-  912: 
-  913: 				/* Copy ax and bx across to linearPIP for use below */
-  914: 				for (ns = 0; ns < totpi; ns++) {
-  915: 					linearPI[sp][linPI_id][ns] = ax[ns];
-  916: 					linearPI[sp][idd_id][ns] = bx[ns];
-  917: 				}
-  918: 
-  919: 				b = 0;
-  920: 				s = nsort;
-  921: 				while ((s >= 0) && (b < nsort && b >= 0)) {
+ 1381: 				sellerns = (int) (ex[idd]); /* Finding the seller subfleet_id */
+ 1382: 
+ 1383: 				if (do_debug_base && ((bm->which_fleet == buyernf) || (bm->which_fleet == sellernf) || (bm->which_fleet >= bm->K_num_fisheries))) {
+ 1384: 					do_debug = 1;
+ 1385: 				} else
+ 1386: 					do_debug = 0;
+ 1387: 
+ 1388: 				for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+ 1389: 					if (FunctGroupArray[sp].isFished == TRUE) {
+ 1390: 						if (do_debug) {
 ```
 
 **Suggested fix (from review):** Size ax..ex as `(nf*ns)^2`, or bound-check idp

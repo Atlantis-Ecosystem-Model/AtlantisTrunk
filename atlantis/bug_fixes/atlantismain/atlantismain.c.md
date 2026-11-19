@@ -32,15 +32,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `free2d(dvol); free3d(dtr);` run every time, but `dvol`/`dtr` are only allocated inside `if (do_physics)` (atlantismain.c:1392-1398). `do_physics` is only set by the `-p` flag (line 869), so without `-p` they are NULL globals. `d_free2d` reads `pp[0]` before anything else (sjwlib/memory.c:648), and `d_free3d` reads `ppp[0][0]` (memory.c:721), so shutdown crashes. (If `flag_skip_phys` clears do_physics after allocation, the free is fine.) Function: `modelshutdown()`.
 
-**Current code** (`atlantismain/atlantismain.c` lines 2387–2392) — code appears to have moved +96 lines since the review
+**Current code** (`atlantismain/atlantismain.c` lines 2405–2410) — code appears to have moved +114 lines since the review
 
 ```c
- 2387:  *
- 2388:  */
- 2389: void modelshutdown(MSEBoxModel *bm) {
- 2390:     int b = 0;
- 2391: 	printf("Freeing general box arrays\n");
- 2392: 
+ 2405: 	/* Free Memory for top level boxmodel arrays */
+ 2406:     i_free1d((int*) bm->is_boundary);
+ 2407: 	free2d((double**) bm->nom_dz);
+ 2408: 	free2d((double**) bm->dz);
+ 2409: 	free3d((double***) bm->wctr);
+ 2410: 	free3d((double***) bm->sedtr);
 ```
 
 **Suggested fix (from review):** `if (dvol) free2d(dvol); if (dtr) free3d(dtr);`
@@ -198,14 +198,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The `bm->params` string prints `-s %s -g %s -c %s -d %s` with the summary, PROD, TOTCATCH and CATCH output file names. These are old flag meanings: `-s` is now the functional-group file, `-c` is cabspot, `-d` is the destination folder, and `-g` is not a flag. The params string written into output metadata is therefore wrong and cannot be re-run. Function: `setupMSEBoxModel()`.
 
-**Current code** (`atlantismain/atlantismain.c` lines 918–922) — code appears to have moved -116 lines since the review
+**Current code** (`atlantismain/atlantismain.c` lines 1173–1177) — code appears to have moved +139 lines since the review
 
 ```c
-  918:  Basic model initialisation
-  919:  */
-  920: void setupMSEBoxModel(int argc, char *argv[], MSEBoxModel *bm) {
-  921: 	double cellvol, ask_t;
-  922: 	int ij, traceid, den, rn, sn, fgIndex, i;
+ 1173: 
+ 1174: 	/* Write arguments to parameter string */
+ 1175: 	snprintf(bm->params, (num_cmd_line_flags * BMSLEN), "%s -i %s %d -o %s -s %s -g %s -c %s -d %s -r %s -f %s", progname, bm->ncIfname, bm->ncIfdump, bm->ncOfname, bm->ncOSumfname, bm->ncOPCfname, bm->ncOFishfname, bm->ncODetFishfname, bm->runprmIfname, bm->forceIfname);
+ 1176:     
+ 1177: 	if (do_biology) {
 ```
 
 **Suggested fix (from review):** Rebuild params from the current flags (-s functionGroupIfname, -q fisheryIfname, -d destFolder, etc.)
@@ -347,27 +347,9 @@ The `bm->params` string prints `-s %s -g %s -c %s -d %s` with the summary, PROD,
 
 `bm->init_pH` (allocated at line 1179 with alloc2d) is never freed in `modelshutdown()`. Every other array in that allocation block is freed. Function: `modelshutdown()`.
 
-**Current code** (`atlantismain/atlantismain.c` lines 2387–2421 (range truncated)) — code appears to have moved +139 lines since the review
+**Current code** (`atlantismain/atlantismain.c` lines 2405–2439 (range truncated)) — code appears to have moved +157 lines since the review
 
 ```c
- 2387:  *
- 2388:  */
- 2389: void modelshutdown(MSEBoxModel *bm) {
- 2390:     int b = 0;
- 2391: 	printf("Freeing general box arrays\n");
- 2392: 
- 2393:     /* Free flux trackers */
- 2394:     for (b = 0; b < bm->nbox; b++) {
- 2395:         free1d(bm->boxes[b].flush_in);
- 2396:         free1d(bm->boxes[b].flush_out);
- 2397: 
- 2398:         if(bm->boxes[b].uniqueAdjBoxes){
- 2399:         	free(bm->boxes[b].uniqueAdjBoxes);
- 2400:         }
- 2401: 
- 2402:         free(bm->boxes[b].distID);
- 2403:     }
- 2404: 
  2405: 	/* Free Memory for top level boxmodel arrays */
  2406:     i_free1d((int*) bm->is_boundary);
  2407: 	free2d((double**) bm->nom_dz);
@@ -385,6 +367,24 @@ The `bm->params` string prints `-s %s -g %s -c %s -d %s` with the summary, PROD,
  2419: 	free3d((double***) newwctr);
  2420: 	free3d((double***) newsedtr);
  2421: 	if(bm->ice_on){
+ 2422: 		free3d((double***) newicetr);
+ 2423: 		free3d((double***) bm->icetr);
+ 2424: 		free2d((double**) bm->icedz);
+ 2425: 	}
+ 2426: 	if(bm->terrestrial_on){
+ 2427: 		free2d((double**) newlandtr);
+ 2428: 		free2d((double**) bm->landtr);
+ 2429: 	}
+ 2430: 
+ 2431: 	i_free2d(bm->checkedalready);
+ 2432: 	free2d(dvol);
+ 2433: 	free3d(dtr);
+ 2434: 
+ 2435: 	 if (bm->flagdietcheck) {
+ 2436: 		// If age structured diets required then free up the array.
+ 2437: 		free5d(bm->totDiet);
+ 2438: 	}
+ 2439: 
 ```
 
 **Suggested fix (from review):** Add `free2d(bm->init_pH);`

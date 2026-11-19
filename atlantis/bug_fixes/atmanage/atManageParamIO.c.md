@@ -13,7 +13,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 | [MNGIO-01](#mngio-01) ⭐ | 1069-1081, 517-524 | H/H | always-true condition / buffer overrun | `POP_changes = 1; ... if (POP_changes > 0) bm->flagchangepop = 0;` is always true, so the flagchangepop settin… |  | [ ] |
 | [MNGIO-02](#mngio-02) | 1019-1023, 343-351, 1037-1042 | H/M | buffer overrun (config dependent) | `EFFORTchange` is allocated `[nf][Effort_max_num_changes][4]`, with max = 1 when `flagchangeeffort == 0`. `rea… |  | [ ] |
 | [MNGIO-03](#mngio-03) | 662 | H/M | copy-paste / wrong param key | `bm->CPUEshotavgdis = Util_XML_Read_Value(..., "CPUEshotfdis");` reads the integer error-case flag instead of … |  | [ ] |
-| [MNGIO-04](#mngio-04) | 144-153 | M/H | buffer overrun / index collision | `bm->BiTAC_sp[b][region][guild][old_id]` with `region < bm->K_num_reg`. BiTAC_sp is allocated with a fixed reg… |  | [ ] |
+| [MNGIO-04](#mngio-04) 🔀 | 144-153 | M/H | buffer overrun / index collision | `bm->BiTAC_sp[b][region][guild][old_id]` with `region < bm->K_num_reg`. BiTAC_sp is allocated with a fixed reg… |  | [ ] |
 | [MNGIO-05](#mngio-05) | 294-306 | M/M | buffer overrun (unchecked bound) | The loop `co_sp < FunctGroupArray[guild].speciesParams[max_co_sp_id]` writes `co_sp_catch[nf][co_sp]`, but co_… |  | [ ] |
 | [MNGIO-06](#mngio-06) | 768-770 | H/L | NULL dereference | `childGroupingNode = Util_XML_Get_Node(..., "Location_And_Timing")` is not NULL-checked before `readPortXMLDat… |  | [ ] |
 | [MNGIO-07](#mngio-07) | 335, 748 | H/L | error-message text | `quit("errorString%s attribute group not found.\n", ...)` prints a literal "errorString". Line 748 says "EPUE_… |  | [ ] |
@@ -156,6 +156,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 **Why it's thought to be a bug**
 
 `bm->BiTAC_sp[b][region][guild][old_id]` with `region < bm->K_num_reg`. BiTAC_sp is allocated with a fixed region dimension of `totalreg_id + 1 = 3` (atManageSetup.c:1195, totalreg_id=2), but K_num_reg can be larger (atbiolsetup.c:599/605). Even with K_num_reg==3, region index 2 is the "total" slot that atManageSetup.c:979 overwrites. Function: `readBiMonthlyXML()`.
+
+> 🔀 **Changed by the merge of main (Nov 2026):** BiTAC_sp now zero-initialised. Check whether this finding is now fixed before acting.
 
 **Current code** (`atmanage/atManageParamIO.c` lines 142–155)
 

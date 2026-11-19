@@ -77,17 +77,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Same pattern for groups: `for (b = 0; b < bm->SP_FISHERYprms[sp][i][paramID]; b++) array[sp][i][b][index] = values[b];`. Qchange is allocated with `Q_max_num_changes = 1` unless `bm->flagchangeq` (atharvest/atHarvestParamIO.c:905-908). If `_q_changes` > 1 while the flag is off, the write overflows the [sp][nf][1][3] allocation. TACchange (atimplementation/atImplementationParamIO.c:35) should be checked the same way. Function: `Util_XML_Read_Change_Fished_Groups()`.
 
-**Current code** (`atlantisUtil/atUtilFisheryXML.c` lines 499–520) — code appears to have moved -3 lines since the review
+**Current code** (`atlantisUtil/atUtilFisheryXML.c` lines 507–528) — code appears to have moved +5 lines since the review
 
 ```c
-  499: 		groupNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, attributeGroup, paramStr[index]);
-  500: 		if (groupNode == NULL) {
-  501: 			quit("Util_XML_Read_Change_Fished_Groups attributeNode not found %s\n", errorString);
-  502: 		}
-  503: 
-  504: 		for (speciesIndex = 0; speciesIndex < bm->K_num_tot_sp; speciesIndex++) {
-  505: 
-  506: 			if (FunctGroupArray[speciesIndex].isImpacted == TRUE) {
   507: 				counter = 0;
   508:                 for (i = 0; i < bm->K_num_fisheries; i++) {
   509:                     counter = max ( counter,(int) bm->SP_FISHERYprms[speciesIndex][i][paramID] );
@@ -102,6 +94,14 @@ Same pattern for groups: `for (b = 0; b < bm->SP_FISHERYprms[sp][i][paramID]; b+
   518: 					for (i = 0; i < bm->K_num_fisheries; i++)
   519: 						for (b = 0; b < bm->SP_FISHERYprms[speciesIndex][i][paramID]; b++)
   520: 							array[speciesIndex][i][b][index] = values[b];
+  521: 
+  522: 					free(values);
+  523: 				}
+  524: 			}
+  525: 		}
+  526: 	}
+  527: 	free(nodeName);
+  528: }
 ```
 
 **Suggested fix (from review):** Bound b by the allocated max_num_changes, or quit when the count is larger.

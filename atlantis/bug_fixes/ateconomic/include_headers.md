@@ -71,14 +71,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   113: /* Util functions */
 ```
 
-**Current code** (`atlantismain/include/atlantisboxmodel.h` lines 6334–6338) — code appears to have moved +81 lines since the review
+**Current code** (`atlantismain/include/atlantisboxmodel.h` lines 6336–6340) — code appears to have moved +83 lines since the review
 
 ```c
- 6334: 
- 6335: /* Economics related prototypes */
- 6336: void Quicksort_Dir(double *x, double *bbx, double *ccx, double *ddx, double *eex, int n, int ascendflag);
- 6337: 
- 6338: /* Log file definition */
+ 6336: 
+ 6337: /* Economics related prototypes */
+ 6338: void Quicksort_Dir(double *x, double *bbx, double *ccx, double *ddx, double *eex, int n, int ascendflag);
+ 6339: 
+ 6340: /* Log file definition */
 ```
 
 **Suggested fix (from review):** Delete ateconhelp.c's copy.

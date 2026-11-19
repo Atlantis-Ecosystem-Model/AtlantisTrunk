@@ -480,14 +480,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The message says "100th iteration" but the bail-out is at `itc > 1000`. Function: `Stocastic_Effort_Allocation()`.
 
-**Current code** (`ateconomic/atEconomicAnnual.c` lines 653–657) — code appears to have moved -85 lines since the review
+**Current code** (`ateconomic/atEconomicAnnual.c` lines 738–742) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Stocastic_Effort_Allocation()` now starts at line 12
 
 ```c
-  653:  * \brief Stochastic effort allocation
-  654:  */
-  655: void Stocastic_Effort_Allocation(MSEBoxModel *bm, int nf, int ns, int *not_bounded, double totexpect_return, double max_month_effort, int do_debug,
-  656: 		FILE *llogfp) {
-  657: 
+  738: 
+  739: 			if (itc > 1000) {
+  740: 				fprintf(llogfp, "Had to bail on 100th iteration for %s-%d sp: %s\n", FisheryArray[nf].fisheryCode, ns, FunctGroupArray[sp].groupCode);
+  741: 				quota_avail = 0;
+  742: 				totexpect_return = 0;
 ```
 
 **Suggested fix (from review):** Fix the text

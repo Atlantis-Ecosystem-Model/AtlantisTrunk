@@ -69,13 +69,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `dum` is allocated before the `tc==0` early return, which leaks it. `tot==0` produces NaN props. `dum[15000]` is fixed while np can reach about 10000+ndim/2, with no bound check. Function: `GenMnomial()`.
 
-**Current code** (`atSS3Link/atSS3Util.c` lines 30–62) — code appears to have moved -4 lines since the review
+**Current code** (`atSS3Link/atSS3Util.c` lines 34–66) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `GenMnomial()` now starts at line 32
 
 ```c
-   30: //
-   31: // ******************************************************************************
-   32: void GenMnomial(double *prop, int ndim, int tc, double *c, int *iseed, int withrep)
-   33: {
    34: 	int i,j,icount,np,a,a1;
    35: 	double tot,ntot;
    36: 	int *dum = Util_Alloc_Init_1D_Int(15000, 0);
@@ -105,6 +101,10 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
    60: 	for (i=0;i<ndim;i++){
    61: 		icount = (int) (prop[i]*ntot+0.5);
    62: 		if (icount>0){
+   63: 			for (j=0;j<icount;j++)
+   64: 				dum[np+j] = i;
+   65: 			np = np + icount;
+   66: 		}
 ```
 
 **Suggested fix (from review):** Allocate after the check, free on all paths, guard tot, bound np
@@ -135,20 +135,20 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 In the 0-based port, `ii=0` serves both as the "not started" flag and as a valid index: if the first nonzero is at i=0, forward substitution never starts. The loop `j < (i-1)` should be `j < i`. INVM gives wrong inverses. INVM/LUBKSB are currently never called (latent). Function: `LUBKSB()`.
 
-**Current code** (`atSS3Link/atSS3Util.c` lines 225–235) — code appears to have moved -8 lines since the review
+**Current code** (`atSS3Link/atSS3Util.c` lines 233–243) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `LUBKSB()` now starts at line 227
 
 ```c
-  225: //
-  226: // ******************************************************************************
-  227: void LUBKSB(double **AA,int n, int *INDX, double *B) {
-  228:     int i,ii=0,ip,j;
-  229:     double sum;
-  230: 
-  231:     for ( i=0; i < n; i++) {
-  232:         ip = INDX[i];
   233:         sum = B[ip];
   234:         B[ip] = B[i];
   235:         if (ii) {
+  236:             for( j=ii; j < (i-1); j++) {
+  237: 				sum -= AA[i][j] * B[j];
+  238:             }
+  239:         } else if (sum) {
+  240: 			ii=i;
+  241:         }
+  242:         B[i] = sum;
+  243:     }
 ```
 
 **Suggested fix (from review):** Use `ii=-1` as the flag and `for (j=ii; j<i; j++)`
@@ -179,15 +179,9 @@ In the 0-based port, `ii=0` serves both as the "not started" flag and as a valid
 
 `VV` is never freed, and on a singular row `VV[i] = 1.0/big` is computed with big==0 after only a printf. Latent (unused). Function: `LUDCMP()`.
 
-**Current code** (`atSS3Link/atSS3Util.c` lines 157–173) — code appears to have moved -6 lines since the review
+**Current code** (`atSS3Link/atSS3Util.c` lines 163–179) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `LUDCMP()` now starts at line 159
 
 ```c
-  157: //
-  158: // ******************************************************************************
-  159: void LUDCMP (double **AA, int n, int *INDX, double *d){
-  160:     int i, j, k, imax = 0;
-  161:     double tiny = 1.0e-20;
-  162:     double big, dum, sum, temp;
   163:     double *VV;
   164: 
   165:     VV = Util_Alloc_Init_1D_Double(n, 0.0);
@@ -199,6 +193,12 @@ In the 0-based port, `ii=0` serves both as the "not started" flag and as a valid
   171:             if ((temp=fabs(AA[i][j])) > big)
   172:             	big = temp;
   173:         }
+  174:         if(big == 0.0) {
+  175:             printf("Singular matrix in routine LUDCMP\n");
+  176:         }
+  177:         VV[i] = 1.0 / big;
+  178:     }
+  179: 
 ```
 
 **Suggested fix (from review):** `free1d(VV)`. Return or quit on a singular matrix

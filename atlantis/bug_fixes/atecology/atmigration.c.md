@@ -20,7 +20,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 | [EINIT-08](#einit-08) | 630-631 | H/M | unit / genotype split | `SN[b][counter] = InitSN[b][0] / ngenes; RN[b][counter] = InitRN[b][0] / ngenes;` SN and RN are per-individual… |  | [ ] |
 | [EINIT-09](#einit-09) | 692-694 | H/L | wrong variable in message | `quit("... StaggerYears cannot be set to %d ...", (int)(FunctGroupArray[sp].speciesParams[stagger_years_id]), … |  | [ ] |
 | [EINIT-10](#einit-10) | 740-753 | M/M | loop logic / overwritten result | `end_pt[qid] = cohort + yrs_to_age_pre_model[qid]` is assigned inside a `cohort` loop running from top to 0, s… |  | [ ] |
-| [EINIT-11](#einit-11) | 743 | H/M | integer division | `diff_nc = (int)ceil((Return_Now[qid] - Leave_Now[qid]) / 365);` Both operands are int, so the division trunca… |  | [ ] |
+| [EINIT-11](#einit-11) 🔀 | 743 | H/M | integer division | `diff_nc = (int)ceil((Return_Now[qid] - Leave_Now[qid]) / 365);` Both operands are int, so the division trunca… |  | [ ] |
 | [EINIT-12](#einit-12) | 175, 304 | H/L | log noise | `printf("Doing migration entry %d ...")` and `printf("Step1 Doing currentID ...")` are unconditional and run f… |  | [ ] |
 
 ---
@@ -150,9 +150,10 @@ The pairwise check loops over all ordered pairs (migrationID, migID) and does no
 
 For multi-year migrators the year-0 "start with return" branch writes `this_currentID = currentID + counter*num_migrate` for `counter < MinYearsAway`, then `last_currentID` jumps to that value, so every (stage, migration) at yr 0 uses `(Y-1)*nm+1` slots. Total slots = `S*nm*((Y-1)*nm + nyears)`, but the arrays hold `maxnum = nyears*S*(nm+1)` (atBiologyXMLParamIO.c:4334). This overflows when `nm^2*(Y-1) > nyears`, e.g. nm=1, Y=5 on a run of 3 years or less, or nm=2, Y=3 on a run under 8 years. Nothing bounds `currentID`/`this_currentID` against `num_in_queue`, so Leave_Now, Return_Now, all_go, Box, Stagger, etc. are written past their allocation (heap corruption). Function: `Init_Migration()`.
 
-**Current code** (`atecology/atmigration.c` lines 180–214 (range truncated)) — code appears to have moved +24 lines since the review
+**Current code** (`atecology/atmigration.c` lines 179–213 (range truncated)) — code appears to have moved +23 lines since the review
 
 ```c
+  179:                 MIGRATION[sp].Leave_Period[currentID] = MIGRATION[sp].Leave_Period_Prm[stage][migrationID];
   180:                 MIGRATION[sp].Return_Period[currentID] = MIGRATION[sp].Return_Period_Prm[stage][migrationID];
   181:                 MIGRATION[sp].MinYearsAway[currentID] = MIGRATION[sp].MinYearsAway_Prm[stage][migrationID];
   182:                 MIGRATION[sp].MaxYearsAway[currentID] = MIGRATION[sp].MaxYearsAway_Prm[stage][migrationID];
@@ -187,7 +188,6 @@ For multi-year migrators the year-0 "start with return" branch writes `this_curr
   211:                 }
   212:                 
   213:                 MIGRATION[sp].Stagger[currentID][stagger_years_id] = MIGRATION[sp].Stagger_Prm[stage][migrationID][stagger_years_id];
-  214:                 MIGRATION[sp].Stagger[currentID][return_stagger_id] = MIGRATION[sp].Stagger_Prm[stage][migrationID][return_stagger_id];
 ```
 
 **Suggested fix (from review):** Add `if (this_currentID >= MIGRATION[sp].num_in_queue) quit(...)`, and size maxnum (and the Check_Migration:550 num_in_queue) to include `S*nm*nm*(MaxYearsAway-1)`
@@ -523,6 +523,8 @@ In the loop computing the maximum years away, the `else` branch sets `max_years 
 **Why it's thought to be a bug**
 
 `diff_nc = (int)ceil((Return_Now[qid] - Leave_Now[qid]) / 365);` Both operands are int, so the division truncates before `ceil` (400 days gives 1, not 2). This feeds `yrs_to_age_pre_model = sp_Migrate_Years - diff_nc`. Function: `Init_Migration_Age_Check()`.
+
+> 🔀 **Changed by the merge of main (Nov 2026):** Leave_Now[qid] -> Leave_Now[mid] in Find_Final_Invert_Recruit_Distribtuion. Check whether this finding is now fixed before acting.
 
 **Current code** (`atecology/atmigration.c` lines 741–745)
 

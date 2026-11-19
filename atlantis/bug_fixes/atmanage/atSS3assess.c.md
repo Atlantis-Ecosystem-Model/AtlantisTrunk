@@ -89,25 +89,25 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `char buf[1024]` passed to `realpath()`, which may write up to PATH_MAX bytes (4096 on Linux). Long paths overflow the stack buffer. Function: `Run_SS3()`.
 
-**Current code** (`atmanage/atSS3assess.c` lines 159–174) — code appears to have moved -4 lines since the review
+**Current code** (`atmanage/atSS3assess.c` lines 174–189) — code appears to have moved +11 lines since the review
 
 ```c
-  159: // Modifications: Beth Fulton
-  160: //
-  161: void Run_SS3(MSEBoxModel *bm, char *run_dir) {
-  162: 
-  163:     char *ss3_abs;
-  164:     char ss3_cmd[STRLEN];
-  165:     int THIS_PATH_MAX = 1024; // Needed as linux doesn't have PATH_MAX defined like Mac does
-  166:     char cwd[THIS_PATH_MAX];
-  167:     char buf[THIS_PATH_MAX];
-  168:     
-  169:     if (getcwd(cwd, sizeof(cwd)) != NULL) {
-  170:         // Do nothing has have remembered current directory
-  171:     } else {
-  172:         quit("getcwd() error\n");
-  173:     }
   174: 
+  175:     // resolve link or relative path to an absolute path
+  176:     ss3_abs = realpath(bm->ss3Name, buf);
+  177:     if (ss3_abs) {
+  178:         // Real path found
+  179:     } else {
+  180:         // print explanatory error message
+  181:         int errc = errno;
+  182:         char *errStr = strerror(errno);
+  183:         quit("Failed to resolve: %s - Error: %d %s\n", bm->ss3Name, errc, errStr);
+  184:     }
+  185: 
+  186:     // build command string to pass to system
+  187:     snprintf(ss3_cmd, sizeof(ss3_cmd), "%s -nohess > mse.junk", ss3_abs);
+  188: 
+  189:     // change to rundir and execute the ss3 binary
 ```
 
 **Suggested fix (from review):** Use `realpath(bm->ss3Name, NULL)` and free the result.

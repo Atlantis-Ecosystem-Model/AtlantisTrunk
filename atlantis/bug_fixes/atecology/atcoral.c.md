@@ -80,14 +80,14 @@ When the model has no turf, `facilitate_space = 1.0`, then `ans = mum * (1 - com
 
 `time_since_last_shock` starts at 0 and is only updated inside `if (do_DHW_now)`. That block is disabled for `cohort > 0` and for `it_count > 1` (398-402). Recovery needs `time_since_last_shock > 0` (534) or `> recovery_periodB` (537), so `PropUnBleached[cohort>0]` never recovers after bleaching. Cohort 0 recovers only on the first adaptive iteration. Function: `Do_Bleaching()`.
 
-**Current code** (`atecology/atcoral.c` lines 366–370)
+**Current code** (`atecology/atcoral.c` lines 368–372)
 
 ```c
-  366:  *
-  367:  */
   368: void Do_Bleaching(MSEBoxModel *bm, FILE *llogfp, int guild, int cohort, double sp_biom){
   369: 	int d;
   370:     int time_since_last_shock = 0;
+  371:     int sp_id = (int) (FunctGroupArray[guild].speciesParams[coralID_id]);
+  372:     int recovery_periodA = (int)(FunctGroupArray[guild].speciesParams[bleach_periodA_id]);
 ```
 
 **Suggested fix (from review):** Store time-since-shock per box in CORALREEF (computed when the queue updates) and read it for all cohorts and iterations.
@@ -211,14 +211,10 @@ Polyp mortality N `M = SPmortNH_polyp` is split as NH `M(1-FDM)(1-H)`, symbiont 
 
 In the species-level path, mechanistic/blackwood/bioerosion return a rate of change ("returning a flux so that will be added to LocalRugosity", 751). The caller atGroupProcesses.c:1338 assigns it straight into the state `localWCTracers[Rugosity_i]`, and each coral/sponge guild/cohort overwrites the previous one. The bozec case returns a state. The georugosity floor (818-821) is applied to the flux value. Function: `Calculate_Rugosity()`.
 
-**Current code** (`atecology/atcoral.c` lines 851–855) — code appears to have moved -485 lines since the review
+**Current code** (`atecology/atcoral.c` lines 1336–986) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Calculate_Rugosity()` now starts at line 572
 
 ```c
-  851:     
-  852:     
-  853:     fprintf(llogfp,"Destroy_Rugosity: Time: %e box%d-%d Rugosity: %e dead_biom: %e rate_rug_crumble: %e\n", bm->dayt, bm->current_box, bm->current_layer, boxLayerInfo->localWCFlux[Rugosity_i], dead_biom, rate_rug_crumble);
-  854: 
-  855: }
+
 ```
 
 **Suggested fix (from review):** Caller should accumulate into `localWCFlux[Rugosity_i]` for flux models, and only assign for bozec.

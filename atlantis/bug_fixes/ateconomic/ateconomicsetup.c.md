@@ -241,14 +241,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 "AnnualExpectedProfitInd" (23 chars) goes into a 20-byte name buffer (atlantismain.c:2101), so the output header is truncated. Function: `Init_Econ_Index_Names()`.
 
-**Current code** (`ateconomic/ateconomicsetup.c` lines 1102–1106) — code appears to have moved -39 lines since the review
+**Current code** (`ateconomic/ateconomicsetup.c` lines 1141–1145) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Init_Econ_Index_Names()` now starts at line 1104
 
 ```c
- 1102:  *
- 1103:  */
- 1104: void Init_Econ_Index_Names(MSEBoxModel *bm) {
- 1105:     int paramLen = 20;
- 1106:     
+ 1141: 	snprintf(bm->SUBFLEETeconindxNAME[tax_ind_id], paramLen, "%s", "TaxInd");
+ 1142: 	snprintf(bm->SUBFLEETeconindxNAME[dv_ind_id], paramLen, "%s", "DVInd");
+ 1143: 	snprintf(bm->SUBFLEETeconindxNAME[AnnualExpectPI_id], paramLen, "%s", "AnnualExpectedProfitInd");
+ 1144: 	snprintf(bm->SUBFLEETeconindxNAME[rev_land_ind_id], paramLen, "%s", "RevLandInd");
+ 1145: 	snprintf(bm->SUBFLEETeconindxNAME[rev_effort_ind_id], paramLen, "%s", "RevEffortInd");
 ```
 
 **Suggested fix (from review):** Shorten the label or widen the buffer

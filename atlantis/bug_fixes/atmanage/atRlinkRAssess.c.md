@@ -132,40 +132,40 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Four objects are PROTECTed (infile, outfile, outdir, r_call), but only `UNPROTECT(3)` is called, so R's protect stack leaks on every call and eventually overflows. Function: `Run_RAssess()`.
 
-**Current code** (`atmanage/atRlinkRAssess.c` lines 312–342) — code appears to have moved -12 lines since the review
+**Current code** (`atmanage/atRlinkRAssess.c` lines 350–380) — code appears to have moved +26 lines since the review
 
 ```c
-  312:     
-  313:     if(idR < 0) {
-  314:         quit("whichRAssess is negative for %s so can't complete Run_RAssess\n", FunctGroupArray[species].groupCode);
-  315:     }
-  316:     
-  317:     if (bm->RAssessRuseScript) {
-  318:         // Using a system call
-  319:         snprintf(R_ScriptName, sizeof(R_ScriptName), "Rscript %s_%s", FunctGroupArray[species].groupCode, bm->RAssessRscriptName[idR]);
-  320:         system(R_ScriptName);
-  321:     } else {
-  322:         // Using embedded R call
-  323:         snprintf(inScriptName, sizeof(inScriptName), "%s_%s", FunctGroupArray[species].groupCode, bm->RAssessRscriptName[0]);
-  324:         snprintf(outScriptName, sizeof(outScriptName), "%s_%s", FunctGroupArray[species].groupCode, bm->RAssessRoutName);
-  325:         
-  326:         SEXP infile = PROTECT(allocVector(STRSXP, 1));
-  327:         SET_STRING_ELT(infile, 0, mkChar(inScriptName));
-  328: 
-  329:         SEXP outfile = PROTECT(allocVector(STRSXP, 1));
-  330:         SET_STRING_ELT(outfile, 0, mkChar(outScriptName));
-  331:         
-  332:         SEXP outdir = PROTECT(allocVector(STRSXP, 1));
-  333:         SET_STRING_ELT(outdir, 0, mkChar(bm->destFolder));
-  334: 
-  335:         // Setup a call to the R RAssess function, will need other function calls embedded in that?
-  336:         SEXP r_call;
-  337:         PROTECT(r_call = lang4(install("doRAssess"), infile, outfile, outdir));
-  338: 
-  339:         // Execute the function
-  340:         SEXP ret = R_tryEval(r_call, R_GlobalEnv, &errorOccurred);
-  341: 
-  342:         if (!errorOccurred) {
+  350:         }
+  351: 
+  352:         UNPROTECT(3);
+  353: 
+  354:         // Check interrupts
+  355:         R_CheckUserInterrupt();
+  356: 
+  357:         // Assign the TAC value
+  358:         if(Rret > -1) {
+  359:             bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = Rret;
+  360:             fprintf(bm->logFile, "%s RAssessTAC set to %e\n", FunctGroupArray[species].groupCode, bm->RBCestimation.RBCspeciesParam[species][RBCest_id]);
+  361:         } else {
+  362:             fprintf(bm->logFile, "%s RAssessTAC not set as had R error\n", FunctGroupArray[species].groupCode);
+  363:         }
+  364:         fflush(bm->logFile);
+  365: 
+  366:     }
+  367:     
+  368: 
+  369:     return;
+  370: }
+  371: 
+  372: /**
+  373:  * Initialize R environment and associated arrays
+  374:  */
+  375: 
+  376: void RRAssess_Linkage_Start(MSEBoxModel *bm) {
+  377:     int i;
+  378:     int num_files_needed = 0;
+  379:     int r_argc = 2;
+  380:     char *r_argv[] = { "R", "--silent" };
 ```
 
 **Suggested fix (from review):** `UNPROTECT(4)`.

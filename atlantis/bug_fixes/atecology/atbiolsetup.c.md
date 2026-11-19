@@ -40,11 +40,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `dist_step1 += sqrt(xdiff*xdiff + ydiff*ydiff); if (dist_step1 > maxdist) maxdist = dist_step1;`: the code is meant to find the largest distance from the entry box to any box. Because it uses `+=`, it adds up the distances to all boxes instead (and `dist_step1` is never reset). That makes `maxdist`, and with it `InvaderSatDay` and `Invadendt` (the size of `InvadeArray`), much too large. Function: `Setup_Invade()`.
 
-**Current code** (`atecology/atbiolsetup.c` lines 3323–3336) — code appears to have moved +164 lines since the review
+**Current code** (`atecology/atbiolsetup.c` lines 3325–3338) — code appears to have moved +166 lines since the review
 
 ```c
- 3323:  *
- 3324:  */
  3325: static void Setup_Invade(MSEBoxModel *bm) {
  3326: 	int b, chkbox, nb = -1, ndist, k, sp_move;
  3327: 	double xdiff = 0.0, ydiff = 0.0, avgdist = 0.0, basedt = 0.0, dt = 0.0, dist_step1 = 0.0, maxdist = 0.0, nsteps = 0.0;
@@ -57,6 +55,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
  3334: 		return;
  3335:     
  3336:     bm->invader_spread_scalars = Util_Alloc_Init_2D_Double(bm->wcnz, bm->nbox, 0.0);  // Just make in nbox so don't have to try to map chbox to box_id etc (just easier even if slightly higher memory footprint)
+ 3337:     
+ 3338: 	/* Rescale InvaderScalar to a per bm->dt rate */
 ```
 
 **Suggested fix (from review):** `dist_step1 = sqrt(...)`
@@ -87,17 +87,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 In the no_move invasion spread, `dist_step1` keeps growing from the BSET-01 loop and never resets, so the test `dist_step1 < InvaderSpeed*Invadedt*86400` is effectively always false. Even when it is true, it writes `InvadeArray[b][k]` (the source box, which is already > 0) rather than the neighbour `nb`, and it writes time step `k` rather than `k+1`. The invasion therefore never spreads past the entry box until the forced saturation at the last step. Function: `Setup_Invade()`.
 
-**Current code** (`atecology/atbiolsetup.c` lines 3323–3337) — code appears to have moved +138 lines since the review
+**Current code** (`atecology/atbiolsetup.c` lines 3331–3345) — code appears to have moved +146 lines since the review
 
 ```c
- 3323:  *
- 3324:  */
- 3325: static void Setup_Invade(MSEBoxModel *bm) {
- 3326: 	int b, chkbox, nb = -1, ndist, k, sp_move;
- 3327: 	double xdiff = 0.0, ydiff = 0.0, avgdist = 0.0, basedt = 0.0, dt = 0.0, dist_step1 = 0.0, maxdist = 0.0, nsteps = 0.0;
- 3328:     
- 3329:     if (verbose)
- 3330:         printf("Setup_Invade\n");
  3331: 
  3332: 	/* Don't bother setting things up if never invading or can't spread as have zero speed */
  3333: 	if ((bm->invading_sp_model == no_invader) || (!bm->InvaderSpeed))
@@ -105,6 +97,14 @@ In the no_move invasion spread, `dist_step1` keeps growing from the BSET-01 loop
  3335:     
  3336:     bm->invader_spread_scalars = Util_Alloc_Init_2D_Double(bm->wcnz, bm->nbox, 0.0);  // Just make in nbox so don't have to try to map chbox to box_id etc (just easier even if slightly higher memory footprint)
  3337:     
+ 3338: 	/* Rescale InvaderScalar to a per bm->dt rate */
+ 3339: 	nsteps = 365.0 * 86400.0 / bm->dt;
+ 3340: 	bm->InvaderScalar = (bm->InvaderScalar - 1.0) / nsteps;
+ 3341: 
+ 3342: 	/* Start with functional group tracer ID - get youngest cohort for all
+ 3343: 	 as actually only used for invertebrates, any vertebrates have a
+ 3344: 	 cohort specific call to FunctGroupArray[].NumsTracers[] in
+ 3345: 	 the Invading_Species()
 ```
 
 **Suggested fix (from review):** Compute distance per neighbour (`dist = sqrt(...)`) and set `InvadeArray[nb][k+1]` (when `k+1 < Invadendt`); also carry earlier values forward
@@ -491,10 +491,9 @@ In the relaxed-density retry, `sp_abund += bm->boxes[ij].tr[k][den]` adds every 
 
 `nage = age_mat - 1; nmat = age_mat;` index `structNTracers`, which is sized and ordered by numCohortsXnumGenes (cohort = age*numGeneTypes+gene; see line 550). With several genotypes, `[nage]` and `[nmat]` pick the wrong age class. If `age_mat_id == 0`, `nage = -1` reads out of bounds. Line 3603 does use numCohortsXnumGenes-1, which is inconsistent. Function: `Set_spMinMax_Values()`.
 
-**Current code** (`atecology/atbiolsetup.c` lines 3804–3817) — code appears to have moved +213 lines since the review
+**Current code** (`atecology/atbiolsetup.c` lines 3805–3818) — code appears to have moved +214 lines since the review
 
 ```c
- 3804:  *	\brief Set the spMinMax values for each of the vertebrates.
  3805:  */
  3806: static void Set_spMinMax_Values(MSEBoxModel *bm) {
  3807: 	int sp, nage, nmat;
@@ -508,6 +507,7 @@ In the relaxed-density retry, `sp_abund += bm->boxes[ij].tr[k][den]` adds every 
  3815: 			switch (FunctGroupArray[sp].groupAgeType){
  3816: 			case AGE_STRUCTURED:
  3817: 				/* Remember the indices for smallest and largest sizes of the current fish eaters */
+ 3818: 				nage = (int) (FunctGroupArray[sp].speciesParams[age_mat_id] - 1);
 ```
 
 **Suggested fix (from review):** Use `max(0,nage)*numGeneTypes` and `nmat*numGeneTypes`, clamped against numCohorts-1
@@ -620,49 +620,49 @@ In the relaxed-density retry, `sp_abund += bm->boxes[ij].tr[k][den]` adds every 
 
 `ids[idnum]` is written before checking `n > nbox`. In the first branch (3363) there is no check at all, and in the second the check comes after the write, so `ids[nbox]` can be written before the quit. Function: `Setup_HomeRanges()`.
 
-**Current code** (`atecology/atbiolsetup.c` lines 3356–3395 (truncated)) — code appears to have moved -5 lines since the review
+**Current code** (`atecology/atbiolsetup.c` lines 3474–3513 (truncated)) — code appears to have moved +113 lines since the review
 
 ```c
- 3356: 	avgdist = 0;
- 3357: 	ndist = 0;
- 3358: 	for (b = 0; b < bm->nbox; b++) {
- 3359: 		for (chkbox = 0; chkbox < bm->boxes[b].nconn; chkbox++) {
- 3360: 			nb = bm->boxes[b].ibox[chkbox];
- 3361: 			xdiff = bm->boxes[b].inside.x - bm->boxes[nb].inside.x;
- 3362: 			ydiff = bm->boxes[b].inside.y - bm->boxes[nb].inside.y;
- 3363: 			avgdist += sqrt(xdiff * xdiff + ydiff * ydiff);
- 3364: 			ndist++;
- 3365: 		}
- 3366: 	}
- 3367: 	avgdist /= ndist;
- 3368: 	basedt = (avgdist / bm->InvaderSpeed) / (86400.0);
- 3369: 	dt = floor(basedt / 90);
- 3370: 
- 3371: 	if (dt < 1.0) {
- 3372: 		/* Use monthly resolution */
- 3373: 		bm->Invadedt = 30.0;
- 3374: 	} else if (dt < 2.0) {
- 3375: 		/* Use quarterly resolution */
- 3376: 		bm->Invadedt = 91.0;
- 3377: 	} else if (dt < 3.0) {
- 3378: 		/* Use half yearly resolution */
- 3379: 		bm->Invadedt = 182.0;
- 3380: 	} else {
- 3381: 		/* Use yearly resolution */
- 3382: 		bm->Invadedt = 365.0;
- 3383: 	}
- 3384: 
- 3385: 	/* Maximum distance */
- 3386: 	maxdist = 0.0;
- 3387:     nb = bm->InvaderEntryBox;
- 3388: 	for (b = 0; b < bm->nbox; b++) {
- 3389: 		xdiff = bm->boxes[b].inside.x - bm->boxes[nb].inside.x;
- 3390: 		ydiff = bm->boxes[b].inside.y - bm->boxes[nb].inside.y;
- 3391: 		dist_step1 += sqrt(xdiff * xdiff + ydiff * ydiff);
- 3392:         if (dist_step1 > maxdist) {
- 3393:             maxdist = dist_step1;
- 3394:         }
- 3395: 	}
+ 3474:  */
+ 3475: static void Setup_HomeRanges(MSEBoxModel *bm, FILE *llogfp) {
+ 3476: 	int b, sp, sp_ddepend_move, n, den, k, bb, chkbox, idnum, ij, nij, rij, last_checked, new_checked, more_to_do, sides_covered, start_box, surrounded;
+ 3477: 	double totarea = 0.0, dist = 0.0;
+ 3478: 	int *connected;
+ 3479: 
+ 3480:     if(verbose)
+ 3481:         printf("Creating Homerange arrays\n");
+ 3482: 
+ 3483: 	connected = Util_Alloc_Init_1D_Int(bm->nbox, 0);
+ 3484: 
+ 3485: 	/* Initialise home range related counters */
+ 3486: 	bm->K_num_homerange = 0;
+ 3487: 	for (b = 0; b < bm->nbox; b++) {
+ 3488: 		if ((bm->boxes[b].HomeRangeInfo = (HomeRange *) malloc((size_t)bm->K_num_tot_sp * sizeof(HomeRange))) == NULL)
+ 3489: 			quit("Setup_HomeRanges: Can't allocate memory for HomeRangeInfo in box %d\n", b);
+ 3490: 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+ 3491: 			bm->boxes[b].HomeRangeInfo[sp].n = 0;
+ 3492: 			bm->boxes[b].HomeRangeInfo[sp].ids = (int *) i_alloc1d(bm->nbox); // As should never be more home ranges than there are boxes
+ 3493: 			for (rij = 0; rij < bm->nbox; rij++) {
+ 3494: 				bm->boxes[b].HomeRangeInfo[sp].ids[rij] = -1;
+ 3495: 			}
+ 3496: 		}
+ 3497: 	}
+ 3498: 
+ 3499: 	printf("Constructing home ranges\n");
+ 3500: 
+ 3501: 	/* Find max number of home ranges */
+ 3502: 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+ 3503: 		sp_ddepend_move = (int) (FunctGroupArray[sp].speciesParams[ddepend_move_id]);
+ 3504: 
+ 3505: 		//fprintf(llogfp,"%s has move %d vs %d\n", FunctGroupArray[sp].groupCode, sp_ddepend_move, homerange_move);
+ 3506: 
+ 3507: 		if (sp_ddepend_move == homerange_move) {
+ 3508: 
+ 3509: 			for (ij = 0; ij < bm->nbox; ij++) {
+ 3510: 				if (bm->boxes[ij].type != BOUNDARY) {
+ 3511: 
+ 3512: 					//fprintf(llogfp, "%s depth: %e vs mindepth: %e, maxdepth: %e\n", FunctGroupArray[sp].groupCode, -1.0 * bm->boxes[ij].botz,
+ 3513: 					//		FunctGroupArray[sp].speciesParams[mindepth_id], FunctGroupArray[sp].speciesParams[maxdepth_id]);
 ```
 
 **Suggested fix (from review):** Check `idnum >= nbox` before writing

@@ -589,14 +589,14 @@ Both loops run `groupIndex < max_co_sp` and pick `othersp = sp` only when `group
 
 `Braw` is declared at 1527 without initialisation and accumulated with `Braw += ...` in the SSB branch. It is never reset per species, so the first species uses garbage and later species include all previous species' SSB. (`Per_Sp_Frescale()` initialises `Braw = 0.0` per call.) Function: `Ecosystem_Cap_Frescale()`.
 
-**Current code** (`atmanage/atManageAnnual.c` lines 1524–1528)
+**Current code** (`atmanage/atManageAnnual.c` lines 1526–1530)
 
 ```c
- 1524: *******************************************************************************/
- 1525: 
  1526: void Ecosystem_Cap_Frescale(MSEBoxModel *bm, FILE *llogfp) {
  1527:     int sp, nf, nc, cohort, ij, b, k, flagF, tier, er_case, maxstock, mFC_end_age, mFC_start_age, flagfcmpa, sel_curve, stage, basechrt;
  1528:     double max_mFC, F_rescale, FTARG, Bcurr, calcM, survival, Fcurr, calcF, Fstep1, this_mFC, M, est_bias, est_cv, BrefA, BrefB, BrefE, Blim, FrefA, FrefH, FrefLim, Braw, sel, this_expect_catch, sp_fishery_pref_weight, w_inv, tot_w_inv, counter, mFC, mFC_change_scale, mpa_scale, mpa_infringe, Wgt, li, gear_change_scale, this_Num, this_start, this_end, this_Biom, Z_Est, expectF, Catch_Eqn_Denom, orig_expected_catch, excess, deductions, new_expected_catch, rescale_scalar,tot_area, fishable_area;
+ 1529:     //double calcM;
+ 1530:     
 ```
 
 **Suggested fix (from review):** Set `Braw = 0.0;` at the top of the per-species block (before line 1616).

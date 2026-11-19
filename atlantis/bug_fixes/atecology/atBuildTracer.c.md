@@ -64,22 +64,22 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The size count adds `numCohortsXnumGenes` for every EPIFAUNA group, but the build adds 0 for AGE_STRUCTURED epifauna and only 1 for BIOMASS epifauna unless `flag_macro_model==1 && SEAGRASS`. Unlike Build_TrName_NameList:400 there is no index-vs-size check, so `nEpiSize` can exceed the number of built entries. atbiolsetup.c:1295 then dereferences the terminator entry or uninitialised entries (`epinamelist[ij].name` and `.index`). Function: `Build_EPI_NameList()`.
 
-**Current code** (`atecology/atBuildTracer.c` lines 436–448) — code appears to have moved +3 lines since the review
+**Current code** (`atecology/atBuildTracer.c` lines 469–481) — code appears to have moved +36 lines since the review
 
 ```c
-  436:  *
-  437:  */
-  438: void Build_EPI_NameList(MSEBoxModel *bm) {
-  439: 	char str[STRLEN*2];
-  440: 	int size = 1, fgIndex, index = 0, cohort, contamIndex;
-  441: 
-  442: 	for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
-  443: 		if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA){
-  444: 			size += FunctGroupArray[fgIndex].numCohortsXnumGenes;
-  445: 		}
-  446: 
-  447: 		if (FunctGroupArray[fgIndex].isCover == TRUE)
-  448: 			size += 1;
+  469: 	epinamelist = (Namelist *) malloc((size_t)size * sizeof(Namelist));
+  470: 
+  471: 	nEpiSize = size - 1;
+  472: 
+  473: 	for (fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++) {
+  474: 		FunctGroupArray[fgIndex].CoverTracer = -1;
+  475: 		if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA) {
+  476: 			switch (FunctGroupArray[fgIndex].groupAgeType) {
+  477: 			case AGE_STRUCTURED_BIOMASS:
+  478: 				// Allow for multiple cohorts so can have age structure reefs and multiple macrophyte pools
+  479: 				for (cohort = 0; cohort < FunctGroupArray[fgIndex].numCohortsXnumGenes; cohort++) {
+  480: 					snprintf(str, sizeof(str), "%s_N%d", FunctGroupArray[fgIndex].name, cohort + 1);
+  481: 					Add_Tracer(&epinamelist, index++, str, &FunctGroupArray[fgIndex].totNTracers[cohort], 0, FunctGroupArray[fgIndex].diagTol, 1, 0);
 ```
 
 **Suggested fix (from review):** Make the size count mirror the build branches and add the same `(index-1) != nEpiSize` quit check

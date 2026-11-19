@@ -12,16 +12,16 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 |---|---|---|---|---|---|---|
 | [MNG-01](#mng-01) ⭐ | 160-163 | H/H | swapped indices | `bm->TAC_over[ij][sp][k] = 0` with `ij` looping over `K_num_fisheries` — TAC_over is allocated `Util_Alloc_Ini… |  | [ ] |
 | [MNG-02](#mng-02) ⭐ | 959, 978, 1111, 1133, 2405 | H/H | buffer overrun | `bm->TAC_over[sp][fishery_id][nreg]` — third dimension is allocated with `K_num_basket` (atManageSetup.c:1260;… |  | [ ] |
-| [MNG-03](#mng-03) | 387-417 | H/M | uninitialised variable | `} else if (flagmanage > stock_adapt_mgmt)` — `flagmanage` is only assigned inside the `if (flagspeffortmodel … |  | [ ] |
-| [MNG-04](#mng-04) | 498 | H/M | wrong index | `mpa_scale = bm->MPA[bm->current_box][fishery_id];` inside `for (ij...)` loop — `current_box` is the ecology l… |  | [ ] |
+| [MNG-03](#mng-03) 🔀 | 387-417 | H/M | uninitialised variable | `} else if (flagmanage > stock_adapt_mgmt)` — `flagmanage` is only assigned inside the `if (flagspeffortmodel … |  | [ ] |
+| [MNG-04](#mng-04) 🔀 | 498 | H/M | wrong index | `mpa_scale = bm->MPA[bm->current_box][fishery_id];` inside `for (ij...)` loop — `current_box` is the ecology l… |  | [ ] |
 | [MNG-05](#mng-05) | 561-563 | M/M | always-false condition | Outer `if (flagspeffortmodel == wgt_effort \|\| == dist_effort)` then inner `if (== array_effort \|\| == dist_effo… |  | [ ] |
-| [MNG-06](#mng-06) | 116-148 | M/M | ordering | `bm->CumDisplaceEffort[ij][nf] += bm->Effort[ij][nf];` runs after `bm->Effort[ij][nf] = 0.0` at line 123 (when… |  | [ ] |
-| [MNG-07](#mng-07) ⭐ | 245-257 | H/H | uninitialised variable | In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpressure, &FCpressure, ...)` is c… |  | [ ] |
+| [MNG-06](#mng-06) 🔀 | 116-148 | M/M | ordering | `bm->CumDisplaceEffort[ij][nf] += bm->Effort[ij][nf];` runs after `bm->Effort[ij][nf] = 0.0` at line 123 (when… |  | [ ] |
+| [MNG-07](#mng-07) 🔀 ⭐ | 245-257 | H/H | uninitialised variable | In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpressure, &FCpressure, ...)` is c… |  | [ ] |
 | [MNG-08](#mng-08) | 1129-1137 | H/M | wrong variable / copy-paste | `if (regtaccount == nstock)` in the common-pool regional closure check — `nstock` is stale (last species' valu… |  | [ ] |
 | [MNG-09](#mng-09) | 948, 1087 | L/M | wrong operator | `if (!in_quota \|\| (!sp_reg && (nstock < 1)))` — comment says "Only include those groups under regional TACs wi… |  | [ ] |
 | [MNG-10](#mng-10) | 1266-1273 | H/M | always-true condition | `if (flagpulsefish && (end_date < bm->dayt + 1.0))` inside `if (end_date < bm->dayt)` — always true, so the 1/… |  | [ ] |
 | [MNG-11](#mng-11) | 1739-1740 | M/M | off-by-one / missing wrap | `bm->Effort_hdistrib[ij][fishery_id][bm->QofY + 1]` without the `QofY < 3` guard used in array_effort/rec_effo… |  | [ ] |
-| [MNG-12](#mng-12) ⭐ | 1894-1897 | H/H | inverted logic | `MPA_check = 1.0 - bm->MPA[nb][fishery_id]; fishthere *= MPA_check;` — bm->MPA is an access multiplier (1 = op… |  | [ ] |
+| [MNG-12](#mng-12) 🔀 ⭐ | 1894-1897 | H/H | inverted logic | `MPA_check = 1.0 - bm->MPA[nb][fishery_id]; fishthere *= MPA_check;` — bm->MPA is an access multiplier (1 = op… |  | [ ] |
 | [MNG-13](#mng-13) ⭐ | 2067-2089 | H/H | buffer overrun | "Break loop" is done with `sp = bm->K_num_tot_sp;` but the inner `cohort`/`cIndex` loops keep running and imme… |  | [ ] |
 | [MNG-14](#mng-14) | 2066-2070 | H/M | wrong box | `tracerArray = boxLayerInfo->localWCTracers;` — this is the tracer set of whatever box/layer the ecology loop … |  | [ ] |
 | [MNG-15](#mng-15) | 2068 | M/H | cohort vs cohort×genotype | `for (cohort = 0; cohort < numCohortsXnumGenes; ...) contaminantTracers[cohort][cIndex]` — contaminantTracers … |  | [ ] |
@@ -56,14 +56,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 **Current code** (`atmanage/atManage.c` lines 158–165)
 
 ```c
-  158:     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-  159:         if (FunctGroupArray[sp].isTAC) {
-  160:             for (ij = 0; ij < bm->K_num_fisheries; ij++) {
-  161:                 for (k = 0; k < bm->K_num_basket; k++) {
-  162: 					bm->TAC_over[ij][sp][k] = 0;
-  163:                 }
-  164:             }
-  165:         }
+  158:     
+  159:     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  160:         if (FunctGroupArray[sp].isTAC) {
+  161:             for (ij = 0; ij < bm->K_num_fisheries; ij++) {
+  162:                 for (k = 0; k < bm->K_num_basket; k++) {
+  163: 					bm->TAC_over[ij][sp][k] = 0;
+  164:                 }
+  165:             }
 ```
 
 **Suggested fix (from review):** `bm->TAC_over[sp][ij][k] = 0;`
@@ -92,14 +92,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `bm->TAC_over[sp][fishery_id][nreg]` — third dimension is allocated with `K_num_basket` (atManageSetup.c:1260; K_num_basket = max basket size, usually 1, atManageSetup.c:1291-1297) but is indexed by region/stock `nreg` up to `K_num_active_reg` / `numStocks`. Any regional-TAC config with >1 region/stock writes/reads past the end (also atHarvestDiscards.c:248 reads `[this_stock]`). Functions: `TAC_Check()`, `Manage_Visit_Council()`.
 
-**Current code** (`atmanage/atManage.c` lines 957–961)
+**Current code** (`atmanage/atManage.c` lines 745–749) — code appears to have moved -212 lines since the review
 
 ```c
-  957: 						TAC = (regTAC_scale * bm->TACamt[sp][fishery_id][now_id] * kg_2_mg) / bm->X_CN;
-  958: 						if(((totCumCatch + bm->TotOldCumCatch[sp][fishery_id]) * regC_scale) > TAC){
-  959: 							bm->TAC_over[sp][fishery_id][nreg] = 1;
-  960: 
-  961:                             /*
+  745:  * @return Returns a scalar to adjust realised effort by to take into account TAC issues
+  746:  */
+  747: double TAC_Check(MSEBoxModel *bm, int fishery_id, int flagmanage, FILE *llogfp) {
+  748: 	int sp, nstock = 0, max_sp, taccount, sp_basket_mem, regtaccount, nreg, co_basket_sp, flagTACparticipate, sp_reg, sp_TAC_mgmt, sp_coTAC_mgmt, nf,
+  749:     cumTripLim_mgmt, Right_To_Count, sp_basketTAC_mgmt, sp_regionalTAC_mgmt, flag_commonpool_TAC, in_quota;
 ```
 
 **Suggested fix (from review):** Allocate third dim as max(K_num_basket, nreg, K_num_stocks_per_sp) (and reset that full extent in MNG-01).
@@ -130,44 +130,46 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `} else if (flagmanage > stock_adapt_mgmt)` — `flagmanage` is only assigned inside the `if (flagspeffortmodel != readts_effort)` branch (line 390); for read-ts effort fisheries it is uninitialised (first fishery) or stale from a previous fishery, so TAC_Check (and TAC_over discards) runs/does not run for the wrong fisheries. Function: `Manage_Calculate_Total_Effort()`.
 
+> 🔀 **Changed by the merge of main (Nov 2026):** code shown above was changed by the merge. Check whether this finding is now fixed before acting.
+
 **Current code** (`atmanage/atManage.c` lines 385–419)
 
 ```c
-  385:             active_scale = 1.0;
-  386:         
-  387:         if (flagspeffortmodel != readts_effort) {
-  388: 
-  389:             /* Effort management */
-  390: 			flagmanage = (int) (bm->FISHERYprms[fishery_id][flagmanage_id]);
-  391: 			EFF_scale0 = Effort_Restrict_Check(bm, fishery_id, flagmanage, &trigger_tripped, llogfp);
-  392:             
-  393:             /* TAC-based adjustment to effort */
-  394: 			EFF_scale1 = TAC_Check(bm, fishery_id, flagmanage, llogfp);
-  395:             
-  396:             /* Protected-endangered-threatened species management */
-  397: 			EFF_scale2 = Endangered_Check(bm, fishery_id, EFF_scale1, &end_trigger_tripped, llogfp);
-  398:             
-  399:             /* If general change in fishing pressure through time (gradual change) calculate
-  400: 			 new levels here. */
-  401: 			EFF_scale3 = Forced_Effort_Change(bm, fishery_id, flagspeffortmodel, llogfp);
-  402:             
-  403:             /* If recreational fishery determine human population actually fishing */
-  404:             if(FisheryArray[fishery_id].isRec) {
-  405: 				prop_pop_fish = k_proprecfish;
-  406:             } else {
-  407: 				prop_pop_fish = 1.0;
-  408:             }
-  409: 
-  410:             /* Before do spatially explicit management identify active MPAs - moved earlier so available even if not using dynamic effort
-  411: 			if (bm->dayt != bm->predayt)
-  412: 				Check_For_Active_MPA(bm, fishery_id);
-  413:              */
-  414:         } else if (flagmanage > stock_adapt_mgmt){
-  415:             /* TAC-check needed so discard if over TAC amount - dummy not used but TAC_over calculated within the routine is */
-  416:             dummy = TAC_Check(bm, fishery_id, flagmanage, llogfp);
-  417:         }
-  418: 
-  419:         /* Check port status and contribution */
+  385: 		 and then compare that against dt, so can scale realised effort accordingly
+  386: 		 */
+  387: 		if (bm->FISHERYprms[fishery_id][fisheriesflagactive_id] < 2)
+  388:             active_scale = bm->dt / 43200.0;
+  389: 		else
+  390:             active_scale = 1.0;
+  391:         
+  392:         if (flagspeffortmodel != readts_effort) {
+  393: 
+  394:             /* Effort management */
+  395: 			flagmanage = (int) (bm->FISHERYprms[fishery_id][flagmanage_id]);
+  396: 			EFF_scale0 = Effort_Restrict_Check(bm, fishery_id, flagmanage, &trigger_tripped, llogfp);
+  397:             
+  398:             /* TAC-based adjustment to effort */
+  399: 			EFF_scale1 = TAC_Check(bm, fishery_id, flagmanage, llogfp);
+  400:             
+  401:             /* Protected-endangered-threatened species management */
+  402: 			EFF_scale2 = Endangered_Check(bm, fishery_id, EFF_scale1, &end_trigger_tripped, llogfp);
+  403:             
+  404:             /* If general change in fishing pressure through time (gradual change) calculate
+  405: 			 new levels here. */
+  406: 			EFF_scale3 = Forced_Effort_Change(bm, fishery_id, flagspeffortmodel, llogfp);
+  407:             
+  408:             /* If recreational fishery determine human population actually fishing */
+  409:             if(FisheryArray[fishery_id].isRec) {
+  410: 				prop_pop_fish = k_proprecfish;
+  411:             } else {
+  412: 				prop_pop_fish = 1.0;
+  413:             }
+  414: 
+  415:             /* Before do spatially explicit management identify active MPAs - moved earlier so available even if not using dynamic effort
+  416: 			if (bm->dayt != bm->predayt)
+  417: 				Check_For_Active_MPA(bm, fishery_id);
+  418:              */
+  419:         } else if (flagmanage > stock_adapt_mgmt){
 ```
 
 **Suggested fix (from review):** Move `flagmanage = (int) bm->FISHERYprms[fishery_id][flagmanage_id];` before the if.
@@ -198,14 +200,16 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `mpa_scale = bm->MPA[bm->current_box][fishery_id];` inside `for (ij...)` loop — `current_box` is the ecology loop's stale global box, not `ij`; every box gets the MPA scalar of one arbitrary box. Compare line 454 `bm->MPA[ij][fishery_id]`. Function: `Manage_Calculate_Total_Effort()`.
 
+> 🔀 **Changed by the merge of main (Nov 2026):** MPA[bm->current_box] -> MPA[ij] (JMK fix). Check whether this finding is now fixed before acting.
+
 **Current code** (`atmanage/atManage.c` lines 496–500)
 
 ```c
-  496:                     flagfcmpa = (int) (bm->FISHERYprms[fishery_id][flagmpa_id]);
-  497:                     if (flagfcmpa) {
-  498:                         mpa_scale = bm->MPA[bm->current_box][fishery_id];
-  499:                         
-  500:                         /* Allow for infringement */
+  496: 						FCpressure = tsEval(&this_tsEffort->ts, bm->tseffortid[fishery_id], bm->t);
+  497: 					else
+  498: 						FCpressure = tsEvalEx(&this_tsEffort->ts, bm->tseffortid[fishery_id], bm->t);
+  499:                     
+  500:                     /* Spatial management */
 ```
 
 **Suggested fix (from review):** `bm->MPA[ij][fishery_id]`
@@ -236,16 +240,16 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Outer `if (flagspeffortmodel == wgt_effort || == dist_effort)` then inner `if (== array_effort || == dist_effort)` — array_effort can never be true inside, and wgt_effort never passes the inner test, so effort buffering is never applied to wgt_effort (and array_effort is never reached). One of the two lists is a copy-paste error. Function: `Manage_Calculate_Total_Effort()`.
 
-**Current code** (`atmanage/atManage.c` lines 559–565)
+**Current code** (`atmanage/atManage.c` lines 564–570) — code appears to have moved +5 lines since the review
 
 ```c
-  559:         
-  560: 		flagspeffortmodel = (int) (bm->FISHERYprms[fishery_id][flageffortmodel_id]);
-  561: 		if (flagspeffortmodel == wgt_effort || flagspeffortmodel == dist_effort) {
-  562: 			if (bm->flagbuffereffort) {
-  563: 				if (flagspeffortmodel == array_effort || flagspeffortmodel == dist_effort) {
-  564: 					if (scale_effort[fishery_id] > 1.0) {
-  565: 						if (bm->totNewEffort[fishery_id] > scale_effort[fishery_id] * bm->totOldEffort[fishery_id]) {
+  564:         
+  565: 		flagspeffortmodel = (int) (bm->FISHERYprms[fishery_id][flageffortmodel_id]);
+  566: 		if (flagspeffortmodel == wgt_effort || flagspeffortmodel == dist_effort) {
+  567: 			if (bm->flagbuffereffort) {
+  568: 				if (flagspeffortmodel == array_effort || flagspeffortmodel == dist_effort) {
+  569: 					if (scale_effort[fishery_id] > 1.0) {
+  570: 						if (bm->totNewEffort[fishery_id] > scale_effort[fishery_id] * bm->totOldEffort[fishery_id]) {
 ```
 
 **Suggested fix (from review):** Make the two model lists consistent (decide whether array_effort or wgt_effort is intended).
@@ -275,6 +279,8 @@ Outer `if (flagspeffortmodel == wgt_effort || == dist_effort)` then inner `if (=
 **Why it's thought to be a bug**
 
 `bm->CumDisplaceEffort[ij][nf] += bm->Effort[ij][nf];` runs after `bm->Effort[ij][nf] = 0.0` at line 123 (when EffortModelsActive), so the displaced-effort record (written out in atHarvestIO.c:570) only ever accumulates zeros (or the 1.0 reset value). Function: `Manage_Calculate_Total_Effort()`.
+
+> 🔀 **Changed by the merge of main (Nov 2026):** CumDisplaceEffort accumulation moved. Check whether this finding is now fixed before acting.
 
 **Current code** (`atmanage/atManage.c` lines 114–150)
 
@@ -311,11 +317,11 @@ Outer `if (flagspeffortmodel == wgt_effort || == dist_effort)` then inner `if (=
   143:             for (ij = 0; ij < ncells; ij++) {
   144:                 if(bm->newmonth && bm->flagday) {
   145:                     bm->CumDisplaceEffort[ij][nf] = 0.0;
-  146:                 } else {
-  147:                     bm->CumDisplaceEffort[ij][nf] += bm->Effort[ij][nf];
-  148:                 }
-  149:                 if(!bm->Effort[ij][nf] && (bm->FISHERYprms[nf][flagMFCdisplace_id])){
-  150:                     bm->Effort[ij][nf] = 1.0;  // As used a scalar in mFC fisheries
+  146: 	    	        }
+  147: 	        	    if(!bm->Effort[ij][nf] && (bm->FISHERYprms[nf][flagMFCdisplace_id])){ 
+  148: 	            	    bm->Effort[ij][nf] = 1.0;
+  149:                 }
+  150:                 if(!bm->Effort[ij][nf] && (bm->FISHERYprms[nf][flagMFCdisplace_id])){
 ```
 
 **Suggested fix (from review):** Accumulate CumDisplaceEffort before Effort is zeroed (e.g. use OldEffort).
@@ -346,10 +352,12 @@ Outer `if (flagspeffortmodel == wgt_effort || == dist_effort)` then inner `if (=
 
 In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpressure, &FCpressure, ...)` is called with `FCpressure` never initialised (declared line 86); Effort_Displacement reads `*FCpressure` (line 1919-1920) and sets `*FCdisplaced = orig_FCpressure - *FCpressure`, so F_rescale/F_displaced applied to `bm->Effort` are garbage. Function: `Manage_Calculate_Total_Effort()`.
 
+> 🔀 **Changed by the merge of main (Nov 2026):** orig_FCpressure now set before the branch. Check whether this finding is now fixed before acting.
+
 **Current code** (`atmanage/atManage.c` lines 243–259)
 
 ```c
-  243:                 
+  243:                 Check_For_Active_MPA(bm, fishery_id);
   244:                 if (bm->flagdisplace) {
   245:                     for (ij = 0; ij < bm->nbox; ij++) {
   246:                         orig_FCpressure = 1.0;
@@ -365,7 +373,7 @@ In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpre
   256:                         bm->Effort[ij][fishery_id] *= F_rescale; /* this is so that accumulate additional fishing mortakity pressure due to displaced effort */
   257:                         bm->Effort[new_fish_loc][fishery_id] += F_displaced;
   258:                     }
-  259:                 }
+  259: 
 ```
 
 **Suggested fix (from review):** Set `FCpressure = orig_FCpressure;` (scaled by MPA if intended) before the call.
@@ -399,19 +407,19 @@ In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpre
 **Current code** (`atmanage/atManage.c` lines 1127–1139)
 
 ```c
- 1127: 			}
- 1128: 			/* Check for complete fishery closure everywhere */
- 1129: 			for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
- 1130: 				if (FunctGroupArray[sp].isTAC) {
- 1131: 					regtaccount = 0;
- 1132: 					for (nreg = 0; nreg < FunctGroupArray[sp].numStocks; nreg++) {
- 1133: 						if (bm->TAC_over[sp][fishery_id][nreg])
- 1134: 							regtaccount++;
- 1135: 					}
- 1136: 					if (regtaccount == nstock) {
- 1137: 						taccount++;
- 1138: 					}
- 1139: 				}
+ 1127: 										double totCumCatch = Harvest_Get_TotCumCatch(sp, nf, bm->thisyear);
+ 1128: 										fprintf(llogfp, "time: %e, Cumulative regional catch of %s (%e) is over TAC (%e) for fishery %s in region %d\n",
+ 1129: 												bm->dayt, FunctGroupArray[sp].groupCode, ((totCumCatch + bm->TotOldCumCatch[sp][fishery_id])* regC_scale), TAC, FisheryArray[fishery_id].fisheryCode,
+ 1130: 												nreg);
+ 1131: 
+ 1132: 									}
+ 1133:                                     */
+ 1134: 								}
+ 1135: 							}
+ 1136: 						}
+ 1137: 					}
+ 1138: 				}
+ 1139: 			}
 ```
 
 **Suggested fix (from review):** Add `nstock = FunctGroupArray[sp].numStocks;` before the inner loop.
@@ -442,14 +450,14 @@ In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpre
 
 `if (!in_quota || (!sp_reg && (nstock < 1)))` — comment says "Only include those groups under regional TACs with separate stocks", but with `&&` non-regional species (sp_reg = 0) are still processed whenever nstock >= 1 (always), so speciesParams[regionalSP_id] has no effect. Function: `TAC_Check()`.
 
-**Current code** (`atmanage/atManage.c` lines 946–950)
+**Current code** (`atmanage/atManage.c` lines 945–949)
 
 ```c
-  946: 						nstock = FunctGroupArray[sp].numStocks;
-  947: 
-  948: 					if (!in_quota || (!sp_reg && (nstock < 1))) /* Only include those groups under regional TACs with seperate stocks */
-  949: 						continue;
-  950: 
+  945: 
+  946: 		/* Regional TACs */
+  947: 		if (sp_regionalTAC_mgmt) {
+  948: 			taccount = 0;
+  949: 			for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 ```
 
 **Suggested fix (from review):** Likely `(!sp_reg || (nstock < 1))`.
@@ -480,21 +488,21 @@ In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpre
 
 `if (flagpulsefish && (end_date < bm->dayt + 1.0))` inside `if (end_date < bm->dayt)` — always true, so the 1/EFFmultA "undo pulse" correction (meant only for the first day after the pulse) is applied every timestep forever, compounding on previous-effort-dependent models. Function: `Forced_Effort_Change()`.
 
-**Current code** (`atmanage/atManage.c` lines 1264–1275)
+**Current code** (`atmanage/atManage.c` lines 1263–1274)
 
 ```c
- 1264: 		 each little change in effort is cumulative */
- 1265: 		if (flag_use_preveffortmodel) {
- 1266: 			if (end_date < bm->dayt) {
- 1267: 				/* Change over */
- 1268: 				flagpulsefish = (int) (EFFORTchange[fishery_id][now_change][pulse_id]);
- 1269: 				if (flagpulsefish && (end_date < bm->dayt + 1.0)) {
- 1270: 					/* If only pulse of change, divide by level of change to return to
- 1271: 					 normal for fisheries dependent on previous effort levels - correction only needed for the first day after the end of the pulse */
- 1272: 					EFF_scale3 = 1.0 / EFFmultA;
- 1273: 				} else {
- 1274: 					/* Otherwise change is complete no more scaling necessary */
- 1275: 					EFF_scale3 = 1.0;
+ 1263: 				now_change = i;
+ 1264: 		}
+ 1265: 		end_date = (EFFORTchange[fishery_id][now_change][start_id] + EFFORTchange[fishery_id][now_change][period_id]);
+ 1266: 		past_change = now_change - 1;
+ 1267: 		EFFmultA = EFFORTchange[fishery_id][now_change][mult_id];
+ 1268: 		if (now_change > 0)
+ 1269: 			EFFmultB = EFFORTchange[fishery_id][past_change][mult_id];
+ 1270: 		else
+ 1271: 			EFFmultB = 1;
+ 1272: 		EFFstart = EFFORTchange[fishery_id][now_change][start_id];
+ 1273: 		EFFperiod = EFFORTchange[fishery_id][now_change][period_id] + small_num;
+ 1274: 
 ```
 
 **Suggested fix (from review):** `if (flagpulsefish && (bm->dayt - end_date) <= bm->dt / 86400.0)` (or track that the reset has been done).
@@ -525,15 +533,15 @@ In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpre
 
 `bm->Effort_hdistrib[ij][fishery_id][bm->QofY + 1]` without the `QofY < 3` guard used in array_effort/rec_effort (1451-1456, 1536-1541); in Q4 it reads entry 4 (unused quarterly slot, normally 0, or a monthly econ value) instead of wrapping to 0. Function: `Allocate_Immediate_Effort()` (ideal_distrib_effort).
 
-**Current code** (`atmanage/atManage.c` lines 1737–1742)
+**Current code** (`atmanage/atManage.c` lines 1739–1744)
 
 ```c
- 1737: 			/* If no target left then may be targeting by-product so distrbute based on perscribed distributions */
- 1738: 			if (!totFCweight) {
- 1739: 				FCweight = (bm->HowFar * (bm->Effort_hdistrib[ij][fishery_id][bm->QofY + 1] - bm->Effort_hdistrib[ij][fishery_id][bm->QofY])
- 1740: 						+ bm->Effort_hdistrib[ij][fishery_id][bm->QofY]);
- 1741: 			}
- 1742: 
+ 1739: 						/*
+ 1740: 						 if(do_debug){
+ 1741: 						 fprintf(llogfp,"Time %e %s in %d - sp %s contrib: %e, ntarget %e\n", bm->dayt, FisheryArray[fishery_id].fisheryCode, ij, FunctGroupArray[guild].groupCode[spcat], bm->targetspbiom[sp][ij] / (bm->totbiom[spcat] + small_num), ntarget);
+ 1742: 						 }
+ 1743: 						 */
+ 1744: 					}
 ```
 
 **Suggested fix (from review):** Use `(bm->QofY < 3) ? QofY+1 : 0`.
@@ -564,17 +572,19 @@ In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpre
 
 `MPA_check = 1.0 - bm->MPA[nb][fishery_id]; fishthere *= MPA_check;` — bm->MPA is an access multiplier (1 = open, applied as `FCpressure * MPA` at 454; default 1.0, atManageSetup.c:1220). Using 1-MPA zeroes open neighbours and gives full weight to closed ones, so displaced effort is sent INTO closed areas. Function: `Effort_Displacement()`.
 
-**Current code** (`atmanage/atManage.c` lines 1892–1899)
+> 🔀 **Changed by the merge of main (Nov 2026):** MPA_check no longer inverted. Check whether this finding is now fixed before acting.
+
+**Current code** (`atmanage/atManage.c` lines 69–76) — code appears to have moved -1823 lines since the review
 
 ```c
- 1892: 				*/
- 1893: 				/* Check MPA status */
- 1894: 				MPA_check = 1.0 - bm->MPA[nb][fishery_id];
- 1895: 
- 1896: 				/* Scale stock by MPA access scalar to get final potentail stock */
- 1897: 				fishthere *= MPA_check;
- 1898: 
- 1899: 				/* If its the best so far record it */
+   69: 
+   70: static void Check_CAP(MSEBoxModel *bm, FILE *llogfp);
+   71: static void Calculate_Port_Contrib(MSEBoxModel *bm, int fishery_id, int flagspeffortmodel, FILE *llogfp);
+   72: static void Update_Port_Population(MSEBoxModel *bm, FILE *llogfp);
+   73: static void GenerateCPUE(MSEBoxModel *bm, FILE *llogfp);
+   74: static void allocate_catch(MSEBoxModel *bm, int sp, int nf, int ij, int k, double *catch_unalloced, double *weighted_depth, double this_catch, FILE *llogfp);
+   75: 
+   76: int POP_max_num_changes,
 ```
 
 **Suggested fix (from review):** `MPA_check = bm->MPA[nb][fishery_id];`
@@ -605,36 +615,36 @@ In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpre
 
 "Break loop" is done with `sp = bm->K_num_tot_sp;` but the inner `cohort`/`cIndex` loops keep running and immediately evaluate `FunctGroupArray[sp].numCohortsXnumGenes` / `FunctGroupArray[sp].contaminantTracers[cohort][cIndex]` with sp == K_num_tot_sp — read past FunctGroupArray. Function: `Check_For_Active_MPA()`.
 
-**Current code** (`atmanage/atManage.c` lines 2065–2091)
+**Current code** (`atmanage/atManage.c` lines 2081–2107) — code appears to have moved +16 lines since the review
 
 ```c
- 2065:                 case conc_based: // Based on concentration in species
- 2066:                     tracerArray = boxLayerInfo->localWCTracers;
- 2067:                     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
- 2068:                         for(cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++){
- 2069:                             for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
- 2070:                                 cGroupLevel = tracerArray[FunctGroupArray[sp].contaminantTracers[cohort][cIndex]];
- 2071:                                 
- 2072:                                 thresh_level = bm->contaminantStructure[cIndex]->fishery_thresh_level;
- 2073:                                 if (cGroupLevel > thresh_level) {
- 2074:                                     if (!bm->contam_fishery_closure_option) {
- 2075:                                         bm->MPA[ij][fishery_id] = 0.0;  // Close only the immediate box
- 2076:                                     } else { // Close immediate box and adjactent boxes
- 2077:                                         bm->MPA[ij][fishery_id] = 0.0;
- 2078:                                         for (ad = 0; ad < bm->boxes[ij].nconn; ad++) {
- 2079:                                             adbox = bm->boxes[ij].ibox[ad];
- 2080:                                             bm->MPA[adbox][fishery_id] = 0.0;
- 2081:                                         }
- 2082:                                     }
- 2083:                                     
- 2084:                                     // Break loop as already closed now
- 2085:                                     sp = bm->K_num_tot_sp;
- 2086:                                 }
- 2087:                             }
- 2088:                         }
- 2089:                     }
- 2090:                     break;
- 2091:                 default:
+ 2081:                     tracerArray = boxLayerInfo->localWCTracers;
+ 2082:                     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+ 2083:                         for(cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++){
+ 2084:                             for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
+ 2085:                                 cGroupLevel = tracerArray[FunctGroupArray[sp].contaminantTracers[cohort][cIndex]];
+ 2086:                                 
+ 2087:                                 thresh_level = bm->contaminantStructure[cIndex]->fishery_thresh_level;
+ 2088:                                 if (cGroupLevel > thresh_level) {
+ 2089:                                     if (!bm->contam_fishery_closure_option) {
+ 2090:                                         bm->MPA[ij][fishery_id] = 0.0;  // Close only the immediate box
+ 2091:                                     } else { // Close immediate box and adjactent boxes
+ 2092:                                         bm->MPA[ij][fishery_id] = 0.0;
+ 2093:                                         for (ad = 0; ad < bm->boxes[ij].nconn; ad++) {
+ 2094:                                             adbox = bm->boxes[ij].ibox[ad];
+ 2095:                                             bm->MPA[adbox][fishery_id] = 0.0;
+ 2096:                                         }
+ 2097:                                     }
+ 2098:                                     
+ 2099:                                     // Break loop as already closed now
+ 2100:                                     sp = bm->K_num_tot_sp;
+ 2101:                                 }
+ 2102:                             }
+ 2103:                         }
+ 2104:                     }
+ 2105:                     break;
+ 2106:                 default:
+ 2107:                     quit("This (%d) setting for flag_contam_fisheries_mgmt is not yet coded - please use %d (no closures), %d (set closures) or %d (based on concentration in stocks)\n", bm->flag_contam_fisheries_mgmt, no_closures, set_closures, conc_based);
 ```
 
 **Suggested fix (from review):** Use a flag/goto to exit all three loops (or `break` out of each level).
@@ -665,18 +675,18 @@ In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpre
 
 `tracerArray = boxLayerInfo->localWCTracers;` — this is the tracer set of whatever box/layer the ecology loop last processed, not box `ij`; every box's closure is decided on one box's concentrations (and epibenthic groups' contaminantTracers index the epi tracer list, not WC). Function: `Check_For_Active_MPA()`.
 
-**Current code** (`atmanage/atManage.c` lines 2064–2072)
+**Current code** (`atmanage/atManage.c` lines 2079–2087) — code appears to have moved +15 lines since the review
 
 ```c
- 2064:                     break;
- 2065:                 case conc_based: // Based on concentration in species
- 2066:                     tracerArray = boxLayerInfo->localWCTracers;
- 2067:                     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
- 2068:                         for(cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++){
- 2069:                             for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
- 2070:                                 cGroupLevel = tracerArray[FunctGroupArray[sp].contaminantTracers[cohort][cIndex]];
- 2071:                                 
- 2072:                                 thresh_level = bm->contaminantStructure[cIndex]->fishery_thresh_level;
+ 2079:                     break;
+ 2080:                 case conc_based: // Based on concentration in species
+ 2081:                     tracerArray = boxLayerInfo->localWCTracers;
+ 2082:                     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+ 2083:                         for(cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++){
+ 2084:                             for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
+ 2085:                                 cGroupLevel = tracerArray[FunctGroupArray[sp].contaminantTracers[cohort][cIndex]];
+ 2086:                                 
+ 2087:                                 thresh_level = bm->contaminantStructure[cIndex]->fishery_thresh_level;
 ```
 
 **Suggested fix (from review):** Read concentrations for box ij (e.g. from `bm->boxes[ij].tr[k][...]` / epi arrays).
@@ -707,14 +717,14 @@ In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpre
 
 `for (cohort = 0; cohort < numCohortsXnumGenes; ...) contaminantTracers[cohort][cIndex]` — contaminantTracers is allocated `[numCohorts][num_contaminants]` (atUtilGroupIO.c:910); with numGenes > 1 this reads past the array. Function: `Check_For_Active_MPA()`.
 
-**Current code** (`atmanage/atManage.c` lines 2066–2070)
+**Current code** (`atmanage/atManage.c` lines 2081–2085) — code appears to have moved +15 lines since the review
 
 ```c
- 2066:                     tracerArray = boxLayerInfo->localWCTracers;
- 2067:                     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
- 2068:                         for(cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++){
- 2069:                             for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
- 2070:                                 cGroupLevel = tracerArray[FunctGroupArray[sp].contaminantTracers[cohort][cIndex]];
+ 2081:                     tracerArray = boxLayerInfo->localWCTracers;
+ 2082:                     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+ 2083:                         for(cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++){
+ 2084:                             for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
+ 2085:                                 cGroupLevel = tracerArray[FunctGroupArray[sp].contaminantTracers[cohort][cIndex]];
 ```
 
 **Suggested fix (from review):** Loop to `numCohorts`.
@@ -748,37 +758,37 @@ In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpre
 **Current code** (`atmanage/atManage.c` lines 2115–2145)
 
 ```c
- 2115:     */
- 2116: 
- 2117: 	CAP_scale = 1.0;
- 2118: 	for (fishery_id = 0; fishery_id < bm->K_num_fisheries; fishery_id++) {
- 2119: 
- 2120: 		/*if (do_debug_base && ((bm->which_fleet == fishery_id) || (bm->which_fleet >= bm->K_num_fisheries))) {
- 2121: 			do_debug = 1;
- 2122: 		} else {
- 2123: 			do_debug = 0;
- 2124:          }
- 2125:         */
- 2126: 
- 2127: 		cap = bm->FISHERYprms[fishery_id][cap_id];
- 2128: 		flagcap = (int) (bm->FISHERYprms[fishery_id][flagcap_id]);
- 2129: 		flagspeffortmodel = (int) (bm->FISHERYprms[fishery_id][flageffortmodel_id]);
- 2130: 
- 2131: 		/* Only finish the check if caps in place */
- 2132: 		if (!flagcap)
- 2133: 			continue;
+ 2115: 
+ 2116: /**
+ 2117:  * \brief Check effort cap
+ 2118:  */
+ 2119: void Check_CAP(MSEBoxModel *bm, FILE *llogfp) {
+ 2120: 	int flagchangeCAP, fishery_id, CAP_num_changes, b, flagcap, flagspeffortmodel;
+ 2121: 	double CAP_scale, cap, toteffort, allow_effort, effort_rescale, effort_expended, totghosteffort;
+ 2122: 	//int do_debug, do_debug_base;
+ 2123: 
+ 2124: 	/*
+ 2125:     if (bm->debug == debug_effort) {
+ 2126: 		do_debug_base = 1;
+ 2127: 	} else {
+ 2128: 		do_debug_base = 0;
+ 2129:     }
+ 2130:     */
+ 2131: 
+ 2132: 	CAP_scale = 1.0;
+ 2133: 	for (fishery_id = 0; fishery_id < bm->K_num_fisheries; fishery_id++) {
  2134: 
- 2135: 		flagchangeCAP = (int) (bm->FISHERYprms[fishery_id][flagchangeP_id]);
- 2136: 		CAP_num_changes = (int) (bm->FISHERYprms[fishery_id][P_num_changes_id]);
- 2137: 
- 2138: 		if (flagchangeCAP) {
- 2139: 			CAP_scale = Util_Get_Change_Scale(bm, CAP_num_changes, CAPchange[fishery_id]);
- 2140: 
- 2141: 		}
- 2142: 
- 2143: 		cap *= CAP_scale;
- 2144: 
- 2145: 		/* Total shots to date */
+ 2135: 		/*if (do_debug_base && ((bm->which_fleet == fishery_id) || (bm->which_fleet >= bm->K_num_fisheries))) {
+ 2136: 			do_debug = 1;
+ 2137: 		} else {
+ 2138: 			do_debug = 0;
+ 2139:          }
+ 2140:         */
+ 2141: 
+ 2142: 		cap = bm->FISHERYprms[fishery_id][cap_id];
+ 2143: 		flagcap = (int) (bm->FISHERYprms[fishery_id][flagcap_id]);
+ 2144: 		flagspeffortmodel = (int) (bm->FISHERYprms[fishery_id][flageffortmodel_id]);
+ 2145: 
 ```
 
 **Suggested fix (from review):** Set `CAP_scale = 1.0;` at the top of the fishery loop.
@@ -809,27 +819,27 @@ In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpre
 
 `double POP_scale = 1.0` initialised once; ports without `popchange_id` get the previous port's change scale applied to their population. Function: `Update_Port_Population()`.
 
-**Current code** (`atmanage/atManage.c` lines 2208–2225)
+**Current code** (`atmanage/atManage.c` lines 2223–2240) — code appears to have moved +15 lines since the review
 
 ```c
- 2208: void Update_Port_Population(MSEBoxModel *bm, FILE *llogfp) {
- 2209: 	int porti, flagchangePOP, POP_num_changes;
- 2210: 	double POP_scale = 1.0, start_pop;
- 2211: 
- 2212: 	for (porti = 0; porti < bm->K_num_ports; porti++) {
- 2213: 		/* No check if active here as needn't be a commerical port to have recreational fishing pressure */
- 2214: 
- 2215: 		/* Get population of port fishing and scale it for growth if necessary */
- 2216: 		start_pop = bm->Port_info[porti][population_id];
- 2217: 		flagchangePOP = (int) (bm->Port_info[porti][popchange_id]);
- 2218: 		POP_num_changes = (int) (bm->Port_info[porti][POP_num_changes_id]);
- 2219: 
- 2220: 		if (flagchangePOP) {
- 2221: 			POP_scale = Util_Get_Change_Scale(bm, POP_num_changes, bm->POPchange[porti]);
- 2222: 		}
- 2223: 		bm->Port_info[porti][popactive_id] = start_pop * POP_scale;
- 2224: 	}
- 2225: 
+ 2223: void Update_Port_Population(MSEBoxModel *bm, FILE *llogfp) {
+ 2224: 	int porti, flagchangePOP, POP_num_changes;
+ 2225: 	double POP_scale = 1.0, start_pop;
+ 2226: 
+ 2227: 	for (porti = 0; porti < bm->K_num_ports; porti++) {
+ 2228: 		/* No check if active here as needn't be a commerical port to have recreational fishing pressure */
+ 2229: 
+ 2230: 		/* Get population of port fishing and scale it for growth if necessary */
+ 2231: 		start_pop = bm->Port_info[porti][population_id];
+ 2232: 		flagchangePOP = (int) (bm->Port_info[porti][popchange_id]);
+ 2233: 		POP_num_changes = (int) (bm->Port_info[porti][POP_num_changes_id]);
+ 2234: 
+ 2235: 		if (flagchangePOP) {
+ 2236: 			POP_scale = Util_Get_Change_Scale(bm, POP_num_changes, bm->POPchange[porti]);
+ 2237: 		}
+ 2238: 		bm->Port_info[porti][popactive_id] = start_pop * POP_scale;
+ 2239: 	}
+ 2240: 
 ```
 
 **Suggested fix (from review):** Reset `POP_scale = 1.0;` per port.
@@ -860,49 +870,49 @@ In the `!bm->EffortModelsActive` branch `Effort_Displacement(bm, ..., orig_FCpre
 
 Rescaling of BiTACamt is inside the per-companion loop, so it is applied once per OK companion (compounding `BiTACamt *= 1/catch_ratio` each time) and never if the species has no companions; also `prop_yr_changed = 1 - implement_BiM/6.0` (2539) uses implement_BiM from a previous species/fishery since it is only set at 2557. Comment says rescale "only if companion species would be worse off, so check companions" — i.e. check all then rescale once. Function: `Manage_Visit_Council()`.
 
-**Current code** (`atmanage/atManage.c` lines 2512–2551 (truncated)) — code appears to have moved -3 lines since the review
+**Current code** (`atmanage/atManage.c` lines 2526–2565 (truncated)) — code appears to have moved +11 lines since the review
 
 ```c
- 2512: 					}
- 2513: 					catch_ratio = CumCatch / (TAC + small_num);
- 2514: 					if (catch_ratio < 1.0) {
- 2515: 						/* Rescaling necessary - but only if companion species would be worse off, so check companions.*/
- 2516:                         
- 2517:                         for (co_sp = 0; co_sp < FunctGroupArray[sp].speciesParams[max_co_sp_id]; co_sp++ ) {
- 2518:                             co_sp2 = FunctGroupArray[sp].co_sp[co_sp];
- 2519:                             
- 2520:                             if ((co_sp2 < 0) || (co_sp2 > bm->K_max_impacted_sp) || (FunctGroupArray[co_sp2].isFished == FALSE)) {
- 2521:                                 continue;
- 2522:                             }
- 2523: 
- 2524:                             regTAC_scale_cosp = bm->RegionalData[co_sp2][nreg][reg_tac_id];
- 2525: 							regC_scale_cosp = bm->RegionalData[co_sp2][nreg][reg_catch_id];
- 2526: 							TAC_cosp = 0;
- 2527:                             CumCatch_cosp = 0.0;
- 2528:                             companion_ok = 1;
- 2529:                             
- 2530: 							for (nf = 0; nf < bm->K_num_fisheries; nf++) {
- 2531: 								flagTACparticipate = (int)(bm->FISHERYprms[nf][flagTACpartipcate_id]);
- 2532: 								if (flagTACparticipate) {
- 2533: 									/* Convert from tonnes wet weight to mg N */
- 2534: 									TAC_cosp += (regTAC_scale_cosp * bm->TACamt[co_sp2][nf][now_id] * kg_2_mg) / bm->X_CN;
- 2535:                                     CumCatch_cosp += (Harvest_Get_TotCumCatch(co_sp2, nf, bm->thisyear)  + bm->TotOldCumCatch[co_sp2][nf]) * regC_scale_cosp;
- 2536: 								}
- 2537: 							}
- 2538: 							/* Check if scaled up CumCatch for companions would exceed TAC */
- 2539: 							prop_yr_changed = (1.0 - implement_BiM / 6.0);
- 2540: 							CumCatch_cosp *= 1.0 + ((1 / (catch_ratio + small_num)) * prop_yr_changed);
- 2541: 							catch_ratio_cosp = CumCatch_cosp / (TAC_cosp + small_num);
- 2542: 
- 2543:                             if (catch_ratio_cosp > 1.0) {
- 2544:                                 companion_ok = 0;
- 2545:                             }
- 2546: 
- 2547: 
- 2548:                             /* Do rescaling */
- 2549:                             if (companion_ok) {
- 2550:                                 min_delay = MAXINT;
- 2551:                                 for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+ 2526: 						}
+ 2527: 					}
+ 2528: 					catch_ratio = CumCatch / (TAC + small_num);
+ 2529: 					if (catch_ratio < 1.0) {
+ 2530: 						/* Rescaling necessary - but only if companion species would be worse off, so check companions.*/
+ 2531:                         
+ 2532:                         for (co_sp = 0; co_sp < FunctGroupArray[sp].speciesParams[max_co_sp_id]; co_sp++ ) {
+ 2533:                             co_sp2 = FunctGroupArray[sp].co_sp[co_sp];
+ 2534:                             
+ 2535:                             if ((co_sp2 < 0) || (co_sp2 > bm->K_max_impacted_sp) || (FunctGroupArray[co_sp2].isFished == FALSE)) {
+ 2536:                                 continue;
+ 2537:                             }
+ 2538: 
+ 2539:                             regTAC_scale_cosp = bm->RegionalData[co_sp2][nreg][reg_tac_id];
+ 2540: 							regC_scale_cosp = bm->RegionalData[co_sp2][nreg][reg_catch_id];
+ 2541: 							TAC_cosp = 0;
+ 2542:                             CumCatch_cosp = 0.0;
+ 2543:                             companion_ok = 1;
+ 2544:                             
+ 2545: 							for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+ 2546: 								flagTACparticipate = (int)(bm->FISHERYprms[nf][flagTACpartipcate_id]);
+ 2547: 								if (flagTACparticipate) {
+ 2548: 									/* Convert from tonnes wet weight to mg N */
+ 2549: 									TAC_cosp += (regTAC_scale_cosp * bm->TACamt[co_sp2][nf][now_id] * kg_2_mg) / bm->X_CN;
+ 2550:                                     CumCatch_cosp += (Harvest_Get_TotCumCatch(co_sp2, nf, bm->thisyear)  + bm->TotOldCumCatch[co_sp2][nf]) * regC_scale_cosp;
+ 2551: 								}
+ 2552: 							}
+ 2553: 							/* Check if scaled up CumCatch for companions would exceed TAC */
+ 2554: 							prop_yr_changed = (1.0 - implement_BiM / 6.0);
+ 2555: 							CumCatch_cosp *= 1.0 + ((1 / (catch_ratio + small_num)) * prop_yr_changed);
+ 2556: 							catch_ratio_cosp = CumCatch_cosp / (TAC_cosp + small_num);
+ 2557: 
+ 2558:                             if (catch_ratio_cosp > 1.0) {
+ 2559:                                 companion_ok = 0;
+ 2560:                             }
+ 2561: 
+ 2562: 
+ 2563:                             /* Do rescaling */
+ 2564:                             if (companion_ok) {
+ 2565:                                 min_delay = MAXINT;
 ```
 
 **Suggested fix (from review):** Compute companion_ok over all companions first (AND), then do the nf/bim rescale once outside that loop; compute implement_BiM before use.
@@ -933,14 +943,14 @@ Rescaling of BiTACamt is inside the per-companion loop, so it is applied once pe
 
 `quit("...more than 12 months in a year - %d\n", bm->BiM)` while switching on `bm->MofY`. Function: `Manage_Visit_Council()`.
 
-**Current code** (`atmanage/atManage.c` lines 2377–2381)
+**Current code** (`atmanage/atManage.c` lines 2372–2376) — code appears to have moved -5 lines since the review
 
 ```c
- 2377: 			break;
- 2378: 		default:
- 2379: 			quit("How the hell did you get more than 12 months in a year - %d\n", bm->BiM);
- 2380: 			break;
- 2381: 		}
+ 2372: 	/** Only continue if relevant and in new bi-month period **/
+ 2373: 	if (bm->newmonth) {
+ 2374: 		switch (bm->MofY) {
+ 2375: 		case 0:
+ 2376: 		case 2:
 ```
 
 **Suggested fix (from review):** Print `bm->MofY`.
@@ -971,19 +981,19 @@ Rescaling of BiTACamt is inside the per-companion loop, so it is applied once pe
 
 `if (val > maxValue) maxValue = val + 1;` — later fisheries are compared against the +1'd value, so e.g. values {3,4} return 4 not 5 as documented. Callers add +1 so no overrun found, but the function does not return what it claims; Species version (2629) never adds +1. Function: `Manage_Get_Max_Fishery_Param()`.
 
-**Current code** (`atmanage/atManage.c` lines 2613–2622)
+**Current code** (`atmanage/atManage.c` lines 2628–2637) — code appears to have moved +15 lines since the review
 
 ```c
- 2613: int Manage_Get_Max_Fishery_Param(MSEBoxModel *bm, int paramIndex) {
- 2614: 	int i;
- 2615: 	int maxValue = 1;
- 2616: 
- 2617: 	for (i = 0; i < bm->K_num_fisheries; i++) {
- 2618: 		if (bm->FISHERYprms[i][paramIndex] > maxValue)
- 2619: 			maxValue = (int) (bm->FISHERYprms[i][paramIndex] + 1);
- 2620: 	}
- 2621: 	return maxValue;
- 2622: 
+ 2628: int Manage_Get_Max_Fishery_Param(MSEBoxModel *bm, int paramIndex) {
+ 2629: 	int i;
+ 2630: 	int maxValue = 1;
+ 2631: 
+ 2632: 	for (i = 0; i < bm->K_num_fisheries; i++) {
+ 2633: 		if (bm->FISHERYprms[i][paramIndex] > maxValue)
+ 2634: 			maxValue = (int) (bm->FISHERYprms[i][paramIndex] + 1);
+ 2635: 	}
+ 2636: 	return maxValue;
+ 2637: 
 ```
 
 **Suggested fix (from review):** Track the raw max then return `max(1, raw_max + 1)`.
@@ -1017,26 +1027,26 @@ Rescaling of BiTACamt is inside the per-companion loop, so it is applied once pe
 **Current code** (`atmanage/atManage.c` lines 2716–2735)
 
 ```c
- 2716:                 }
- 2717:                 
- 2718:                 this_shot = 0;
- 2719:                 max_prob = 1.0;
- 2720:                 Util_Init_1D_Int(bm->shot_loc, max_poss_shots, 0);
- 2721:                 while (this_shot < nshot) {
- 2722:                     step1 = drandom(0.0, max_prob);
- 2723:                     sum_prob = 0.0;
- 2724:                     for (ij = 0; ij < bm->nbox; ij++) {
- 2725:                         sum_prob += bm->prop_effort[ij];
- 2726:                         if (step1 <= sum_prob) {
- 2727:                             bm->shot_loc[this_shot] = ij;
- 2728:                             bm->box_done[ij] = 1;
- 2729:                             this_shot++;
- 2730:                             break;
- 2731:                         }
- 2732:                     }
- 2733:                 }
- 2734:                 // Make sure all the boxes with catch are included - if not pad out the list now
- 2735:                 for (ij = 0; ij < bm->nbox; ij++) {
+ 2716:                 if(shotcount)
+ 2717:                     step1 = drandom(0.0, shotcount);
+ 2718:                 step1 += min_shots;
+ 2719:                 nshot = (int)ceil(step1);
+ 2720:                 
+ 2721:                 // Find the locaiton of the shots
+ 2722:                 tot_effort = 0.0;
+ 2723:                 Util_Init_1D_Double(bm->prop_effort, bm->nbox, 0.0);
+ 2724:                 Util_Init_1D_Int(bm->shot_loc, max_poss_shots, 0);
+ 2725:                 for (ij = 0; ij < bm->nbox; ij++) {
+ 2726:                     bm->prop_effort[ij] += bm->Effort_hdistrib[ij][nf][today_effort];
+ 2727:                     tot_effort += bm->Effort_hdistrib[ij][nf][today_effort];
+ 2728:                 }
+ 2729:                 for (ij = 0; ij < bm->nbox; ij++) {
+ 2730:                     bm->prop_effort[ij] /= (tot_effort + small_num);
+ 2731:                 }
+ 2732:                 
+ 2733:                 this_shot = 0;
+ 2734:                 max_prob = 1.0;
+ 2735:                 Util_Init_1D_Int(bm->shot_loc, max_poss_shots, 0);
 ```
 
 **Suggested fix (from review):** Skip shot generation when tot_effort == 0 (and guard against round-off by assigning the last box with effort).
@@ -1067,49 +1077,49 @@ Rescaling of BiTACamt is inside the per-companion loop, so it is applied once pe
 
 `nshot` is derived from boats × down_time × FishableLength × hr_per_dt/ShotLength and is not clamped to `max_poss_shots` (= K_max_num_subfleet × K_max_num_boats × ceil(24/K_min_shotlength) + nbox + 1, set at setup atManageSetup.c:1591); boat numbers can also grow under the econ model. `shot_loc[this_shot]` / `ShotData[this_shot]` can overrun. Function: `GenerateCPUE()`.
 
-**Current code** (`atmanage/atManage.c` lines 2671–2710 (truncated)) — code appears to have moved -15 lines since the review
+**Current code** (`atmanage/atManage.c` lines 2686–2725 (truncated))
 
 ```c
- 2671:                     minimum down time
- 2672:                 */
- 2673:                 Util_Init_3D_Double(bm->ShotData, max_poss_shots, bm->K_num_tot_sp, K_num_shot_data_entries, 0.0);
- 2674:                 Util_Init_1D_Int(bm->box_done, bm->nbox, 0);
- 2675:                 Util_Init_1D_Double(bm->alloced_effort, bm->nbox, 0.0);
- 2676:                 Util_Init_3D_Double(bm->alloced_catch, bm->K_num_tot_sp, bm->nbox, bm->wcnz, 0.0);
- 2677:                 Util_Init_2D_Double(bm->alloced_discard, bm->K_num_tot_sp, bm->nbox, 0.0);
- 2678:                 tot_nboat = 0.0;
- 2679:                 tot_hold = 0.0;
- 2680:                 min_shots = 0.0;
- 2681:                 max_shots = 0.0;
- 2682:                 nshot = 0;
- 2683:                 Util_Init_1D_Double(bm->prop_hold, bm->K_max_num_subfleet, 0.0);
- 2684:                 for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) {
- 2685:                     tot_nboat += bm->SUBFLEET_ECONprms[nf][ns][nboat_id];
- 2686:                     bm->prop_hold[ns] += bm->SUBFLEET_ECONprms[nf][ns][hold_capacity_id] * bm->SUBFLEET_ECONprms[nf][ns][nboat_id];
- 2687:                     tot_hold += bm->SUBFLEET_ECONprms[nf][ns][hold_capacity_id];
- 2688:                     min_shots += bm->SUBFLEET_ECONprms[nf][ns][nboat_id] * bm->SUBFLEET_ECONprms[nf][ns][down_time_id] * bm->SUBFLEET_ECONprms[nf][ns][FishableLength_id] ;  // So a minimum of one shot each for active vessels
- 2689:                     max_shots += bm->SUBFLEET_ECONprms[nf][ns][nboat_id] * bm->SUBFLEET_ECONprms[nf][ns][down_time_id] * bm->SUBFLEET_ECONprms[nf][ns][FishableLength_id] * (hr_per_dt / (bm->SUBFLEET_ECONprms[nf][ns][ShotLength_id] + small_num));
- 2690:                 }
- 2691:                 for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) {
- 2692:                     bm->prop_hold[ns] /= (tot_hold + small_num);
- 2693:                 }
- 2694:                 
- 2695:                 // Find number of shots to take
- 2696:                 if (min_shots > max_shots)
- 2697:                     max_shots = min_shots;
- 2698:                 step1 = drandom(0.0, min_shots);  // As getting too many shots so reset starting point a bit lower
- 2699:                 min_shots = step1;
- 2700:                 shotcount = ceil(max_shots - min_shots);
- 2701:                 if(shotcount)
- 2702:                     step1 = drandom(0.0, shotcount);
- 2703:                 step1 += min_shots;
- 2704:                 nshot = (int)ceil(step1);
- 2705:                 
- 2706:                 // Find the locaiton of the shots
- 2707:                 tot_effort = 0.0;
- 2708:                 Util_Init_1D_Double(bm->prop_effort, bm->nbox, 0.0);
- 2709:                 Util_Init_1D_Int(bm->shot_loc, max_poss_shots, 0);
- 2710:                 for (ij = 0; ij < bm->nbox; ij++) {
+ 2686:                     minimum down time
+ 2687:                 */
+ 2688:                 Util_Init_3D_Double(bm->ShotData, max_poss_shots, bm->K_num_tot_sp, K_num_shot_data_entries, 0.0);
+ 2689:                 Util_Init_1D_Int(bm->box_done, bm->nbox, 0);
+ 2690:                 Util_Init_1D_Double(bm->alloced_effort, bm->nbox, 0.0);
+ 2691:                 Util_Init_3D_Double(bm->alloced_catch, bm->K_num_tot_sp, bm->nbox, bm->wcnz, 0.0);
+ 2692:                 Util_Init_2D_Double(bm->alloced_discard, bm->K_num_tot_sp, bm->nbox, 0.0);
+ 2693:                 tot_nboat = 0.0;
+ 2694:                 tot_hold = 0.0;
+ 2695:                 min_shots = 0.0;
+ 2696:                 max_shots = 0.0;
+ 2697:                 nshot = 0;
+ 2698:                 Util_Init_1D_Double(bm->prop_hold, bm->K_max_num_subfleet, 0.0);
+ 2699:                 for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) {
+ 2700:                     tot_nboat += bm->SUBFLEET_ECONprms[nf][ns][nboat_id];
+ 2701:                     bm->prop_hold[ns] += bm->SUBFLEET_ECONprms[nf][ns][hold_capacity_id] * bm->SUBFLEET_ECONprms[nf][ns][nboat_id];
+ 2702:                     tot_hold += bm->SUBFLEET_ECONprms[nf][ns][hold_capacity_id];
+ 2703:                     min_shots += bm->SUBFLEET_ECONprms[nf][ns][nboat_id] * bm->SUBFLEET_ECONprms[nf][ns][down_time_id] * bm->SUBFLEET_ECONprms[nf][ns][FishableLength_id] ;  // So a minimum of one shot each for active vessels
+ 2704:                     max_shots += bm->SUBFLEET_ECONprms[nf][ns][nboat_id] * bm->SUBFLEET_ECONprms[nf][ns][down_time_id] * bm->SUBFLEET_ECONprms[nf][ns][FishableLength_id] * (hr_per_dt / (bm->SUBFLEET_ECONprms[nf][ns][ShotLength_id] + small_num));
+ 2705:                 }
+ 2706:                 for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) {
+ 2707:                     bm->prop_hold[ns] /= (tot_hold + small_num);
+ 2708:                 }
+ 2709:                 
+ 2710:                 // Find number of shots to take
+ 2711:                 if (min_shots > max_shots)
+ 2712:                     max_shots = min_shots;
+ 2713:                 step1 = drandom(0.0, min_shots);  // As getting too many shots so reset starting point a bit lower
+ 2714:                 min_shots = step1;
+ 2715:                 shotcount = ceil(max_shots - min_shots);
+ 2716:                 if(shotcount)
+ 2717:                     step1 = drandom(0.0, shotcount);
+ 2718:                 step1 += min_shots;
+ 2719:                 nshot = (int)ceil(step1);
+ 2720:                 
+ 2721:                 // Find the locaiton of the shots
+ 2722:                 tot_effort = 0.0;
+ 2723:                 Util_Init_1D_Double(bm->prop_effort, bm->nbox, 0.0);
+ 2724:                 Util_Init_1D_Int(bm->shot_loc, max_poss_shots, 0);
+ 2725:                 for (ij = 0; ij < bm->nbox; ij++) {
 ```
 
 **Suggested fix (from review):** Clamp `nshot` to `max_poss_shots - bm->nbox - 1`.
@@ -1140,14 +1150,14 @@ Rescaling of BiTACamt is inside the per-companion loop, so it is applied once pe
 
 `bm->alloced_discard[sp][ij] -= final_shot_discards;` — alloced_discard is subtracted from available discards at 2808/2940, so it must increase as discards are allocated; decrementing makes available discards grow with each shot. Function: `GenerateCPUE()`.
 
-**Current code** (`atmanage/atManage.c` lines 2850–2854)
+**Current code** (`atmanage/atManage.c` lines 2860–2864) — code appears to have moved +10 lines since the review
 
 ```c
- 2850:                         
- 2851:                         // Allocated catch and discards per depth so don't get double counting - also gives average depth for reporting
- 2852:                         bm->alloced_discard[sp][ij] -= final_shot_discards;
- 2853:                         weighted_depth = 0.0;
- 2854:                         catch_unalloced = final_shot_catch;
+ 2860:                         // Find corresponding discards
+ 2861:                         step1 = final_shot_catch * prop_discard;
+ 2862:                         final_shot_discards = Assess_Add_Error(bm, bm->CPUEshotfdis, step1, bm->CPUEshotavgdis, bm->CPUEshotvartdis);
+ 2863:                         if(final_shot_discards > this_discards)
+ 2864:                             final_shot_discards = this_discards;
 ```
 
 **Suggested fix (from review):** `+=`
@@ -1176,33 +1186,33 @@ Rescaling of BiTACamt is inside the per-companion loop, so it is applied once pe
 
 `sum_prob` is reset only once before the while loop and the k loop has no `break`, so after the first pass every layer past the threshold (and on later passes all layers) is allocated; and `allocate_catch()` allocates the whole `catch_left` of a layer rather than `min(catch_left, *catch_unalloced)`, so a single small shot consumes all catch in a layer and catch_unalloced goes negative. Shot catches/depths and tot_alloced are wrong. Functions: `GenerateCPUE()`, `allocate_catch()`.
 
-**Current code** (`atmanage/atManage.c` lines 2853–2876)
+**Current code** (`atmanage/atManage.c` lines 2867–2890) — code appears to have moved +14 lines since the review
 
 ```c
- 2853:                         weighted_depth = 0.0;
- 2854:                         catch_unalloced = final_shot_catch;
- 2855:                         sum_prob = 0.0;
- 2856:                         
- 2857:                         // Start with random allocation
- 2858:                         numstep = 0;
- 2859:                         while ((catch_unalloced > 0.0) && (numstep < step_tolerance)) {
- 2860:                             step1 = drandom(0.0, 1.0);
- 2861:                             for (k = 0; k < bm->boxes[ij].nz; k++) {
- 2862:                                 sum_prob += bm->prop_depth[k];
- 2863:                                 if (step1 < sum_prob) {
- 2864:                                     allocate_catch(bm, sp, nf, ij, k, &catch_unalloced, &weighted_depth, this_catch, llogfp);
- 2865:                                 }
- 2866:                             }
- 2867:                             numstep++;
- 2868:                         }
- 2869:                         // Now iteratively allocate any remaining
- 2870:                         if (catch_unalloced > 0.0) {
- 2871:                             for (k = 0; k < bm->boxes[ij].nz; k++) {
- 2872:                                 allocate_catch(bm, sp, nf, ij, k, &catch_unalloced, &weighted_depth, this_catch, llogfp);
- 2873:                             }
- 2874:                         }
- 2875:                         
- 2876:                         weighted_depth /= (final_shot_catch + small_num);
+ 2867:                         bm->alloced_discard[sp][ij] -= final_shot_discards;
+ 2868:                         weighted_depth = 0.0;
+ 2869:                         catch_unalloced = final_shot_catch;
+ 2870:                         sum_prob = 0.0;
+ 2871:                         
+ 2872:                         // Start with random allocation
+ 2873:                         numstep = 0;
+ 2874:                         while ((catch_unalloced > 0.0) && (numstep < step_tolerance)) {
+ 2875:                             step1 = drandom(0.0, 1.0);
+ 2876:                             for (k = 0; k < bm->boxes[ij].nz; k++) {
+ 2877:                                 sum_prob += bm->prop_depth[k];
+ 2878:                                 if (step1 < sum_prob) {
+ 2879:                                     allocate_catch(bm, sp, nf, ij, k, &catch_unalloced, &weighted_depth, this_catch, llogfp);
+ 2880:                                 }
+ 2881:                             }
+ 2882:                             numstep++;
+ 2883:                         }
+ 2884:                         // Now iteratively allocate any remaining
+ 2885:                         if (catch_unalloced > 0.0) {
+ 2886:                             for (k = 0; k < bm->boxes[ij].nz; k++) {
+ 2887:                                 allocate_catch(bm, sp, nf, ij, k, &catch_unalloced, &weighted_depth, this_catch, llogfp);
+ 2888:                             }
+ 2889:                         }
+ 2890:                         
 ```
 
 **Suggested fix (from review):** Reset sum_prob each iteration, break after allocating, and allocate `min(catch_left, *catch_unalloced)`.
@@ -1236,15 +1246,15 @@ Rescaling of BiTACamt is inside the per-companion loop, so it is applied once pe
 **Current code** (`atmanage/atManage.c` lines 2990–2998)
 
 ```c
- 2990:         if (bm->prop_depth[k] < 0.0)
- 2991:             bm->prop_depth[k] = 0.0;
- 2992:         new_sum = 1.0 - prop_used;
- 2993:         if (new_sum > 0.0) {
- 2994:             for (ij = 0; ij < bm->nbox; ij++) {
- 2995:                 bm->prop_effort[ij] /= (new_sum + small_num);
- 2996:             }
- 2997:         } else {
- 2998:             *catch_unalloced = 0.0;
+ 2990: 
+ 2991: /*
+ 2992:  * \brief Allocating geenrated catch to actual depths in selected box 
+ 2993:  */
+ 2994: void allocate_catch(MSEBoxModel *bm, int sp, int nf, int ij, int k, double *catch_unalloced, double *weighted_depth, double this_catch, FILE *llogfp) {
+ 2995:     
+ 2996:     double prop_used, new_sum;
+ 2997:     double catch_left = (bm->Catch[ij][sp][nf][k] * bm->X_CN * mg_2_kg) - bm->alloced_catch[sp][ij][k];
+ 2998:     
 ```
 
 **Suggested fix (from review):** Loop `for (kk = 0; kk < bm->boxes[ij].nz; kk++) bm->prop_depth[kk] /= new_sum;`
@@ -1275,14 +1285,14 @@ Rescaling of BiTACamt is inside the per-companion loop, so it is applied once pe
 
 Left-over effort uses `Effort_hdistrib[..][today_effort] / 24.0` whereas shot effort uses `* 24.0` ("originally in days and want hours", 2897); also `alloced_effort` is never incremented, so the residual effort is the full effort, not the left-over. Function: `GenerateCPUE()`.
 
-**Current code** (`atmanage/atManage.c` lines 2934–2938)
+**Current code** (`atmanage/atManage.c` lines 2949–2953) — code appears to have moved +15 lines since the review
 
 ```c
- 2934:                         for (ij=0; ij < bm->nbox; ij++) {
- 2935:                             bm->ShotData[this_shot][sp][tloc_id] = ij;
- 2936:                             bm->ShotData[this_shot][sp][teffort_id] += ((bm->Effort_hdistrib[ij][nf][today_effort] / 24.0 ) - bm->alloced_effort[ij]);
- 2937:                             for (k = 0; k < bm->boxes[ij].nz; k++) {
- 2938:                                 bm->ShotData[this_shot][sp][wdepth_id] += (bm->Catch[ij][sp][nf][k] * bm->X_CN * mg_2_kg) - bm->alloced_catch[sp][ij][k];
+ 2949:                         for (ij=0; ij < bm->nbox; ij++) {
+ 2950:                             bm->ShotData[this_shot][sp][tloc_id] = ij;
+ 2951:                             bm->ShotData[this_shot][sp][teffort_id] += ((bm->Effort_hdistrib[ij][nf][today_effort] / 24.0 ) - bm->alloced_effort[ij]);
+ 2952:                             for (k = 0; k < bm->boxes[ij].nz; k++) {
+ 2953:                                 bm->ShotData[this_shot][sp][wdepth_id] += (bm->Catch[ij][sp][nf][k] * bm->X_CN * mg_2_kg) - bm->alloced_catch[sp][ij][k];
 ```
 
 **Suggested fix (from review):** Use `* 24.0` and update alloced_effort with final_shot_effort per box.
@@ -1313,18 +1323,18 @@ Left-over effort uses `Effort_hdistrib[..][today_effort] / 24.0` whereas shot ef
 
 `ShotData[...][tdiscard_id] += Discards[ij][sp][nf]*... - alloced_discard[sp][ij]` is inside the `k` (layer) loop, but Discards/alloced_discard are per box — discards are added nz times. Function: `GenerateCPUE()`.
 
-**Current code** (`atmanage/atManage.c` lines 2935–2943)
+**Current code** (`atmanage/atManage.c` lines 2953–2961) — code appears to have moved +18 lines since the review
 
 ```c
- 2935:                             bm->ShotData[this_shot][sp][tloc_id] = ij;
- 2936:                             bm->ShotData[this_shot][sp][teffort_id] += ((bm->Effort_hdistrib[ij][nf][today_effort] / 24.0 ) - bm->alloced_effort[ij]);
- 2937:                             for (k = 0; k < bm->boxes[ij].nz; k++) {
- 2938:                                 bm->ShotData[this_shot][sp][wdepth_id] += (bm->Catch[ij][sp][nf][k] * bm->X_CN * mg_2_kg) - bm->alloced_catch[sp][ij][k];
- 2939:                                 bm->ShotData[this_shot][sp][tcatch_id] += (bm->Catch[ij][sp][nf][k] * bm->X_CN * mg_2_kg) - bm->alloced_catch[sp][ij][k];
- 2940:                                 bm->ShotData[this_shot][sp][tdiscard_id] += (bm->Discards[ij][sp][nf] * bm->X_CN * mg_2_kg) - bm->alloced_discard[sp][ij];
- 2941:                             }
- 2942:                         }
- 2943:                         bm->ShotData[this_shot][sp][wdepth_id] /= (bm->ShotData[this_shot][sp][tcatch_id] + small_num);
+ 2953:                                 bm->ShotData[this_shot][sp][wdepth_id] += (bm->Catch[ij][sp][nf][k] * bm->X_CN * mg_2_kg) - bm->alloced_catch[sp][ij][k];
+ 2954:                                 bm->ShotData[this_shot][sp][tcatch_id] += (bm->Catch[ij][sp][nf][k] * bm->X_CN * mg_2_kg) - bm->alloced_catch[sp][ij][k];
+ 2955:                                 bm->ShotData[this_shot][sp][tdiscard_id] += (bm->Discards[ij][sp][nf] * bm->X_CN * mg_2_kg) - bm->alloced_discard[sp][ij];
+ 2956:                             }
+ 2957:                         }
+ 2958:                         bm->ShotData[this_shot][sp][wdepth_id] /= (bm->ShotData[this_shot][sp][tcatch_id] + small_num);
+ 2959:                     }
+ 2960:                 }
+ 2961:                 
 ```
 
 **Suggested fix (from review):** Move the tdiscard line outside the k loop.
@@ -1355,19 +1365,19 @@ Left-over effort uses `Effort_hdistrib[..][today_effort] / 24.0` whereas shot ef
 
 Left-over `wdepth_id += catch` then `/= tcatch` gives ~1, not a catch-weighted depth (compare 2987 which multiplies by a depth term). Function: `GenerateCPUE()`.
 
-**Current code** (`atmanage/atManage.c` lines 2936–2945)
+**Current code** (`atmanage/atManage.c` lines 2946–2955) — code appears to have moved +10 lines since the review
 
 ```c
- 2936:                             bm->ShotData[this_shot][sp][teffort_id] += ((bm->Effort_hdistrib[ij][nf][today_effort] / 24.0 ) - bm->alloced_effort[ij]);
- 2937:                             for (k = 0; k < bm->boxes[ij].nz; k++) {
- 2938:                                 bm->ShotData[this_shot][sp][wdepth_id] += (bm->Catch[ij][sp][nf][k] * bm->X_CN * mg_2_kg) - bm->alloced_catch[sp][ij][k];
- 2939:                                 bm->ShotData[this_shot][sp][tcatch_id] += (bm->Catch[ij][sp][nf][k] * bm->X_CN * mg_2_kg) - bm->alloced_catch[sp][ij][k];
- 2940:                                 bm->ShotData[this_shot][sp][tdiscard_id] += (bm->Discards[ij][sp][nf] * bm->X_CN * mg_2_kg) - bm->alloced_discard[sp][ij];
- 2941:                             }
- 2942:                         }
- 2943:                         bm->ShotData[this_shot][sp][wdepth_id] /= (bm->ShotData[this_shot][sp][tcatch_id] + small_num);
- 2944:                     }
- 2945:                 }
+ 2946:                     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+ 2947:                         weighted_depth = 0.0;
+ 2948:                         bm->ShotData[this_shot][sp][tcatch_id] = 0.0;
+ 2949:                         for (ij=0; ij < bm->nbox; ij++) {
+ 2950:                             bm->ShotData[this_shot][sp][tloc_id] = ij;
+ 2951:                             bm->ShotData[this_shot][sp][teffort_id] += ((bm->Effort_hdistrib[ij][nf][today_effort] / 24.0 ) - bm->alloced_effort[ij]);
+ 2952:                             for (k = 0; k < bm->boxes[ij].nz; k++) {
+ 2953:                                 bm->ShotData[this_shot][sp][wdepth_id] += (bm->Catch[ij][sp][nf][k] * bm->X_CN * mg_2_kg) - bm->alloced_catch[sp][ij][k];
+ 2954:                                 bm->ShotData[this_shot][sp][tcatch_id] += (bm->Catch[ij][sp][nf][k] * bm->X_CN * mg_2_kg) - bm->alloced_catch[sp][ij][k];
+ 2955:                                 bm->ShotData[this_shot][sp][tdiscard_id] += (bm->Discards[ij][sp][nf] * bm->X_CN * mg_2_kg) - bm->alloced_discard[sp][ij];
 ```
 
 **Suggested fix (from review):** Accumulate `depth(k) * catch_left`.
@@ -1398,27 +1408,27 @@ Left-over `wdepth_id += catch` then `/= tcatch` gives ~1, not a catch-weighted d
 
 If `step1 >= cpue_cdf[sp][nc][gun]` for all bins (cdf not reaching 1), `this_catchbin` stays 0 giving zero catch instead of the top bin; bin 0 always yields `max_catch = 0`. Function: `GenerateCPUE()`.
 
-**Current code** (`atmanage/atManage.c` lines 2815–2832)
+**Current code** (`atmanage/atManage.c` lines 2830–2847) — code appears to have moved +15 lines since the review
 
 ```c
- 2815:                         sum_prob = 0.0;
- 2816:                         this_catchbin = 0;
- 2817:                         for (nc = 0; nc < bm->K_num_catchbin; nc++){
- 2818:                             sum_prob = cpue_cdf[sp][nc][this_gun];   // Could use a calculated negative binomal cdf, but reading it in from pre-generated set for now (as cpue_cdf is cumualtive then set sum_prob = not += )
- 2819:                             
- 2820:                             //fprintf(llogfp,"gun %d step1: %e nc: %d cpue_cdf: %e sum_prob %e\n", this_gun, step1, nc, cpue_cdf[nc][this_gun], sum_prob);
- 2821:                             
- 2822:                             if (step1 < sum_prob) {
- 2823:                                 this_catchbin = nc;
- 2824:                                 break;
- 2825:                             }
- 2826:                         }
- 2827:                         min_catch = (this_catchbin - 1) * bm->size_catchbin;  // in kg
- 2828:                         if(min_catch < 0.0)
- 2829:                             min_catch = 0.0;
- 2830:                         max_catch = this_catchbin * bm->size_catchbin;
- 2831:                         diff_Catch = max_catch - min_catch;
- 2832:                         step1 = drandom(0.0, diff_Catch);
+ 2830:                         sum_prob = 0.0;
+ 2831:                         this_catchbin = 0;
+ 2832:                         for (nc = 0; nc < bm->K_num_catchbin; nc++){
+ 2833:                             sum_prob = cpue_cdf[sp][nc][this_gun];   // Could use a calculated negative binomal cdf, but reading it in from pre-generated set for now (as cpue_cdf is cumualtive then set sum_prob = not += )
+ 2834:                             
+ 2835:                             //fprintf(llogfp,"gun %d step1: %e nc: %d cpue_cdf: %e sum_prob %e\n", this_gun, step1, nc, cpue_cdf[nc][this_gun], sum_prob);
+ 2836:                             
+ 2837:                             if (step1 < sum_prob) {
+ 2838:                                 this_catchbin = nc;
+ 2839:                                 break;
+ 2840:                             }
+ 2841:                         }
+ 2842:                         min_catch = (this_catchbin - 1) * bm->size_catchbin;  // in kg
+ 2843:                         if(min_catch < 0.0)
+ 2844:                             min_catch = 0.0;
+ 2845:                         max_catch = this_catchbin * bm->size_catchbin;
+ 2846:                         diff_Catch = max_catch - min_catch;
+ 2847:                         step1 = drandom(0.0, diff_Catch);
 ```
 
 **Suggested fix (from review):** Initialise `this_catchbin = K_num_catchbin - 1`.

@@ -331,24 +331,24 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `case sp_rollover:` has no `break`, so it falls through to `default` and calls `quit("")`. It is also unreachable in practice because `tier` is re-read from `speciesParams[tier_id]` and not from the local `tier` that DoTierAssessment sets to sp_rollover (lines 267/277). As a result a rolled-over TAC gets the base tier's buffer (e.g. sig1) and not the MYTAC buffer. Function: `Apply_RBC_Buffers()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 3406–3420) — code appears to have moved -131 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 3741–3755) — code appears to have moved +204 lines since the review
 
 ```c
- 3406: 	int  r;
- 3407: 	double sb0;
- 3408: 	int tier = (int) (FunctGroupArray[species].speciesParams[tier_id]);
- 3409: 	int tiertype = (int) (bm->RBCestimation.RBCspeciesParam[species][tiertype_id]);   // Nov 2026: was read from speciesParams
- 3410: 	double step1;
- 3411: 	int fleetid = (int)(bm->RBCestimation.RBCspeciesParam[species][CPUEfleet_id]);
- 3412: 	int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[species][NumRegions_id]);
- 3413:     int Nstocks = FunctGroupArray[species].numStocks;
- 3414: 
- 3415:     //printf("Doing Evaluation for %s with tier %d\n", FunctGroupArray[species].groupCode, tier);
- 3416:     
- 3417:     for (r=0; r < Nregions; r++) {
- 3418: 		WriteResults(bm, species, r, year, llogfp, fid);
- 3419:     }
- 3420: 
+ 3741:             // Nothing to do for these cases as yet
+ 3742:             break;
+ 3743:         case sp_rollover:
+ 3744:             // Nov 2026 (review item 29): the multi-year TAC decay (myTACbuffer) is now applied in Apply_MYTAC_Decay,
+ 3745:             // called from DoTierAssessment whether or not UseTierBuffers is set, so nothing to do here.
+ 3746:             break;
+ 3747:         default:
+ 3748:             printf("No such tier (%d)\n", tier);
+ 3749:             fprintf(llogfp,"No such tier (%d)\n", tier);
+ 3750:             quit("");
+ 3751:             break;
+ 3752:             
+ 3753: 	}
+ 3754:     if (RBC != TACbase) {
+ 3755:         fprintf(llogfp, "Time: %e %s year: %d tier buffer applied (tier %d): RBC %e becomes %e on the way to the TAC\n",
 ```
 
 **Suggested fix (from review):** Add `break`; pass the effective tier in as a parameter
@@ -427,9 +427,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `Util_Init_1D_Double(discrate, nyears, 0.0)` zeroes indices 0..nyears-1 (the number of averaging years), not the absolute years `year-3..year` that are used afterwards. Inside the fleet loop `discrate[iy]` is only overwritten when `DiscYears[nf][iy] > 0`, so fleets without discard data inherit the previous fleet's rate (or values from line 807 of the previous call). Function: `Tier_averages()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 684–713) — code appears to have moved -32 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 667–696) — code appears to have moved -49 lines since the review
 
 ```c
+  667: void Tier_averages(MSEBoxModel *bm, int species, int year, int tier, double *current_catch, double *discard_rate, FILE *llogfp)
+  668: {
+  669: 	int nf, iy, sumregion, nreg, MinCyr = 0, MaxCyr = 0, DiscType = 0, nyears, startyear, diffyr;
+  670: 	double ccurr, meancatch, avrate, curcatch, sumcatch, indexcount;
+  671: 	double fltdiscbio = 0, totdiscbio, totretbio;
+  672: 	int CCsel_years = (int)bm->RBCestimation.RBCspeciesParam[species][CCsel_years_id];
+  673: 	int AgeSel50 = (int)bm->RBCestimation.RBCspeciesParam[species][AgeSel50_id];
+  674: 	int Tier3_time = (int)bm->RBCestimation.RBCspeciesParam[species][Tier3_time_id];
+  675: 	int Tier3_Fcalc = (int)bm->RBCestimation.RBCspeciesParam[species][Tier3_Fcalc_id];
+  676: 	int Tier4_avtime = (int)bm->RBCestimation.RBCspeciesParam[species][Tier4_avtime_id];
+  677: 	int Tier4_CPUEyrmin = (int)bm->RBCestimation.RBCspeciesParam[species][Tier4_CPUEyrmin_id];
+  678: 	int Tier4_CPUEyrmax = (int)bm->RBCestimation.RBCspeciesParam[species][Tier4_CPUEyrmax_id];
+  679: 	int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[species][NumRegions_id]);
+  680: 	int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[species][NumFisheries_id]);
+  681:     int nPast = (int)(bm->RBCestimation.RBCspeciesParam[species][HistYrMax_id] - bm->RBCestimation.RBCspeciesParam[species][HistYrMin_id]) + 1;
+  682:     int InitnYears = bm->RBCestimation.nFuture + nPast;
+  683:     
   684: 	double nyrs;
   685: 
   686:     printf("Doing Tier_averages - initalise popcatch and avprop\n");
@@ -443,23 +460,6 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   694:     int do_debug = 0;
   695: 	if((bm->debug == debug_quota) && (bm->which_check == species)){
   696: 		do_debug = 1;
-  697: 	}
-  698:      */
-  699:     
-  700: 	sumregion = Nregions;  // sum over regions
-  701:     
-  702: 	/* Sally deleted code snippet AA was here */
-  703: 
-  704: 	// work out proportion of catch taken by each fleet and region in each of last 5 years of data in the assessment
-  705: 	// assessments don't know about regions, but need to know the proportion of catch by region
-  706: 	// and fleet so can allocate TACs
-  707:     startyear = year-4;
-  708:     if (startyear < 0) startyear = 0;
-  709: 	for (iy = startyear; iy < year+1; iy++) {
-  710: 		sumcatch = 0.0;
-  711: 		for (nreg = 0; nreg < Nregions ; nreg++){
-  712: 			for (nf = 0; nf< Nfleets; nf++){
-  713: 				//sumcatch += Harvest_Get_TotCumCatch(species, nf, iy);   Use this if want true catch and for loop is over K_num_fisheries
 ```
 
 **Suggested fix (from review):** Reset `discrate[startyear..year]` at the start of each fleet iteration
@@ -490,14 +490,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `DiscType = ...DiscardType[nf]`: DiscardType is allocated with size nLen (atAssessTierSetup.c:130), is indexed by fleet, and is never filled anywhere in the repo, so it is always 0. Neither DiscType branch (1/2) ever runs, so discard rates are always 0, or NaN when there is no catch (807). The all-fleet block at 800-803 also uses the `DiscType` left over from the last fleet and not each fleet's own. Function: `Tier_averages()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 684–688) — code appears to have moved -35 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 667–671) — code appears to have moved -52 lines since the review
 
 ```c
-  684: 	double nyrs;
-  685: 
-  686:     printf("Doing Tier_averages - initalise popcatch and avprop\n");
-  687:     
-  688:     Util_Init_2D_Double(bm->RBCestimation.RBCspeciesArray[species].propcatch, Nfleets, InitnYears, 0.0);
+  667: void Tier_averages(MSEBoxModel *bm, int species, int year, int tier, double *current_catch, double *discard_rate, FILE *llogfp)
+  668: {
+  669: 	int nf, iy, sumregion, nreg, MinCyr = 0, MaxCyr = 0, DiscType = 0, nyears, startyear, diffyr;
+  670: 	double ccurr, meancatch, avrate, curcatch, sumcatch, indexcount;
+  671: 	double fltdiscbio = 0, totdiscbio, totretbio;
 ```
 
 **Suggested fix (from review):** Allocate DiscardType with K_num_fisheries and read it from params; look up per fleet in the 799 loop
@@ -528,14 +528,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `avprop_reg[nf][nreg] /= num_avg_year;` but the sum covers `startyear..year` (5 years, or fewer near the start). When num_avg_year != the number of years summed, avprop does not sum to 1. Function: `Tier_averages()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 659–663) — code appears to have moved +17 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 667–671) — code appears to have moved +25 lines since the review
 
 ```c
-  659: 
-  660: /********************************************************************************************************
-  661:  * \brief  Tier_averages
-  662:  * Description: calculate average total catch  over last x (4) years for each fleet, sum over fleets
-  663:  *              get average discard rate combined over all fleets for last x (4) years
+  667: void Tier_averages(MSEBoxModel *bm, int species, int year, int tier, double *current_catch, double *discard_rate, FILE *llogfp)
+  668: {
+  669: 	int nf, iy, sumregion, nreg, MinCyr = 0, MaxCyr = 0, DiscType = 0, nyears, startyear, diffyr;
+  670: 	double ccurr, meancatch, avrate, curcatch, sumcatch, indexcount;
+  671: 	double fltdiscbio = 0, totdiscbio, totretbio;
 ```
 
 **Suggested fix (from review):** Divide by `(year - startyear + 1)`
@@ -683,19 +683,19 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `if ((a == AgeSel95+1) && (numatage[1] < numatage[2]))`: at this point `numatage[2]` has not been filled yet (it is 0), so the test can never be true and the "drop first age if lower than next" logic never runs. In 0-based terms it should compare `numatage[0] < numatage[1]`. Function: `TierThree_CC()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 1185–1194) — code appears to have moved +66 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 1203–1212) — code appears to have moved +84 lines since the review
 
 ```c
- 1185: /******************************************************************************
- 1186:  *
- 1187: \brief:  TierThree_CC
- 1188:  *      TierThree_CC:     estimate Fcurr using catch curves
- 1189:  * Description: estimate Fcurr using catch curves (old Tier3)
- 1190:  *
- 1191:  *
- 1192:  * called by : DoAssessment
- 1193:  * calls :  getSlope, Tier3_averages, Tier3rule
- 1194:  * created  : From code by Sally Wayte
+ 1203: 	double age, len, temp;
+ 1204: 	int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[species][NumFisheries_id]);
+ 1205: 	int AgeSel95 = (int)(bm->RBCestimation.RBCspeciesParam[species][AgeSel95_id]);
+ 1206:     int maxage = (int)(bm->RBCestimation.RBCspeciesParam[species][MaxAge_id]);
+ 1207: 
+ 1208:     /*
+ 1209:     int do_debug = 1;
+ 1210: 	if (do_debug)
+ 1211: 		fprintf(llogfp,"Tier 3 catch curve calculations for %s assessment in year %d\n", FunctGroupArray[species].groupCode, year);
+ 1212:      */
 ```
 
 **Suggested fix (from review):** Translate to 0-based indices
@@ -726,17 +726,17 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `nz` is the index of the last stored Z (it starts at -1 and is incremented before use), but `for (i=0; i<nz; i++)` and `meanz = sumz/nz` treat it as a count. The last Z is dropped, and a single valid Z (nz==0) is reported as an assessment failure. Function: `TierThree_CC()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 1185–1192) — code appears to have moved +14 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 1199–1206) — code appears to have moved +28 lines since the review
 
 ```c
- 1185: /******************************************************************************
- 1186:  *
- 1187: \brief:  TierThree_CC
- 1188:  *      TierThree_CC:     estimate Fcurr using catch curves
- 1189:  * Description: estimate Fcurr using catch curves (old Tier3)
- 1190:  *
- 1191:  *
- 1192:  * called by : DoAssessment
+ 1199: 	int s, nf, a, i, iy, nz, ia, isum05, sumnum;
+ 1200: 	// int region;
+ 1201: 	double sumz, meanz = 0, step1, sp_a, sp_b;
+ 1202: 	int nselage, this_nselage;
+ 1203: 	double age, len, temp;
+ 1204: 	int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[species][NumFisheries_id]);
+ 1205: 	int AgeSel95 = (int)(bm->RBCestimation.RBCspeciesParam[species][AgeSel95_id]);
+ 1206:     int maxage = (int)(bm->RBCestimation.RBCspeciesParam[species][MaxAge_id]);
 ```
 
 **Suggested fix (from review):** Use `nz+1` as the count (`i <= nz`, `if (nz >= 0)`, `/(nz+1)`)
@@ -767,42 +767,42 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `NCA` is initialised to 0 at its declaration and only updated when a year has data. It is not reset per fleet (only `Ncage_id` is), so a fleet with no data reuses the previous fleet's NCA (and the first fleet uses 0). `if (NCA >= 0)` is therefore always true and the minimisation runs on stale or empty Obsageprop. Function: `TierThree_CCsel()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 1389–1421) — code appears to have moved +46 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 1478–1510) — code appears to have moved +135 lines since the review
 
 ```c
- 1389: //******************************************************************************
- 1390: //
- 1391: // Name:  TierThree_CCsel
- 1392: //      TierThree_CCsel:  calculate current F using Andre's YPR catch curve with selectivity
- 1393: // Description: calculate current F using Andre's yield per recruit (new Tier 3)
- 1394: //               catch curves with selectivity (now calling this Equilibrium F method)
- 1395: //
- 1396: //
- 1397: // called by : DoAssessment
- 1398: // calls :  downhill_simplex, Transform, UnTransform
- 1399: // created  : April 2008 Sally
- 1400: //
- 1401: //******************************************************************************
- 1402: void TierThree_CCsel(MSEBoxModel *bm, int species, int year, FILE *llogfp){
- 1403: 
- 1404: 	int s, a, iy, i, j, nF, nf, nFit, NCA = 0;
- 1405: 	int iter = bm->RBCestimation.Tier_Max_Int;
- 1406: 	double sumage, init_S95, init_S50, step1;
- 1407: 	double ftol;
- 1408: 	double sumF, sumchi;
- 1409: 	double linf,kpar,t0;
- 1410: 	double age,len;
- 1411: 	double Tier3_M = bm->RBCestimation.RBCspeciesParam[species][Tier3_M_id];
- 1412: 	double Tier3_h = bm->RBCestimation.RBCspeciesParam[species][Tier3_h_id];
- 1413: 	double Tier3_a = bm->RBCestimation.RBCspeciesParam[species][Tier3_a_id];
- 1414: 	double Tier3_b = bm->RBCestimation.RBCspeciesParam[species][Tier3_b_id];
- 1415: 	double Tier3_F = bm->RBCestimation.RBCspeciesParam[species][Tier3_F_id];
- 1416: 	double Tier3_matlen = bm->RBCestimation.RBCspeciesParam[species][Tier3_matlen_id];
- 1417: 	double Tier3_S50 = bm->RBCestimation.RBCspeciesParam[species][Tier3_S50_id];
- 1418: 	double Tier3_S95 = bm->RBCestimation.RBCspeciesParam[species][Tier3_S95_id];
- 1419: 	double Nsexes = (double)(bm->K_num_sexes);
- 1420: 	int CCsel_years = (int)bm->RBCestimation.RBCspeciesParam[species][CCsel_years_id];
- 1421: 	int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[species][NumFisheries_id]);
+ 1478:         startyear = year - CCsel_years + 1;
+ 1479:         if(startyear < 0) startyear = 0;
+ 1480:         bm->RBCestimation.RBCspeciesParam[species][Ncage_id] = -1;  // So then first entry is entry 0
+ 1481:         for (iy = startyear; iy <= year; iy++){
+ 1482:  			if((bm->RBCestimation.RBCspeciesArray[species].AgeFltYr[1][nf][iy]>0) && (bm->RBCestimation.RBCspeciesArray[species].propcatch[nf][iy]> 0.3)) {
+ 1483: 				bm->RBCestimation.RBCspeciesParam[species][Ncage_id] += 1;     // number of years of catch-at-age data for this fleet
+ 1484: 				NCA = (int)bm->RBCestimation.RBCspeciesParam[species][Ncage_id];
+ 1485: 				// store numbers at age
+ 1486: 				sumage = 0;
+ 1487: 				for (a = 0; a < Tier3maxage; a++){
+ 1488: 					// calc num at age over all years used for this fleet
+ 1489: 					bm->RBCestimation.RBCspeciesArray[species].totnumatage[a] += bm->RBCestimation.RBCspeciesArray[species].AgeComp[nf][FEMALE][iy][1][a];
+ 1490: 					sumage += bm->RBCestimation.RBCspeciesArray[species].AgeComp[nf][FEMALE][iy][1][a];
+ 1491: 				}
+ 1492: 				for (a = 0; a < Tier3maxage; a++){
+ 1493: 					bm->RBCestimation.RBCspeciesArray[species].Obsageprop[NCA][a] = bm->RBCestimation.RBCspeciesArray[species].AgeComp[nf][FEMALE][iy][1][a] / (sumage + small_num);
+ 1494:                     /*
+ 1495: 					if (do_debug){
+ 1496: 						fprintf(llogfp, "Time: %e, %s f: %d, iy: %d a: %d Obsageprop[%d][%d]: %e sumage: %e (%e)\n",
+ 1497: 								bm->dayt, FunctGroupArray[species].groupCode, nf, iy, a, NCA, a, bm->RBCestimation.RBCspeciesArray[species].Obsageprop[NCA][a],
+ 1498:                                 sumage, bm->RBCestimation.RBCspeciesArray[species].totnumatage[a]);
+ 1499:                    }
+ 1500:                     */
+ 1501: 				}
+ 1502: 			}
+ 1503: 		}
+ 1504:         
+ 1505:         /*
+ 1506:         if (do_debug) {
+ 1507:             fprintf(llogfp, "Time %e %s NCA: %d\n",
+ 1508:                 bm->dayt, FunctGroupArray[species].groupCode, NCA);
+ 1509:        }
+ 1510:         */
 ```
 
 **Suggested fix (from review):** Set `NCA = -1` at the top of each fleet iteration
@@ -871,33 +871,33 @@ Restart branch: `fvalF[nF] = UnTransform(simplex[1][1], 0.01);` takes the S95 pa
 
 `nF` is the index of the last fitted fleet (it starts at -1, then ++), but the loops `i < nF` and the divisor `nF` treat it as a count. With one fleet (nF=0) Fcurr=0 and agesel is all zeros; with more fleets the last fleet is dropped. Function: `TierThree_CCsel()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 1400–1423) — code appears to have moved -57 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 1457–1480) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `TierThree_CCsel()` now starts at line 1402
 
 ```c
- 1400: //
- 1401: //******************************************************************************
- 1402: void TierThree_CCsel(MSEBoxModel *bm, int species, int year, FILE *llogfp){
- 1403: 
- 1404: 	int s, a, iy, i, j, nF, nf, nFit, NCA = 0;
- 1405: 	int iter = bm->RBCestimation.Tier_Max_Int;
- 1406: 	double sumage, init_S95, init_S50, step1;
- 1407: 	double ftol;
- 1408: 	double sumF, sumchi;
- 1409: 	double linf,kpar,t0;
- 1410: 	double age,len;
- 1411: 	double Tier3_M = bm->RBCestimation.RBCspeciesParam[species][Tier3_M_id];
- 1412: 	double Tier3_h = bm->RBCestimation.RBCspeciesParam[species][Tier3_h_id];
- 1413: 	double Tier3_a = bm->RBCestimation.RBCspeciesParam[species][Tier3_a_id];
- 1414: 	double Tier3_b = bm->RBCestimation.RBCspeciesParam[species][Tier3_b_id];
- 1415: 	double Tier3_F = bm->RBCestimation.RBCspeciesParam[species][Tier3_F_id];
- 1416: 	double Tier3_matlen = bm->RBCestimation.RBCspeciesParam[species][Tier3_matlen_id];
- 1417: 	double Tier3_S50 = bm->RBCestimation.RBCspeciesParam[species][Tier3_S50_id];
- 1418: 	double Tier3_S95 = bm->RBCestimation.RBCspeciesParam[species][Tier3_S95_id];
- 1419: 	double Nsexes = (double)(bm->K_num_sexes);
- 1420: 	int CCsel_years = (int)bm->RBCestimation.RBCspeciesParam[species][CCsel_years_id];
- 1421: 	int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[species][NumFisheries_id]);
- 1422: 	int ok, startyear;
- 1423:     int npar = 3;
+ 1457: 	kpar = 0.0;
+ 1458: 	t0 = 0.0;
+ 1459: 	for (s = 0; s < bm->K_num_sexes; s++){
+ 1460: 		linf += bm->RBCestimation.RBCspeciesArray[species].Tier3_Linf[s];
+ 1461: 		kpar += bm->RBCestimation.RBCspeciesArray[species].Tier3_k[s];
+ 1462: 		t0 += bm->RBCestimation.RBCspeciesArray[species].Tier3_t0[s];
+ 1463: 	}
+ 1464: 	linf = linf/Nsexes;
+ 1465: 	kpar = kpar/Nsexes;
+ 1466: 	t0 = t0/Nsexes;
+ 1467: 
+ 1468: // calc initial age selectivity params from length selectivity and growth
+ 1469: 	init_S50 = (-1.0 * log(1-Tier3_S50/linf)/kpar + t0);
+ 1470: 	init_S95 = (-1.0 * log(1-Tier3_S95/linf)/kpar + t0);
+ 1471: 
+ 1472: 	nF = -1;  // As starting base zero
+ 1473: 	for (nf = 0; nf < Nfleets; nf++){
+ 1474: 		// Initalise
+ 1475:         Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[species].totnumatage, Tier3maxage, 0.0);
+ 1476:         Util_Init_2D_Double(bm->RBCestimation.RBCspeciesArray[species].Obsageprop, CCselyr, Tier3maxage, 0.0);
+ 1477:         
+ 1478:         startyear = year - CCsel_years + 1;
+ 1479:         if(startyear < 0) startyear = 0;
+ 1480:         bm->RBCestimation.RBCspeciesParam[species][Ncage_id] = -1;  // So then first entry is entry 0
 ```
 
 **Suggested fix (from review):** Use `nF+1` as the count
@@ -928,14 +928,14 @@ Restart branch: `fvalF[nF] = UnTransform(simplex[1][1], 0.01);` takes the S95 pa
 
 `for (iy=0; iy < Ncage_id; iy++)`: Ncage_id is the last index (it starts at -1), so the last year of catch-at-age is left out of the objective. With one year the objective is constant (ss=0), so the fit is meaningless. Function: `EquilF_Funk()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 1570–1574) — code appears to have moved -42 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 1754–1758) — code appears to have moved +142 lines since the review
 
 ```c
- 1570: 				}
- 1571: 
- 1572: 				downhill_simplex(bm, EquilF_Funk_model, species, bm->RBCestimation.RBCspeciesArray[species].simplex, bm->RBCestimation.RBCspeciesArray[species].func, npar, ftol, iter, &ok, llogfp, bm->RBCestimation.RBCspeciesArray[species].xpar);
- 1573: 
- 1574: 				bm->RBCestimation.RBCspeciesArray[species].fvalF[nF] = UnTransform(bm->RBCestimation.RBCspeciesArray[species].simplex[0][0], 0.01);   // Nov 2026: was simplex[1][1] (S95 of a non-best vertex)
+ 1754: 
+ 1755: 	ss = 0.0;
+ 1756: 	for (iy=0; iy < bm->RBCestimation.RBCspeciesParam[species][Ncage_id]; iy++){
+ 1757: 		for (a=0; a < bm->RBCestimation.RBCspeciesParam[species][Tier3_maxage_id]; a++) {
+ 1758:  			if (bm->RBCestimation.RBCspeciesArray[species].Obsageprop[iy][a] != 0.0)
 ```
 
 **Suggested fix (from review):** `iy <= Ncage_id`
@@ -966,17 +966,17 @@ Restart branch: `fvalF[nF] = UnTransform(simplex[1][1], 0.01);` takes the S95 pa
 
 The plus-group branch `else if (a == Tier3_maxage)` can never run inside `for (a < Tier3_maxage)`, so the plus group is never accumulated. Function: `EquilF_Funk()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 1621–1628) — code appears to have moved +22 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 1715–1722) — code appears to have moved +116 lines since the review
 
 ```c
- 1621: 		bm->RBCestimation.RBCspeciesArray[species].chi[i] = bm->RBCestimation.RBCspeciesArray[species].chi[i] / (sumchi + small_num);
- 1622: 	}
- 1623: 	for (a = 0; a < bm->RBCestimation.RBCspeciesParam[species][Tier3_maxage_id]; a++){
- 1624: 		for (i = 0; i < nFit; i++){
- 1625: 			bm->RBCestimation.RBCspeciesArray[species].agesel[a] += bm->RBCestimation.RBCspeciesArray[species].chi[i] * bm->RBCestimation.RBCspeciesArray[species].sel[i][a];
- 1626:             
- 1627:             /*
- 1628:             if (do_debug){
+ 1715: 	double fmort, sumyield, sel, ss;
+ 1716: 	double inF, inS95, inS50;
+ 1717:     int Tier3maxage = (int)(bm->RBCestimation.RBCspeciesParam[species][Tier3_maxage_id]);
+ 1718: 
+ 1719:     /*
+ 1720:     int do_debug = 0;
+ 1721:     if((bm->debug == debug_ss3) && (bm->which_check == species)) {
+ 1722: 		do_debug = 1;
 ```
 
 **Suggested fix (from review):** Apply the plus-group formula at `a == Tier3_maxage-1`
@@ -1046,43 +1046,43 @@ The plus-group branch `else if (a == Tier3_maxage)` can never run inside `for (a
 
 `fval` is updated at the *end* of the loop as `i/1000.0`, so iterations 0 and 1 both use F=0 and every later F lags by 0.001. Function: `getF20_40_48()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 1809–1842)
+**Current code** (`atmanage/atManageTier.c` lines 1932–1965) — code appears to have moved +122 lines since the review
 
 ```c
- 1809: 	}
- 1810: 
- 1811: 	getF20_40_48(bm, species, bm->RBCestimation.RBCspeciesArray[species].agesel, bm->RBCestimation.RBCspeciesArray[species].wt, bm->RBCestimation.RBCspeciesArray[species].mat, bm->RBCestimation.RBCspeciesArray[species].Mnat[0][0][0][0][year], bm->RBCestimation.RBCspeciesParam[species][Hsteep_id], llogfp);
- 1812: 
- 1813: 	return fmax;
- 1814: 
- 1815: }
- 1816: 
- 1817: 
- 1818: //******************************************************************************
- 1819: //
- 1820: // Name:  Tier3rule
- 1821: //      Tier3rule:        calculate RBC using the original Tier 3 rule, given Fcurr, Ccur and M
- 1822: // Description: calculate RBC using the original Tier 3 rule, given Fcurr, Ccur and M
- 1823: //
- 1824: //
- 1825: // called by : DoAssessment
- 1826: // calls :
- 1827: // created  : Mar 2008 Sally
- 1828: //
- 1829: // Note replaced the fixed constants with variable parameters so for reference
- 1830: //  tier3RuleA = 0.0295
- 1831: //  tier3RuleB = 0.2313
- 1832: //  tier3RuleC = 1.209
- 1833: //  tier3RuleD = 1.0413
- 1834: //  tier3RuleE = 0.283
- 1835: //
- 1836: //******************************************************************************
- 1837: void Tier3Rule(MSEBoxModel *bm, int species, int year, double current_catch, FILE *llogfp)
- 1838: {
- 1839: 	double p,r,mnat;
- 1840: 
- 1841: 	mnat = bm->RBCestimation.RBCspeciesArray[species].Mnat[0][0][0][0][year];
- 1842: 	r = bm->RBCestimation.RBCspeciesParam[species][Fcurr_id] / mnat;
+ 1932: {
+ 1933: 	double alpha, beta;
+ 1934: 	double fval, spbpr;
+ 1935:     int i, nfint;
+ 1936:     //int a;
+ 1937:     double spb0 = 0, spfrac, spbf, spbf0 = 0;
+ 1938:     //double rec_prog;
+ 1939: 	double rec_phd;
+ 1940: 	
+ 1941:     /*
+ 1942:     int do_debug = 0;
+ 1943:     if((bm->debug == debug_ss3) && (bm->which_check == species)) {
+ 1944: 		do_debug = 1;
+ 1945:     }
+ 1946:      */
+ 1947:     
+ 1948: 	alpha = (1.0 - hsteep) / (4.0 * hsteep);    // this is (usual alpha) / B0
+ 1949: 	beta = (5.0 * hsteep - 1.0) / (4.0 * hsteep);
+ 1950: 
+ 1951:     /*
+ 1952: 	if (do_debug){
+ 1953: 		fprintf(llogfp, "Time %e %s Calculate F20, F40, F48 - steepness: %e B-H stock-recruit alpha: %e B-H stock-recruit beta : %e (natM: %e)\n",
+ 1954: 				bm->dayt, FunctGroupArray[species].groupCode, hsteep, alpha, beta, natM);
+ 1955: 		for (a=0; a < FunctGroupArray[species].numCohorts; a++) {
+ 1956: 			fprintf(llogfp, "Time: %e %s a: %d wt: %e mat: %e agesel: %e\n", bm->dayt, FunctGroupArray[species].groupCode, a, wt[a], mat[a], agesel[a]);
+ 1957: 		}
+ 1958: 	}
+ 1959:      */
+ 1960:     
+ 1961: 	fval = 0.0;
+ 1962: 	nfint = (int)(1000 * bm->RBCestimation.RBCspeciesParam[species][Tier3_maxF_id]);   // no of F's over which to calculate YPR
+ 1963: 
+ 1964: 	for (i=0; i < nfint; i++){  // f = i/1000  f goes from 0 to 2
+ 1965: 		YPR(bm, species, fval, natM, &spbpr, wt, mat, agesel, llogfp);
 ```
 
 **Suggested fix (from review):** Set `fval = i/1000.0` at the top of the loop
@@ -1113,32 +1113,32 @@ The plus-group branch `else if (a == Tier3_maxage)` can never run inside `for (a
 
 YPR loops over `numCohorts`, but the `wt/mat/sel` arrays it is given are indexed by age in years (filled up to MaxAge in TierOneMimic/trueF and up to Tier3_maxage in CC/CCsel). When ageClassSize>1, only the first numCohorts *years* are used, so the plus group is wrong. Function: `YPR()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 1953–1975) — code appears to have moved +87 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 2015–2037) — code appears to have moved +149 lines since the review
 
 ```c
- 1953: 		fprintf(llogfp, "Time %e %s Calculate F20, F40, F48 - steepness: %e B-H stock-recruit alpha: %e B-H stock-recruit beta : %e (natM: %e)\n",
- 1954: 				bm->dayt, FunctGroupArray[species].groupCode, hsteep, alpha, beta, natM);
- 1955: 		for (a=0; a < FunctGroupArray[species].numCohorts; a++) {
- 1956: 			fprintf(llogfp, "Time: %e %s a: %d wt: %e mat: %e agesel: %e\n", bm->dayt, FunctGroupArray[species].groupCode, a, wt[a], mat[a], agesel[a]);
- 1957: 		}
- 1958: 	}
- 1959:      */
- 1960:     
- 1961: 	fval = 0.0;
- 1962: 	nfint = (int)(1000 * bm->RBCestimation.RBCspeciesParam[species][Tier3_maxF_id]);   // no of F's over which to calculate YPR
- 1963: 
- 1964: 	for (i=0; i < nfint; i++){  // f = i/1000  f goes from 0 to 2
- 1965: 		YPR(bm, species, fval, natM, &spbpr, wt, mat, agesel, llogfp);
- 1966: 
- 1967: 		if (i == 0) spb0 = spbpr;
- 1968: 		spfrac = spbpr / spb0;
- 1969: 
- 1970: 		// rec_prog = spfrac / (alpha + beta * spfrac); // Used 2008 - 2015
- 1971: 		rec_phd = (spfrac - alpha) / (beta * spfrac);
- 1972: 
- 1973: 		// spbf = spbpr * rec_prog; // Used 2008 - 2015
- 1974: 		spbf = spbpr * rec_phd;
- 1975: 
+ 2015: 	int a;
+ 2016:     
+ 2017:     Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[species].num, FunctGroupArray[species].numCohorts, 0.0);
+ 2018:     Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[species].Funkz, FunctGroupArray[species].numCohorts, 0.0);
+ 2019: 
+ 2020: 	*spbpr = 0.0;
+ 2021: 
+ 2022: 	for (a=0; a < FunctGroupArray[species].numCohorts; a++)
+ 2023: 		bm->RBCestimation.RBCspeciesArray[species].Funkz[a] = natM + sel[a] * fval;
+ 2024: 
+ 2025: 	bm->RBCestimation.RBCspeciesArray[species].num[0] = 1.0;
+ 2026: 
+ 2027:     //  calculate numbers at age relative to age 0
+ 2028: 	for (a=1; a < FunctGroupArray[species].numCohorts-1; a++)
+ 2029: 		bm->RBCestimation.RBCspeciesArray[species].num[a] = bm->RBCestimation.RBCspeciesArray[species].num[a-1] * exp(-bm->RBCestimation.RBCspeciesArray[species].Funkz[a-1]);
+ 2030: 	// plus group
+ 2031: 	bm->RBCestimation.RBCspeciesArray[species].num[FunctGroupArray[species].numCohorts-1] = bm->RBCestimation.RBCspeciesArray[species].num[FunctGroupArray[species].numCohorts-2] * exp(-bm->RBCestimation.RBCspeciesArray[species].Funkz[FunctGroupArray[species].numCohorts-2])/(1.0 - exp(-bm->RBCestimation.RBCspeciesArray[species].Funkz[FunctGroupArray[species].numCohorts-1]));
+ 2032: 
+ 2033:     // YPR
+ 2034: 	for (a=0; a< FunctGroupArray[species].numCohorts; a++)
+ 2035: 		*spbpr = *spbpr + bm->RBCestimation.RBCspeciesArray[species].num[a] * wt[a] * mat[a];
+ 2036: 
+ 2037: }
 ```
 
 **Suggested fix (from review):** Loop over the age length actually used (MaxAge/Tier3_maxage), passed in as a parameter
@@ -1256,31 +1256,31 @@ The CPUE target loop `iy < MaxCyr` excludes the last year, but the divisor `step
 
 `startyear = year - m; for (iy=startyear; iy<=year; ...)` sums m+1 years but divides by m (or by `year-startyear` when clipped). CPUEav is overstated by (m+1)/m, which makes the RBC multiplier too high. Function: `newTierFour()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 2074–2095)
+**Current code** (`atmanage/atManageTier.c` lines 2161–2182) — code appears to have moved +85 lines since the review
 
 ```c
- 2074: 			for (nf = 0; nf < bm->K_num_fisheries; nf++)
- 2075: 				for (nreg = 0; nreg < Nregions; nreg++)
- 2076: 					current_catch += Harvest_Get_TotCumCatch(species, nf, bm->thisyear);   // True catchs and discards
- 2077: 			break;
- 2078:     }
- 2079:     
- 2080:     // ---------  apply tier 3 rule to get RBC
- 2081:     if (tiertype == orig_tier_rule) {   // original rule
- 2082:         Tier3Rule(bm, species, year, current_catch, llogfp);
- 2083:     } else if (tiertype == new_tier_rule) {    // Neils' new rule
- 2084:         newTier3Rule(bm, species, year, current_catch, llogfp, tier5fp);
- 2085:     }
- 2086:     
- 2087:     return;
- 2088: }
- 2089: 
- 2090: //******************************************************************************
- 2091: //
- 2092: // Name:  TierFour
- 2093: //      TierFour:         do an old-style tier 4 assessment and get RBC for next year
- 2094: // Description: do a tier 4 assessment and get RBC for next year (old T4)
- 2095: //
+ 2161: //
+ 2162: //******************************************************************************
+ 2163: void newTierFour (MSEBoxModel *bm, int species, int year, double current_catch, FILE *llogfp){
+ 2164: 	int iy, region, r, nf, MinCyr, MaxCyr, nsum;
+ 2165: 	double cpuesum, maxprop, mult, step1, denom;
+ 2166: 	int fleetid, startyear;
+ 2167: 	int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[species][NumRegions_id]);
+ 2168: 	int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[species][NumFisheries_id]);
+ 2169: 
+ 2170:     /*
+ 2171:     int do_debug = 0;
+ 2172:     if((bm->debug == debug_ss3) && (bm->which_check == species)) {
+ 2173: 		do_debug = 1;
+ 2174:     }
+ 2175:     */
+ 2176:         
+ 2177: 	region = Nregions;   // weighted sum over regions (stored at index Nregions), assessment doesn't know about regions - Nov 2026: was 0 (i.e. region 0 only)
+ 2178: 	// which fleet has highest proportion of catch (av over last 5 years) ?
+ 2179: 	// 22.3.2011 only do this at start of projection
+ 2180: 	if (year == (bm->RBCestimation.RBCspeciesParam[species][HistYrMax_id] - 1)){
+ 2181: 		maxprop = 0;
+ 2182: 		bm->RBCestimation.RBCspeciesParam[species][CPUEfleet_id] = 0;
 ```
 
 **Suggested fix (from review):** `startyear = year - m + 1` (or divide by `year-startyear+1`)
@@ -1347,15 +1347,15 @@ The CPUE target loop `iy < MaxCyr` excludes the last year, but the divisor `step
 
 `step1 = (1 - (bt/K)^p) - T5_removal[iy-1]; B = bt + bt*r/p*step1;` multiplies the catch removal by `bt*r/p`. The projection loop at 2432-2433 correctly subtracts the removal outside. Function: `SurplusProduction()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 2416–2421) — code appears to have moved +21 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 2515–2520) — code appears to have moved +120 lines since the review
 
 ```c
- 2416: 			catchy += bm->RBCestimation.RBCspeciesArray[species].CatchData[nf][sumregion][iy];
- 2417: 		}
- 2418: 		bm->RBCestimation.RBCspeciesArray[species].T5_removal[iy] = discy + catchy;
- 2419: 		
- 2420:         /*
- 2421:         if (do_debug){
+ 2515: 	int iy, nq, index1M, index2M;
+ 2516: 	//int sumregion = 0;  // index for sum of catches over regions
+ 2517: 	double in_Bstart, in_K, in_r, step1, step2;
+ 2518: 	double bt,q,sigma,diff2,expect_cpue,sumq,ll;
+ 2519: 	int Tier5_flt = (int)(bm->RBCestimation.RBCspeciesParam[species][Tier5_flt_id]);
+ 2520: 	int Tier5_reg = (int)(bm->RBCestimation.RBCspeciesParam[species][Tier5_reg_id]);
 ```
 
 **Suggested fix (from review):** `B = bt + bt*r/p*(1-(bt/K)^p) - T5_removal[iy-1]`
@@ -1386,22 +1386,22 @@ The CPUE target loop `iy < MaxCyr` excludes the last year, but the divisor `step
 
 The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to CurrentYear for delay 1. Then `BcurrSP = expectB[index1]` reads an entry that was never computed (outside the Init range at 2380, so stale or 0). The fitting loop also stops at `iy < CurrentYear`. Function: `SurplusProduction()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 2441–2453) — code appears to have moved +13 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 2523–2535) — code appears to have moved +95 lines since the review
 
 ```c
- 2441: 		for (j=0; j < npar; j++)
- 2442: 			bm->RBCestimation.RBCspeciesArray[species].xpar[j] = bm->RBCestimation.RBCspeciesArray[species].simplex[i][j];
- 2443: 		bm->RBCestimation.RBCspeciesArray[species].func[i] = SurplusProduction(bm, species, bm->RBCestimation.RBCspeciesArray[species].xpar, llogfp);
- 2444: 	}
- 2445: 
- 2446: 
- 2447: // call simplex to estimate Bstart, K, r
- 2448: 	downhill_simplex(bm, SurplusProduction_model, species, bm->RBCestimation.RBCspeciesArray[species].simplex, bm->RBCestimation.RBCspeciesArray[species].func, npar, ftol, iter, &ok, llogfp, bm->RBCestimation.RBCspeciesArray[species].xpar);
- 2449: 
- 2450: 	/* Nov 2026: K is now its own parameter (simplex[0][1]). Original handling, in case need to switch back:
- 2451: 	   K was set equal to Bstart, i.e.  k = simplex[0][0]  (and xpar[1] below = simplex[0][0], in_K = xpar[0] in SurplusProduction) */
- 2452: 	bstart = bm->RBCestimation.RBCspeciesArray[species].simplex[0][0];
- 2453: 	k = bm->RBCestimation.RBCspeciesArray[species].simplex[0][1];
+ 2523:     // So got meaningful data as assessing as go here
+ 2524:     if(bm->RBCestimation.AssessDelay > 1) {
+ 2525:         index1 = bm->RBCestimation.RBCspeciesArray[species].CurrentYear+1;
+ 2526:         index2 = bm->RBCestimation.RBCspeciesArray[species].CurrentYear+2;
+ 2527:     } else if (bm->RBCestimation.AssessDelay) {
+ 2528:         index1 = bm->RBCestimation.RBCspeciesArray[species].CurrentYear+1;
+ 2529:         index2 = bm->RBCestimation.RBCspeciesArray[species].CurrentYear+1;
+ 2530:     } else {
+ 2531:         index1 = bm->RBCestimation.RBCspeciesArray[species].CurrentYear;
+ 2532:         index2 = bm->RBCestimation.RBCspeciesArray[species].CurrentYear;
+ 2533:     }
+ 2534:     
+ 2535:     index1M = index1;
 ```
 
 **Suggested fix (from review):** Project through `iy <= index1`; init expectB to the full size
@@ -1432,19 +1432,19 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
 
 `do { iy++; ... TSbiomass[iy] = ... } while (... && iy < 1000.0);` can write `TSbiomass[1000]`, but the array is allocated with 1000 entries (atAssessTierSetup.c:499). Function: `get_T5_F20_40_48()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 2468–2477) — code appears to have moved -5 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 2624–2633) — code appears to have moved +151 lines since the review
 
 ```c
- 2468: 
- 2469: 	// calculate F20, F40 and F48
- 2470: 	get_T5_F20_40_48(bm, species, bstart, k, r, llogfp);
- 2471: 
- 2472: 	// now apply the 20:35:48 harvest control rule
- 2473: 	if (current_depletion<0.2)
- 2474: 		ftarg = 0.0;
- 2475: 	else if (current_depletion<0.35)
- 2476: 		ftarg = bm->RBCestimation.RBCspeciesParam[species][F40_id] * (current_depletion / 0.2 -1.0);
- 2477: 	else
+ 2624: 	int i, iy, nfint;
+ 2625: 
+ 2626: 	Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[species].TSbiomass, 1000, 0.0);
+ 2627: 
+ 2628: 	bm->RBCestimation.RBCspeciesParam[species][F20_id] = 0.0;
+ 2629: 	bm->RBCestimation.RBCspeciesArray[species].TSbiomass[0] = bstart;
+ 2630: 
+ 2631: 	nfint = (int)(1000 * bm->RBCestimation.RBCspeciesParam[species][Tier3_maxF_id]);   // max no of F's over which to calculate YPR
+ 2632: 	//bm->RBCestimation.RBCspeciesParam[species][Nfint_id] = nfint;  // As set globally at the start
+ 2633: 	i = 0;
 ```
 
 **Suggested fix (from review):** `while (... && iy < 999)`
@@ -1475,20 +1475,20 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
 
 `do { i=i+1; } while ((avlen < T5_Avlen_atF[i]) && (i < nfint));` evaluates `T5_Avlen_atF[nfint]` (array size nFtier3 == nfint) before the bound check, and never tests index 1. Function: `TierFive_AvLen()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 2622–2632) — code appears to have moved +41 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 2671–2681) — code appears to have moved +90 lines since the review
 
 ```c
- 2622: {
- 2623: 	double fval, bt, longterm_dep, step1;
- 2624: 	int i, iy, nfint;
- 2625: 
- 2626: 	Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[species].TSbiomass, 1000, 0.0);
- 2627: 
- 2628: 	bm->RBCestimation.RBCspeciesParam[species][F20_id] = 0.0;
- 2629: 	bm->RBCestimation.RBCspeciesArray[species].TSbiomass[0] = bstart;
- 2630: 
- 2631: 	nfint = (int)(1000 * bm->RBCestimation.RBCspeciesParam[species][Tier3_maxF_id]);   // max no of F's over which to calculate YPR
- 2632: 	//bm->RBCestimation.RBCspeciesParam[species][Nfint_id] = nfint;  // As set globally at the start
+ 2671: {
+ 2672: 	int i, it, l, fleet;
+ 2673: 	double avlen, nolen, totlen, len = 0;
+ 2674: 	// double avlen1;
+ 2675:     //int do_debug = 1;
+ 2676:     int nfint = (int)(bm->RBCestimation.RBCspeciesParam[species][Nfint_id]);
+ 2677: 
+ 2678: 	it = 1;     // retained
+ 2679: 	avlen = 0.0;
+ 2680: 	nolen = totlen = 0;
+ 2681: 
 ```
 
 **Suggested fix (from review):** Put `i < nfint` first and start at i=0
@@ -1519,24 +1519,24 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
 
 `for (iy...) { sumcatch = 0.0; ... }` resets the sum every year, so DCAC uses only the final year's catch and not the cumulative catch over `num_years`. Function: `TierFiveDCAC()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 2770–2784) — code appears to have moved +133 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 2785–2799) — code appears to have moved +148 lines since the review
 
 ```c
- 2770: //******************************************************************************
- 2771: //
- 2772: // Name:  TierFiveDCAC
- 2773: //      TierFiveDCAC:   do a tier 5 assessment using Alec McCall's
- 2774: //                        depletion corrected average catch
- 2775: //
- 2776: // called by : DoAssessment
- 2777: // calls :
- 2778: // created  : Oct 2014 Beth Fulton
- 2779: //
- 2780: //******************************************************************************
- 2781: void TierFiveDCAC(MSEBoxModel *bm, int species, int year, double current_catch, FILE *llogfp) {
- 2782:     int startyear = 0;
- 2783:     int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[species][NumRegions_id]);
- 2784:     int Nstocks = FunctGroupArray[species].numStocks;
+ 2785:     int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[species][NumFisheries_id]);
+ 2786:     double sb0 = bm->RBCestimation.RBCspeciesArray[species].SBioZero[Nstocks][Nregions];
+ 2787:     double num_years = (double)(year + 1);
+ 2788:     double depletion, WYopt, step1, nat_mort_est, t_agemat, sumcatch;
+ 2789:     int iy, nreg, nf;
+ 2790:     
+ 2791:     // Get simple estimate of natural mortality
+ 2792:     t_agemat = FunctGroupArray[species].speciesParams[age_mat_id] * FunctGroupArray[species].ageClassSize;
+ 2793:     if(!t_agemat)
+ 2794:         t_agemat = small_num;
+ 2795:     nat_mort_est = bm->RBCestimation.tier5JensenConst / t_agemat;
+ 2796:     
+ 2797:     depletion = (bm->RBCestimation.RBCspeciesArray[species].SpawnBio[Nstocks][Nregions][startyear] - bm->RBCestimation.RBCspeciesArray[species].SpawnBio[Nstocks][Nregions][year]) / sb0;
+ 2798:     WYopt = depletion / (bm->RBCestimation.tier5DCACscalar * bm->RBCestimation.tier5DCACconst * nat_mort_est);
+ 2799:     if ((num_years + WYopt) < 0.0)
 ```
 
 **Suggested fix (from review):** Remove the reset inside the loop
@@ -1567,20 +1567,20 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
 
 `localcatch` is not reset per year, so `HistCatch` ends up as cumulative total catch rather than the peak annual catch (compare TierSevenRUSS 3051, which resets it). Function: `TierSixRUSS()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 2909–2919) — code appears to have moved +143 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 2926–2936) — code appears to have moved +160 lines since the review
 
 ```c
- 2909: //******************************************************************************
- 2910: //
- 2911: // Name:  TierSixRUSS
- 2912: //      TierSizRUSS:   catch trigger - see
- 2913: //
- 2914: // called by : DoAssessment
- 2915: // calls :
- 2916: // created  : Oct 2014 Beth Fulton
- 2917: //
- 2918: //******************************************************************************
- 2919: void TierSixRUSS(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
+ 2926:     int FisheryClosed = (int)(bm->RBCestimation.RBCspeciesParam[species][Closed_id]);
+ 2927:     int Ntriggers = bm->RBCestimation.NumTriggers;
+ 2928:     double regsumcatch, totsumcatch, adjTAC, prev_RBC, localcatch;
+ 2929:     double HistCatch = 0.0;
+ 2930: 
+ 2931: 	localcatch = 0.0;
+ 2932:     
+ 2933:     // Get historical level of catch
+ 2934:     for (iy = 0; iy < bm->RBCestimation.RBCspeciesParam[species][HistYrMax_id]; iy++){
+ 2935:         for (nf = 0; nf< Nfleets; nf++){
+ 2936:             localcatch += bm->RBCestimation.RBCspeciesArray[species].CatchData[nf][Nregions][iy];
 ```
 
 **Suggested fix (from review):** Set `localcatch = 0.0` at the top of the iy loop
@@ -1661,26 +1661,9 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
 
 `DoCPUE(bm, year, species, llogfp)`, `DoPrager(bm, year, species, ...)`, `Call_Tier3(bm, year, species, ...)` and `TierFiveSAFE(bm, year, species, totsumcatch, ...)` all pass (year, species) where the prototypes (lines 75-76, 1899, 57) expect (species, year). The wrong species is assessed, or there are out-of-bounds species indices. Function: `TierSixRUSS()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 2909–2935) — code appears to have moved +85 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 2926–2952) — code appears to have moved +102 lines since the review
 
 ```c
- 2909: //******************************************************************************
- 2910: //
- 2911: // Name:  TierSixRUSS
- 2912: //      TierSizRUSS:   catch trigger - see
- 2913: //
- 2914: // called by : DoAssessment
- 2915: // calls :
- 2916: // created  : Oct 2014 Beth Fulton
- 2917: //
- 2918: //******************************************************************************
- 2919: void TierSixRUSS(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
- 2920:     
- 2921: 	int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[species][NumFisheries_id]);
- 2922:     int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[species][NumRegions_id]);
- 2923: 	int nf, nreg, nt, ij, nd, iy;
- 2924:     int TriggerScen = (int)(bm->RBCestimation.RBCspeciesParam[species][TriggerResponseScen_id]);
- 2925:     int MaxTrigger = 0;
  2926:     int FisheryClosed = (int)(bm->RBCestimation.RBCspeciesParam[species][Closed_id]);
  2927:     int Ntriggers = bm->RBCestimation.NumTriggers;
  2928:     double regsumcatch, totsumcatch, adjTAC, prev_RBC, localcatch;
@@ -1691,6 +1674,23 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
  2933:     // Get historical level of catch
  2934:     for (iy = 0; iy < bm->RBCestimation.RBCspeciesParam[species][HistYrMax_id]; iy++){
  2935:         for (nf = 0; nf< Nfleets; nf++){
+ 2936:             localcatch += bm->RBCestimation.RBCspeciesArray[species].CatchData[nf][Nregions][iy];
+ 2937:         }
+ 2938:         if (localcatch > HistCatch)
+ 2939:             HistCatch = localcatch;
+ 2940:     }
+ 2941: 
+ 2942:     // First, see if any triggers have been reached for any level in the previous year:
+ 2943:     for (nreg = 0; nreg < Nregions; nreg++) {
+ 2944:         regsumcatch = 0.0;
+ 2945:         for (nf = 0; nf< Nfleets; nf++){
+ 2946:             regsumcatch += bm->RBCestimation.RBCspeciesArray[species].CatchData[nf][nreg][year];
+ 2947:         }
+ 2948:         bm->RBCestimation.RBCspeciesParam[species][TriggerReached_id] = 0;
+ 2949:         for (nt=0; nt < Ntriggers; nt++) {
+ 2950:             if (regsumcatch > (bm->RBCestimation.RBCspeciesArray[species].TriggerPoints[nt][nreg] * HistCatch))
+ 2951:                  bm->RBCestimation.RBCspeciesArray[species].TriggerReached[nreg] = nt;
+ 2952:         }
 ```
 
 **Suggested fix (from review):** Swap to `(bm, species, year, ...)`
@@ -1721,26 +1721,26 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
 
 `for (iy = year-1; iy >= 0; iy++)` counts *up* without bound (runs off the end of EffortData). Also `j = iy` is assigned only when effort was *not* found, so j is not the most recent year with effort (if found immediately, j stays 0). Function: `DoCPUE()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 2940–2956) — code appears to have moved +4 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 3091–3107) — code appears to have moved +155 lines since the review
 
 ```c
- 2940:     }
- 2941: 
- 2942:     // First, see if any triggers have been reached for any level in the previous year:
- 2943:     for (nreg = 0; nreg < Nregions; nreg++) {
- 2944:         regsumcatch = 0.0;
- 2945:         for (nf = 0; nf< Nfleets; nf++){
- 2946:             regsumcatch += bm->RBCestimation.RBCspeciesArray[species].CatchData[nf][nreg][year];
- 2947:         }
- 2948:         bm->RBCestimation.RBCspeciesParam[species][TriggerReached_id] = 0;
- 2949:         for (nt=0; nt < Ntriggers; nt++) {
- 2950:             if (regsumcatch > (bm->RBCestimation.RBCspeciesArray[species].TriggerPoints[nt][nreg] * HistCatch))
- 2951:                  bm->RBCestimation.RBCspeciesArray[species].TriggerReached[nreg] = nt;
- 2952:         }
- 2953:     }
- 2954:     totsumcatch = 0.0;
- 2955:     for (nf = 0; nf< Nfleets; nf++){
- 2956:         totsumcatch += bm->RBCestimation.RBCspeciesArray[species].CatchData[nf][Nregions][year];
+ 3091: //
+ 3092: //******************************************************************************
+ 3093: double DoCPUE(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
+ 3094:     double Adjust;
+ 3095: 	int iy, nyrs, f;
+ 3096:     int is_done = 0;
+ 3097: 	int j = 0;
+ 3098: 	int Rnum = 0;
+ 3099: 	double Alpha, Beta, SumX, SumXX, SumXY, SumY, totEff, totC, AvgCPUE;
+ 3100:     int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[species][NumFisheries_id]);
+ 3101: 	int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[species][NumRegions_id]);
+ 3102:     
+ 3103: 	// Calculate CPUE for the last x years, beginning with latest non-zero effort year
+ 3104: 	// Nov 2026: loop now counts back (was iy++ so ran forward off the end of the arrays) and j is the year found
+ 3105: 	for(iy = year-1; iy >= 0; iy--) { // establish most recent non-zero effort year
+ 3106:         for (f = 0; f < Nfleets; f++) {
+ 3107:             if (bm->RBCestimation.RBCspeciesArray[species].EffortData[f][Nregions][iy] > 0.0) {
 ```
 
 **Suggested fix (from review):** `iy--`; set `j = iy` when `is_done`
@@ -1771,14 +1771,14 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
 
 `AnnCPUE[5-iy]` with iy going down to 0 writes `AnnCPUE[5]`, but AnnCPUE is allocated with 5 entries (atAssessTierSetup.c:215). Function: `DoCPUE()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 2990–2994) — code appears to have moved +29 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 3127–3131) — code appears to have moved +166 lines since the review
 
 ```c
- 2990:                 
- 2991:                 if(bm->RBCestimation.tier6_to_tier4) {
- 2992:                     adjTAC = DoCPUE(bm, year, species, llogfp); // To get average CPUE
- 2993:                     adjTAC = DoPrager(bm, year, species, llogfp);
- 2994: 
+ 3127:             totC += bm->RBCestimation.RBCspeciesArray[species].CatchData[f][Nregions][j-iy];
+ 3128:         }
+ 3129:         bm->RBCestimation.RBCspeciesArray[species].AnnCPUE[5-iy] = totC / totEff;
+ 3130: 	}
+ 3131:     
 ```
 
 **Suggested fix (from review):** `AnnCPUE[4-iy]`
@@ -1882,15 +1882,15 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
 
 `if (bm->SP_FISHERYprms[cosp][nf][q_id] > 0.0) toteffort += bm->CumEffort[nf][b];` sits after the nf loops have finished, so nf == K_num_fisheries and both arrays are read out of bounds. Function: `TierSevenRUSS()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 3063–3068) — code appears to have moved -81 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 3310–3315) — code appears to have moved +166 lines since the review
 
 ```c
- 3063:                             for (nf = 0; nf < bm->K_num_fisheries; nf++) {
- 3064:                                 // If target the species then close the fishery
- 3065:                                 if(bm->FISHERYtarget[nf][species] || (bm->SP_FISHERYprms[species][nf][q_id] > bm->RBCestimation.RBCspeciesParam[species][trigq_id])) {
- 3066:                                     for (nd = 0; nd < 365; nd++) {
- 3067:                                         bm->MPAlist[year+1][nd][ij][nf] = 0;
- 3068:                                     }
+ 3310:             }
+ 3311: 
+ 3312:             if (bm->SP_FISHERYprms[cosp][nf][q_id] > 0.0)
+ 3313:                 toteffort += bm->CumEffort[nf][b];
+ 3314: 
+ 3315:             if((localcatch / (totcatch + small_num)) > maxrelcatch)
 ```
 
 **Suggested fix (from review):** Wrap in `for (nf = 0; nf < K_num_fisheries; nf++)`
@@ -1921,21 +1921,9 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
 
 `areafished` and `areasp` (and `toteffort`) are initialised once at function entry and not per co-species, so `relarea` for later species includes earlier species' areas. Function: `TierSevenRUSS()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 3179–3215) — code appears to have moved +57 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 3191–3227) — code appears to have moved +69 lines since the review
 
 ```c
- 3179: //******************************************************************************
- 3180: //
- 3181: // Name:  TierSevenRUSS
- 3182: //      SevenRUSS:   group based assessment
- 3183: //          Primary member of group called then do assessment (i.e. set only one
- 3184: //          species as tiered 7 assessed and then it will assess that species and
- 3185: //          its companion species (as defined by co_sp array)
- 3186: //
- 3187: // called by : DoAssessment
- 3188: // calls :
- 3189: // created  : Oct 2014 Beth Fulton
- 3190: //
  3191: //******************************************************************************
  3192: void TierSevenRUSS(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
  3193:     double this_catch, last_catch, totcatch, localcatch, toteffort = 0.0, HistCatch, CoHistCatch, diff;
@@ -1961,6 +1949,18 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
  3213:         
  3214:         // Get historical level of catch
  3215:         HistCatch = 0.0;
+ 3216:         for (iy = 0; iy < bm->RBCestimation.RBCspeciesParam[species][HistYrMax_id]; iy++){
+ 3217:             localcatch = 0.0;
+ 3218:             for (nf = 0; nf< bm->K_num_fisheries; nf++){
+ 3219:                 localcatch += Harvest_Get_TotCumCatch(cosp, nf, iy);
+ 3220:             }
+ 3221:             if (localcatch > HistCatch)
+ 3222:                 HistCatch = localcatch;
+ 3223:         }
+ 3224:         
+ 3225:         this_catch = 0.0;
+ 3226:         for (nf = 0; nf < bm->K_num_fisheries; nf++){
+ 3227:             this_catch += Harvest_Get_TotCumCatch(cosp, nf, year);
 ```
 
 **Suggested fix (from review):** Reset areafished/areasp at the top of each cosp iteration
@@ -2029,18 +2029,9 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
 
 `catchwghtCPUE` is zeroed once outside the `lag` loop, so every lag adds into the same slots. The regression for lag k therefore includes data from lags > k. Also, when mgt_rbcYear==this_year, `yy` runs 1..TCP-1, so slot 0 is never filled and a spurious 0 enters the regression. Division by `totCatch` can also be 0. Function: `trigger_species_breakout()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 3920–3942) — code appears to have moved +204 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 3929–3951) — code appears to have moved +213 lines since the review
 
 ```c
- 3920:  * \brief  Trigger species breakout routine
- 3921:  */
- 3922: int trigger_species_breakout(MSEBoxModel *bm, int sp, int this_year){
- 3923: 
- 3924:     //TODO: set up this_year = bm->RBCestimation.RBCspeciesParam[sp].mgt.rbcYear
- 3925:     
- 3926:     int f = 0, r = 0, y = 0;
- 3927:     //int LTcount = 0;
- 3928:     int LTincr = FALSE;
  3929:     int STincr = FALSE;
  3930:     int TACcaptured = FALSE;
  3931:     double totCatch = 0;
@@ -2055,6 +2046,15 @@ The projection loop `iy < index2` runs zero times for AssessDelay 0 and only to 
  3940:     if (!bm->RBCestimation.RBCspeciesParam[sp][prevAssessment_id]){
  3941:         //no previous assessment has been done AND it is a trigger species, best to do an assessment
  3942:          fprintf(bm->logFile, "Time: %e %s TRIGGER species BREAKOUT: no previous assessment\n", bm->dayt, FunctGroupArray[sp].groupCode);
+ 3943:          return 1;
+ 3944:     }
+ 3945:     
+ 3946:     // MARKET TEST
+ 3947:     // if recent catches are greater than long-term catches, breakout and do an assessment
+ 3948:     // the problem with testing this breakout rule however is that we pretty much assume that
+ 3949:     // all TACs are taken, i.e. there is no market effects ...
+ 3950:     lastC = 0;
+ 3951:     for (r = 0; r < bm->RBCestimation.RBCspeciesParam[sp][NumRegions_id]; r++) {
 ```
 
 **Suggested fix (from review):** Init inside the lag loop; fix the yy offset (drop the `+1`)
@@ -2194,16 +2194,16 @@ The `yy` offset uses `GradientPeriod` (the lag count) and not `GradientWindow` (
 
 The else-branch sets `CPUEtrend_id = 0` where it should set `CPUEdir_id = 0`, so the direction stays stale and the trend is wiped before it is used in steps B/C. Function: `Check_Indicator_Links()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 3877–3883) — code appears to have moved -48 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 4138–4144) — code appears to have moved +213 lines since the review
 
 ```c
- 3877:     
- 3878:         if (year == bm->RBCestimation.ReviewYr) {
- 3879:             Check_Indicator_Links(bm, year);
- 3880:             bm->RBCestimation.ReviewYr = year + bm->RBCestimation.ReviewPeriod;
- 3881:         }
- 3882:     
- 3883:         for (species = 0; species < bm->K_num_tot_sp; species++) {
+ 4138:     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+ 4139:         if (FunctGroupArray[sp].isImpacted == TRUE) {
+ 4140:             if( year == bm->RBCestimation.RBCspeciesParam[sp][AssessStart_id]) {
+ 4141:                 bm->RBCestimation.RBCspeciesParam[sp][mgt_sp_id] = bm->RBCestimation.RBCspeciesParam[sp][init_mgt_sp_id];
+ 4142:                 bm->RBCestimation.RBCspeciesParam[sp][mgt_category_id] = bm->RBCestimation.RBCspeciesParam[sp][init_mgt_category_id];
+ 4143:             }
+ 4144:         }
 ```
 
 **Suggested fix (from review):** `RBCspeciesParam[sp][CPUEdir_id] = 0;`
@@ -2234,16 +2234,16 @@ The else-branch sets `CPUEtrend_id = 0` where it should set `CPUEdir_id = 0`, so
 
 `if (diff < closest_slope) ref_sp = ind_sp;` never updates `closest_slope` (or `closest_slopeB`), so ref_sp ends up as the *last* candidate (possibly `sp` itself), not the closest. And `closest_slope < closest_slopeB` (3981/4055) compares MAXDOUBLE with MAXDOUBLE, so ref_spB is always chosen. Function: `Check_Indicator_Links()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 3877–3883) — code appears to have moved -71 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 4129–4135) — code appears to have moved +181 lines since the review
 
 ```c
- 3877:     
- 3878:         if (year == bm->RBCestimation.ReviewYr) {
- 3879:             Check_Indicator_Links(bm, year);
- 3880:             bm->RBCestimation.ReviewYr = year + bm->RBCestimation.ReviewPeriod;
- 3881:         }
- 3882:     
- 3883:         for (species = 0; species < bm->K_num_tot_sp; species++) {
+ 4129: //******************************************************************************
+ 4130: void Check_Indicator_Links(MSEBoxModel *bm, int year) {
+ 4131:     int y, yy, r, f, lag, sp, ind_sp, ref_sp, ref_spB, my_category, that_category, itier, maxTier,
+ 4132:         maxCount = 0, starty = 0, endy = 0;
+ 4133:     double diff, closest_slope, closest_slopeB, buffer, totCatch, step1, step2;
+ 4134:     
+ 4135:     printf("Doing Check_Indicator_Links\n");
 ```
 
 **Suggested fix (from review):** Add `closest_slope = diff;` / `closest_slopeB = diff;`; skip `ind_sp == sp`
@@ -2274,14 +2274,14 @@ The else-branch sets `CPUEtrend_id = 0` where it should set `CPUEdir_id = 0`, so
 
 The other-category diff is missing `fabs()` (the same-category loop at 3949 has it), so any species with a more negative trend counts as "closest". Function: `Check_Indicator_Links()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 3877–3881) — code appears to have moved -88 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 4131–4135) — code appears to have moved +166 lines since the review
 
 ```c
- 3877:     
- 3878:         if (year == bm->RBCestimation.ReviewYr) {
- 3879:             Check_Indicator_Links(bm, year);
- 3880:             bm->RBCestimation.ReviewYr = year + bm->RBCestimation.ReviewPeriod;
- 3881:         }
+ 4131:     int y, yy, r, f, lag, sp, ind_sp, ref_sp, ref_spB, my_category, that_category, itier, maxTier,
+ 4132:         maxCount = 0, starty = 0, endy = 0;
+ 4133:     double diff, closest_slope, closest_slopeB, buffer, totCatch, step1, step2;
+ 4134:     
+ 4135:     printf("Doing Check_Indicator_Links\n");
 ```
 
 **Suggested fix (from review):** `diff = fabs(...)`
@@ -2312,14 +2312,14 @@ The other-category diff is missing `fabs()` (the same-category loop at 3949 has 
 
 `maxTier = mgt_category_id;` defaults to the enum index constant and not the species' current category (`my_category`). When no species falls inside the buffer, the category is set to an arbitrary number. Function: `Check_Indicator_Links()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 3877–3881) — code appears to have moved -108 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 4129–4133) — code appears to have moved +144 lines since the review
 
 ```c
- 3877:     
- 3878:         if (year == bm->RBCestimation.ReviewYr) {
- 3879:             Check_Indicator_Links(bm, year);
- 3880:             bm->RBCestimation.ReviewYr = year + bm->RBCestimation.ReviewPeriod;
- 3881:         }
+ 4129: //******************************************************************************
+ 4130: void Check_Indicator_Links(MSEBoxModel *bm, int year) {
+ 4131:     int y, yy, r, f, lag, sp, ind_sp, ref_sp, ref_spB, my_category, that_category, itier, maxTier,
+ 4132:         maxCount = 0, starty = 0, endy = 0;
+ 4133:     double diff, closest_slope, closest_slopeB, buffer, totCatch, step1, step2;
 ```
 
 **Suggested fix (from review):** `maxTier = my_category;`
@@ -2350,30 +2350,30 @@ The other-category diff is missing `fabs()` (the same-category loop at 3949 has 
 
 `chdir(dirname)` never returns to the parent directory, so later relative file I/O and next year's mkdir end up nested. `Util_Close_Output_File(bm->Dyn4File)` closes the file but leaves the pointer non-NULL (atUtil.c:200), so on the next call `if(!bm->Dyn4File)` is false and the code writes to a closed FILE*. Function: `RDynamicTier4Assessment()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 3621–3641) — code appears to have moved -533 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 5233–5253) — code appears to have moved +1079 lines since the review
 
 ```c
- 3621:     Util_Close_Output_File(bm->tierRBCfp);
- 3622:     Util_Close_Output_File(histCPUEfp);
- 3623:     Util_Close_Output_File(tier5fp);
- 3624:         
- 3625: }
- 3626: 
- 3627: /**
- 3628:  *	\brief Routines to initialise the v Biomass information file
- 3629:  *
- 3630:  */
- 3631: static FILE * Init_tierRBC_File(MSEBoxModel *bm) {
- 3632: 	FILE *fid;
- 3633: 	char fname[STRLEN];
- 3634: 	int nf;
- 3635:     int Nfleets = bm->K_num_fisheries;
- 3636:     
- 3637: 	/** Create filename **/
- 3638: 	snprintf(fname, sizeof(fname), "%sTierRBC.txt", bm->startfname);
- 3639:     
- 3640:     /** Create file **/
- 3641:     if ( (fid=Util_fopen(bm, fname, "w")) == NULL )
+ 5233:     /* Change directory into the new directory */
+ 5234:     //pass your path in the function
+ 5235:     ret = chdir(dirname);
+ 5236:     /*if the change of directory was successful it will print successful otherwise it will print not successful*/
+ 5237:     if (ret < 0)
+ 5238:         quit("runDynamicTier4Assessment: chdir change of directory to %s not successful\n", dirname);
+ 5239:     else
+ 5240:         printf("runDynamicTier4Assessment: chdir change of directory to %s successful", dirname);
+ 5241:     
+ 5242:     /* Create and run bat files - Nov 2026: new files each time as each assessment is in its own directory
+ 5243:        (previously the file pointers were closed but not reset so later assessments wrote to closed files) */
+ 5244:     bm->Dyn4File = initDynTier4File(bm);
+ 5245:     bm->Dyn4CTLFile = initDynTier4CTLFile(bm);
+ 5246:     writeDynTier4inputfile(bm, species, year, bm->Dyn4File, bm->Dyn4CTLFile);
+ 5247:     Util_Close_Output_File(bm->Dyn4File);
+ 5248:     Util_Close_Output_File(bm->Dyn4CTLFile);
+ 5249:     bm->Dyn4File = NULL;
+ 5250:     bm->Dyn4CTLFile = NULL;
+ 5251:     
+ 5252:     /* Commands to run the assessment */
+ 5253:     printf("Running %s\n", scriptName);
 ```
 
 **Suggested fix (from review):** Set both pointers to NULL after closing; `chdir("..")` at the end
@@ -2404,16 +2404,16 @@ The other-category diff is missing `fabs()` (the same-category loop at 3949 has 
 
 The third block under the "Year, Catch and CPUE" header writes `CatchData` a second time where CPUE (`CPUEgen`) is expected, so the R assessment receives catch as CPUE. Function: `writeDynTier4inputfile()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 4183–4189) — code appears to have moved -95 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 5314–5320) — code appears to have moved +1036 lines since the review
 
 ```c
- 4183:                     for (r = 0; r < bm->RBCestimation.RBCspeciesParam[sp][NumRegions_id]; r++) {
- 4184:                         for (f = 0; f < bm->RBCestimation.RBCspeciesParam[sp][NumFisheries_id]; f++) {
- 4185:                             bm->RBCestimation.catchwghtCPUE[yy] += (bm->RBCestimation.RBCspeciesArray[sp].CatchData[f][r][y] / totCatch) * bm->RBCestimation.RBCspeciesArray[sp].CPUEgen[f][r][y];
- 4186:                             bm->RBCestimation.catchwght[yy] += bm->RBCestimation.RBCspeciesArray[sp].CatchData[f][r][y] / totCatch;
- 4187:                         }
- 4188:                     }
- 4189:                 }
+ 5314:     int iy, nf;
+ 5315:     int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[sp][NumRegions_id]);
+ 5316:     int sumregion = Nregions;  // sum over regions
+ 5317:     int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[sp][NumFisheries_id]);
+ 5318:     int CPUEfleet = (int)(bm->RBCestimation.RBCspeciesParam[sp][DT4_CPUEfleet_id]);
+ 5319:     double catchy, discy, cpue;
+ 5320: 
 ```
 
 **Suggested fix (from review):** Write `CPUEgen[nf][sumregion][iy]`
@@ -2444,7 +2444,7 @@ The third block under the "Year, Catch and CPUE" header writes `CatchData` a sec
 
 `t` is never incremented, so `t <= HistYrMax` is always true and the retro-catch adjustment applies to all years. Function: `writeDynTier4inputfile()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 4267–4271) — ⚠ quoted code not found in current file (changed or already fixed?)
+**Current code** (`atmanage/atManageTier.c` lines 4267–4271) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `writeDynTier4inputfile()` now starts at line 5313
 
 ```c
  4267:                 maxCount = 0;
@@ -2482,14 +2482,14 @@ The third block under the "Year, Catch and CPUE" header writes `CatchData` a sec
 
 `...= 0.0; // temporary value ...        bm->RBCestimation.RBCspeciesParam[species][EstB0_id] = 999.9;` puts the EstB0 assignment inside the comment, so EstB0 is not flagged on failure and EstDepletion (4467) mixes a valid B0 with Bcurr=999.9. Function: `setRBC()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 4454–4458) — ⚠ quoted code not found in current file (changed or already fixed?)
+**Current code** (`atmanage/atManageTier.c` lines 5441–5445) — code appears to have moved +987 lines since the review
 
 ```c
- 4454:                     maxFabc = Flim * ((B2B40 - alpha) / (1.0 - alpha));
- 4455:                 else
- 4456:                     maxFabc = 0.0;
- 4457:             }
- 4458:             break;
+ 5441:         fprintf(llogfp, "Tier 4 assessment failed due to %s MaxConvergCrit: %e\n", FunctGroupArray[species].groupCode, bm->RBCestimation.RBCspeciesArray[species].MaxConvergCrit);
+ 5442:         bm->RBCestimation.RBCspeciesParam[species][AssessFail_id] = TRUE;
+ 5443:         bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year] = 0.0;              // temporary value, will be reset in DoAssessment
+ 5444:         bm->RBCestimation.RBCspeciesParam[species][EstB0_id] = 999.9;
+ 5445:         bm->RBCestimation.RBCspeciesParam[species][EstBinit_id] = 999.9;
 ```
 
 **Suggested fix (from review):** Move the EstB0 assignment onto its own line
@@ -2520,23 +2520,23 @@ The third block under the "Year, Catch and CPUE" header writes `CatchData` a sec
 
 The loop `yr < mgt_rbcYear + n - 1` sums n-1 RBCs but divides by n. The replacement loop writes `RBC_by_year[year]` repeatedly and not `[yr]`. Function: `Averaged_RBC()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 4160–4173) — code appears to have moved -319 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 5594–5607) — code appears to have moved +1115 lines since the review
 
 ```c
- 4160:                 printf("Doing Check_Indicator_Links Doing species %s lag %d (RBCestimation.GradientPeriod: %d)\n", FunctGroupArray[sp].groupCode, lag, bm->RBCestimation.GradientPeriod);
- 4161:                 
- 4162:                 starty = (bm->RBCestimation.RBCspeciesArray[sp].mgt_rbcYear - bm->RBCestimation.GradientWindow - lag);
- 4163:                 
- 4164:                 if (starty < 0)
- 4165:                     starty = 0;
- 4166:                 endy = (year - 1 - lag);
- 4167:                 if (endy < 0)
- 4168:                     endy = 0;
- 4169:                 
- 4170:                 for (y = starty; y < endy; y++){
- 4171:                     totCatch = 0;
- 4172:                     for (r = 0; r < bm->RBCestimation.RBCspeciesParam[sp][NumRegions_id]; r++) {
- 4173:                         for (f = 0; f < bm->RBCestimation.RBCspeciesParam[sp][NumFisheries_id]; f++) {
+ 5594: 
+ 5595: /* Needed if using ratpack style RBC averaging over years */
+ 5596: void Averaged_RBC(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
+ 5597:     int yr, startyr, nyr = 0;
+ 5598:     double AveRBC = 0;
+ 5599: 
+ 5600:     /* Nov 2026: average the most recent nRBCaverage RBCs ending with the current assessment.
+ 5601:        Previously summed nRBCaverage-1 values starting at the (never set) mgt_rbcYear, divided by
+ 5602:        nRBCaverage and wrote to RBC_by_year[year] on every loop pass. */
+ 5603: 
+ 5604:     // Store the current RBC so it is included in the average
+ 5605:     bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year] = bm->RBCestimation.RBCspeciesParam[species][RBCest_id];
+ 5606: 
+ 5607:     startyr = year - bm->RBCestimation.nRBCaverage + 1;
 ```
 
 **Suggested fix (from review):** Loop `yr < mgt_rbcYear + n`; write `RBC_by_year[yr]`
@@ -2567,14 +2567,14 @@ The loop `yr < mgt_rbcYear + n - 1` sums n-1 RBCs but divides by n. The replacem
 
 `tiertype = FunctGroupArray[species].speciesParams[tiertype_id]`: tiertype_id belongs to the RBC_SPECIES_PARAMS enum (atlantisboxmodel.h:2513/2706). DoTierAssessment reads `RBCspeciesParam[species][tiertype_id]`, so the tier5 log branch tests an unrelated parameter. Function: `Evaluation()`.
 
-**Current code** (`atmanage/atManageTier.c` lines 3393–3397) — code appears to have moved +152 lines since the review
+**Current code** (`atmanage/atManageTier.c` lines 3406–3410) — code appears to have moved +165 lines since the review
 
 ```c
- 3393: //******************************************************************************
- 3394: //
- 3395: // Name:  Evaluation
- 3396: //      Evaluation:       write results for later evaluation
- 3397: // Description: write results for later evaluation
+ 3406: 	int  r;
+ 3407: 	double sb0;
+ 3408: 	int tier = (int) (FunctGroupArray[species].speciesParams[tier_id]);
+ 3409: 	int tiertype = (int) (bm->RBCestimation.RBCspeciesParam[species][tiertype_id]);   // Nov 2026: was read from speciesParams
+ 3410: 	double step1;
 ```
 
 **Suggested fix (from review):** `bm->RBCestimation.RBCspeciesParam[species][tiertype_id]`

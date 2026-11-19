@@ -1,0 +1,19 @@
+Post-merge fix-up: tempPopRatio index, outamps, bug_fixes review files
+
+Follows merge 1c3b874 of origin/main into atlantis_update.
+
+- atdemography.c Get_Latest_Additions: the _finite check brought in from
+  main used tempPopRatio[stock_id][ngene][cohort][0], with ngene in the
+  species slot, so it checked the wrong element and could index out of
+  bounds. It now uses [stock_id][species][ngene][0], the element updated
+  on the line above. (00_merge_from_main.md A-01)
+- Remove atlantis/outamps, a stray file committed on main that
+  contains only "bash: cd: too many arguments".
+- bug_fixes/: workflow for working through to-do-fixt-list.md.
+  - README.md: index and progress log.
+  - CROSS_REFERENCES.md: bugs that need fixing together.
+  - 00_merge_from_main.md: merge decisions and outcome.
+  - One review file per source file (1143 findings), regenerated
+    against the merged code. The 21 findings whose code main changed
+    are flagged 🔀.
+  - commit_messages/: commit text for each batch.

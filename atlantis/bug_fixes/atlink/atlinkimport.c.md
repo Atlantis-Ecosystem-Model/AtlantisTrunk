@@ -84,23 +84,23 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Each overlapping EwE cell overwrites (`=`) the box value instead of accumulating its area-weighted contribution, so only the last cell counts. Function: `UnpackArrays()`.
 
-**Current code** (`atlink/atlinkimport.c` lines 33–46) — code appears to have moved -27 lines since the review
+**Current code** (`atlink/atlinkimport.c` lines 60–73) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `UnpackArrays()` now starts at line 35
 
 ```c
-   33: */
-   34: 
-   35: void UnpackArrays(MSEBoxModel *bm)
-   36: {
-   37: 	int fgIndex, layer=0, b=0, nr=0, nc=0, row=0, col=0, k=0;
-   38: 	double area=0, totval=0, origval;
-   39: 	int cohort, bid;
-   40: 
-   41: 	/* Update the array */
-   42: 	switch(bm->eweLinkModule->convertPRMS.spacehandling){
-   43: 		case WEIGHTED_AVERAGE:
-   44: 			for(fgIndex = 0; fgIndex < bm->K_num_tot_sp; fgIndex++){
-   45: 			/* Note only running for biomass pools for now.
-   46: 			   More consultation needed with Villy for age structured groups as will
+   60: 												area = bm->boxes[b].export->bcellarea[nr][nc];  // area of box that contributes to cell [nr][nc] - calculated on startup
+   61: 												if(FunctGroupArray[fgIndex].habitatType == EPIFAUNA){
+   62: 													bm->boxes[b].epi[bid] = bm->eweLinkModule->ImportArray[layer].values[row][col] * tonne_2_mg * (area /  bm->eweLinkModule->ExportArray[layer].area[nr][nc]) * per_m2_from_per_km2;
+   63: 												} else {
+   64: 													if(FunctGroupArray[fgIndex].habitatType == WC){
+   65: 														totval = 0;
+   66: 														for(k=0; k<bm->boxes[b].nz; k++){
+   67: 															totval += bm->boxes[b].tr[k][bid] * bm->boxes[b].dz[k];
+   68: 														}
+   69: 														for(k=0; k<bm->boxes[b].nz; k++){
+   70: 															origval = bm->boxes[b].tr[k][bid] * bm->boxes[b].dz[k];
+   71: 															bm->boxes[b].tr[k][bid] = bm->eweLinkModule->ImportArray[layer].values[row][col] * tonne_2_mg * (area / bm->eweLinkModule->ExportArray[layer].area[nr][nc]) * per_m2_from_per_km2 * (origval / totval) / bm->boxes[b].dz[k];
+   72: 														}
+   73: 													}
 ```
 
 **Suggested fix (from review):** Sum the cell contributions (zero first, then `+=`).
