@@ -13301,6 +13301,7 @@ flag_contamGrowthModel     2     No growth effects of contaminants (0), InVitro 
 flag_contamMove            1     Flag indicating avoidance scalar used - 0 = none, 1 = knife-edge, 2 = sigmoidal, 3 = left shoulder flat top
 flag_contamOnlyAmplify     1     Whether the interacting contaminants can only amplify (1) or can buffer/negate each other too (0)
 flag_contamMinTemp         1.0   Minimum temperature to consider in contaminants relationships that involve temperature corrections
+min_pool_cont              0.00000001 Minimum contaminant pool size 
 
 # Coefficient indicating degree of dissolubility of the material
 ## ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ #

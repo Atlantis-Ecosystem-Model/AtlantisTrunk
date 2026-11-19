@@ -558,7 +558,6 @@ void Manage_Init(MSEBoxModel *bm, FILE *llogfp) {
 			if (FunctGroupArray[sp].isFished == TRUE) {
 				if (bm->FISHERYtarget[i][sp]) {
 					count_it++;
-
 					//fprintf(llogfp, "%s is target of %s\n", FunctGroupArray[sp].groupCode, FisheryArray[i].fisheryCode);
 				}
 			}
@@ -567,7 +566,8 @@ void Manage_Init(MSEBoxModel *bm, FILE *llogfp) {
             }
 		}
 		bm->FISHERYprms[i][ntargets_id] = count_it;
-	}
+}
+
 
 	for (i = 0; i < nfleets; i++) {
 		for (guild = 0; guild < bm->K_num_tot_sp; guild++) {

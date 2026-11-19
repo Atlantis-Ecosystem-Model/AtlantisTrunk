@@ -7573,7 +7573,7 @@ mum_CEP_T15   0.0014   Growth rate of cephalopods (from AMS was 0.05 in NSW) mg 
 mum_jCEP_T15   0.001  Growth rate of juvenile cephalopods (from AMS was 0.05 in NSW) mg N d-1 0.02 - 0.35              
 mum_PWN_T15   0.0000001 Growth rate of prawns (from AMS was 0.004 in NSW) mg N d-1 0.0015 - 0.015             
 mum_jPWN_T15   0.0000001  Growth rate of juvenile prawns (From AMS was 0.004 in NSW) mg N d-1 0.0015 - 0.015              
-                         
+                          
 # Vertebrate growth rates for each group, per age class mg N d-1           
 
 mum_FPL          10

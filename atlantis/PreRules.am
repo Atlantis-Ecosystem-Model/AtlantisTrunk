@@ -63,6 +63,7 @@ if OS_LINUX
 	WARN += -Wno-error=implicit-function-declaration
 endif
 
+
 # if using clang then turn this on and use the Wconditional-uninitialized warning.
 #CC = clang
 #WARN += -Wconditional-uninitialized
@@ -90,7 +91,7 @@ if GCC_GE_730
 endif
 
 
-AM_CFLAGS = $(DEFINES) $(INCLUDE) $(DBG) $(OPT) $(EF) $(PG) $(WARN)
+AM_CFLAGS = $(DEFINES) $(INCLUDES) $(DBG) $(OPT) $(EF) $(PG) $(WARN)
 
 if BROKER_LINK_ENABLED
 	AM_CFLAGS +=  -D BROKER_LINK_ENABLED -I$(top_srcdir)/atbrokerlink/include

@@ -948,9 +948,9 @@ void Ecology_Do_External_Age_Structured_Spawning(MSEBoxModel *bm, int species, i
                     MIGRATION[species].RN[cohort][mid] -= MigIndSpawn; // Mass lost in spawning
 
                     
-                    if(bm->track_contaminants && bm->flag_contamMaternalTransfer){
+                 /*   if(bm->track_contaminants && bm->flag_contamMaternalTransfer){
                         quit("Have not coded contaminant transfer for externally reproducing species - if you get this message contact teh developer group and ask them to sort this for you.... if it involves salmon Beth may swear, don't worry she will be fine after a bowl of ice cream\n");
-                    }
+                 } */
 
                     /* If semelparous reproduction */
                     if (flagmother < 0) {

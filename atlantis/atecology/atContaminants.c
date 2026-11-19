@@ -31,12 +31,8 @@
 #include "atecology.h"
 
 static FILE *contaminantContactFile;
-/**
- * Free up the contaminant structure.
- *
- *
- *
- */
+
+
 void Free_Contaminants(MSEBoxModel *bm) {
 	int cIndex;
 
@@ -422,9 +418,14 @@ void Move_Vert_Contaminated(MSEBoxModel *bm, int sp, int cohort, double ****this
  */
 
 void Change_Contaminant_Levels(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitat, double dtsz, int offset) {
-    int cIndex;
+    int cIndex, sp, cohort;
     double cLevel;
     double *tracerArray = getTracerArray(boxLayerInfo, habitat);
+
+    /* DEBUG: Log when contaminant processing happens
+    if (bm->dayt < 2.0 && habitat == WC) {
+        fprintf(bm->logFile, "DEBUG_TIMING: Change_Contaminant_Levels START for habitat WC at time=%e\n", bm->dayt);
+    } */
 
     for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
         /* Grab the level in the water column or the sediment */
@@ -435,6 +436,11 @@ void Change_Contaminant_Levels(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
         Degrade_Contaminants(bm, boxLayerInfo, habitat, dtsz, cIndex, cLevel);
     }
     Calculate_Contaminants_Flux(bm, boxLayerInfo, habitat);
+
+    /* DEBUG: Log when contaminant processing ends 
+    if (bm->dayt < 2.0 && habitat == WC) {
+        fprintf(bm->logFile, "DEBUG_TIMING: Change_Contaminant_Levels END for habitat WC at time=%e\n", bm->dayt);
+    } */
 
     return;
 }
@@ -742,20 +748,26 @@ int Species_Contaminant_Uptake(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
 
 	int sp, pid, cohort = 0;
 	double cLevel = 0, uptake_rate = 0, cUptake = 0, cGroupLevel = 0, Cnew = 0, propLevel = 0, avoidLevel = 0, chronicLevel = 0, testLevel = 0, propContam = 0, time_step = 0;
-	double *tracerArray;
+	double *environmentTracerArray, *organismTracerArray;
 	CONTAMINANT_UPTAKE_OPTION uptake_option;
 
+	/* For EPIFAUNA groups: environmental concentration comes from WC, but organism concentration lives in EPIFAUNA */
 	if (habitat == EPIFAUNA) {
-		tracerArray = getTracerArray(boxLayerInfo, WC);
+		environmentTracerArray = getTracerArray(boxLayerInfo, WC);      /* Water column concentration (forced from outside) */
+		organismTracerArray = getTracerArray(boxLayerInfo, EPIFAUNA);   /* Organism concentration in EPIFAUNA */
 	} else {
-		tracerArray = getTracerArray(boxLayerInfo, habitat);
+		/* For other habitats, both come from the same habitat */
+		environmentTracerArray = getTracerArray(boxLayerInfo, habitat);
+		organismTracerArray = getTracerArray(boxLayerInfo, habitat);
 	}
+
 
 	/* For each contaminant calculate the uptake */
 
-    /* Grab the level in the water column or the sediment */
-    cLevel = tracerArray[bm->contaminantStructure[cIndex]->contaminant_tracer];
-    if(cLevel > bm->min_pool){
+    /* Grab the level in the water column or the sediment (environmental concentration) */
+    cLevel = environmentTracerArray[bm->contaminantStructure[cIndex]->contaminant_tracer];
+
+    if(cLevel > bm->min_pool_cont){
         //fprintf(bm->logFile, "time %e, box %d, layer %d, cLevel = %e\n", bm->dayt, bm->current_box, bm->current_layer, cLevel);
         for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 
@@ -766,8 +778,16 @@ int Species_Contaminant_Uptake(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
                 uptake_rate = bm->contaminantStructure[cIndex]->sp_uptake_rate[sp];
 
                 for(cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++){
-                    /* The current concentration in the group */
-                    cGroupLevel = tracerArray[FunctGroupArray[sp].contaminantTracers[cohort][cIndex]];
+                    int h;
+                    /* The current concentration in the group (from organism's habitat) */
+                    cGroupLevel = organismTracerArray[FunctGroupArray[sp].contaminantTracers[cohort][cIndex]];
+                    /* Add any transfers from this timestep that haven't been integrated into tracer yet */
+                    /* sp_transfer is indexed by prey habitat, not predator habitat, so sum across all habitats */
+                    for (h = 0; h < bm->num_active_habitats; h++) {
+                        if (bm->contaminantStructure[cIndex]->sp_transfer[sp][cohort][h] > 0) {
+                            cGroupLevel += bm->contaminantStructure[cIndex]->sp_transfer[sp][cohort][h];
+                        }
+                    }
                     cUptake = 0;
 
                     switch (uptake_option) {
@@ -940,7 +960,7 @@ int Init_Contaminant_Transfer_Values(MSEBoxModel *bm) {
 int Group_Transfer_Contaminant(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES globalHabitat, HABITAT_TYPES habitat, int toGuild, int toCohort, int fromGuild, int fromCohort, double amountTransfer, double ***spSPinfo, double initialBiomass, double dtsz, int need_prop, int caseGTC) {
 
 	int cIndex, pid, this_habitat;
-	double *tracerArray;
+	double *preyTracerArray, *predatorTracerArray;
   double cGroupLevel = 0, transfer = 0, totalBiomass, amt_exchanged, toGuild_totalBiomass = 0.0, prop_exchanged, propContam, min_num, this_num;
 	int isGlobal = (FunctGroupArray[toGuild].diagTol == 2 && it_count == 1);
 
@@ -954,10 +974,17 @@ int Group_Transfer_Contaminant(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
         quit("Group_Transfer_Contaminant - from group %s-%d, to group %s-%d, dtsz: %e\n", FunctGroupArray[fromGuild].groupCode, fromCohort, FunctGroupArray[toGuild].groupCode, toCohort, dtsz);
     }
 
+	/* Get tracer arrays - separate for prey and predator since they may be in different habitats */
 	if(FunctGroupArray[fromGuild].habitatType == EPIFAUNA){
-	  tracerArray = getTracerArray(boxLayerInfo, EPIFAUNA);
+	  preyTracerArray = getTracerArray(boxLayerInfo, EPIFAUNA);
 	} else {
-	  tracerArray = getTracerArray(boxLayerInfo, habitat);
+	  preyTracerArray = getTracerArray(boxLayerInfo, habitat);
+	}
+
+	if(FunctGroupArray[toGuild].habitatType == EPIFAUNA){
+	  predatorTracerArray = getTracerArray(boxLayerInfo, EPIFAUNA);
+	} else {
+	  predatorTracerArray = getTracerArray(boxLayerInfo, habitat);
 	}
 
 	/* Work out the proportion transfered */
@@ -994,7 +1021,7 @@ int Group_Transfer_Contaminant(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
                 quit("Time: %e %s-%d returning nan biomass in box%d-%d for Group_Transfer_Contaminant - SN: %e RN: %e DEN: %e cell_vol: %e\n", bm->dayt, FunctGroupArray[toGuild].groupCode, toCohort, bm->current_box, bm->current_layer, spSPinfo[toGuild][toCohort][SN_id], spSPinfo[toGuild][toCohort][RN_id], spSPinfo[toGuild][toCohort][DEN_id], bm->cell_vol);
             }
         } else {
-            toGuild_totalBiomass = tracerArray[FunctGroupArray[toGuild].totNTracers[toCohort]];
+            toGuild_totalBiomass = predatorTracerArray[FunctGroupArray[toGuild].totNTracers[toCohort]];
             
             if(isnan(toGuild_totalBiomass)) {
                 quit("Time: %e %s-%d returning nan biomass in box%d-%d for Group_Transfer_Contaminant\n", bm->dayt, FunctGroupArray[toGuild].groupCode, toCohort, bm->current_box, bm->current_layer);
@@ -1004,9 +1031,10 @@ int Group_Transfer_Contaminant(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
     
 
 	for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
-		/* The current concentration in the group */
-		cGroupLevel = tracerArray[FunctGroupArray[fromGuild].contaminantTracers[fromCohort][cIndex]];
+		/* The current concentration in the prey */
+		cGroupLevel = preyTracerArray[FunctGroupArray[fromGuild].contaminantTracers[fromCohort][cIndex]];
 
+			/* DEBUG: Log feeding with timestamps */
 		/* This used to have an if-else statement using the test (cGroupLevel > bm->min_pool) but removed so got sediment transferal and accumualtion even if low amounts
            Use of Contamflag means it won't get reset in Integrate_Tracer_Variables() */
 
@@ -1032,6 +1060,19 @@ int Group_Transfer_Contaminant(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
         bm->contaminantStructure[cIndex]->sp_transfer[toGuild][toCohort][habitat] += transfer;
         bm->contaminantStructure[cIndex]->sp_transfer[fromGuild][fromCohort][habitat] -= transfer;
 
+        /* CRITICAL FIX: Apply transfer immediately to tracer arrays so predators see updated concentrations */
+        /* This ensures inverts see prey contaminants immediately after eating, not one timestep later */
+        /* Validate tracer indices before accessing to prevent out-of-bounds access */
+        int toGuild_tracer_idx = FunctGroupArray[toGuild].contaminantTracers[toCohort][cIndex];
+        int fromGuild_tracer_idx = FunctGroupArray[fromGuild].contaminantTracers[fromCohort][cIndex];
+
+        if (toGuild_tracer_idx >= 0 && toGuild_tracer_idx < bm->ntracer) {
+            predatorTracerArray[toGuild_tracer_idx] += transfer;
+        }
+        if (fromGuild_tracer_idx >= 0 && fromGuild_tracer_idx < bm->ntracer) {
+            preyTracerArray[fromGuild_tracer_idx] -= transfer;
+        }
+
         /**
         //if((((toGuild == 54) || (fromGuild == 54)) && (bm->contaminantStructure[cIndex]->sp_transfer[toGuild][toCohort][habitat] > 0.0)) && (cIndex == 3)) {
                 fprintf(bm->logFile, "prey = %s, to %s-%d gaining %e, cGroupLevel= %e, propTransfer= %e, totalTransfer = %e amountTransfer = %e, totalBiomass= %e\n", FunctGroupArray[fromGuild].groupCode, FunctGroupArray[toGuild].groupCode, toCohort, transfer, cGroupLevel, propTransfer, bm->contaminantStructure[cIndex]->sp_transfer[toGuild][toCohort][habitat], amountTransfer, totalBiomass);
@@ -1055,10 +1096,10 @@ int Group_Transfer_Contaminant(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HA
 
             min_num = 0.0;
             if(FunctGroupArray[toGuild].groupAgeType == AGE_STRUCTURED ){
-                this_num = tracerArray[FunctGroupArray[toGuild].NumsTracers[toCohort]];
+                this_num = predatorTracerArray[FunctGroupArray[toGuild].NumsTracers[toCohort]];
                 min_num = 1.0 / (this_num + small_num);
             } else {
-                min_num = bm->min_pool;  // Just using this as a proxy for a small number here
+                min_num = bm->min_pool_cont;  // Just using this as a proxy for a small number here
             }
 
             
@@ -1994,7 +2035,19 @@ void Get_Settler_Contaminants(MSEBoxModel *bm, int wclayer, int sp, int ngene, i
     double end_n = (double)FunctGroupArray[sp].numCohortsXnumGenes;
     int cohort = (int)(floor(drandom(start_n, end_n))); // Find a random adult cohort to use
     
+   
+  
+    // Clamp cohort index to valid range (defensive against boundary values)
+   // Fix applied here just in case
+   if (cohort >= FunctGroupArray[sp].numCohortsXnumGenes) {
+     cohort = FunctGroupArray[sp].numCohortsXnumGenes - 1;
+   }
+   if (cohort < 0) {
+     cohort = 0;
+   }
     if (flagmother > 0) {
+      
+      
         for (cIndex = 0; cIndex < bm->num_contaminants; cIndex++) {
             maternal_transfer_rate = bm->contaminantStructure[cIndex]->sp_maternal_transfer[sp];
             cid = FunctGroupArray[sp].contaminantTracers[cohort][cIndex];

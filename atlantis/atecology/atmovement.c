@@ -940,6 +940,7 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
             printf("Doing desired chrt check\n");
 
 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+		  
 			if (FunctGroupArray[sp].isVertebrate == TRUE) {
 				for (nf = 0; nf < bm->K_num_fisheries; nf++) {
 					bm->SP_FISHERYprms[sp][nf][larger_extant_id] = 0.0;
@@ -1151,6 +1152,15 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                        **/
                         
                         mignum = MIGRATION[sp].DEN[n][qid] * migtime2;
+                        
+                        /* Actual numbers returning - corrected for losses while away */
+                        mignum_actual = MIGRATION[sp].survival[qid] * mignum;
+                        
+                        if(bm->track_contaminants){
+                            ContaminantMigrationIn(bm, sp, n, qid, MIGRATION[sp].DEN[n][qid], mignum_actual);
+                        }
+                                                
+                        
                         if(!mignum)
                             continue;
                         
@@ -1159,17 +1169,10 @@ void Ecology_Total_Verts_And_Migration(MSEBoxModel *bm, double dt, FILE *llogfp)
                         if(MIGRATION[sp].DEN[n][qid] < 0)
                             MIGRATION[sp].DEN[n][qid] = 0.0;
 
-                        /* Actual numbers returning - corrected for losses while away */
-                        mignum_actual = MIGRATION[sp].survival[qid] * mignum;
-                        
                         oldden = totden[sp][n];
                         totden[sp][n] += mignum_actual;
                         mig_returners[sp] = 1;
-                        
-                        if(bm->track_contaminants){
-                            ContaminantMigrationIn(bm, sp, n, qid, MIGRATION[sp].DEN[n][qid], mignum_actual);
-                        }
-                        
+
                         /**
                         //if(do_debug2){
                         //if ((sp == 33) || ((sp > 8) && (sp < 12))) {

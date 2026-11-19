@@ -3411,6 +3411,8 @@ typedef struct {
 	double mindz; /**< Minimum layer thickness */
 	int ntr; /**< number of tracers */
 
+  double decay_scalar;
+
 	/**@name
 	 * These values may change during a run, and are read
 	 * and written by readBMphysData() and writeBMphysData()
