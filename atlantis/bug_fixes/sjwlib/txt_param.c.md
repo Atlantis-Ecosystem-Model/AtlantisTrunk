@@ -2,22 +2,22 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **1 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [SJW2-13](#sjw2-13) | 670-677 (used throughout, e.g. 144-145, 166-167) | M/L | format string | `quit(msg)` / `warn(msg)` pass a message that contains the file's line text (`"...format bad on line>> %s"`) a… |  | [ ] |
+| [SJW2-13](#sjw2-13) | 674, 600, 92 | M/L | format string | `quit(msg)` / `warn(msg)` pass a message that contains the file's line text (`"...format bad on line>> %s"`) a… |  | [ ] |
 
 ---
 
 ## SJW2-13
 
 **format string** · Conf M / Sev L  
-**Lines (current code):** 670-677 (used throughout, e.g. 144-145, 166-167)  
+**Found at (current code):** `txt_param.c` 674, `txt_param.c` 600, `txt_param.c` 92
 **Lines at review (Oct 2026):** 670-677 (used throughout, e.g. 144-145, 166-167)
 
 **Function:** `param_error()`
@@ -26,20 +26,37 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `quit(msg)` / `warn(msg)` pass a message that contains the file's line text (`"...format bad on line>> %s"`) as the format string. A `%` in a parameter file line (common in comments and units) then produces garbage output or a crash inside the error path. Function: `param_error()` (and the direct `warn(msg)` calls in each `*param()`).
 
-**Current code** (`sjwlib/txt_param.c` lines 668–678)
+**Code at issue** — `txt_param.c` line 674  
+Search for: `quit(msg)`
 
 ```c
-  668: }
-  669: 
-  670: void
-  671: param_error(char *msg)
   672: {
   673:     if( prm_fatal )
-  674: 	quit(msg);
+  674→ 	quit(msg);
   675:     else
   676: 	warn(msg);
-  677: }
-  678: 
+```
+
+**Code at issue** — `txt_param.c` line 600  
+Search for: `format bad on line>> %s"`
+
+```c
+  598: 	if( strncmp(label,line,(size_t)ll)==0 && isspace(line[ll]) ) {
+  599: 	    if( sscanf(line+ll,"%ld",size) != 1 || *size < 0L ) {
+  600→ 		snprintf(msg, sizeof(msg),"dparamarray: Parameter %s array size format bad on line>> %s",label,line);
+  601: 		param_error(msg);
+  602: 		return(-1);
+```
+
+**Code at issue** — `txt_param.c` line 92  
+Search for: `param_error()`
+
+```c
+   90: 		    memory if *p == NULL
+   91: 
+   92→ 		    28 Oct 93: Added param_error() and
+   93: 		    param_fatal() code.
+   94: 
 ```
 
 **Suggested fix (from review):** `quit("%s", msg)` / `warn("%s", msg)`

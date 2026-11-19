@@ -2,22 +2,22 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **1 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [HRV2-24](#hrv2-24) | 24, 30 | L/L | fixed buffer | `convertedXMLFileName[50]` uses a hard-coded name, so this is fine today. Note only: if it is ever built from … |  | [ ] |
+| [HRV2-24](#hrv2-24) | 24 | L/L | fixed buffer | `convertedXMLFileName[50]` uses a hard-coded name, so this is fine today. Note only: if it is ever built from … |  | [ ] |
 
 ---
 
 ## HRV2-24
 
 **fixed buffer** · Conf L / Sev L  
-**Lines (current code):** 24, 30  
+**Found at (current code):** `atImplementationSetup.c` 24
 **Lines at review (Oct 2026):** 24, 30
 
 **Function:** `Implementation_Init()`
@@ -26,20 +26,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `convertedXMLFileName[50]` uses a hard-coded name, so this is fine today. Note only: if it is ever built from the fishprm filename (as in Harvest_Init, which uses STRLEN), it will overflow. Function: `Implementation_Init()`.
 
-**Current code** (`atimplementation/atImplementationSetup.c` lines 22–32)
+**Code at issue** — `atImplementationSetup.c` line 24  
+Search for: `convertedXMLFileName[50]`
 
 ```c
    22: void Implementation_Init(MSEBoxModel *bm, FILE *llogfp){
    23: 
-   24: 	char convertedXMLFileName[50];
+   24→ 	char convertedXMLFileName[50];
    25: 
    26: 	if ( !bm->flag_fisheries_on ){
-   27: 		return;
-   28: 	}
-   29: 
-   30: 	strcpy(convertedXMLFileName, "implementation.xml");
-   31: 
-   32: 	/* Convert the input file to XML */
 ```
 
 **Suggested fix (from review):** Use STRLEN

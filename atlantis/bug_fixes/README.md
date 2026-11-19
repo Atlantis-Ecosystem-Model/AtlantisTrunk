@@ -20,7 +20,7 @@ Before starting on the bug files, work through **[00_merge_from_main.md](00_merg
 5. Bugs marked D get investigated and written up in that bug's Outcome, and come back to you for a decision before any code changes.
 
 **Notes**
-- **Line numbers** were re-mapped on 2026-11-19 to the merged code. Each one was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)**, the code snippets and the file:line references in the text are all current. ≈ = approximate (the code there has changed), ? = could not be traced (the review's number is kept), and **Lines at review** keeps the October numbers. ⚠ on a snippet means the quoted code is no longer at those lines (62 findings): it may have been changed or already fixed. Line numbers will drift again as fixes go in. Claude always re-reads the code before editing.
+- **Finding the code:** each bug's **Code at issue** block is located by searching the current code for what the review quoted, not by line number. Paste the **Search for** text into your editor's Find; line numbers change as fixes go in. → marks the matching line, and the block says how it was found: exact (700), a close match (135), the line the review pointed to found by its text (134), or by name only (137; check these). In 35 cases the review quoted no code, and the block shows the line it pointed to (also check these). ⚠ means it couldn't be found (2). **Lines at review** keeps the October numbers.
 - **Conf/Sev**: H/M/L confidence it's a bug / severity if it is. ✔ = the reviewer re-checked it by hand. ⭐ = on the priority list. 🔀 = the merge of main changed this code (21 findings), so check whether it's already fixed before acting.
 - `_lower_confidence_<GROUP>.md` files hold speculative notes (from §B.3 of the list) that could not be tied to one file. Other lower-confidence notes are at the end of the relevant file's review.
 - The original list's Status column is not being updated. These files are the record.
@@ -31,6 +31,7 @@ Before starting on the bug files, work through **[00_merge_from_main.md](00_merg
 |---|---|---|---|---|
 | 000 | 2026-11-19 | [00_merge_from_main.md](00_merge_from_main.md) | merge origin/main — committed as `1c3b874` | [000_merge_origin_main.txt](commit_messages/000_merge_origin_main.txt) (not used — default merge message) |
 | 001 | 2026-11-19 | atdemography.c, outamps, bug_fixes/ | A-01 tempPopRatio index; remove outamps; review files | [001_post_merge_fixup.txt](commit_messages/001_post_merge_fixup.txt) |
+| 002 | 2026-11-19 | [atassess/atAssessTierSetup.c](atassess/atAssessTierSetup.c.md) | ATS-01–13 done except ATS-08 (awaiting your choice); code-located snippets in all review files | [002_atAssessTierSetup_ATS.txt](commit_messages/002_atAssessTierSetup_ATS.txt) |
 |  |  |  |  |  |
 
 ## Suggested order (most high-confidence + high-severity first)

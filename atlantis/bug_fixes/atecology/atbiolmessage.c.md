@@ -2,32 +2,32 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **11 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 2 lower-confidence notes.
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [BMSG-01](#bmsg-01) | 966, 987-994 | H/M | accumulator not reset | `coverindx = 0;` is set once before the box loop (966), but inside the loop `coverindx += epi[CoverTracer]` ke… |  | [ ] |
-| [BMSG-02](#bmsg-02) | 2736-2778 | H/M | double counting | For vertebrates, the first `n` loop adds `MIGRATION[sp].DEN/SN/RN[n][i]` into `juv_mig_sum`/`ad_mig_sum`. Then… |  | [ ] |
-| [BMSG-03](#bmsg-03) | 2697-2703 vs 2790-2808 | M/M | header/data mismatch | For invertebrate migrators the header writes 3 columns for each `n` and for each `i < num_migrate`. The writer… |  | [ ] |
-| [BMSG-04](#bmsg-04) | 435, 530-574 | M/M | wrong scope | The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm->maxwcbotz)`, which is meant … |  | [ ] |
-| [BMSG-05](#bmsg-05) | 457-458, 504-505, 552-553 | M/M | missing update | `bm->boxBiomass[ij][sp]` is incremented for water-column groups (281, 360) and land (601), but not in the sedi… |  | [ ] |
-| [BMSG-06](#bmsg-06) | 2735, 2743, 2763 | M/M | cohort vs cohort x genotype | `n` runs over `numCohortsXnumGenes` but is compared directly with `age_mat` (an age-class index). Elsewhere th… |  | [ ] |
-| [BMSG-07](#bmsg-07) | 266-268, 310 | M/M | cohort vs cohort x genotype | `fished_chrt` comes from `Age95pcntV_id` (a cohort index), and its floor is set from `numCohortsXnumGenes/2`. … |  | [ ] |
-| [BMSG-08](#bmsg-08) | 1077-1095 | M/L | wrong condition | `if ((flagstockout == 1) \|\| call_type)` also holds for diagnostic box calls (`call_type == 1`, from atecology.… |  | [ ] |
-| [BMSG-09](#bmsg-09) | 1026-1036 | M/L | out-of-bounds read | The BSS slope is computed only when `smallID != -1 && largeID != -1`, but the debug fprintf right after it use… |  | [ ] |
+| [BMSG-01](#bmsg-01) | 966, 990, 994 | H/M | accumulator not reset | `coverindx = 0;` is set once before the box loop (966), but inside the loop `coverindx += epi[CoverTracer]` ke… |  | [ ] |
+| [BMSG-02](#bmsg-02) | 2857, 2757 | H/M | double counting | For vertebrates, the first `n` loop adds `MIGRATION[sp].DEN/SN/RN[n][i]` into `juv_mig_sum`/`ad_mig_sum`. Then… |  | [ ] |
+| [BMSG-03](#bmsg-03) | 910 | M/M | header/data mismatch | For invertebrate migrators the header writes 3 columns for each `n` and for each `i < num_migrate`. The writer… |  | [ ] |
+| [BMSG-04](#bmsg-04) | 530, 435 | M/M | wrong scope | The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm->maxwcbotz)`, which is meant … |  | [ ] |
+| [BMSG-05](#bmsg-05) | 360 | M/M | missing update | `bm->boxBiomass[ij][sp]` is incremented for water-column groups (281, 360) and land (601), but not in the sedi… |  | [ ] |
+| [BMSG-06](#bmsg-06) | 2735 | M/M | cohort vs cohort x genotype | `n` runs over `numCohortsXnumGenes` but is compared directly with `age_mat` (an age-class index). Elsewhere th… |  | [ ] |
+| [BMSG-07](#bmsg-07) | 311 | M/M | cohort vs cohort x genotype | `fished_chrt` comes from `Age95pcntV_id` (a cohort index), and its floor is set from `numCohortsXnumGenes/2`. … |  | [ ] |
+| [BMSG-08](#bmsg-08) | 1077 | M/L | wrong condition | `if ((flagstockout == 1) \|\| call_type)` also holds for diagnostic box calls (`call_type == 1`, from atecology.… |  | [ ] |
+| [BMSG-09](#bmsg-09) | 1026, 1034 | M/L | out-of-bounds read | The BSS slope is computed only when `smallID != -1 && largeID != -1`, but the debug fprintf right after it use… |  | [ ] |
 | [BMSG-10](#bmsg-10) | 694, 726 | M/L | cohort vs cohort x genotype | The initial-condition checks loop `n < numCohorts`, while the tracer arrays (`structNTracers`, `totNTracers`) … |  | [ ] |
-| [BMSG-11](#bmsg-11) | 411-414 | L/L | wrong variable | `bm->diagnosticBiom[sp] += ...NO3...` uses the loop variable `sp`, left over after the species loop, while the… |  | [ ] |
+| [BMSG-11](#bmsg-11) | 414 | L/L | wrong variable | `bm->diagnosticBiom[sp] += ...NO3...` uses the loop variable `sp`, left over after the species loop, while the… |  | [ ] |
 
 ---
 
 ## BMSG-01
 
 **accumulator not reset** · Conf H / Sev M  
-**Lines (current code):** 966, 987-994  
+**Found at (current code):** `atbiolmessage.c` 966, `atbiolmessage.c` 990, `atbiolmessage.c` 994
 **Lines at review (Oct 2026):** 966, 987-994
 
 **Function:** `Ecology_Calculate_Total_Abundance()`
@@ -36,40 +36,35 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `coverindx = 0;` is set once before the box loop (966), but inside the loop `coverindx += epi[CoverTracer]` keeps adding and then `ecolindx[coverindx_id] += coverindx / (nbox-nboundary-nland)` runs for every box. So box 1's cover gets counted once per box, box 2's once per remaining box, and so on. The cover indicator is a weighted cumulative sum, not a mean. Function: `Ecology_Calculate_Total_Abundance()`.
 
-**Current code** (`atecology/atbiolmessage.c` lines 964–996)
+**Code at issue** — `atbiolmessage.c` line 966  
+Search for: `coverindx = 0`
 
 ```c
   964: 		bm->ecolindx[InfEpi_id] = 0;
   965: 		bm->ecolindx[coverindx_id] = 0;
-  966: 		coverindx = 0;
+  966→ 		coverindx = 0;
   967: 
   968: 		for (ij = 0; ij < ncells; ij++) {
-  969: 			nreg = bm->regID[ij];
-  970: 
-  971: 			if ((!call_type && bm->boxes[ij].type != BOUNDARY) || (call_type && ij == bm->current_box)) {
-  972:                 
-  973: 				/* Calculate the biomass of each functional group in this box */
-  974: 				Calculate_Box_Biomass(bm, llogfp, ij, nreg, FALSE, isDiagnostic);
-  975: 
-  976: 				if (call_type) {
-  977: 					break;
-  978: 				}
-  979: 
-  980: 				//	fprintf(llogfp, "bm->diagnost[ij][DivCount_i] = %.20e\n", bm->diagnost[ij][DivCount_i]);
-  981: 				/* Ecological indicators */
-  982: 				bm->ecolindx[PDratio_id] += bm->diagnost[ij][PelDem_ratio_i] / (bm->nbox - bm->nboundary - bm->nland);
-  983: 				bm->ecolindx[FPFVratio_id] += bm->diagnost[ij][PiscPlank_ratio_i] / (bm->nbox - bm->nboundary - bm->nland);
-  984: 				bm->ecolindx[DivCount_id] += bm->diagnost[ij][DivCount_i] / (bm->nbox - bm->nboundary - bm->nland);
-  985: 				//fprintf(llogfp, "bm->ecolindx[DivCount_id] = %.20e\n", bm->ecolindx[DivCount_id]);
-  986: 				bm->ecolindx[InfEpi_id] += bm->diagnost[ij][InfEpi_ratio_i] / (bm->nbox - bm->nboundary - bm->nland);
-  987: 				for (k = 0; k < bm->K_num_tot_sp; k++) {
+```
+
+**Code at issue** — `atbiolmessage.c` line 990 (closest match to the quoted code; wording differs slightly)  
+Search for: `coverindx += bm->boxes[ij].epi[FunctGroupArray[k].CoverTracer];`
+
+```c
   988: 					if(FunctGroupArray[k].speciesParams[flag_id] == TRUE){
   989: 						if (FunctGroupArray[k].CoverTracer != -1) {
-  990: 							coverindx += bm->boxes[ij].epi[FunctGroupArray[k].CoverTracer];
+  990→ 							coverindx += bm->boxes[ij].epi[FunctGroupArray[k].CoverTracer];
   991: 						}
   992: 					}
+```
+
+**Code at issue** — `atbiolmessage.c` line 994  
+Search for: `ecolindx[coverindx_id] += coverindx / (bm->nbox - bm->nboundary - bm->nland)`
+
+```c
+  992: 					}
   993: 				}
-  994: 				bm->ecolindx[coverindx_id] += coverindx / (bm->nbox - bm->nboundary - bm->nland);
+  994→ 				bm->ecolindx[coverindx_id] += coverindx / (bm->nbox - bm->nboundary - bm->nland);
   995: 
   996: 				/*
 ```
@@ -94,7 +89,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## BMSG-02
 
 **double counting** · Conf H / Sev M  
-**Lines (current code):** 2736-2778  
+**Found at (current code):** `atbiolmessage.c` 2857, `atbiolmessage.c` 2757
 **Lines at review (Oct 2026):** 2736-2778
 
 **Function:** `Write_Migration_File()`
@@ -103,49 +98,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 For vertebrates, the first `n` loop adds `MIGRATION[sp].DEN/SN/RN[n][i]` into `juv_mig_sum`/`ad_mig_sum`. Then the `j` loop uses `index = j*num_migrate + i`, which at `j=0` is `i` again, so queue slot `i` is added twice. Migrating biomass and Prop_Migrating in Migration.txt are too high. Function: `Write_Migration_File()`.
 
-**Current code** (`atecology/atbiolmessage.c` lines 2734–2773 (truncated))
+**Code at issue** — `atbiolmessage.c` line 2857 (closest match to the quoted code; wording differs slightly)  
+Search for: `fprintf(fid,"%e %s %d %d %e %e %e %d %d %d\n", bm->dayt, FunctGroupArray[sp].groupCode, n,`
 
 ```c
- 2734: 
- 2735:            		age_mat = (int) (FunctGroupArray[sp].speciesParams[age_mat_id]);
- 2736:            		for(i = 0; i < FunctGroupArray[sp].num_migrate; i++){
- 2737:            			juv_mig_sum = juv_sum = ad_mig_sum = ad_sum = 0;
- 2738: 					for(n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++){
- 2739: 
- 2740: 						dynsn = MIGRATION[sp].SN[n][i];
- 2741: 						dynrn = MIGRATION[sp].RN[n][i];
- 2742: 
- 2743: 						if (n < age_mat){
- 2744: 							juv_mig_sum += (MIGRATION[sp].DEN[n][i] * (dynsn + dynrn));
- 2745: 							juv_sum += bm->totagepop[sp][n];
- 2746: 						}
- 2747: 						else{
- 2748: 							ad_mig_sum += (MIGRATION[sp].DEN[n][i] * (dynsn + dynrn));
- 2749: 							ad_sum += bm->totagepop[sp][n];
- 2750: 						}
- 2751:                         
- 2752:                         
- 2753: 					}
- 2754:                     
+ 2855:                         num_rec = MIGRATION[sp].recruit[n][i];
+ 2856:                     }
+ 2857→                     fprintf(fid,"%e %s %d %d %e %e %e %d %d %d\n", bm->dayt, FunctGroupArray[sp].groupCode, n, i, (MIGRATION[sp].DEN[n][i] + num_rec), MIGRATION[sp].SN[n][i], MIGRATION[sp].RN[n][i], MIGRATION[sp].Leave_Now[i], MIGRATION[sp].Return_Now[i], MIGRATION[sp].cohort_migrating[n][i]);
+ 2858:                 }
+ 2859:             }
+```
+
+**Code at issue** — `atbiolmessage.c` line 2757 (closest match to the quoted code; wording differs slightly)  
+Search for: `index = (j * FunctGroupArray[sp].num_migrate) + i;`
+
+```c
  2755:                     for (j = 0; j < numValues; j++){
  2756:                         
- 2757:                         index = (j * FunctGroupArray[sp].num_migrate) + i;
+ 2757→                         index = (j * FunctGroupArray[sp].num_migrate) + i;
  2758:                         for(n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++){
  2759:                             
- 2760:                             dynsn = MIGRATION[sp].SN[n][index];
- 2761:                             dynrn = MIGRATION[sp].RN[n][index];
- 2762:                             
- 2763:                             if (n < age_mat){
- 2764:                                 juv_mig_sum += (MIGRATION[sp].DEN[n][index] * (dynsn + dynrn));
- 2765:                                 //juv_sum += bm->totagepop[sp][n];
- 2766:                             }
- 2767:                             else{
- 2768:                                 ad_mig_sum += (MIGRATION[sp].DEN[n][index] * (dynsn + dynrn));
- 2769:                                 //ad_sum += bm->totagepop[sp][n];
- 2770:                             }
- 2771:                             
- 2772:                             
- 2773: //                            fprintf(bm->logFile, "Write_Migration_File - day = %f, - MIGRATION[sp = %s].DEN[n = %d][qid = %d] = %e, spmigrate= %d\n",
 ```
 
 **Suggested fix (from review):** Delete the migrating-sum lines from the first loop (keep only `juv_sum`/`ad_sum` there), or start `j` at 1.
@@ -168,7 +140,7 @@ For vertebrates, the first `n` loop adds `MIGRATION[sp].DEN/SN/RN[n][i]` into `j
 ## BMSG-03
 
 **header/data mismatch** · Conf M / Sev M  
-**Lines (current code):** 2697-2703 vs 2790-2808  
+**Found at (current code):** `atbiolmessage.c` 910
 **Lines at review (Oct 2026):** 2697-2703 vs 2790-2808
 
 **Function:** `Init_Migration_File()`
@@ -177,20 +149,15 @@ For vertebrates, the first `n` loop adds `MIGRATION[sp].DEN/SN/RN[n][i]` into `j
 
 For invertebrate migrators the header writes 3 columns for each `n` and for each `i < num_migrate`. The writer writes 3 values for each `n` and each `i` in `[num_in_queue_done, num_in_queue)`, which is a different, time-varying count. Migration.txt columns are misaligned and the row width changes from row to row. Function: `Init_Migration_File()` / `Write_Migration_File()`.
 
-**Current code** (`atecology/atbiolmessage.c` lines 2695–2705) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
+**Code at issue** — `atbiolmessage.c` line 910 (closest match to the quoted code; wording differs slightly)  
+Search for: `for (ij = MIGRATION[sp].num_in_queue_done; ij < MIGRATION[sp].num_in_queue; ij++) {`
 
 ```c
- 2695: 					 }
- 2696: 				 }else{
- 2697: 					 for(n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++){
- 2698: 						 for(i = 0; i < spmigrate; i++){
- 2699: 							 fprintf(fid, " %s:%d_Migrating_Biomass_%d", FunctGroupArray[sp].groupCode, n, i);
- 2700: 							 fprintf(fid, " %s:%d_Total_biomass(tonnes)_%d", FunctGroupArray[sp].groupCode, n, i);
- 2701: 							 fprintf(fid, " %s:%d_Prop_Migrating_%d", FunctGroupArray[sp].groupCode, n, i);
- 2702: 						 }
- 2703: 					 }
- 2704: 				 }
- 2705:         	 }
+  908: 			/* Vertebrates */
+  909: 			for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  910→                 for (ij = MIGRATION[sp].num_in_queue_done; ij < MIGRATION[sp].num_in_queue; ij++) {
+  911:                     for (cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++) {
+  912:                         if (FunctGroupArray[sp].isVertebrate == TRUE) {
 ```
 
 **Suggested fix (from review):** Use the same loop bound in both, e.g. aggregate over the queue per `i < num_migrate` as the vertebrate branch does.
@@ -213,7 +180,7 @@ For invertebrate migrators the header writes 3 columns for each `n` and for each
 ## BMSG-04
 
 **wrong scope** · Conf M / Sev M  
-**Lines (current code):** 435, 530-574  
+**Found at (current code):** `atbiolmessage.c` 530, `atbiolmessage.c` 435
 **Lines at review (Oct 2026):** 435, 530-574
 
 **Function:** `Calculate_Box_Biomass()`
@@ -222,12 +189,24 @@ For invertebrate migrators the header writes 3 columns for each `n` and for each
 
 The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm->maxwcbotz)`, which is meant to leave out the non-dynamic sediments and epibenthos of oceanic cells. Sea ice over deep oceanic boxes is dynamic, but it is left out of totbiom, reg_prop and targetspbiom. Function: `Calculate_Box_Biomass()`.
 
-**Current code** (`atecology/atbiolmessage.c` lines 433–437)
+**Code at issue** — `atbiolmessage.c` line 530  
+Search for: `if(bm->ice_on)`
+
+```c
+  528: 
+  529: 
+  530→ 		if(bm->ice_on){
+  531: 
+  532: 			/* Ice layers  */
+```
+
+**Code at issue** — `atbiolmessage.c` line 435  
+Search for: `if (bm->boxes[ij].botz >= bm->maxwcbotz)`
 
 ```c
   433: 	/* Only include benthos and epibenthics if not oceanic cell - oceanic cells should not be counted as their sediments are not dynamic */
   434: 	//if (isInitPops == TRUE || bm->boxes[ij].botz >= bm->maxwcbotz) {
-  435: 	if (bm->boxes[ij].botz >= bm->maxwcbotz) {
+  435→ 	if (bm->boxes[ij].botz >= bm->maxwcbotz) {
   436: 		for (k = 0; k < bm->boxes[ij].sm.nz; k++) { // Loop through each sediment layer
   437: 			for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
 ```
@@ -252,7 +231,7 @@ The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm
 ## BMSG-05
 
 **missing update** · Conf M / Sev M  
-**Lines (current code):** 457-458, 504-505, 552-553  
+**Found at (current code):** `atbiolmessage.c` 360
 **Lines at review (Oct 2026):** 457-458, 504-505, 552-553
 
 **Function:** `Calculate_Box_Biomass()`
@@ -261,15 +240,15 @@ The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm
 
 `bm->boxBiomass[ij][sp]` is incremented for water-column groups (281, 360) and land (601), but not in the sediment, epibenthic or ice branches. BoxBiomass.txt (`Write_BoxBiomass`) therefore leaves out all infauna, epibenthos and ice biomass and only shows any WC fraction. Function: `Calculate_Box_Biomass()`.
 
-**Current code** (`atecology/atbiolmessage.c` lines 455–460)
+**Code at issue** — `atbiolmessage.c` line 360  
+Search for: `boxBiomass[ij][sp]`
 
 ```c
-  455: 									}else{
-  456: 
-  457: 										bm->totbiom[sp] += biomass;
-  458: 										bm->totagepop[sp][n] += biomass;
-  459: 
-  460: 										if (isInitPops == TRUE) {
+  358: 							bm->totbiom[sp] += biomass;
+  359: 							bm->totagepop[sp][n] += biomass;
+  360→ 							bm->boxBiomass[ij][sp] += biomass;
+  361: 
+  362: 							/**
 ```
 
 **Suggested fix (from review):** Add `bm->boxBiomass[ij][sp] += biomass;` in the sed, epi and ice branches (non-diagnostic path).
@@ -292,7 +271,7 @@ The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm
 ## BMSG-06
 
 **cohort vs cohort x genotype** · Conf M / Sev M  
-**Lines (current code):** 2735, 2743, 2763  
+**Found at (current code):** `atbiolmessage.c` 2735
 **Lines at review (Oct 2026):** 2735, 2743, 2763
 
 **Function:** `Write_Migration_File()`
@@ -301,42 +280,15 @@ The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm
 
 `n` runs over `numCohortsXnumGenes` but is compared directly with `age_mat` (an age-class index). Elsewhere the convention is `basecohort = n / numGeneTypes` (atdemography.c:373, 500). With `numGeneTypes > 1` the juvenile/adult split is wrong. Function: `Write_Migration_File()`.
 
-**Current code** (`atecology/atbiolmessage.c` lines 2733–2765)
+**Code at issue** — `atbiolmessage.c` line 2735 (the line the review pointed to, found by its text)  
+Search for: `age_mat = (int) (FunctGroupArray[sp].speciesParams[age_mat_id]);`
 
 ```c
  2733:            	if(FunctGroupArray[sp].isVertebrate == TRUE){
  2734: 
- 2735:            		age_mat = (int) (FunctGroupArray[sp].speciesParams[age_mat_id]);
+ 2735→            		age_mat = (int) (FunctGroupArray[sp].speciesParams[age_mat_id]);
  2736:            		for(i = 0; i < FunctGroupArray[sp].num_migrate; i++){
  2737:            			juv_mig_sum = juv_sum = ad_mig_sum = ad_sum = 0;
- 2738: 					for(n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++){
- 2739: 
- 2740: 						dynsn = MIGRATION[sp].SN[n][i];
- 2741: 						dynrn = MIGRATION[sp].RN[n][i];
- 2742: 
- 2743: 						if (n < age_mat){
- 2744: 							juv_mig_sum += (MIGRATION[sp].DEN[n][i] * (dynsn + dynrn));
- 2745: 							juv_sum += bm->totagepop[sp][n];
- 2746: 						}
- 2747: 						else{
- 2748: 							ad_mig_sum += (MIGRATION[sp].DEN[n][i] * (dynsn + dynrn));
- 2749: 							ad_sum += bm->totagepop[sp][n];
- 2750: 						}
- 2751:                         
- 2752:                         
- 2753: 					}
- 2754:                     
- 2755:                     for (j = 0; j < numValues; j++){
- 2756:                         
- 2757:                         index = (j * FunctGroupArray[sp].num_migrate) + i;
- 2758:                         for(n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++){
- 2759:                             
- 2760:                             dynsn = MIGRATION[sp].SN[n][index];
- 2761:                             dynrn = MIGRATION[sp].RN[n][index];
- 2762:                             
- 2763:                             if (n < age_mat){
- 2764:                                 juv_mig_sum += (MIGRATION[sp].DEN[n][index] * (dynsn + dynrn));
- 2765:                                 //juv_sum += bm->totagepop[sp][n];
 ```
 
 **Suggested fix (from review):** Compare `(n / FunctGroupArray[sp].numGeneTypes) < age_mat`.
@@ -359,7 +311,7 @@ The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm
 ## BMSG-07
 
 **cohort vs cohort x genotype** · Conf M / Sev M  
-**Lines (current code):** 266-268, 310  
+**Found at (current code):** `atbiolmessage.c` 311
 **Lines at review (Oct 2026):** 266-268, 310
 
 **Function:** `Calculate_Box_Biomass()`
@@ -368,16 +320,15 @@ The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm
 
 `fished_chrt` comes from `Age95pcntV_id` (a cohort index), and its floor is set from `numCohortsXnumGenes/2`. It is then compared with `n`, the cohort x genotype index. With genotypes, `calcNstart[sp][hist_id]` counts the wrong (single genotype) slot. Function: `Calculate_Box_Biomass()`.
 
-**Current code** (`atecology/atbiolmessage.c` lines 264–270)
+**Code at issue** — `atbiolmessage.c` line 311  
+Search for: `calcNstart[sp][hist_id]`
 
 ```c
-  264: 				switch (FunctGroupArray[sp].groupAgeType) {
-  265: 				case AGE_STRUCTURED:
-  266: 					fished_chrt = (int) (FunctGroupArray[sp].speciesParams[Age95pcntV_id]);
-  267: 					if (fished_chrt < ((FunctGroupArray[sp].numCohortsXnumGenes) / 2))
-  268: 						fished_chrt = ((FunctGroupArray[sp].numCohortsXnumGenes) / 2);
-  269: 
-  270: 					for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+  309: 								totden[sp][n] += bm->boxes[ij].tr[k][den];
+  310: 								if (n == fished_chrt) {
+  311→ 									bm->calcNstart[sp][hist_id] += bm->boxes[ij].tr[k][den];
+  312: 								}
+  313: 								bm->calcNstartPerPred[sp][hist_id] += bm->boxes[ij].tr[k][den];
 ```
 
 **Suggested fix (from review):** Use `(n / numGeneTypes) == fished_chrt`, with the floor based on `numCohorts/2`.
@@ -400,7 +351,7 @@ The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm
 ## BMSG-08
 
 **wrong condition** · Conf M / Sev L  
-**Lines (current code):** 1077-1095  
+**Found at (current code):** `atbiolmessage.c` 1077
 **Lines at review (Oct 2026):** 1077-1095
 
 **Function:** `Ecology_Calculate_Total_Abundance()`
@@ -409,32 +360,15 @@ The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm
 
 `if ((flagstockout == 1) || call_type)` also holds for diagnostic box calls (`call_type == 1`, from atecology.c:1253, 1959, 3020, 3616). So `Ecology_Output_Mort_Per_Pred_Estimates()` writes extra MortPerPred/SpecificPredMort rows for every debugged box/layer call. Function: `Ecology_Calculate_Total_Abundance()`.
 
-**Current code** (`atecology/atbiolmessage.c` lines 1075–1097)
+**Code at issue** — `atbiolmessage.c` line 1077  
+Search for: `if ((flagstockout == 1) || call_type)`
 
 ```c
  1075: 
  1076: 		/* If non-annual call proceed with standard log.txt output */
- 1077: 		if ((flagstockout == 1) || call_type) {
+ 1077→ 		if ((flagstockout == 1) || call_type) {
  1078: 
  1079: 
- 1080: 			//fprintf(llogfp, "\n");
- 1081: 
- 1082: 			for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
- 1083: 				if (FunctGroupArray[sp].isDetritus == TRUE || (FunctGroupArray[sp].isDetritus == FALSE
- 1084: 						&& (int) (FunctGroupArray[sp].speciesParams[flag_id]))) { /* Allow for DIN */
- 1085: 
- 1086: 					Print_Biomass_Value(bm, call_type, llogfp, sp);
- 1087: 				}
- 1088: 			}
- 1089:             
- 1090: 			/* Now print out DIN value */
- 1091: 			Print_Biomass_Value(bm, call_type, llogfp, bm->K_num_tot_sp);
- 1092: 
- 1093: 			if (!bm->flagannual_Mest) {
- 1094: 				Ecology_Output_Mort_Per_Pred_Estimates(bm, llogfp);
- 1095: 			}
- 1096:             
- 1097: 		}
 ```
 
 **Suggested fix (from review):** Wrap the Mort_Per_Pred call in `if (!call_type && !bm->flagannual_Mest)`.
@@ -457,7 +391,7 @@ The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm
 ## BMSG-09
 
 **out-of-bounds read** · Conf M / Sev L  
-**Lines (current code):** 1026-1036  
+**Found at (current code):** `atbiolmessage.c` 1026, `atbiolmessage.c` 1034
 **Lines at review (Oct 2026):** 1026-1036
 
 **Function:** `Ecology_Calculate_Total_Abundance()`
@@ -466,24 +400,26 @@ The ice-layer block (`if(bm->ice_on)`) sits inside `if (bm->boxes[ij].botz >= bm
 
 The BSS slope is computed only when `smallID != -1 && largeID != -1`, but the debug fprintf right after it uses `FunctGroupArray[bm->smallID].groupCode` and `totfishpop[bm->smallID]` without that guard, so it reads index -1. Function: `Ecology_Calculate_Total_Abundance()`.
 
-**Current code** (`atecology/atbiolmessage.c` lines 1024–1038)
+**Code at issue** — `atbiolmessage.c` line 1026  
+Search for: `smallID != -1 && bm->largeID != -1`
 
 ```c
  1024: 				}
  1025: 			}
- 1026: 			if(bm->smallID != -1 && bm->largeID != -1){
+ 1026→ 			if(bm->smallID != -1 && bm->largeID != -1){
  1027: 				/* Find BSS - numerator and denominator to be all in kg in calculation */
  1028: 				bm->ecolindx[BSSslope_id] = ((bm->totfishpop[bm->smallID] - bm->totfishpop[bm->largeID]) * bm->X_CN * mg_2_tonne) / (log(bm->smallsize) - log(
- 1029: 						bm->largesize) + small_num);
- 1030: 			}
- 1031: 			if ((bm->debug == debug_biology_process) && (bm->dayt >= bm->checkstart) && (bm->dayt < bm->checkstop)) {
+```
+
+**Code at issue** — `atbiolmessage.c` line 1034  
+Search for: `FunctGroupArray[bm->smallID].groupCode`
+
+```c
  1032: 				fprintf(llogfp,
  1033: 						"BSSslope: %e, fishpop[small-%s]: %e, fishpop[large-%s]: %e, log(smallsize): %e, smallsize: %e, log(largesize): %e, largesize: %e\n",
- 1034: 						bm->ecolindx[BSSslope_id], FunctGroupArray[bm->smallID].groupCode, bm->totfishpop[bm->smallID], FunctGroupArray[bm->largeID].groupCode,
+ 1034→ 						bm->ecolindx[BSSslope_id], FunctGroupArray[bm->smallID].groupCode, bm->totfishpop[bm->smallID], FunctGroupArray[bm->largeID].groupCode,
  1035: 						bm->totfishpop[bm->largeID], (double)log(bm->smallsize), bm->smallsize, (double)log(bm->largesize), bm->largesize);
  1036: 			}
- 1037:             
- 1038:             /* If not an annual call then do all other necessary checks */
 ```
 
 **Suggested fix (from review):** Move the debug print inside the `smallID/largeID != -1` block.
@@ -506,7 +442,7 @@ The BSS slope is computed only when `smallID != -1 && largeID != -1`, but the de
 ## BMSG-10
 
 **cohort vs cohort x genotype** · Conf M / Sev L  
-**Lines (current code):** 694, 726  
+**Found at (current code):** `atbiolmessage.c` 694, `atbiolmessage.c` 726
 **Lines at review (Oct 2026):** 694, 726
 
 **Function:** `Check_Layer_Initial_Biomass()`
@@ -515,44 +451,24 @@ The BSS slope is computed only when `smallID != -1 && largeID != -1`, but the de
 
 The initial-condition checks loop `n < numCohorts`, while the tracer arrays (`structNTracers`, `totNTracers`) run over `numCohortsXnumGenes`. Genotypes beyond the first are never checked for negative or misplaced biomass. Function: `Check_Layer_Initial_Biomass()`.
 
-**Current code** (`atecology/atbiolmessage.c` lines 692–728)
+**Code at issue** — `atbiolmessage.c` line 694 (the line the review pointed to, found by its text)  
+Search for: `for (n = 0; n < FunctGroupArray[sp].numCohorts; n++) {`
 
 ```c
   692: 			case AGE_STRUCTURED:
   693: 
-  694: 				for (n = 0; n < FunctGroupArray[sp].numCohorts; n++) {
+  694→ 				for (n = 0; n < FunctGroupArray[sp].numCohorts; n++) {
   695: 					sn = FunctGroupArray[sp].structNTracers[n];
   696: 					rn = FunctGroupArray[sp].resNTracers[n];
-  697: 					den = FunctGroupArray[sp].NumsTracers[n];
-  698: 
-  699: 					for (b = 0; b < bm->nbox; b++) {
-  700: 
-  701: 						/* Check to see if we have negative biomass */
-  702: 						for (k = 0; k < bm->boxes[b].nz; k++){
-  703: 							biomass = (bm->boxes[b].tr[k][sn] + bm->boxes[b].tr[k][rn]) * bm->boxes[b].tr[k][den] * FunctGroupArray[sp].habitatCoeffs[WC];
-  704: 
-  705: 							if(biomass < 0){
-  706: 								fprintf(stderr, "ERROR: Data for group %s, cohort %d in box %d, layer %d in your initial conditions file. This biomass is NEGATIVE! = %e. Please update your initial conditions and try again.\n\n",
-  707: 									FunctGroupArray[sp].groupCode, n, b, k, biomass);
-  708: 								quit("");
-  709: 							}
-  710: 
-  711: 						}
-  712: 						/* Check to see if we have biomass in layers that are not active */
-  713: 						for (k = bm->boxes[b].nz; k < bm->wcnz; k++) {
-  714: 							biomass = (bm->boxes[b].tr[k][sn] + bm->boxes[b].tr[k][rn]) * bm->boxes[b].tr[k][den] * FunctGroupArray[sp].habitatCoeffs[WC];
-  715: 
-  716: 							if(biomass != 0){
-  717: 								fprintf(stderr, "WARN: Data for group %s, cohort %d in box %d, layer %d in your initial conditions file. There are only %d layers in this box. Please check and updated your initial conditions file.\n\n",
-  718: 									FunctGroupArray[sp].groupCode, n, b, k, bm->boxes[b].nz);
-  719: 							}
-  720: 						}
-  721: 					}
-  722: 				}
-  723: 				break;
+```
+
+**Code at issue** — `atbiolmessage.c` line 726 (the line the review pointed to, found by its text)  
+Search for: `for (n = 0; n < FunctGroupArray[sp].numCohorts; n++) {`
+
+```c
   724: 			case AGE_STRUCTURED_BIOMASS:
   725: 				if (FunctGroupArray[sp].groupType != REF_DET && FunctGroupArray[sp].groupType != LAB_DET) {
-  726: 					for (n = 0; n < FunctGroupArray[sp].numCohorts; n++) {
+  726→ 					for (n = 0; n < FunctGroupArray[sp].numCohorts; n++) {
   727: 
   728: 						pid = FunctGroupArray[sp].totNTracers[n];
 ```
@@ -577,7 +493,7 @@ The initial-condition checks loop `n < numCohorts`, while the tracer arrays (`st
 ## BMSG-11
 
 **wrong variable** · Conf L / Sev L  
-**Lines (current code):** 411-414  
+**Found at (current code):** `atbiolmessage.c` 414
 **Lines at review (Oct 2026):** 411-414
 
 **Function:** `Calculate_Box_Biomass()`
@@ -586,15 +502,13 @@ The initial-condition checks loop `n < numCohorts`, while the tracer arrays (`st
 
 `bm->diagnosticBiom[sp] += ...NO3...` uses the loop variable `sp`, left over after the species loop, while the NH3 block (395) uses `nid` (`DIN_id`). It works only because `sp == K_num_tot_sp == DIN_id` (atparamIO.c:367). Function: `Calculate_Box_Biomass()`.
 
-**Current code** (`atecology/atbiolmessage.c` lines 409–416)
+**Code at issue** — `atbiolmessage.c` line 414  
+Search for: `diagnosticBiom[sp] +=`
 
 ```c
-  409: 		}
-  410: 
-  411: 		pid = NO3_i;
   412: 		nid = bm->DIN_id;
   413: 		if(isDiagnostic == TRUE){
-  414: 			bm->diagnosticBiom[sp] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area; // Intentional overload storing all nutrients in final slot
+  414→ 			bm->diagnosticBiom[sp] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area; // Intentional overload storing all nutrients in final slot
   415: 		}else{
   416: 			bm->totbiom[nid] += bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area;
 ```

@@ -2,23 +2,23 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [PHY3-06](#phy3-06) ⭐ | 60,69,78,87 | H/H | hard-coded index / out of bounds | `if (!_finite(newwc[24][0][Salinity_i]))`: leftover debug code with box 24 hard-coded, run for every box. Any … |  | [ ] |
-| [PHY3-07](#phy3-07) | 195-202 | M/M | unit mismatch | Oxygen case: `pvol = sm->porosity[k] * (oxvol / sm->volume[k]) + small_num` is a dimensionless ratio, not a po… |  | [ ] |
+| [PHY3-06](#phy3-06) ⭐ | 60 | H/H | hard-coded index / out of bounds | `if (!_finite(newwc[24][0][Salinity_i]))`: leftover debug code with box 24 hard-coded, run for every box. Any … |  | [ ] |
+| [PHY3-07](#phy3-07) | 202, 205 | M/M | unit mismatch | Oxygen case: `pvol = sm->porosity[k] * (oxvol / sm->volume[k]) + small_num` is a dimensionless ratio, not a po… |  | [ ] |
 
 ---
 
 ## PHY3-06
 
 **hard-coded index / out of bounds** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 60,69,78,87  
+**Found at (current code):** `atbioirrig.c` 60
 **Lines at review (Oct 2026):** 60,69,78,87
 
 **Function:** `bioirrig()`
@@ -27,32 +27,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `if (!_finite(newwc[24][0][Salinity_i]))`: leftover debug code with box 24 hard-coded, run for every box. Any model with `nbox <= 24` reads past the `newwc` pointer array (UB / segfault). Otherwise it checks the wrong box. Function: `bioirrig()`.
 
-**Current code** (`atphysics/atbioirrig.c` lines 58–80)
+**Code at issue** — `atbioirrig.c` line 60  
+Search for: `if (!_finite(newwc[24][0][Salinity_i]))`
 
 ```c
    58: 		if (bp->type != BOUNDARY && bp->type != LAND) {
    59: 
-   60:             if (!_finite(newwc[24][0][Salinity_i])) {
+   60→             if (!_finite(newwc[24][0][Salinity_i])) {
    61:                 printf("Time: %e Salinity in bottom water is nan - while doing box %d in bioirrig\n", bm->dayt, b);
    62:                 fflush(stdout);
-   63:                 fflush(stderr);
-   64:             }
-   65:             
-   66: 			/* Diffusion */
-   67: 			dissol_diff(bm, bp, sm, newwc[b], newsed[b]);
-   68:             
-   69:             if (!_finite(newwc[24][0][Salinity_i])) {
-   70:                 printf("Time: %e Salinity in bottom water is nan - while doing bioirrig B\n", bm->dayt);
-   71:                 fflush(stdout);
-   72:                 fflush(stderr);
-   73:             }
-   74: 
-   75: 			/* Exchange */
-   76: 			exchange(bm, bp, sm, newwc[b], newsed[b]);
-   77:             
-   78:             if (!_finite(newwc[24][0][Salinity_i])) {
-   79:                 printf("Time: %e Salinity in bottom water is nan - while doing bioirrig C\n", bm->dayt);
-   80:                 fflush(stdout);
 ```
 
 **Suggested fix (from review):** Delete these checks or use `newwc[b]`
@@ -75,7 +58,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-07
 
 **unit mismatch** · Conf M / Sev M  
-**Lines (current code):** 195-202  
+**Found at (current code):** `atbioirrig.c` 202, `atbioirrig.c` 205
 **Lines at review (Oct 2026):** 195-202
 
 **Function:** `exchange()`
@@ -84,21 +67,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Oxygen case: `pvol = sm->porosity[k] * (oxvol / sm->volume[k]) + small_num` is a dimensionless ratio, not a pore-water volume in m3. It is then used as a volume in `ek = rate*(1/wvol+1/pvol)` and `ce = (...*wvol + ...*pvol)/(wvol+pvol)`. Oxygen exchange is therefore hugely over-damped and mass is not conserved. Compare the non-oxygen branch at line 235: `porosity*volume`. Function: `exchange()`.
 
-**Current code** (`atphysics/atbioirrig.c` lines 193–204)
+**Code at issue** — `atbioirrig.c` line 202  
+Search for: `pvol = sm->porosity[k] * (oxvol / sm->volume[k]) + small_num`
 
 ```c
-  193: 				 Walker had implemented for all dissolved groups */
-  194: 				/* Volume of pore water */
-  195: 				double oxvol = sm->oxdepth * bp->area;
-  196: 				/* Uses same form as before but adjusts volume being considered
-  197: 				 to that due to oxygen depth rather than just the sediment layer
-  198: 				 - FIX this is OK if only have one sediment layer in implementation
-  199: 				 (as was case for PhD work) must be corrected if more than one layer used.
   200: 				 The 0.00000000001 was added so that pvol was never exactly equal to
   201: 				 zero as you must divide by it*/
-  202: 				double pvol = sm->porosity[k] * (oxvol / sm->volume[k]) + small_num;
+  202→ 				double pvol = sm->porosity[k] * (oxvol / sm->volume[k]) + small_num;
   203: 				/* Constants in exponential formula */
   204: 				double ek = rate[k] * (1.0 / wvol + 1.0 / pvol);
+```
+
+**Code at issue** — `atbioirrig.c` line 205  
+Search for: `* wvol +`
+
+```c
+  203: 				/* Constants in exponential formula */
+  204: 				double ek = rate[k] * (1.0 / wvol + 1.0 / pvol);
+  205→ 				double ce = (newwc[0][n] * wvol + newsed[k][n] * pvol) / (wvol + pvol);
+  206: 				/* New water column concentration */
+  207: 				double cw = ce + decay_exact(newwc[0][n] - ce, ek, bm->dt);
 ```
 
 **Suggested fix (from review):** `pvol = sm->porosity[k] * min(oxvol, sm->volume[k]) + small_num`

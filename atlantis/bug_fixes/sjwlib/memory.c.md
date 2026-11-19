@@ -2,74 +2,62 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [SJW1-01](#sjw1-01) | 46, 51, 86, 150, 232, 336, 456, 574, 579, 616, 680, 762, 865, 985, 1104, 1145, 1210, 1291, 1384, 1426, 1490, 1564, 1606, 1669, 1751, 1845, 1885, 1948, 2024, 2110, 2149, 2212, 2288 | H/L | format specifier | `quit("...size %d, %d\n", n1, n2)` where `n1..n6` are `long int`, and `quit("...size = %d\n", size)` where `si… |  | [ ] |
-| [SJW1-02](#sjw1-02) | 118, 191-193, 283-287, 395-401, 523-531, 648, 721-723, 813-817, 924-930, 1052-1060, 1178, 1250-1252, 1342-1346, 1458, 1531-1533, 1637, 1710-1712, 1802-1806, 1916, 1987-1989, 2073-2077, 2180, 2251-2253, 2337-2341 | M/M | zero-size / free mismatch | The allocators accept a dimension of 0 (they only reject `n<0`). If an outer dimension is 0 (e.g. `d_alloc2d(n… |  | [ ] |
-| [SJW1-03](#sjw1-03) | 153-160, 235-250, 339-362, 459-490, 619, 683-690, 765-780, 868-891, 988-1019, 1148, 1213-1220, 1294-1309, 1429, 1493-1500, 1609, 1672-1679, 1754-1769, 1888, 1951-1958, 2027-2042, 2152, 2215-2222, 2291-2306 | L/L | integer overflow | `size = (size_t)(n1 * n2 * n3) * sizeof(double)`: the product is formed in `long` before the cast. That is fin… |  | [ ] |
-| [SJW1-04](#sjw1-04) | 308, 1827, 2093 | H/L | copy-paste (message) | The 4d free routines report `"free3d: attempt to free NULL pointer"` for the main-storage check (copied from t… |  | [ ] |
+| [SJW1-01](#sjw1-01) | 46, 86, 51 | H/L | format specifier | `quit("...size %d, %d\n", n1, n2)` where `n1..n6` are `long int`, and `quit("...size = %d\n", size)` where `si… |  | [ ] |
+| [SJW1-02](#sjw1-02) | 609, 191, 283 | M/M | zero-size / free mismatch | The allocators accept a dimension of 0 (they only reject `n<0`). If an outer dimension is 0 (e.g. `d_alloc2d(n… |  | [ ] |
+| [SJW1-03](#sjw1-03) | 683, 156 | L/L | integer overflow | `size = (size_t)(n1 * n2 * n3) * sizeof(double)`: the product is formed in `long` before the cast. That is fin… |  | [ ] |
+| [SJW1-04](#sjw1-04) | 308 | H/L | copy-paste (message) | The 4d free routines report `"free3d: attempt to free NULL pointer"` for the main-storage check (copied from t… |  | [ ] |
 
 ---
 
 ## SJW1-01
 
 **format specifier** · Conf H / Sev L  
-**Lines (current code):** 46, 51, 86, 150, 232, 336, 456, 574, 579, 616, 680, 762, 865, 985, 1104, 1145, 1210, 1291, 1384, 1426, 1490, 1564, 1606, 1669, 1751, 1845, 1885, 1948, 2024, 2110, 2149, 2212, 2288  
+**Found at (current code):** `memory.c` 46, `memory.c` 86, `memory.c` 51
 **Lines at review (Oct 2026):** 46, 51, 86, 150, 232, 336, 456, 574, 579, 616, 680, 762, 865, 985, 1104, 1145, 1210, 1291, 1384, 1426, 1490, 1564, 1606, 1669, 1751, 1845, 1885, 1948, 2024, 2110, 2149, 2212, 2288
 
 **Why it's thought to be a bug**
 
 `quit("...size %d, %d\n", n1, n2)` where `n1..n6` are `long int`, and `quit("...size = %d\n", size)` where `size` is `size_t`. `%d` with a 64-bit argument is undefined behaviour and prints the wrong value on LP64, so the error message reports the wrong size just when someone needs it to debug a bad allocation. Functions: every `*_alloc1d..6d` / `d_alloc*longd`.
 
-**Current code** (`sjwlib/memory.c` lines 44–83 (truncated))
+**Code at issue** — `memory.c` line 46  
+Search for: `quit("`
 
 ```c
    44: 
    45: 	if (n1 < 0)
-   46: 		quit("alloc1d: you have asked to allocate an array of size %d\n", n1);
+   46→ 		quit("alloc1d: you have asked to allocate an array of size %d\n", n1);
    47: 
    48: 	/* allocate storage */
+```
+
+**Code at issue** — `memory.c` line 86  
+Search for: `size %d, %d\n", n1, n2)`
+
+```c
+   84: 
+   85: 	if (n1 < 0 || n2 < 0)
+   86→ 		quit("alloc2longd: you have asked to allocate an array of size %d, %d\n", n1, n2);
+   87: 
+   88: 	/* first allocate main storage */
+```
+
+**Code at issue** — `memory.c` line 51  
+Search for: `size = %d\n", size)`
+
+```c
    49: 	size = (size_t)n1 * sizeof(long double);
    50: 	if ((p = (long double *) malloc(size)) == NULL)
-   51: 		quit("alloc1d: Not enough memory size = %d\n", size);
+   51→ 		quit("alloc1d: Not enough memory size = %d\n", size);
    52: 	for (i = 0; i < n1; i++)
    53: 		p[i] = 0.0;
-   54: 	return ((long double *) p);
-   55: }
-   56: 
-   57: /** Deallocates the memory for a 1d array of doubles.
-   58:  * Was allocated using alloc1d.
-   59:  *
-   60:  * @param p pointer to aray of doubles.
-   61:  */
-   62: void d_free1longd(long double *p) {
-   63: 	if (p == NULL)
-   64: 		quit("free1d: attempt to free NULL pointer\n");
-   65: 	free((void *) p);
-   66: }
-   67: 
-   68: /** Allocate and clear a 2d array. Note that the storage for the values
-   69:  * is one large piece of memory so that it can be read or written
-   70:  * easily. The i,j value is accessed by saying array[j][i], because
-   71:  * array[j] is a pointer to the jth row of the matrix.
-   72:  * n1 is the number of columns, n2 is the number of rows.
-   73:  *
-   74:  * @param n1 size of first dimension of the array.
-   75:  * @param n2 size of second dimension of the array.
-   76:  * @return a 2d array n1*n2 double values.
-   77:  */
-   78: long double **
-   79: d_alloc2longd(long int n1, long int n2) {
-   80: 	long double *p;
-   81: 	long double **pp;
-   82: 	size_t size;
-   83: 	long i;
 ```
 
 **Suggested fix (from review):** Use `%ld` for the `long` dims and `%zu` for `size`.
@@ -92,21 +80,44 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW1-02
 
 **zero-size / free mismatch** · Conf M / Sev M  
-**Lines (current code):** 118, 191-193, 283-287, 395-401, 523-531, 648, 721-723, 813-817, 924-930, 1052-1060, 1178, 1250-1252, 1342-1346, 1458, 1531-1533, 1637, 1710-1712, 1802-1806, 1916, 1987-1989, 2073-2077, 2180, 2251-2253, 2337-2341  
+**Found at (current code):** `memory.c` 609, `memory.c` 191, `memory.c` 283
 **Lines at review (Oct 2026):** 118, 191-193, 283-287, 395-401, 523-531, 648, 721-723, 813-817, 924-930, 1052-1060, 1178, 1250-1252, 1342-1346, 1458, 1531-1533, 1637, 1710-1712, 1802-1806, 1916, 1987-1989, 2073-2077, 2180, 2251-2253, 2337-2341
 
 **Why it's thought to be a bug**
 
 The allocators accept a dimension of 0 (they only reject `n<0`). If an outer dimension is 0 (e.g. `d_alloc2d(n1,0)`, or `n2`/`n3` == 0 for 3d), the pointer block is `malloc(0)` and none of its entries are set. The matching free then reads `pp[0]` / `ppp[0][0]` / `pppp[0][0][0]` out of that zero-byte block and passes the garbage to `free()`: a heap over-read and an invalid free (crash at shutdown). On platforms where `malloc(0)` returns NULL the allocation instead quits with a false "Not enough memory". Functions: all `*_free2d..6d` paired with the `*_alloc2d..6d` routines.
 
-**Current code** (`sjwlib/memory.c` lines 116–120) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
+**Code at issue** — `memory.c` line 609 (closest match to the quoted code; wording differs slightly)  
+Search for: `d_alloc2d(long int n1, long int n2) {`
 
 ```c
-  116: 	}
-  117: 	/* extract pointer to main storage */
-  118: 	p = pp[0];
-  119: 	/* free row pointer space */
-  120: 	free((void *) pp);
+  607:  */
+  608: double **
+  609→ d_alloc2d(long int n1, long int n2) {
+  610: 	double *p;
+  611: 	double **pp;
+```
+
+**Code at issue** — `memory.c` line 191  
+Search for: `ppp[0][0]`
+
+```c
+  189: 	}
+  190: 	/* extract pointer to main storage */
+  191→ 	p = ppp[0][0];
+  192: 	/* extract pointer to row pointer storage */
+  193: 	pp = ppp[0];
+```
+
+**Code at issue** — `memory.c` line 283  
+Search for: `pppp[0][0][0]`
+
+```c
+  281: 	}
+  282: 	/* extract pointer to main storage */
+  283→ 	p = pppp[0][0][0];
+  284: 	/* extract pointer to row pointer storage */
+  285: 	pp = pppp[0][0];
 ```
 
 **Suggested fix (from review):** Either reject zero dims in the allocators, or store the base pointers so the frees don't dereference empty blocks (e.g. always allocate `max(n,1)` pointer slots and set them).
@@ -129,28 +140,33 @@ The allocators accept a dimension of 0 (they only reject `n<0`). If an outer dim
 ## SJW1-03
 
 **integer overflow** · Conf L / Sev L  
-**Lines (current code):** 153-160, 235-250, 339-362, 459-490, 619, 683-690, 765-780, 868-891, 988-1019, 1148, 1213-1220, 1294-1309, 1429, 1493-1500, 1609, 1672-1679, 1754-1769, 1888, 1951-1958, 2027-2042, 2152, 2215-2222, 2291-2306  
+**Found at (current code):** `memory.c` 683, `memory.c` 156
 **Lines at review (Oct 2026):** 153-160, 235-250, 339-362, 459-490, 619, 683-690, 765-780, 868-891, 988-1019, 1148, 1213-1220, 1294-1309, 1429, 1493-1500, 1609, 1672-1679, 1754-1769, 1888, 1951-1958, 2027-2042, 2152, 2215-2222, 2291-2306
 
 **Why it's thought to be a bug**
 
 `size = (size_t)(n1 * n2 * n3) * sizeof(double)`: the product is formed in `long` before the cast. That is fine on LP64 (macOS/Linux), but on LLP64 Windows (the code has `WIN32` branches) `long` is 32-bit, so more than 2^31 elements overflow and under-allocate. The loop bound `i < n1*n2*n3` overflows the same way. Only `d_alloc2longd` (line 89) casts each factor correctly. Functions: all typed `*_alloc2d..6d`.
 
-**Current code** (`sjwlib/memory.c` lines 151–162)
+**Code at issue** — `memory.c` line 683  
+Search for: `size = (size_t)(n1 * n2 * n3) *sizeof(double)`
 
 ```c
-  151: 
-  152: 	/* first allocate main storage */
-  153: 	size = (size_t)(n1 * n2 * n3) * sizeof(long double);
+  681: 
+  682: 	/* first allocate main storage */
+  683→ 	size = (size_t)(n1 * n2 * n3) *sizeof(double);
+  684: 	if ((p = (double *) malloc(size)) == NULL)
+  685: 		quit("alloc3d: Not enough memory\n");
+```
+
+**Code at issue** — `memory.c` line 156  
+Search for: `i < n1 * n2 * n3`
+
+```c
   154: 	if ((p = (long double *) malloc(size)) == NULL)
   155: 		quit("alloc3d: Not enough memory\n");
-  156: 	for (i = 0; i < n1 * n2 * n3; i++)
+  156→ 	for (i = 0; i < n1 * n2 * n3; i++)
   157: 		p[i] = 0.0;
   158: 
-  159: 	/* now allocate row pointers */
-  160: 	size = (size_t)(n2 * n3) * sizeof(long double *);
-  161: 	if ((pp = (long double **) malloc(size)) == NULL)
-  162: 		quit("alloc3d: Can't allocate row pointers\n");
 ```
 
 **Suggested fix (from review):** Cast each factor: `(size_t)n1 * (size_t)n2 * (size_t)n3`, and use a `size_t` loop index.
@@ -173,19 +189,20 @@ The allocators accept a dimension of 0 (they only reject `n<0`). If an outer dim
 ## SJW1-04
 
 **copy-paste (message)** · Conf H / Sev L  
-**Lines (current code):** 308, 1827, 2093  
+**Found at (current code):** `memory.c` 308
 **Lines at review (Oct 2026):** 308, 1827, 2093
 
 **Why it's thought to be a bug**
 
 The 4d free routines report `"free3d: attempt to free NULL pointer"` for the main-storage check (copied from the 3d version). Functions: `d_free4longd()`, `i_free4d()`, `s_free4d()`.
 
-**Current code** (`sjwlib/memory.c` lines 306–310)
+**Code at issue** — `memory.c` line 308 (closest match to the quoted code; wording differs slightly)  
+Search for: `quit("free3d: attempt to free NULL pointer\n");`
 
 ```c
   306: 	if (checkMemory) {
   307: 		if (p == NULL)
-  308: 			quit("free3d: attempt to free NULL pointer\n");
+  308→ 			quit("free3d: attempt to free NULL pointer\n");
   309: 	}
   310: 	free((void *) p);
 ```

@@ -1015,8 +1015,9 @@ void TierOneMimic(MSEBoxModel *bm, int species, int year, FILE *llogfp)
         index2 = year;
     }
     
-    Util_Init_2D_Double(bm->RBCestimation.RBCspeciesArray[species].agesel_bysex, FunctGroupArray[species].numCohorts, bm->K_num_sexes, 0.0);
-    Util_Init_2D_Double(bm->RBCestimation.RBCspeciesArray[species].fval, FunctGroupArray[species].numCohorts, bm->K_num_sexes, 0.0);
+    /* Nov 2026: arrays are [K_num_sexes][numCohorts] (ATS-02) so reset in that index order */
+    Util_Init_2D_Double(bm->RBCestimation.RBCspeciesArray[species].agesel_bysex, bm->K_num_sexes, FunctGroupArray[species].numCohorts, 0.0);
+    Util_Init_2D_Double(bm->RBCestimation.RBCspeciesArray[species].fval, bm->K_num_sexes, FunctGroupArray[species].numCohorts, 0.0);
 
     Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[species].agesel, maxage, 0.0);
     Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[species].mat, maxage, 0.0);

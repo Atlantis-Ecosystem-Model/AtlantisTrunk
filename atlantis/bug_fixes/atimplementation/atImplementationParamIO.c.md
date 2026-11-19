@@ -2,24 +2,24 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [HRV2-25](#hrv2-25) ⭐ | 31, 35, 38 | H/H | wrong function / wrong array -> heap overflow | `TAC_num_changes_id` is a species-fishery parameter: it is in the SP enum (atlantisboxmodel.h:985), read by Ut… |  | [ ] |
-| [HRV2-26](#hrv2-26) | 50-52 | M/L | NULL dereference | `inputDoc = xmlReadFileDestFolder(...)` is not checked before `inputDoc->children`, so it crashes if the conve… |  | [ ] |
-| [HRV2-27](#hrv2-27) | 25-27 | L/L | copy-paste (node name) | TAC changes are read from a node called "Fishing_Catchability_Change", and ConvertAtlantis/atImplementationtoX… |  | [ ] |
+| [HRV2-25](#hrv2-25) ⭐ | 38 | H/H | wrong function / wrong array -> heap overflow | `TAC_num_changes_id` is a species-fishery parameter: it is in the SP enum (atlantisboxmodel.h:985), read by Ut… |  | [ ] |
+| [HRV2-26](#hrv2-26) | 50 | M/L | NULL dereference | `inputDoc = xmlReadFileDestFolder(...)` is not checked before `inputDoc->children`, so it crashes if the conve… |  | [ ] |
+| [HRV2-27](#hrv2-27) | 25 | L/L | copy-paste (node name) | TAC changes are read from a node called "Fishing_Catchability_Change", and ConvertAtlantis/atImplementationtoX… |  | [ ] |
 
 ---
 
 ## HRV2-25
 
 **wrong function / wrong array -> heap overflow** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 31, 35, 38  
+**Found at (current code):** `atImplementationParamIO.c` 38
 **Lines at review (Oct 2026):** 31, 35, 38
 
 **Function:** `readManagementImplementationChangeXML()`
@@ -28,19 +28,13 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `TAC_num_changes_id` is a species-fishery parameter: it is in the SP enum (atlantisboxmodel.h:985), read by Util_XML_Read_Impacted_Group_Param, and used as `SP_FISHERYprms[sp][nf][TAC_num_changes_id]` (atImplementationAnnual.c:338). But `Manage_Get_Max_Fishery_Param()` reads `bm->FISHERYprms[i][paramIndex]` (atManage.c:2633), so the max comes from an unrelated per-fishery parameter. TACchange is then allocated with that change count. `Util_XML_Read_Change_Fished_Groups` writes `array[sp][i][b]` for `b < SP_FISHERYprms[sp][i][TAC_num_changes_id]` (atUtilFisheryXML.c:519-521), which overflows when a species has more TAC changes than that bogus max. Function: `readManagementImplementationChangeXML()`.
 
-**Current code** (`atimplementation/atImplementationParamIO.c` lines 29–40)
+**Code at issue** — `atImplementationParamIO.c` line 38 (the line the review pointed to, found by its text)  
+Search for: `Util_XML_Read_Change_Fished_Groups(bm, fileName, groupingNode, "TACchange", TAC_num_change`
 
 ```c
-   29: 
-   30: 	Util_XML_Read_Impacted_Group_Param(bm, fileName, groupingNode, TAC_num_changes_id);
-   31: 	TAC_max_num_changes = Manage_Get_Max_Fishery_Param(bm, TAC_num_changes_id ) + 1;
-   32: 
-   33: 
-   34: 	/** Allocate the storage to hold the information on the TAC change */
-   35: 	TACchange = Util_Alloc_Init_4D_Double ( 3, TAC_max_num_changes, bm->K_num_fisheries, bm->K_num_tot_sp, 0.0 );
    36: 
    37: 	/* Now load the data */
-   38: 	Util_XML_Read_Change_Fished_Groups(bm, fileName, groupingNode, "TACchange", TAC_num_changes_id, TACchange);
+   38→ 	Util_XML_Read_Change_Fished_Groups(bm, fileName, groupingNode, "TACchange", TAC_num_changes_id, TACchange);
    39: }
    40: 
 ```
@@ -65,7 +59,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-26
 
 **NULL dereference** · Conf M / Sev L  
-**Lines (current code):** 50-52  
+**Found at (current code):** `atImplementationParamIO.c` 50
 **Lines at review (Oct 2026):** 50-52
 
 **Function:** `readModelManageImplParameters()`
@@ -74,16 +68,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `inputDoc = xmlReadFileDestFolder(...)` is not checked before `inputDoc->children`, so it crashes if the converted XML is missing or malformed. Function: `readModelManageImplParameters()`.
 
-**Current code** (`atimplementation/atImplementationParamIO.c` lines 48–54)
+**Code at issue** — `atImplementationParamIO.c` line 50  
+Search for: `inputDoc = xmlReadFileDestFolder(`
 
 ```c
    48: int readModelManageImplParameters(MSEBoxModel *bm, char *filename) {
    49: 	xmlDocPtr inputDoc;
-   50: 	inputDoc = xmlReadFileDestFolder(bm->destFolder, filename, NULL, 0);
+   50→ 	inputDoc = xmlReadFileDestFolder(bm->destFolder, filename, NULL, 0);
    51: 
    52: 	readManagementImplementationChangeXML(bm, filename, inputDoc->children);
-   53: 	xmlFreeDoc(inputDoc);
-   54: 	/* Shutdown libxml */
 ```
 
 **Suggested fix (from review):** `if (inputDoc == NULL) quit(...)`
@@ -106,23 +99,22 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-27
 
 **copy-paste (node name)** · Conf L / Sev L  
-**Lines (current code):** 25-27  
+**Found at (current code):** `atImplementationParamIO.c` 25
 **Lines at review (Oct 2026):** 25-27
 
 **Why it's thought to be a bug**
 
 TAC changes are read from a node called "Fishing_Catchability_Change", and ConvertAtlantis/atImplementationtoXML.c:29,33 labels them "catchability". The reader and writer agree, so it works, but the name and description are copy-paste from the q-change code and misleading.
 
-**Current code** (`atimplementation/atImplementationParamIO.c` lines 23–29)
+**Code at issue** — `atImplementationParamIO.c` line 25 (located by name only; check this is the right place)  
+Search for: `groupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, rootnode, "Fishing_Catchabi`
 
 ```c
    23: 	xmlNodePtr groupingNode;
    24: 	int TAC_max_num_changes;
-   25: 	groupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, rootnode, "Fishing_Catchability_Change");
+   25→ 	groupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, rootnode, "Fishing_Catchability_Change");
    26: 	if(groupingNode == NULL){
    27: 		quit("readManagementImplementationChangeXML node 'Fishing_Catchability_Change' not found.\n");
-   28: 	}
-   29: 
 ```
 
 **Suggested fix (from review):** Rename consistently in both (optional)

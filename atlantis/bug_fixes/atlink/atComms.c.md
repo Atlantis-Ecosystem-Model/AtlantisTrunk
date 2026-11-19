@@ -2,25 +2,25 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [LINK-23](#link-23) ⭐ | 321-328 | H/H | buffer / sizeof(pointer) / overlap | `snprintf(str, sizeof(str), "%s,%e", str, ...)` — `str` is a `char *`, so `sizeof(str)` is 8 and the output is… |  | [ ] |
+| [LINK-23](#link-23) ⭐ | 328 | H/H | buffer / sizeof(pointer) / overlap | `snprintf(str, sizeof(str), "%s,%e", str, ...)` — `str` is a `char *`, so `sizeof(str)` is 8 and the output is… |  | [ ] |
 | [LINK-24](#link-24) | 345, 353 | H/M | copy-paste / ignored param | `soap_ctx_new_with_method(EwEUrn, EwEGetBiomassMethod, ...)` and `soap_env_add_item(..., "name", "PL")` — the … |  | [ ] |
 | [LINK-25](#link-25) | 252 | M/M | copy-paste | `soap_client_invoke(..., EwEServerUrl, "http://tempuri.org/Init")` — the SOAPAction is hard-coded to Init for … |  | [ ] |
-| [LINK-26](#link-26) | 265-268 | L/L | leak | On `checkResponse()==FALSE` it returns without `endClient()`, leaking request, response and the client. checkR… |  | [ ] |
+| [LINK-26](#link-26) | 265 | L/L | leak | On `checkResponse()==FALSE` it returns without `endClient()`, leaking request, response and the client. checkR… |  | [ ] |
 
 ---
 
 ## LINK-23
 
 **buffer / sizeof(pointer) / overlap** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 321-328  
+**Found at (current code):** `atComms.c` 328
 **Lines at review (Oct 2026):** 321-328
 
 **Function:** `buildDataString()`
@@ -29,19 +29,13 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `snprintf(str, sizeof(str), "%s,%e", str, ...)` — `str` is a `char *`, so `sizeof(str)` is 8 and the output is truncated to 7 characters. snprintf with the destination also used as a `%s` source is undefined behaviour (overlapping). The resulting data string sent to EwE is garbage. malloc is also unchecked. Function: `buildDataString()`.
 
-**Current code** (`atlink/atComms.c` lines 319–330)
+**Code at issue** — `atComms.c` line 328  
+Search for: `snprintf(str, sizeof(str), "%s,%e", str,`
 
 ```c
-  319: 	char *str;
-  320: 
-  321: 	str = (char *)malloc(sizeof(char) * numColumns * numRows * 50);
-  322: 
-  323:    	for(rows = 0; rows < numRows; rows++){
-  324:    		for(columns = 0; columns < numColumns; columns++){
-  325:    			if(rows == 0 && columns == 0)
   326:    				snprintf(str, sizeof(str), "%e", dataArray[rows][columns]);
   327:    			else
-  328:    				snprintf(str, sizeof(str), "%s,%e", str, dataArray[rows][columns]);
+  328→    				snprintf(str, sizeof(str), "%s,%e", str, dataArray[rows][columns]);
   329:    		}
   330:    	}
 ```
@@ -66,7 +60,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-24
 
 **copy-paste / ignored param** · Conf H / Sev M  
-**Lines (current code):** 345, 353  
+**Found at (current code):** `atComms.c` 345, `atComms.c` 353
 **Lines at review (Oct 2026):** 345, 353
 
 **Function:** `getParameter()`
@@ -75,20 +69,24 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `soap_ctx_new_with_method(EwEUrn, EwEGetBiomassMethod, ...)` and `soap_env_add_item(..., "name", "PL")` — the `method` and `species` parameters are ignored, so getProduction, getMortality, getNutrients and getProperties all request biomass for group "PL". The returned data is also never parsed into `dataArray`. Function: `getParameter()`.
 
-**Current code** (`atlink/atComms.c` lines 343–355)
+**Code at issue** — `atComms.c` line 345  
+Search for: `soap_ctx_new_with_method(EwEUrn, EwEGetBiomassMethod,`
 
 ```c
   343: 
   344: 	/* Create the XML Envelope */
-  345:    	if ((err = soap_ctx_new_with_method(EwEUrn, EwEGetBiomassMethod, &request)) != H_OK)
+  345→    	if ((err = soap_ctx_new_with_method(EwEUrn, EwEGetBiomassMethod, &request)) != H_OK)
   346:    	{
   347:      	printf("getBiomass - %s():%s [%d]\n", herror_func(err), herror_message(err), herror_code(err));
-  348:      	herror_release(err);
-  349:      	soap_client_destroy();
-  350:      	exit(1);
+```
+
+**Code at issue** — `atComms.c` line 353  
+Search for: `soap_env_add_item(`
+
+```c
   351:    	}
   352: 
-  353:    	soap_env_add_item(request->env, "xsd:string", "name", "PL");
+  353→    	soap_env_add_item(request->env, "xsd:string", "name", "PL");
   354: 
   355: 	/* Invoke the server function */
 ```
@@ -113,7 +111,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-25
 
 **copy-paste** · Conf M / Sev M  
-**Lines (current code):** 252  
+**Found at (current code):** `atComms.c` 252
 **Lines at review (Oct 2026):** 252
 
 **Function:** `callBooleanServerFunction()`
@@ -122,12 +120,13 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `soap_client_invoke(..., EwEServerUrl, "http://tempuri.org/Init")` — the SOAPAction is hard-coded to Init for every method (LoadModel, RunEcospace, RunNextEcospaceTS, runModel). Function: `callBooleanServerFunction()`.
 
-**Current code** (`atlink/atComms.c` lines 250–254)
+**Code at issue** — `atComms.c` line 252  
+Search for: `soap_client_invoke(`
 
 ```c
   250: 
   251: 	/* Invoke the server function */
-  252:    	if ((err = soap_client_invoke(request, &response, EwEServerUrl, "http://tempuri.org/Init")) != H_OK)
+  252→    	if ((err = soap_client_invoke(request, &response, EwEServerUrl, "http://tempuri.org/Init")) != H_OK)
   253:    	{
   254:      	printf("[%d] %s(): %s\n", herror_code(err), herror_func(err), herror_message(err));
 ```
@@ -152,7 +151,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-26
 
 **leak** · Conf L / Sev L  
-**Lines (current code):** 265-268  
+**Found at (current code):** `atComms.c` 265
 **Lines at review (Oct 2026):** 265-268
 
 **Function:** `callBooleanServerFunction()`
@@ -161,17 +160,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 On `checkResponse()==FALSE` it returns without `endClient()`, leaking request, response and the client. checkResponse currently always returns TRUE. Function: `callBooleanServerFunction()`.
 
-**Current code** (`atlink/atComms.c` lines 263–270)
+**Code at issue** — `atComms.c` line 265 (the line the review pointed to, found by its text)  
+Search for: `if(checkResponse(response) == FALSE){`
 
 ```c
   263: 
   264: 	/* Check that the response was true */
-  265: 	if(checkResponse(response) == FALSE){
+  265→ 	if(checkResponse(response) == FALSE){
   266: 		printf("EwE model setup failed \n");
   267: 		return FALSE;
-  268: 	}
-  269: 
-  270: 	endClient(request, response);
 ```
 
 **Suggested fix (from review):** Call endClient before returning.

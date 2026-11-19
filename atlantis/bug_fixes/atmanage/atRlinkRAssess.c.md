@@ -2,26 +2,26 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **5 findings** (severity H: 2; confidence H and severity H: 2; on the priority list: 2), plus 1 lower-confidence notes.
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [MNGIO-35](#mngio-35) ⭐ | 180, 202-207 | H/H | uninitialised variable / accumulator not reset | `rawwgt` is never initialised and never reset per cohort/box before `if (this_wgt > rawwgt) rawwgt = this_wgt;… |  | [ ] |
+| [MNGIO-35](#mngio-35) ⭐ | 180, 204 | H/H | uninitialised variable / accumulator not reset | `rawwgt` is never initialised and never reset per cohort/box before `if (this_wgt > rawwgt) rawwgt = this_wgt;… |  | [ ] |
 | [MNGIO-36](#mngio-36) ⭐ | 213 | H/H | out-of-bounds layer | `rawn = bm->boxes[b].tr[k][den];` runs after the `for (k...)` loop, so k == nz, one layer past the last water … |  | [ ] |
-| [MNGIO-37](#mngio-37) | 326-352 | H/M | PROTECT imbalance | Four objects are PROTECTed (infile, outfile, outdir, r_call), but only `UNPROTECT(3)` is called, so R's protec… |  | [ ] |
-| [MNGIO-38](#mngio-38) | 118-119 | M/M | cohort vs age | `MeanWtAge[istock][isex][cohort][iyr]` and `MeanLenAge[istock][isex][cohort]` are age-indexed arrays (OverallM… |  | [ ] |
-| [MNGIO-39](#mngio-39) | 282-287 | M/L | string compare / NULL | `strcmp(buffer, "TAC")` never matches because fgets keeps the "\n". The header is parsed as `atof("TAC")=0`, w… |  | [ ] |
+| [MNGIO-37](#mngio-37) | 352 | H/M | PROTECT imbalance | Four objects are PROTECTed (infile, outfile, outdir, r_call), but only `UNPROTECT(3)` is called, so R's protec… |  | [ ] |
+| [MNGIO-38](#mngio-38) | 118 | M/M | cohort vs age | `MeanWtAge[istock][isex][cohort][iyr]` and `MeanLenAge[istock][isex][cohort]` are age-indexed arrays (OverallM… |  | [ ] |
+| [MNGIO-39](#mngio-39) | 282, 286 | M/L | string compare / NULL | `strcmp(buffer, "TAC")` never matches because fgets keeps the "\n". The header is parsed as `atof("TAC")=0`, w… |  | [ ] |
 
 ---
 
 ## MNGIO-35
 
 **uninitialised variable / accumulator not reset** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 180, 202-207  
+**Found at (current code):** `atRlinkRAssess.c` 180, `atRlinkRAssess.c` 204
 **Lines at review (Oct 2026):** 180, 202-207
 
 **Function:** `RAssessSurvey()`
@@ -30,41 +30,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `rawwgt` is never initialised and never reset per cohort/box before `if (this_wgt > rawwgt) rawwgt = this_wgt;`. The first comparison uses garbage, and later boxes and cohorts inherit the previous maximum. Function: `RAssessSurvey()`.
 
-**Current code** (`atmanage/atRlinkRAssess.c` lines 178–209)
+**Code at issue** — `atRlinkRAssess.c` line 180 (the line the review pointed to, found by its text)  
+Search for: `double sample_num, survey_num, q, avail, swept_area, rawwgt, rawlngth, rawn, this_wgt;`
 
 ```c
   178:     int springSurvey = 0;
   179:     int sp, cohort, bb, b, den, sn, rn, k;
-  180:     double sample_num, survey_num, q, avail, swept_area, rawwgt, rawlngth, rawn, this_wgt;
+  180→     double sample_num, survey_num, q, avail, swept_area, rawwgt, rawlngth, rawn, this_wgt;
   181:     int fishery_id = bm->RAssessFisheryID;
   182: 
-  183:     if (bm->TofY == bm->RAssessSpringSurveyDay) {
-  184:         springSurvey = 1;
-  185:     }
-  186:     
-  187:     // Survey the species
-  188:     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-  189:         if (FunctGroupArray[sp].isTAC > 1) {
-  190:             
-  191:             printf("Doing RAssess Survey for %s\n", FunctGroupArray[sp].groupCode);
-  192:             
-  193:             for (cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++) {
-  194:                 for (bb = 0; bb < bm->nsbox; bb++) {
-  195:                     b = bm->nsboxes[bb];
-  196: 
-  197:                     den = FunctGroupArray[sp].NumsTracers[cohort];
-  198:                     sn = FunctGroupArray[sp].structNTracers[cohort];
-  199:                     rn = FunctGroupArray[sp].resNTracers[cohort];
-  200:                 
-  201:                     // Just use max size as do mixing in movement so undless sedentary then all same size anyways
+```
+
+**Code at issue** — `atRlinkRAssess.c` line 204 (the line the review pointed to, found by its text)  
+Search for: `if (this_wgt > rawwgt) {`
+
+```c
   202:                     for (k = 0; k < bm->boxes[b].nz; k++){
   203:                         this_wgt = (bm->boxes[b].tr[k][sn] + bm->boxes[b].tr[k][rn]);
-  204:                         if (this_wgt > rawwgt) {
+  204→                         if (this_wgt > rawwgt) {
   205:                             rawwgt = this_wgt;
   206:                         }
-  207:                     }
-  208:                 
-  209:                     rawlngth = Get_Length(bm, rawwgt, sp);
 ```
 
 **Suggested fix (from review):** Set `rawwgt = 0.0` before the k loop.
@@ -87,7 +72,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## MNGIO-36
 
 **out-of-bounds layer** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 213  
+**Found at (current code):** `atRlinkRAssess.c` 213
 **Lines at review (Oct 2026):** 213
 
 **Function:** `RAssessSurvey()`
@@ -96,12 +81,13 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `rawn = bm->boxes[b].tr[k][den];` runs after the `for (k...)` loop, so k == nz, one layer past the last water layer. Function: `RAssessSurvey()`.
 
-**Current code** (`atmanage/atRlinkRAssess.c` lines 211–215)
+**Code at issue** — `atRlinkRAssess.c` line 213  
+Search for: `rawn = bm->boxes[b].tr[k][den]`
 
 ```c
   211:                     q = Selectivity(bm, rawlngth, fishery_id, avail, 0, bm->logFile);  // Also accounts for availability
   212:                     swept_area = bm->FISHERYprms[fishery_id][swept_area_id] / (bm->boxes[b].area * bm->boxes[b].botz);
-  213:                     rawn = bm->boxes[b].tr[k][den];
+  213→                     rawn = bm->boxes[b].tr[k][den];
   214:                     sample_num = Assess_Add_Error(bm, flagcount, rawn, k_avgcount, k_varcount);
   215:                     survey_num = sample_num * q * swept_area;
 ```
@@ -126,7 +112,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## MNGIO-37
 
 **PROTECT imbalance** · Conf H / Sev M  
-**Lines (current code):** 326-352  
+**Found at (current code):** `atRlinkRAssess.c` 352
 **Lines at review (Oct 2026):** 326-352
 
 **Function:** `Run_RAssess()`
@@ -135,38 +121,13 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Four objects are PROTECTed (infile, outfile, outdir, r_call), but only `UNPROTECT(3)` is called, so R's protect stack leaks on every call and eventually overflows. Function: `Run_RAssess()`.
 
-**Current code** (`atmanage/atRlinkRAssess.c` lines 324–354)
+**Code at issue** — `atRlinkRAssess.c` line 352  
+Search for: `UNPROTECT(3)`
 
 ```c
-  324:         snprintf(outScriptName, sizeof(outScriptName), "%s_%s", FunctGroupArray[species].groupCode, bm->RAssessRoutName);
-  325:         
-  326:         SEXP infile = PROTECT(allocVector(STRSXP, 1));
-  327:         SET_STRING_ELT(infile, 0, mkChar(inScriptName));
-  328: 
-  329:         SEXP outfile = PROTECT(allocVector(STRSXP, 1));
-  330:         SET_STRING_ELT(outfile, 0, mkChar(outScriptName));
-  331:         
-  332:         SEXP outdir = PROTECT(allocVector(STRSXP, 1));
-  333:         SET_STRING_ELT(outdir, 0, mkChar(bm->destFolder));
-  334: 
-  335:         // Setup a call to the R RAssess function, will need other function calls embedded in that?
-  336:         SEXP r_call;
-  337:         PROTECT(r_call = lang4(install("doRAssess"), infile, outfile, outdir));
-  338: 
-  339:         // Execute the function
-  340:         SEXP ret = R_tryEval(r_call, R_GlobalEnv, &errorOccurred);
-  341: 
-  342:         if (!errorOccurred) {
-  343:             printf("RRAssess: R returned TAC value of: ");
-  344:             Rret = REAL(ret)[0];
-  345:             printf("%0.5f, ", Rret);
-  346:             printf("\n");
-  347:         } else {
-  348:             printf("Error occurred calling R\n");
-  349:             Rret = -1;
   350:         }
   351: 
-  352:         UNPROTECT(3);
+  352→         UNPROTECT(3);
   353: 
   354:         // Check interrupts
 ```
@@ -191,7 +152,7 @@ Four objects are PROTECTed (infile, outfile, outdir, r_call), but only `UNPROTEC
 ## MNGIO-38
 
 **cohort vs age** · Conf M / Sev M  
-**Lines (current code):** 118-119  
+**Found at (current code):** `atRlinkRAssess.c` 118
 **Lines at review (Oct 2026):** 118-119
 
 **Function:** `Populate_RAssessFile()`
@@ -200,15 +161,15 @@ Four objects are PROTECTed (infile, outfile, outdir, r_call), but only `UNPROTEC
 
 `MeanWtAge[istock][isex][cohort][iyr]` and `MeanLenAge[istock][isex][cohort]` are age-indexed arrays (OverallMaxAge dim, atAssessTierSetup.c:100-101) but are indexed with the cohort number instead of `this_age`, which is wrong when ageClassSize>1. Function: `Populate_RAssessFile()`.
 
-**Current code** (`atmanage/atRlinkRAssess.c` lines 116–121)
+**Code at issue** — `atRlinkRAssess.c` line 118  
+Search for: `MeanWtAge[istock][isex][cohort][iyr]`
 
 ```c
   116:         for (istock = 0; istock < FunctGroupArray[groupIndex].numStocks; istock++){
   117:             for (isex = 0; isex < bm->K_num_sexes; isex++){
-  118:                 this_size += bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[istock][isex][cohort][iyr] * 1000.0; // convert weight to g from kg
+  118→                 this_size += bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[istock][isex][cohort][iyr] * 1000.0; // convert weight to g from kg
   119:                 this_length += bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[istock][isex][cohort];
   120:                 counter1 += 1.0;
-  121:             }
 ```
 
 **Suggested fix (from review):** Index with `this_age`.
@@ -231,7 +192,7 @@ Four objects are PROTECTed (infile, outfile, outdir, r_call), but only `UNPROTEC
 ## MNGIO-39
 
 **string compare / NULL** · Conf M / Sev L  
-**Lines (current code):** 282-287  
+**Found at (current code):** `atRlinkRAssess.c` 282, `atRlinkRAssess.c` 286
 **Lines at review (Oct 2026):** 282-287
 
 **Function:** `Read_RAssess_output()`
@@ -240,19 +201,26 @@ Four objects are PROTECTed (infile, outfile, outdir, r_call), but only `UNPROTEC
 
 `strcmp(buffer, "TAC")` never matches because fgets keeps the "\n". The header is parsed as `atof("TAC")=0`, which is only fixed by the next line. `strtok` can return NULL (for example, a whitespace-only line), and then `strlen(valueStr)` crashes. Function: `Read_RAssess_output()`.
 
-**Current code** (`atmanage/atRlinkRAssess.c` lines 280–289)
+**Code at issue** — `atRlinkRAssess.c` line 282  
+Search for: `strcmp(buffer, "TAC")`
 
 ```c
   280:             continue;
   281: 
-  282:         if (strcmp(buffer, "TAC") == 0){
+  282→         if (strcmp(buffer, "TAC") == 0){
   283:             // Do nothing as header row
   284:         } else {
+```
+
+**Code at issue** — `atRlinkRAssess.c` line 286  
+Search for: `strlen(valueStr)`
+
+```c
+  284:         } else {
   285:             valueStr = strtok(buffer, seps);
-  286:             if(strlen(valueStr) != 0) {
+  286→             if(strlen(valueStr) != 0) {
   287:                 bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = atof(valueStr);
   288:             }
-  289:         }
 ```
 
 **Suggested fix (from review):** Strip the newline before comparing and check valueStr != NULL.

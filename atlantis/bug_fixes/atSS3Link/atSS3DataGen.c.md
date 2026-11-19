@@ -2,45 +2,45 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **24 findings** (severity H: 10; confidence H and severity H: 8; on the priority list: 8).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [SS3-02](#ss3-02) | 212-216 | H/M | accumulator | `this_SSB += (RN+SN)*DEN*...; tot_SSB += scaled_FSPB[cohort] * this_SSB;`: `this_SSB` is a running total over … |  | [ ] |
-| [SS3-03](#ss3-03) | 227, 254, 556, 929 | M/M | wrong variable | `r_id = bm->regID[ij]` uses the biomass *reporting* region (atlantisboxmodel.h:5297). The other functions in t… |  | [ ] |
-| [SS3-04](#ss3-04) | 282-291 | M/M | division by zero | `propR[ij] /= thistot; propSR[ij][s] /= thistot;` has no guard. When the stock is collapsed or absent, `thisto… |  | [ ] |
-| [SS3-05](#ss3-05) ⭐ | 350-383 | H/H | wrong denominator / units | `totnum` is accumulated but never used. MeanWtAge is `sum(W*N*X_CN*mg_2_kg)` divided by `propCount`, which is … |  | [ ] |
-| [SS3-06](#ss3-06) ⭐ | 369-381 | H/H | loop / copy-paste | The divisions sit inside `for (ij=0; ij<K_num_sexes; ij++)` but always target `[FEMALE]`. With `Num_Sexes=2` t… |  | [ ] |
+| [SS3-02](#ss3-02) | 213 | H/M | accumulator | `this_SSB += (RN+SN)*DEN*...; tot_SSB += scaled_FSPB[cohort] * this_SSB;`: `this_SSB` is a running total over … |  | [ ] |
+| [SS3-03](#ss3-03) | 227, 122 | M/M | wrong variable | `r_id = bm->regID[ij]` uses the biomass *reporting* region (atlantisboxmodel.h:5297). The other functions in t… |  | [ ] |
+| [SS3-04](#ss3-04) | 288 | M/M | division by zero | `propR[ij] /= thistot; propSR[ij][s] /= thistot;` has no guard. When the stock is collapsed or absent, `thisto… |  | [ ] |
+| [SS3-05](#ss3-05) ⭐ | 359 | H/H | wrong denominator / units | `totnum` is accumulated but never used. MeanWtAge is `sum(W*N*X_CN*mg_2_kg)` divided by `propCount`, which is … |  | [ ] |
+| [SS3-06](#ss3-06) ⭐ | 371 | H/H | loop / copy-paste | The divisions sit inside `for (ij=0; ij<K_num_sexes; ij++)` but always target `[FEMALE]`. With `Num_Sexes=2` t… |  | [ ] |
 | [SS3-07](#ss3-07) | 369 | H/L | wrong index | The test `propCount[stock_id]` uses the `stock_id` left over from the box/layer loop, before the per-stock loo… |  | [ ] |
-| [SS3-08](#ss3-08) | 337-348, 359-381 | M/M | cohort vs genotype | With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][iyr] is re-zeroed at 343 for ea… |  | [ ] |
-| [SS3-09](#ss3-09) | 388-441 | M/L | state not reset | `last_wtval/last_wtai/last_lval/last_lai` are not reset per stock or sex. Because the loop order is ia (outer)… |  | [ ] |
-| [SS3-10](#ss3-10) ⭐ | 525-532 | H/H | uninitialised data | `sumcatch += TotCatch[f][r][iyr]`: `TotCatch` is allocated (atAssessTierSetup.c:160) but never written anywher… |  | [ ] |
-| [SS3-11](#ss3-11) ⭐ | 569-573, 582 | H/H | unit mismatch | `SizeNumCaught/SizeNumDiscard` hold *numbers* (atHarvest.c:586/594, `age_catch = fishing / Wgt`). Here they ar… |  | [ ] |
+| [SS3-08](#ss3-08) | 337 | M/M | cohort vs genotype | With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][iyr] is re-zeroed at 343 for ea… |  | [ ] |
+| [SS3-09](#ss3-09) | 321 | M/L | state not reset | `last_wtval/last_wtai/last_lval/last_lai` are not reset per stock or sex. Because the loop order is ia (outer)… |  | [ ] |
+| [SS3-10](#ss3-10) ⭐ | 525, 531 | H/H | uninitialised data | `sumcatch += TotCatch[f][r][iyr]`: `TotCatch` is allocated (atAssessTierSetup.c:160) but never written anywher… |  | [ ] |
+| [SS3-11](#ss3-11) ⭐ | 570 | H/H | unit mismatch | `SizeNumCaught/SizeNumDiscard` hold *numbers* (atHarvest.c:586/594, `age_catch = fishing / Wgt`). Here they ar… |  | [ ] |
 | [SS3-12](#ss3-12) | 573 | M/L | wrong index | `actualcatchsize[r_id][stock_id][basecohort]` uses the stock_id of the *last layer* from the preceding k loop.… |  | [ ] |
-| [SS3-13](#ss3-13) | ≈614 | M/H | off-by-one / OOB | `CPUEdevs[f][r][iyr-1]` is read with no `iyr>0` guard. GenData is called with `year` from atManageTier.c:124, … |  | [ ] |
-| [SS3-14](#ss3-14) | 619-629 | M/M | wrong transform | The AR(1) deviate (normal, mean 0) is used directly as a multiplier, `actualCPUE * cpue_dev`. A hack maps exac… |  | [ ] |
-| [SS3-15](#ss3-15) | 717-735, 799-801 | H/M | overwritten state / missing calc | On the GenMnomial path, `ageprops[r]` and `lenprops[r]` are 2-D (stock × bin). They are overwritten for every … |  | [ ] |
-| [SS3-16](#ss3-16) | 719-722, 1038, 1120 | M/M | region vs stock | The loop `r < numStocks` is passed as the region arg `r`. The callee uses it both as stock (`r != stock_id`) a… |  | [ ] |
-| [SS3-17](#ss3-17) | 742-743, 793-801, 821-848 | H/M | stale buffer | `agecomp/lencomp` are reset only per `it`, not per (f,r,s). On the GenMnomial path, when `nage_sample`/`nlen_s… |  | [ ] |
-| [SS3-18](#ss3-18) ⭐ | 808, 1389-1396 | H/H | wrong quantity | Age samples are generated by `GenSample(..., NageVec, ..., agecomp, ...)`, which bins by *length*: `l = floor(… |  | [ ] |
-| [SS3-19](#ss3-19) | 329, 388, 843 | M/H | buffer overrun risk | Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (AgeComp). These arrays are alloc… |  | [ ] |
-| [SS3-20](#ss3-20) | 938-1003 | M/M | duplicated counts | `SizeNumCaught/SizeNumDiscard` have no sex dimension, but are added once per `s < Nsexes`. With `Num_Sexes=2`,… |  | [ ] |
-| [SS3-21](#ss3-21) ⭐ | 1067-1079 | H/H | buffer overrun | `l = (int)floor(li / bin_size); lenprops[r][l] += ...` has no upper bound check, unlike GenSample:1388. lenpro… |  | [ ] |
-| [SS3-22](#ss3-22) ⭐ | 1126-1157, 1171-1174 | H/H | accumulator not reset / OOB | `a` is set once per cohort, but `a += aa` runs inside the *box* loop. It keeps growing across boxes, which yie… |  | [ ] |
-| [SS3-23](#ss3-23) | 1219-1220 | M/M | uninitialised source | `CKSurveyNum` is built from `ageprops`, which is filled only on the `useGenMnomial` path (and then holds the l… |  | [ ] |
-| [SS3-24](#ss3-24) ⭐ | 1247-1306 | H/H | unit mismatch | `fishableBiomass` mixes units. AGE_STRUCTURED adds a cell total in mg N (`(sn+rn)*den`). AGE_STRUCTURED_BIOMAS… |  | [ ] |
-| [SS3-25](#ss3-25) | 1291-1295 | H/M | copy-paste / loop | In the BIOMASS case the fishery loop only assigns `sel` and `q`, and the `+=` sits after the loop, so only the… |  | [ ] |
+| [SS3-13](#ss3-13) | 616 | M/H | off-by-one / OOB | `CPUEdevs[f][r][iyr-1]` is read with no `iyr>0` guard. GenData is called with `year` from atManageTier.c:124, … |  | [ ] |
+| [SS3-14](#ss3-14) | 629 | M/M | wrong transform | The AR(1) deviate (normal, mean 0) is used directly as a multiplier, `actualCPUE * cpue_dev`. A hack maps exac… |  | [ ] |
+| [SS3-15](#ss3-15) | 731, 1043, 801 | H/M | overwritten state / missing calc | On the GenMnomial path, `ageprops[r]` and `lenprops[r]` are 2-D (stock × bin). They are overwritten for every … |  | [ ] |
+| [SS3-16](#ss3-16) | 1052, 506 | M/M | region vs stock | The loop `r < numStocks` is passed as the region arg `r`. The callee uses it both as stock (`r != stock_id`) a… |  | [ ] |
+| [SS3-17](#ss3-17) | 799 | H/M | stale buffer | `agecomp/lencomp` are reset only per `it`, not per (f,r,s). On the GenMnomial path, when `nage_sample`/`nlen_s… |  | [ ] |
+| [SS3-18](#ss3-18) ⭐ | 808, 1394 | H/H | wrong quantity | Age samples are generated by `GenSample(..., NageVec, ..., agecomp, ...)`, which bins by *length*: `l = floor(… |  | [ ] |
+| [SS3-19](#ss3-19) | 323 | M/H | buffer overrun risk | Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (AgeComp). These arrays are alloc… |  | [ ] |
+| [SS3-20](#ss3-20) | 973, 938 | M/M | duplicated counts | `SizeNumCaught/SizeNumDiscard` have no sex dimension, but are added once per `s < Nsexes`. With `Num_Sexes=2`,… |  | [ ] |
+| [SS3-21](#ss3-21) ⭐ | 1067, 698 | H/H | buffer overrun | `l = (int)floor(li / bin_size); lenprops[r][l] += ...` has no upper bound check, unlike GenSample:1388. lenpro… |  | [ ] |
+| [SS3-22](#ss3-22) ⭐ | 1125 | H/H | accumulator not reset / OOB | `a` is set once per cohort, but `a += aa` runs inside the *box* loop. It keeps growing across boxes, which yie… |  | [ ] |
+| [SS3-23](#ss3-23) | 1219 | M/M | uninitialised source | `CKSurveyNum` is built from `ageprops`, which is filled only on the `useGenMnomial` path (and then holds the l… |  | [ ] |
+| [SS3-24](#ss3-24) ⭐ | 1237, 1274, 572 | H/H | unit mismatch | `fishableBiomass` mixes units. AGE_STRUCTURED adds a cell total in mg N (`(sn+rn)*den`). AGE_STRUCTURED_BIOMAS… |  | [ ] |
+| [SS3-25](#ss3-25) | 1292, 1295 | H/M | copy-paste / loop | In the BIOMASS case the fishery loop only assigns `sel` and `q`, and the `+=` sits after the loop, so only the… |  | [ ] |
 
 ---
 
 ## SS3-02
 
 **accumulator** · Conf H / Sev M  
-**Lines (current code):** 212-216  
+**Found at (current code):** `atSS3DataGen.c` 213
 **Lines at review (Oct 2026):** 212-216
 
 **Function:** `GetBiomassData()`
@@ -49,18 +49,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `this_SSB += (RN+SN)*DEN*...; tot_SSB += scaled_FSPB[cohort] * this_SSB;`: `this_SSB` is a running total over queue entries and cohorts, and the whole running total is added to `tot_SSB` again on each iteration. External-recruit SSB is therefore over-counted. The in-domain loop at 233 correctly uses `=`. Function: `GetBiomassData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 210–218)
+**Code at issue** — `atSS3DataGen.c` line 213 (closest match to the quoted code; wording differs slightly)  
+Search for: `this_SSB += (MIGRATION[groupIndex].RN[cohort][ij] + MIGRATION[groupIndex].SN[cohort][ij]) `
 
 ```c
-  210:             // Biomass outside the model domain
   211:             if (FunctGroupArray[groupIndex].recruitType == external_recruit) {
   212:                 for (ij = MIGRATION[groupIndex].num_in_queue_done; ij < MIGRATION[groupIndex].num_in_queue; ij++) {
-  213:                     this_SSB += (MIGRATION[groupIndex].RN[cohort][ij] + MIGRATION[groupIndex].SN[cohort][ij]) * MIGRATION[groupIndex].DEN[cohort][ij] * bm->X_CN * mg_2_kg;
+  213→                     this_SSB += (MIGRATION[groupIndex].RN[cohort][ij] + MIGRATION[groupIndex].SN[cohort][ij]) * MIGRATION[groupIndex].DEN[cohort][ij] * bm->X_CN * mg_2_kg;
   214:                     bm->tot_SSB[groupIndex] += FunctGroupArray[groupIndex].scaled_FSPB[cohort] * this_SSB;
   215:                     bm->tot_cohort[groupIndex][cohort] += MIGRATION[groupIndex].DEN[cohort][ij];
-  216:                 }
-  217:             }
-  218:         
 ```
 
 **Suggested fix (from review):** Use a local `val = (...)`, then `this_SSB += val; tot_SSB += FSPB*val`
@@ -83,48 +80,33 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SS3-03
 
 **wrong variable** · Conf M / Sev M  
-**Lines (current code):** 227, 254, 556, 929  
+**Found at (current code):** `atSS3DataGen.c` 227, `atSS3DataGen.c` 122
 **Lines at review (Oct 2026):** 227, 254, 556, 924
 
 **Why it's thought to be a bug**
 
 `r_id = bm->regID[ij]` uses the biomass *reporting* region (atlantisboxmodel.h:5489). The other functions in this file map boxes with the species *assessment* region `RBCspeciesArray[groupIndex].regID[b]` (lines 122, 480, 882). So SSB, propR, Uage and the raw comp data are split by a different region map than catch and effort. The clamp `r_id >= Nregions -> Nregions-1` hides the mismatch. Functions: `GetBiomassData()`, `GetCatch_n_DiscardData()`, `FindRawData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 225–256)
+**Code at issue** — `atSS3DataGen.c` line 227  
+Search for: `r_id = bm->regID[ij]`
 
 ```c
   225:             thistot = 0.0;
   226:             for (ij = 0; ij < bm->nbox; ij++) {
-  227:                 r_id = bm->regID[ij];
+  227→                 r_id = bm->regID[ij];
   228:                 if(r_id >= Nregions)
   229:                     r_id = Nregions - 1;
-  230:                 for (k = 0; k < bm->boxes[ij].nz; k++) {
-  231: 					stock_id = bm->group_stock[groupIndex][ij][k];
-  232:                     
-  233:                     this_SSB = (bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn]) * bm->boxes[ij].tr[k][den] * FunctGroupArray[groupIndex].habitatCoeffs[WC] * bm->X_CN * mg_2_kg;
-  234:                     bm->tot_SSB[groupIndex] += FunctGroupArray[groupIndex].scaled_FSPB[cohort] * this_SSB;
-  235:                     bm->RBCestimation.RBCspeciesArray[groupIndex].propR[r_id] += FunctGroupArray[groupIndex].scaled_FSPB[cohort] * this_SSB;
-  236:                     thistot += FunctGroupArray[groupIndex].scaled_FSPB[cohort] * this_SSB;
-  237:                     bm->RBCestimation.RBCspeciesArray[groupIndex].propSR[r_id][stock_id] += FunctGroupArray[groupIndex].scaled_FSPB[cohort] * this_SSB;
-  238:                     bm->tot_cohort[groupIndex][cohort] += bm->boxes[ij].tr[k][den];
-  239:                  }
-  240:             }
-  241:             
-  242:         }
-  243:     } else {
-  244:         thistot = 0.0;
-  245:         // Find regional breakdown
-  246:         
-  247:         for (cohort = 0; cohort < FunctGroupArray[groupIndex].numCohortsXnumGenes; cohort++) {
-  248:             sn = FunctGroupArray[groupIndex].structNTracers[cohort];
-  249:             rn = FunctGroupArray[groupIndex].resNTracers[cohort];
-  250:             den = FunctGroupArray[groupIndex].NumsTracers[cohort];
-  251:             //bm->tot_Bcohort[groupIndex][cohort] = 0.0;
-  252:         
-  253:             for (ij = 0; ij < bm->nbox; ij++) {
-  254:                 r_id = bm->regID[ij];
-  255:                 if(r_id >= Nregions)
-  256:                     r_id = Nregions - 1;
+```
+
+**Code at issue** — `atSS3DataGen.c` line 122  
+Search for: `RBCspeciesArray[groupIndex].regID[b]`
+
+```c
+  120: 		for (r = 0; r < Nregions; r++) {
+  121: 			for(b=0; b<bm->nbox; b++) {
+  122→ 				if ((Nregions == 1) || (bm->RBCestimation.RBCspeciesArray[groupIndex].regID[b] == r)) {
+  123:                     thiscatch = 0.0;
+  124:                     thisdiscard = bm->CumDiscards[groupIndex][nf][b];
 ```
 
 **Suggested fix (from review):** Use `RBCspeciesArray[groupIndex].regID[ij]`
@@ -147,7 +129,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SS3-04
 
 **division by zero** · Conf M / Sev M  
-**Lines (current code):** 282-291  
+**Found at (current code):** `atSS3DataGen.c` 288
 **Lines at review (Oct 2026):** 282-291
 
 **Function:** `GetBiomassData()`
@@ -156,23 +138,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `propR[ij] /= thistot; propSR[ij][s] /= thistot;` has no guard. When the stock is collapsed or absent, `thistot == 0` makes SpawnBio and SBioZero NaN. Function: `GetBiomassData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 280–293)
+**Code at issue** — `atSS3DataGen.c` line 288 (the line the review pointed to, found by its text)  
+Search for: `bm->RBCestimation.RBCspeciesArray[groupIndex].SpawnBio[stock_id][ij][iyr] = bm->tot_SSB[gr`
 
 ```c
-  280:     
-  281:     // Normalise the regional contributions
-  282:     for (ij=0; ij < Nregions; ij++) {
-  283:         bm->RBCestimation.RBCspeciesArray[groupIndex].propR[ij] /= thistot;
-  284:     
-  285:         // Store spawning biomass for the current year
   286:         for (stock_id=0; stock_id < Nstocks; stock_id++) {
   287:             bm->RBCestimation.RBCspeciesArray[groupIndex].propSR[ij][stock_id] /= thistot;
-  288:             bm->RBCestimation.RBCspeciesArray[groupIndex].SpawnBio[stock_id][ij][iyr] = bm->tot_SSB[groupIndex] * bm->RBCestimation.RBCspeciesArray[groupIndex].propSR[ij][stock_id];
+  288→             bm->RBCestimation.RBCspeciesArray[groupIndex].SpawnBio[stock_id][ij][iyr] = bm->tot_SSB[groupIndex] * bm->RBCestimation.RBCspeciesArray[groupIndex].propSR[ij][stock_id];
   289:         }
   290:         bm->RBCestimation.RBCspeciesArray[groupIndex].SpawnBio[Nstocks][ij][iyr] = bm->tot_SSB[groupIndex] * bm->RBCestimation.RBCspeciesArray[groupIndex].propR[ij];
-  291:         bm->RBCestimation.RBCspeciesArray[groupIndex].SpawnBio[Nstocks][Nregions][iyr] += bm->tot_SSB[groupIndex] * bm->RBCestimation.RBCspeciesArray[groupIndex].propR[ij];
-  292:         
-  293:         // If appropriate store the SSB_zero
 ```
 
 **Suggested fix (from review):** Divide only if `thistot > 0`
@@ -195,7 +169,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SS3-05
 
 **wrong denominator / units** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 350-383  
+**Found at (current code):** `atSS3DataGen.c` 359
 **Lines at review (Oct 2026):** 350-383
 
 **Function:** `GetLengthWeightData()`
@@ -204,47 +178,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `totnum` is accumulated but never used. MeanWtAge is `sum(W*N*X_CN*mg_2_kg)` divided by `propCount`, which is the number of *cells*. That gives biomass per cell, not the mean weight of an individual. MeanLenAge is `sum(L*N*X_CN*mg_2_kg)/ncells`, so it also carries a spurious mgN-to-kg factor on a length. The comment says the average is "weighted based on numbers". Function: `GetLengthWeightData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 348–385)
+**Code at issue** — `atSS3DataGen.c` line 359 (located by name only; check this is the right place)  
+Search for: `bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[stock_id][FEMALE][ia] += (Ecology`
 
 ```c
-  348:         Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].propCount, Nstocks, 0.0);  // As need to reinitalise each for each cohort
-  349:         
-  350:         totnum  = 0.0;
-  351:         for (ij = 0; ij < bm->nbox; ij++) {
-  352:             for (k = 0; k < bm->boxes[ij].nz; k++) {
-  353:                 stock_id = bm->group_stock[groupIndex][ij][k];
-  354: 
-  355:                 if(bm->boxes[ij].tr[k][den] > bm->min_dens) {
-  356:                     Wgt = (bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn]);
   357:                     totnum += bm->boxes[ij].tr[k][den] * FunctGroupArray[groupIndex].habitatCoeffs[WC];
   358:                     if (bm->RBCestimation.RBCspeciesParam[groupIndex][flagLAdirect_id]) {
-  359:                         bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[stock_id][FEMALE][ia] += (Ecology_Get_Size(bm, groupIndex, Wgt, basecohort) * bm->boxes[ij].tr[k][den] * FunctGroupArray[groupIndex].habitatCoeffs[WC] * bm->X_CN * mg_2_kg);
+  359→                         bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[stock_id][FEMALE][ia] += (Ecology_Get_Size(bm, groupIndex, Wgt, basecohort) * bm->boxes[ij].tr[k][den] * FunctGroupArray[groupIndex].habitatCoeffs[WC] * bm->X_CN * mg_2_kg);
   360:                      }
   361:                      if (bm->RBCestimation.RBCspeciesParam[groupIndex][flagWAdirect_id]) {
-  362:                          bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][FEMALE][ia][iyr] += ((bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn])  * bm->boxes[ij].tr[k][den] * FunctGroupArray[groupIndex].habitatCoeffs[WC] * bm->X_CN * mg_2_kg);
-  363:                      }
-  364:                      bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id] += 1.0;
-  365:                 }
-  366:             }
-  367:         }
-  368:         // Get final average sizes (which have been weighted based on numbers per box contributing
-  369:         if ((bm->RBCestimation.RBCspeciesParam[groupIndex][flagLAdirect_id]) && (bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id])){
-  370:             for (stock_id = 0; stock_id < Nstocks; stock_id++) {
-  371:                 for (ij = 0; ij < bm->K_num_sexes; ij++) {
-  372:                     bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[stock_id][FEMALE][ia] /= bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id];
-  373:                 }
-  374:             }
-  375:         }
-  376:         
-  377:         for (stock_id = 0; stock_id < Nstocks; stock_id++) {
-  378:                 if ((bm->RBCestimation.RBCspeciesParam[groupIndex][flagWAdirect_id]) && (bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id])){
-  379:                 for (ij = 0; ij < bm->K_num_sexes; ij++) {
-  380:                     bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][FEMALE][ia][iyr] /= bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id];
-  381:                 }
-  382:             }
-  383:         }
-  384:     
-  385:     }
 ```
 
 **Suggested fix (from review):** Divide by `totnum` per stock. Drop `X_CN*mg_2_kg` from the length sum
@@ -267,7 +209,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SS3-06
 
 **loop / copy-paste** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 369-381  
+**Found at (current code):** `atSS3DataGen.c` 371
 **Lines at review (Oct 2026):** 369-381
 
 **Function:** `GetLengthWeightData()`
@@ -276,26 +218,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The divisions sit inside `for (ij=0; ij<K_num_sexes; ij++)` but always target `[FEMALE]`. With `Num_Sexes=2` the FEMALE mean is divided by propCount twice. Function: `GetLengthWeightData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 367–383)
+**Code at issue** — `atSS3DataGen.c` line 371  
+Search for: `for (ij = 0; ij < bm->K_num_sexes; ij++)`
 
 ```c
-  367:         }
-  368:         // Get final average sizes (which have been weighted based on numbers per box contributing
   369:         if ((bm->RBCestimation.RBCspeciesParam[groupIndex][flagLAdirect_id]) && (bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id])){
   370:             for (stock_id = 0; stock_id < Nstocks; stock_id++) {
-  371:                 for (ij = 0; ij < bm->K_num_sexes; ij++) {
+  371→                 for (ij = 0; ij < bm->K_num_sexes; ij++) {
   372:                     bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[stock_id][FEMALE][ia] /= bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id];
   373:                 }
-  374:             }
-  375:         }
-  376:         
-  377:         for (stock_id = 0; stock_id < Nstocks; stock_id++) {
-  378:                 if ((bm->RBCestimation.RBCspeciesParam[groupIndex][flagWAdirect_id]) && (bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id])){
-  379:                 for (ij = 0; ij < bm->K_num_sexes; ij++) {
-  380:                     bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][FEMALE][ia][iyr] /= bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id];
-  381:                 }
-  382:             }
-  383:         }
 ```
 
 **Suggested fix (from review):** Divide once, outside the sex loop, or index `[ij]`
@@ -318,7 +249,7 @@ The divisions sit inside `for (ij=0; ij<K_num_sexes; ij++)` but always target `[
 ## SS3-07
 
 **wrong index** · Conf H / Sev L  
-**Lines (current code):** 369  
+**Found at (current code):** `atSS3DataGen.c` 369
 **Lines at review (Oct 2026):** 369
 
 **Function:** `GetLengthWeightData()`
@@ -327,12 +258,13 @@ The divisions sit inside `for (ij=0; ij<K_num_sexes; ij++)` but always target `[
 
 The test `propCount[stock_id]` uses the `stock_id` left over from the box/layer loop, before the per-stock loop that follows it. One stock's count gates the division for all stocks. Function: `GetLengthWeightData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 367–371)
+**Code at issue** — `atSS3DataGen.c` line 369  
+Search for: `propCount[stock_id]`
 
 ```c
   367:         }
   368:         // Get final average sizes (which have been weighted based on numbers per box contributing
-  369:         if ((bm->RBCestimation.RBCspeciesParam[groupIndex][flagLAdirect_id]) && (bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id])){
+  369→         if ((bm->RBCestimation.RBCspeciesParam[groupIndex][flagLAdirect_id]) && (bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id])){
   370:             for (stock_id = 0; stock_id < Nstocks; stock_id++) {
   371:                 for (ij = 0; ij < bm->K_num_sexes; ij++) {
 ```
@@ -357,7 +289,7 @@ The test `propCount[stock_id]` uses the `stock_id` left over from the box/layer 
 ## SS3-08
 
 **cohort vs genotype** · Conf M / Sev M  
-**Lines (current code):** 337-348, 359-381  
+**Found at (current code):** `atSS3DataGen.c` 337
 **Lines at review (Oct 2026):** 337-348, 359-381
 
 **Function:** `GetLengthWeightData()`
@@ -366,49 +298,15 @@ The test `propCount[stock_id]` uses the `stock_id` left over from the box/layer 
 
 With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][iyr] is re-zeroed at 343 for each genotype cohort, so only the last genotype survives. MeanLenAge is not reset, but is divided again for each genotype cohort. Function: `GetLengthWeightData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 335–374 (truncated))
+**Code at issue** — `atSS3DataGen.c` line 337 (the line the review pointed to, found by its text)  
+Search for: `basecohort = (int)floor (cohort / FunctGroupArray[groupIndex].numGeneTypes);`
 
 ```c
   335:         rn = FunctGroupArray[groupIndex].resNTracers[cohort];
   336:         den = FunctGroupArray[groupIndex].NumsTracers[cohort];
-  337:         basecohort = (int)floor (cohort / FunctGroupArray[groupIndex].numGeneTypes);
+  337→         basecohort = (int)floor (cohort / FunctGroupArray[groupIndex].numGeneTypes);
   338:         ia = basecohort * FunctGroupArray[groupIndex].ageClassSize;
   339:         
-  340:         if (bm->RBCestimation.RBCspeciesParam[groupIndex][flagWAdirect_id]) {
-  341:             for (stock_id = 0; stock_id < Nstocks; stock_id++) {
-  342:                 for (ij = 0; ij < bm->K_num_sexes; ij++) {
-  343:                     bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][ij][ia][iyr] = 0.0;
-  344:                 }
-  345:             }
-  346:         }
-  347:         
-  348:         Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].propCount, Nstocks, 0.0);  // As need to reinitalise each for each cohort
-  349:         
-  350:         totnum  = 0.0;
-  351:         for (ij = 0; ij < bm->nbox; ij++) {
-  352:             for (k = 0; k < bm->boxes[ij].nz; k++) {
-  353:                 stock_id = bm->group_stock[groupIndex][ij][k];
-  354: 
-  355:                 if(bm->boxes[ij].tr[k][den] > bm->min_dens) {
-  356:                     Wgt = (bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn]);
-  357:                     totnum += bm->boxes[ij].tr[k][den] * FunctGroupArray[groupIndex].habitatCoeffs[WC];
-  358:                     if (bm->RBCestimation.RBCspeciesParam[groupIndex][flagLAdirect_id]) {
-  359:                         bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[stock_id][FEMALE][ia] += (Ecology_Get_Size(bm, groupIndex, Wgt, basecohort) * bm->boxes[ij].tr[k][den] * FunctGroupArray[groupIndex].habitatCoeffs[WC] * bm->X_CN * mg_2_kg);
-  360:                      }
-  361:                      if (bm->RBCestimation.RBCspeciesParam[groupIndex][flagWAdirect_id]) {
-  362:                          bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][FEMALE][ia][iyr] += ((bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn])  * bm->boxes[ij].tr[k][den] * FunctGroupArray[groupIndex].habitatCoeffs[WC] * bm->X_CN * mg_2_kg);
-  363:                      }
-  364:                      bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id] += 1.0;
-  365:                 }
-  366:             }
-  367:         }
-  368:         // Get final average sizes (which have been weighted based on numbers per box contributing
-  369:         if ((bm->RBCestimation.RBCspeciesParam[groupIndex][flagLAdirect_id]) && (bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id])){
-  370:             for (stock_id = 0; stock_id < Nstocks; stock_id++) {
-  371:                 for (ij = 0; ij < bm->K_num_sexes; ij++) {
-  372:                     bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[stock_id][FEMALE][ia] /= bm->RBCestimation.RBCspeciesArray[groupIndex].propCount[stock_id];
-  373:                 }
-  374:             }
 ```
 
 **Suggested fix (from review):** Loop over basecohort and aggregate all genotypes before averaging
@@ -431,7 +329,7 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 ## SS3-09
 
 **state not reset** · Conf M / Sev L  
-**Lines (current code):** 388-441  
+**Found at (current code):** `atSS3DataGen.c` 321
 **Lines at review (Oct 2026):** 388-441
 
 **Function:** `GetLengthWeightData()`
@@ -440,49 +338,15 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 
 `last_wtval/last_wtai/last_lval/last_lai` are not reset per stock or sex. Because the loop order is ia (outer) then stock (inner), gap-filling interpolates using the previous stock's values. Function: `GetLengthWeightData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 386–425 (truncated))
+**Code at issue** — `atSS3DataGen.c` line 321 (located by name only; check this is the right place)  
+Search for: `int ij, k, cohort, sn, rn, den, stock_id = 0, basecohort, ia, last_wtai = 0, last_lai = 0,`
 
 ```c
-  386:     
-  387:     // Now do a size check to fill holes
-  388:     for (ia=0; ia < bm->RBCestimation.RBCspeciesParam[groupIndex][MaxAge_id]; ia++) {
-  389:         for (stock_id = 0; stock_id < Nstocks; stock_id++) {
-  390:             for (ij = 0; ij < bm->K_num_sexes; ij++) {
-  391:                 if ( bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][FEMALE][ia][iyr] ) {
-  392:                     last_wtval = bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][FEMALE][ia][iyr];
-  393:                     last_wtai = ia;
-  394:                 }
-  395:                 if ( bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[stock_id][FEMALE][ia] ) {
-  396:                     last_lval = bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[stock_id][FEMALE][ia];
-  397:                     last_lai = ia;
-  398:                 }
-  399:                 
-  400:                 
-  401:                 if (!bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][FEMALE][ia][iyr]) {
-  402:                     if (( ia > 0 ) && ( ia < bm->RBCestimation.RBCspeciesParam[groupIndex][MaxAge_id] - FunctGroupArray[groupIndex].ageClassSize)) {  // just average either side
-  403:                         
-  404:                         next_ai = last_wtai + FunctGroupArray[groupIndex].ageClassSize;
-  405:                         next_val = bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][FEMALE][next_ai][iyr];
-  406:                         
-  407:                         diff_val = (next_val - last_wtval) / nAgeCor;
-  408:                         nstep = (double) (ia - last_wtai);
-  409:                         bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][FEMALE][ia][iyr] = last_wtval + nstep * diff_val;
-  410:                         
-  411:                         
-  412:                     } else if ( ia > 0 ) {
-  413:                         // Test just to be sure, in actuality always has to be > 0 as should always have a value for a = 0 case
-  414:                         // due to fact basecohort = 0 -> ai = 0 case above
-  415:                         // So this is to pad out final age class
-  416:                         
-  417:                         bm->RBCestimation.RBCspeciesArray[groupIndex].MeanWtAge[stock_id][FEMALE][ia][iyr] = last_wtval;
-  418:                         
-  419:                     }
-  420:                 }
-  421:                 if (!bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[stock_id][FEMALE][ia]) {
-  422:                     if (( ia > 0 ) && ( ia < bm->RBCestimation.RBCspeciesParam[groupIndex][MaxAge_id] - FunctGroupArray[groupIndex].ageClassSize)) {  // just average either side
-  423:                         
-  424:                         next_ai = last_lai + FunctGroupArray[groupIndex].ageClassSize;
-  425:                         next_val =bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge[stock_id][FEMALE][next_ai];
+  319:  *****************************************************************************/
+  320: void GetLengthWeightData(MSEBoxModel *bm, int groupIndex, int iyr) {
+  321→     int ij, k, cohort, sn, rn, den, stock_id = 0, basecohort, ia, last_wtai = 0, last_lai = 0, next_ai;
+  322:     int Nstocks = FunctGroupArray[groupIndex].numStocks;
+  323:     int Nages = (int)bm->RBCestimation.RBCspeciesParam[groupIndex][MaxAge_id];
 ```
 
 **Suggested fix (from review):** Make the last_* arrays per stock, or loop stock outermost and reset
@@ -505,7 +369,7 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 ## SS3-10
 
 **uninitialised data** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 525-532  
+**Found at (current code):** `atSS3DataGen.c` 525, `atSS3DataGen.c` 531
 **Lines at review (Oct 2026):** 525-532
 
 **Function:** `GetCatch_n_DiscardData()`
@@ -514,21 +378,26 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 
 `sumcatch += TotCatch[f][r][iyr]`: `TotCatch` is allocated (atAssessTierSetup.c:160) but never written anywhere in compiled code (grep finds only this read). With `DiscType==2`, the discard fraction becomes `expdisc/(0+0.0001)`, about 10^4 times too large. Function: `GetCatch_n_DiscardData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 523–534)
+**Code at issue** — `atSS3DataGen.c` line 525 (closest match to the quoted code; wording differs slightly)  
+Search for: `sumcatch += bm->RBCestimation.RBCspeciesArray[groupIndex].TotCatch[f][r][iyr];`
 
 ```c
   523: 			if (bm->RBCestimation.RBCspeciesArray[groupIndex].DiscYears[f][iyr]) {
   524: 				expdisc += bm->RBCestimation.RBCspeciesArray[groupIndex].DiscData[f][r][iyr];
-  525: 				sumcatch += bm->RBCestimation.RBCspeciesArray[groupIndex].TotCatch[f][r][iyr];
+  525→ 				sumcatch += bm->RBCestimation.RBCspeciesArray[groupIndex].TotCatch[f][r][iyr];
   526: 			}
   527:             
-  528: 		}
+```
+
+**Code at issue** — `atSS3DataGen.c` line 531  
+Search for: `DiscType == 2`
+
+```c
   529:         
   530:         if (bm->RBCestimation.RBCspeciesArray[groupIndex].DiscYears[f][iyr]) {
-  531: 			if (bm->RBCestimation.DiscType == 2) {  // fraction of total
+  531→ 			if (bm->RBCestimation.DiscType == 2) {  // fraction of total
   532: 				expdisc = expdisc / (sumcatch + 0.0001);
   533:                 bm->RBCestimation.RBCspeciesArray[groupIndex].DiscData[f][sumregion][iyr] = expdisc
-  534: 					+ Util_xnorm(0.0, bm->RBCestimation.RBCspeciesArray[groupIndex].DiscCV[f] * expdisc, &bm->RBCestimation.Iseedz);
 ```
 
 **Suggested fix (from review):** Use `CatchData[f][r][iyr]` (+ discards) or fill TotCatch
@@ -551,7 +420,7 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 ## SS3-11
 
 **unit mismatch** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 569-573, 582  
+**Found at (current code):** `atSS3DataGen.c` 570
 **Lines at review (Oct 2026):** 569-573, 582
 
 **Function:** `GetCatch_n_DiscardData()`
@@ -560,27 +429,15 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 
 `SizeNumCaught/SizeNumDiscard` hold *numbers* (atHarvest.c:586/594, `age_catch = fishing / Wgt`). Here they are multiplied by `X_CN*mg_2_kg` and divided by `actualbiom`, which is in kg. So Uage is not a harvest rate. Uage feeds F at atManageTier.c:1049 and 1656. Function: `GetCatch_n_DiscardData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 567–584)
+**Code at issue** — `atSS3DataGen.c` line 570 (closest match to the quoted code; wording differs slightly)  
+Search for: `this_SSB += FunctGroupArray[groupIndex].SizeNumCaught[cohort][f][ij] + FunctGroupArray[gro`
 
 ```c
-  567:  
   568:             this_SSB = 0.0;
   569:             for (f = 0; f < bm->K_num_fisheries; f++) {
-  570:                 this_SSB += FunctGroupArray[groupIndex].SizeNumCaught[cohort][f][ij] + FunctGroupArray[groupIndex].SizeNumDiscard[cohort][f][ij];
+  570→                 this_SSB += FunctGroupArray[groupIndex].SizeNumCaught[cohort][f][ij] + FunctGroupArray[groupIndex].SizeNumDiscard[cohort][f][ij];
   571:             }
   572:             this_SSB *= (bm->X_CN * mg_2_kg);
-  573:             bm->RBCestimation.RBCspeciesArray[groupIndex].actualcatchsize[r_id][stock_id][basecohort] += this_SSB;
-  574:         }
-  575:     }
-  576:     
-  577:     // Get the final explotation rates
-  578:     for (ij=0; ij < Nstocks; ij++) {
-  579:         for (r = 0; r < Nregions; r++) {
-  580:             for (cohort = 0; cohort < FunctGroupArray[groupIndex].numCohorts; cohort++) {
-  581:                 for (s=0; s < bm->K_num_sexes; s++){
-  582:                     bm->RBCestimation.RBCspeciesArray[groupIndex].Uage[ij][r][s][cohort][iyr] = bm->RBCestimation.RBCspeciesArray[groupIndex].actualcatchsize[r][ij][cohort] / (bm->RBCestimation.RBCspeciesArray[groupIndex].actualbiom[r][ij][cohort] + small_num);
-  583:                 }
-  584:             }
 ```
 
 **Suggested fix (from review):** Divide catch numbers by numbers present (den), or convert catch numbers to weight
@@ -603,7 +460,7 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 ## SS3-12
 
 **wrong index** · Conf M / Sev L  
-**Lines (current code):** 573  
+**Found at (current code):** `atSS3DataGen.c` 573
 **Lines at review (Oct 2026):** 573
 
 **Function:** `GetCatch_n_DiscardData()`
@@ -612,12 +469,13 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 
 `actualcatchsize[r_id][stock_id][basecohort]` uses the stock_id of the *last layer* from the preceding k loop. Catches are attributed to one stock per box. Function: `GetCatch_n_DiscardData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 571–575)
+**Code at issue** — `atSS3DataGen.c` line 573  
+Search for: `actualcatchsize[r_id][stock_id][basecohort]`
 
 ```c
   571:             }
   572:             this_SSB *= (bm->X_CN * mg_2_kg);
-  573:             bm->RBCestimation.RBCspeciesArray[groupIndex].actualcatchsize[r_id][stock_id][basecohort] += this_SSB;
+  573→             bm->RBCestimation.RBCspeciesArray[groupIndex].actualcatchsize[r_id][stock_id][basecohort] += this_SSB;
   574:         }
   575:     }
 ```
@@ -642,7 +500,7 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 ## SS3-13
 
 **off-by-one / OOB** · Conf M / Sev H  
-**Lines (current code):** ≈614  
+**Found at (current code):** `atSS3DataGen.c` 616
 **Lines at review (Oct 2026):** 615
 
 **Function:** `GetFishCPUEData()`
@@ -651,14 +509,15 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 
 `CPUEdevs[f][r][iyr-1]` is read with no `iyr>0` guard. GenData is called with `year` from atManageTier.c:131, which can be 0 in the first year, and CPUEyears is set whenever catch > 0. That reads index -1. Function: `GetFishCPUEData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 612–616) — ≈ the code here has changed since the review; lines are approximate
+**Code at issue** — `atSS3DataGen.c` line 616  
+Search for: `CPUEdevs[f][r][iyr-1]`
 
 ```c
-  612: 				sigma = sqrt(bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEvar[f]);
-  613: 				norm = Util_xnorm(0.0, sigma, &bm->RBCestimation.Iseedz);
   614: 				// Nov 2026: previous deviation taken as 0 in the first year (was reading index -1)
   615: 				if (iyr > 0)
-  616: 					lastdev = bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEdevs[f][r][iyr-1];
+  616→ 					lastdev = bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEdevs[f][r][iyr-1];
+  617: 				else
+  618: 					lastdev = 0.0;
 ```
 
 **Suggested fix (from review):** Use `prev = (iyr>0) ? CPUEdevs[..][iyr-1] : 0`
@@ -681,7 +540,7 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 ## SS3-14
 
 **wrong transform** · Conf M / Sev M  
-**Lines (current code):** 619-629  
+**Found at (current code):** `atSS3DataGen.c` 629
 **Lines at review (Oct 2026):** 614-624
 
 **Function:** `GetFishCPUEData()`
@@ -690,22 +549,13 @@ With `numGeneTypes>1`, several cohorts map to the same `ia`. MeanWtAge[..][ia][i
 
 The AR(1) deviate (normal, mean 0) is used directly as a multiplier, `actualCPUE * cpue_dev`. A hack maps exactly 0 to 1. Generated CPUE can be negative, and with `CPUEvar=0` and `corr<1` it decays as corr^n. Function: `GetFishCPUEData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 617–631)
+**Code at issue** — `atSS3DataGen.c` line 629  
+Search for: `actualCPUE * cpue_dev`
 
 ```c
-  617: 				else
-  618: 					lastdev = 0.0;
-  619: 				bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEdevs[f][r][iyr] = bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEcorr[f]
-  620: 				        * lastdev
-  621: 						+ norm * sqrt(1.0 - bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEcorr[f] * bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEcorr[f]);
-  622:                 if(!bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEdevs[f][r][iyr])
-  623:                     bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEdevs[f][r][iyr] = 1.0;
-  624: 
-  625: 				// error on CPUE
-  626: 				sigma = sqrt(log(1 + bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEcv[f] * bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEcv[f])); //  log-normal sigma from cv
   627: 				norm = Util_xnorm(0.0, sigma, &bm->RBCestimation.Iseedz);
   628: 				cpue_dev = bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEdevs[f][r][iyr];
-  629: 				bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEgen[f][r][iyr] = actualCPUE * cpue_dev * exp(norm - 0.5 * sigma * sigma);
+  629→ 				bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEgen[f][r][iyr] = actualCPUE * cpue_dev * exp(norm - 0.5 * sigma * sigma);
   630:                 
   631:                 /*
 ```
@@ -730,7 +580,7 @@ The AR(1) deviate (normal, mean 0) is used directly as a multiplier, `actualCPUE
 ## SS3-15
 
 **overwritten state / missing calc** · Conf H / Sev M  
-**Lines (current code):** 717-735, 799-801  
+**Found at (current code):** `atSS3DataGen.c` 731, `atSS3DataGen.c` 1043, `atSS3DataGen.c` 801
 **Lines at review (Oct 2026):** 712-730, 794-796
 
 **Function:** `GetFishLength_n_AgeData()`
@@ -739,32 +589,37 @@ The AR(1) deviate (normal, mean 0) is used directly as a multiplier, `actualCPUE
 
 On the GenMnomial path, `ageprops[r]` and `lenprops[r]` are 2-D (stock × bin). They are overwritten for every `it` and `f`, so sampling for every data type uses the props from it=2 (discards) and the last fleet. Also `lenprops[Nstocks]` (overall) is never computed; only `ageprops[Nstocks]` is (728-734). Length comps are therefore drawn from all-zero props. Function: `GetFishLength_n_AgeData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 715–737)
+**Code at issue** — `atSS3DataGen.c` line 731  
+Search for: `ageprops[r]`
 
 ```c
-  715:         FindRawData(bm, it, iyr, groupIndex, bm->RBCestimation.RBCspeciesArray[groupIndex].rawdata, bm->RBCestimation.RBCspeciesArray[groupIndex].rawnumdata, bm->RBCestimation.RBCspeciesArray[groupIndex].rawsizedata);
-  716:     
-  717:         if(bm->useGenMnomial) { // If using GenMnomial - get expected proportions
-  718:             for (f = 0; f < Nfleets; f++) {
-  719:                 for (r = 0; r < FunctGroupArray[groupIndex].numStocks; r++) {
-  720:                     for (s=0; s < bm->K_num_sexes; s++){
-  721:                         GetAgeProps(bm, groupIndex, 1, it, f, r, s, iyr, bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops, &bm->RBCestimation.Iseedx);
-  722:                         GetLenProps(bm, groupIndex, 1, it, f, r, s, iyr, bm->RBCestimation.RBCspeciesArray[groupIndex].lenprops, &bm->RBCestimation.Iseedx);
-  723:                     }
-  724:                 }
-  725:             }
-  726:             
-  727:             // Get overall len and age props
-  728:             for (a = 0; a < Nages; a++) {
   729:                 bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops[Nstocks][a] = 0.0;
   730:                 for (r = 0; r < FunctGroupArray[groupIndex].numStocks; r++) {
-  731:                     bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops[Nstocks][a] += bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops[r][a];
+  731→                     bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops[Nstocks][a] += bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops[r][a];
   732:                 }
   733:                 bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops[Nstocks][a] /= ns;
-  734:             }
-  735:         }
-  736:     }
-  737:     
+```
+
+**Code at issue** — `atSS3DataGen.c` line 1043  
+Search for: `lenprops[r]`
+
+```c
+ 1041:     // initialise
+ 1042:     for (l = 0; l < Nlen; l++) {
+ 1043→         lenprops[r][l] = 0.0;
+ 1044:     }
+ 1045:     
+```
+
+**Code at issue** — `atSS3DataGen.c` line 801  
+Search for: `lenprops[Nstocks]`
+
+```c
+  799:                             GenMnomial(bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops[Nstocks], NageVec, nage_sample, bm->RBCestimation.RBCspeciesArray[groupIndex].agecomp, &bm->RBCestimation.Iseedx, 0);
+  800:                         if(nlen_sample)
+  801→                             GenMnomial(bm->RBCestimation.RBCspeciesArray[groupIndex].lenprops[Nstocks], NlenVec, nlen_sample, bm->RBCestimation.RBCspeciesArray[groupIndex].lencomp, &bm->RBCestimation.Iseedz, 0);
+  802:                     } else {
+  803:                         // Use method consistent with ecological indicators work
 ```
 
 **Suggested fix (from review):** Compute the props per it (and fleet) right before sampling, and compute `lenprops[Nstocks]`
@@ -787,24 +642,33 @@ On the GenMnomial path, `ageprops[r]` and `lenprops[r]` are 2-D (stock × bin). 
 ## SS3-16
 
 **region vs stock** · Conf M / Sev M  
-**Lines (current code):** 719-722, 1038, 1120  
+**Found at (current code):** `atSS3DataGen.c` 1052, `atSS3DataGen.c` 506
 **Lines at review (Oct 2026):** 714-717, 1033, 1115
 
 **Why it's thought to be a bug**
 
 The loop `r < numStocks` is passed as the region arg `r`. The callee uses it both as stock (`r != stock_id`) and as region in `Ia[f][r]`. Ia is allocated `[nfish][K_num_reg]` (atAssessTierSetup.c:90), so this is OOB when numStocks > K_num_reg, and the wrong flag is read otherwise. Functions: `GetFishLength_n_AgeData()`, `GetLenProps()`, `GetAgeProps()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 717–724)
+**Code at issue** — `atSS3DataGen.c` line 1052  
+Search for: `r != stock_id`
 
 ```c
-  717:         if(bm->useGenMnomial) { // If using GenMnomial - get expected proportions
-  718:             for (f = 0; f < Nfleets; f++) {
-  719:                 for (r = 0; r < FunctGroupArray[groupIndex].numStocks; r++) {
-  720:                     for (s=0; s < bm->K_num_sexes; s++){
-  721:                         GetAgeProps(bm, groupIndex, 1, it, f, r, s, iyr, bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops, &bm->RBCestimation.Iseedx);
-  722:                         GetLenProps(bm, groupIndex, 1, it, f, r, s, iyr, bm->RBCestimation.RBCspeciesArray[groupIndex].lenprops, &bm->RBCestimation.Iseedx);
-  723:                     }
-  724:                 }
+ 1050: 		for (b = 0; b < bm->nbox; b++) {
+ 1051:             stock_id = bm->group_stock[groupIndex][b][reflayer];
+ 1052→             if (r != stock_id)
+ 1053:                 continue;
+ 1054: 
+```
+
+**Code at issue** — `atSS3DataGen.c` line 506  
+Search for: `Ia[f][r]`
+
+```c
+  504:             totcatch += step1;
+  505:             if(bm->RBCestimation.RBCspeciesArray[groupIndex].CatchData[f][r][iyr] > 0) {  // Indicate catch present because then can do length sampling calculations etc
+  506→                 bm->RBCestimation.RBCspeciesArray[groupIndex].Ia[f][r] = 1;
+  507:             }
+  508:             
 ```
 
 **Suggested fix (from review):** Pass region and stock separately
@@ -827,7 +691,7 @@ The loop `r < numStocks` is passed as the region arg `r`. The callee uses it bot
 ## SS3-17
 
 **stale buffer** · Conf H / Sev M  
-**Lines (current code):** 742-743, 793-801, 821-848  
+**Found at (current code):** `atSS3DataGen.c` 799
 **Lines at review (Oct 2026):** 737-738, 788-796, 816-843
 
 **Function:** `GetFishLength_n_AgeData()`
@@ -836,15 +700,15 @@ The loop `r < numStocks` is passed as the region arg `r`. The callee uses it bot
 
 `agecomp/lencomp` are reset only per `it`, not per (f,r,s). On the GenMnomial path, when `nage_sample`/`nlen_sample` is 0 for a cell, GenMnomial is skipped. The previous cell's comp is then added into `AgeComp/LenComp[f][s]` for this cell. Function: `GetFishLength_n_AgeData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 740–745)
+**Code at issue** — `atSS3DataGen.c` line 799 (the line the review pointed to, found by its text)  
+Search for: `GenMnomial(bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops[Nstocks], NageVec, nage_`
 
 ```c
-  740:         nage_sample = bm->RBCestimation.RBCspeciesArray[groupIndex].AgeN[it];
-  741:         nlen_sample = bm->RBCestimation.RBCspeciesArray[groupIndex].LengthN[it];
-  742:         Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].lencomp, Nlen, 0.0);
-  743:         Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].agecomp, Nages+1, 0.0);
-  744:         
-  745:         //printf("Doing iteration %d and about to Find Data\n", it);
+  797: 
+  798:                         if(nage_sample)
+  799→                             GenMnomial(bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops[Nstocks], NageVec, nage_sample, bm->RBCestimation.RBCspeciesArray[groupIndex].agecomp, &bm->RBCestimation.Iseedx, 0);
+  800:                         if(nlen_sample)
+  801:                             GenMnomial(bm->RBCestimation.RBCspeciesArray[groupIndex].lenprops[Nstocks], NlenVec, nlen_sample, bm->RBCestimation.RBCspeciesArray[groupIndex].lencomp, &bm->RBCestimation.Iseedz, 0);
 ```
 
 **Suggested fix (from review):** Zero agecomp/lencomp at the top of the f/r/s body
@@ -867,21 +731,33 @@ The loop `r < numStocks` is passed as the region arg `r`. The callee uses it bot
 ## SS3-18
 
 **wrong quantity** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 808, 1389-1396  
+**Found at (current code):** `atSS3DataGen.c` 808, `atSS3DataGen.c` 1394
 **Lines at review (Oct 2026):** 803, 1384-1391
 
 **Why it's thought to be a bug**
 
 Age samples are generated by `GenSample(..., NageVec, ..., agecomp, ...)`, which bins by *length*: `l = floor(rawsizedata/bin_size)`, clamped to `vecsize-1`. AgeComp therefore holds length-bin counts piled into age slots, with the plus group absorbing everything above NageVec. This is the default (non-GenMnomial) path used for tier 3. Functions: `GetFishLength_n_AgeData()`/`GenSample()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 806–810)
+**Code at issue** — `atSS3DataGen.c` line 808  
+Search for: `GenSample(`
 
 ```c
   806:  
   807:                         if(nage_sample) {
-  808:                             GenSample(bm, groupIndex, NageVec, f, r, s, it, nage_sample, bm->RBCestimation.RBCspeciesArray[groupIndex].agecomp, bm->RBCestimation.RBCspeciesArray[groupIndex].rawnumdata, bm->RBCestimation.RBCspeciesArray[groupIndex].rawsizedata, &bm->RBCestimation.Iseedx);
+  808→                             GenSample(bm, groupIndex, NageVec, f, r, s, it, nage_sample, bm->RBCestimation.RBCspeciesArray[groupIndex].agecomp, bm->RBCestimation.RBCspeciesArray[groupIndex].rawnumdata, bm->RBCestimation.RBCspeciesArray[groupIndex].rawsizedata, &bm->RBCestimation.Iseedx);
   809:                         }
   810:                         //printf("Fleet %d region %d sex %d and generating %d length samples\n", f, r, s, nlen_sample);
+```
+
+**Code at issue** — `atSS3DataGen.c` line 1394  
+Search for: `vecsize - 1`
+
+```c
+ 1392:                 // sanity check
+ 1393:                 if(l >= vecsize)
+ 1394→                     l = vecsize - 1;
+ 1395:                 
+ 1396:                 comp[l] += 1;
 ```
 
 **Suggested fix (from review):** Add an age mode that uses `(nc/numGeneTypes)*ageClassSize` (+ an intra-class draw) as the index
@@ -904,21 +780,22 @@ Age samples are generated by `GenSample(..., NageVec, ..., agecomp, ...)`, which
 ## SS3-19
 
 **buffer overrun risk** · Conf M / Sev H  
-**Lines (current code):** 329, 388, 843  
+**Found at (current code):** `atSS3DataGen.c` 323
 **Lines at review (Oct 2026):** 329, 388, 838
 
 **Why it's thought to be a bug**
 
 Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (AgeComp). These arrays are allocated with `OverallMaxAge` (atAssessTierSetup.c:100-101, 138), which is read independently (atassessParamIO.c:967). MaxAge_id is raised to `numCohorts*ageClassSize` at atAssessTierSetup.c:74-75 with no check against OverallMaxAge. Functions: `GetLengthWeightData()`, `GetFishLength_n_AgeData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 327–331)
+**Code at issue** — `atSS3DataGen.c` line 323 (closest match to the quoted code; wording differs slightly)  
+Search for: `int Nages = (int)bm->RBCestimation.RBCspeciesParam[groupIndex][MaxAge_id];`
 
 ```c
-  327:     Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].propCount, Nstocks, 0.0);
-  328:     if (bm->RBCestimation.RBCspeciesParam[groupIndex][flagLAdirect_id]) {
-  329:         Util_Init_3D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAge, Nstocks, bm->K_num_sexes, Nages, 0.0);
-  330:     }
-  331:     
+  321:     int ij, k, cohort, sn, rn, den, stock_id = 0, basecohort, ia, last_wtai = 0, last_lai = 0, next_ai;
+  322:     int Nstocks = FunctGroupArray[groupIndex].numStocks;
+  323→     int Nages = (int)bm->RBCestimation.RBCspeciesParam[groupIndex][MaxAge_id];
+  324:     double Wgt, totnum, last_wtval = 0, last_lval = 0, nstep, diff_val, next_val;
+  325:     double nAgeCor = (double) (FunctGroupArray[groupIndex].ageClassSize);
 ```
 
 **Suggested fix (from review):** At setup, enforce `OverallMaxAge >= MaxAge+1` for every assessed species
@@ -941,7 +818,7 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 ## SS3-20
 
 **duplicated counts** · Conf M / Sev M  
-**Lines (current code):** 938-1003  
+**Found at (current code):** `atSS3DataGen.c` 973, `atSS3DataGen.c` 938
 **Lines at review (Oct 2026):** 933-998
 
 **Function:** `FindRawData()`
@@ -950,49 +827,26 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 
 `SizeNumCaught/SizeNumDiscard` have no sex dimension, but are added once per `s < Nsexes`. With `Num_Sexes=2`, totnum and tempcatch are doubled, which inflates AgeN/LengthN, and the comps are duplicated across sexes. Function: `FindRawData()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 936–975 (truncated))
+**Code at issue** — `atSS3DataGen.c` line 973 (closest match to the quoted code; wording differs slightly)  
+Search for: `tempcatch[f][r_id][s][itype] += FunctGroupArray[groupIndex].SizeNumCaught[nc][nf][b] + Fun`
+
+```c
+  971:                         // whole catch
+  972:                         if ((itype == whole_id) && (have_catch || have_discards)) {
+  973→                             tempcatch[f][r_id][s][itype] += FunctGroupArray[groupIndex].SizeNumCaught[nc][nf][b] + FunctGroupArray[groupIndex].SizeNumDiscard[nc][nf][b];
+  974: 
+  975:                             step1 = rawnumdata[f][r_id][s][nc][itype] * rawsizedata[f][r_id][s][nc][itype];
+```
+
+**Code at issue** — `atSS3DataGen.c` line 938  
+Search for: `s < Nsexes`
 
 ```c
   936:                         have_discards = 1;
   937:                 
-  938:                 for (s = 0; s < Nsexes; s++) {
+  938→                 for (s = 0; s < Nsexes; s++) {
   939:                     for (nc = 0; nc < Ncohorts; nc++) {
   940:                         
-  941:                         //printf("Doing fishery %d box %d sex %d cohort %d\n", nf, b, s, nc);
-  942:                         
-  943:                         sn = FunctGroupArray[groupIndex].structNTracers[nc];
-  944:                         rn = FunctGroupArray[groupIndex].resNTracers[nc];
-  945:                         Wgt = 0.0;
-  946:                         for (k=0; k < bm->boxes[b].nz; k++) {
-  947:                             if ((bm->boxes[b].tr[k][sn] + bm->boxes[b].tr[k][rn]) > Wgt) {
-  948:                                 Wgt = bm->boxes[b].tr[k][sn] + bm->boxes[b].tr[k][rn];
-  949:                             }
-  950:                             if( bm->CumCatch[groupIndex][nf][b][k] > 0 )
-  951:                                 have_catch = 1;
-  952:                         }
-  953:                         li = Ecology_Get_Size(bm, groupIndex, Wgt, nc);
-  954:                     
-  955:                         // retained
-  956:                         if ((itype == retained_id) && have_catch) {
-  957:                             tempcatch[f][r_id][s][itype] += FunctGroupArray[groupIndex].SizeNumCaught[nc][nf][b];
-  958:                             
-  959:                             step1 = rawnumdata[f][r_id][s][nc][itype] * rawsizedata[f][r_id][s][nc][itype];
-  960:                             step2 = li * FunctGroupArray[groupIndex].SizeNumCaught[nc][nf][b];
-  961:                             new_mean_l = (step1 + step2) / (rawnumdata[f][r_id][s][nc][itype] + FunctGroupArray[groupIndex].SizeNumCaught[nc][nf][b] + small_num);
-  962:  
-  963:                             rawnumdata[f][r_id][s][nc][itype] += FunctGroupArray[groupIndex].SizeNumCaught[nc][nf][b];
-  964:                             rawsizedata[f][r_id][s][nc][itype] = new_mean_l;
-  965:                             totnum += (int)FunctGroupArray[groupIndex].SizeNumCaught[nc][nf][b];
-  966:                             
-  967:                             //printf("rawnum: %e rawsize: %e totnum: %d SizeNumCaught: %e\n", rawnumdata[f][r_id][s][nc][itype], rawsizedata[f][r_id][s][nc][itype], totnum, FunctGroupArray[groupIndex].SizeNumCaught[nc][nf][b]);
-  968:                             
-  969:                         }
-  970: 
-  971:                         // whole catch
-  972:                         if ((itype == whole_id) && (have_catch || have_discards)) {
-  973:                             tempcatch[f][r_id][s][itype] += FunctGroupArray[groupIndex].SizeNumCaught[nc][nf][b] + FunctGroupArray[groupIndex].SizeNumDiscard[nc][nf][b];
-  974: 
-  975:                             step1 = rawnumdata[f][r_id][s][nc][itype] * rawsizedata[f][r_id][s][nc][itype];
 ```
 
 **Suggested fix (from review):** Divide by Nsexes or apply a sex ratio
@@ -1015,7 +869,7 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 ## SS3-21
 
 **buffer overrun** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 1067-1079  
+**Found at (current code):** `atSS3DataGen.c` 1067, `atSS3DataGen.c` 698
 **Lines at review (Oct 2026):** 1062-1074
 
 **Function:** `GetLenProps()`
@@ -1024,26 +878,26 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 
 `l = (int)floor(li / bin_size); lenprops[r][l] += ...` has no upper bound check, unlike GenSample:1388. lenprops is allocated `[Nstocks+1][Nlen]` (atAssessTierSetup.c:424). Large fish write past the row and corrupt memory. The `f` parameter is also clobbered by the `for (f...)` loop at 1064, so the fleet is ignored. Function: `GetLenProps()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 1065–1081)
+**Code at issue** — `atSS3DataGen.c` line 1067 (closest match to the quoted code; wording differs slightly)  
+Search for: `l = (int)floor(li / bin_size);`
 
 ```c
  1065:             }
  1066:             li = Ecology_Get_Size(bm, groupIndex, Wgt, nc);
- 1067:             l = (int)floor(li / bin_size);
+ 1067→             l = (int)floor(li / bin_size);
  1068:             
  1069: 			for (f = 0; f < bm->K_num_fisheries; f++) {
- 1070:                 //fishery
- 1071:                 if (id == 1) {
- 1072:                     samplecatch = FunctGroupArray[groupIndex].SizeNumCaught[nc][f][b];
- 1073:                     samplediscard = FunctGroupArray[groupIndex].SizeNumDiscard[nc][f][b];
- 1074:                     
- 1075:                     if ((itype == retained_id) || (itype == whole_id)) {
- 1076:                         lenprops[r][l] += samplecatch;
- 1077:                     }
- 1078:                     if ((itype == discarded_id) || (itype == whole_id)) {
- 1079:                         lenprops[r][l] += samplediscard;
- 1080:                     }
- 1081:                 }
+```
+
+**Code at issue** — `atSS3DataGen.c` line 698 (closest match to the quoted code; wording differs slightly)  
+Search for: `Util_Init_2D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].lenprops, Nstocks+1, Nle`
+
+```c
+  696:     // Shouldn't need to re-init AFss and LFss as already per year entry
+  697:     
+  698→     Util_Init_2D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].lenprops, Nstocks+1, Nlen, 0.0);
+  699:     Util_Init_2D_Double(bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops, Nstocks+1, Nages+1, 0.0);
+  700:     
 ```
 
 **Suggested fix (from review):** Clamp `l` to Nlen-1. Use a separate loop variable and restrict to the requested fleet
@@ -1066,7 +920,7 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 ## SS3-22
 
 **accumulator not reset / OOB** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 1126-1157, 1171-1174  
+**Found at (current code):** `atSS3DataGen.c` 1125
 **Lines at review (Oct 2026):** 1126-1157, 1171-1174
 
 **Function:** `GetAgeProps()`
@@ -1075,49 +929,15 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 
 `a` is set once per cohort, but `a += aa` runs inside the *box* loop. It keeps growing across boxes, which yields wrong ages and indices beyond `Nages` into `ageprops[r][a]` (allocated MaxAge+2, atAssessTierSetup.c:426). This happens when ageClassSize > 1. Function: `GetAgeProps()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 1124–1163 (truncated))
+**Code at issue** — `atSS3DataGen.c` line 1125  
+Search for: `ageprops[r][a]`
 
 ```c
+ 1123:     // initialise
  1124:     for (a = 0; a < Nages; a++) {
- 1125:         ageprops[r][a] = 0.0;
+ 1125→         ageprops[r][a] = 0.0;
  1126:     }
  1127:     
- 1128:     // find numbers per bin in raw data
- 1129: 	for (nc = 0; nc < Ncohorts; nc++) {
- 1130:         // basecohort * sp_AgeSize_per_age_cohort first
- 1131:         a = (int)(floor(nc / FunctGroupArray[groupIndex].numGeneTypes)) * sp_AgeSize;
- 1132: 
- 1133: 		for (b = 0; b < bm->nbox; b++) {
- 1134:             stock_id = bm->group_stock[groupIndex][b][reflayer];
- 1135:             if (r != stock_id)
- 1136:                 continue;
- 1137:             
- 1138:             // find annual increment
- 1139:             if(sp_AgeSize > 1){
- 1140:                 p_a = ran3(iseed);
- 1141:                 p_agestep = 0.0;
- 1142:                 for (aa = 0; aa < sp_AgeSize; aa++) {
- 1143:                     if (!bm->flagagestruct) {
- 1144:                         p_agestep += 1.0 / num_ann_class;
- 1145:                     } else {
- 1146:                         max_prop = 0.0;
- 1147:                         for (k=0; k < bm->boxes[b].nz; k++) {
- 1148:                             stock_id = bm->group_stock[groupIndex][b][k];
- 1149:                             if(r != stock_id) {
- 1150:                                 // Do nothing as not relevant
- 1151:                             } else {
- 1152:                                 if(FunctGroupArray[groupIndex].boxPopRatio[b][k][nc][aa] > max_prop){
- 1153:                                     max_prop = FunctGroupArray[groupIndex].boxPopRatio[b][k][nc][aa];
- 1154:                                 }
- 1155:                             }
- 1156:                         }
- 1157:                         p_agestep += max_prop;
- 1158:                     }
- 1159:                     
- 1160:                     if (p_a < p_agestep) {  // Found the candidate annual step so increment a appropriately and break
- 1161:                         a += aa;
- 1162:                         break;
- 1163:                     }
 ```
 
 **Suggested fix (from review):** Use `a_box = a_base + aa` per box
@@ -1140,7 +960,7 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 ## SS3-23
 
 **uninitialised source** · Conf M / Sev M  
-**Lines (current code):** 1219-1220  
+**Found at (current code):** `atSS3DataGen.c` 1219
 **Lines at review (Oct 2026):** 1214-1215
 
 **Function:** `GetCloseKinNum()`
@@ -1149,15 +969,15 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 
 `CKSurveyNum` is built from `ageprops`, which is filled only on the `useGenMnomial` path (and then holds the last itype and fleet). Otherwise it is all zeros, so close-kin survey numbers are 0. Function: `GetCloseKinNum()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 1217–1222)
+**Code at issue** — `atSS3DataGen.c` line 1219 (the line the review pointed to, found by its text)  
+Search for: `bm->RBCestimation.RBCspeciesArray[groupIndex].CKSurveyNum[ns][FEMALE_ID][a][iyr] = (int)(f`
 
 ```c
  1217:     for (ns = 0; ns < FunctGroupArray[groupIndex].numStocks; ns++){
  1218:         for (a = 0; a < bm->RBCestimation.RBCspeciesParam[groupIndex][MaxAge_id]; a++){
- 1219:             bm->RBCestimation.RBCspeciesArray[groupIndex].CKSurveyNum[ns][FEMALE_ID][a][iyr] = (int)(floor(bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops[ns][a] * samplesize * sex_ratio));
+ 1219→             bm->RBCestimation.RBCspeciesArray[groupIndex].CKSurveyNum[ns][FEMALE_ID][a][iyr] = (int)(floor(bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops[ns][a] * samplesize * sex_ratio));
  1220:             bm->RBCestimation.RBCspeciesArray[groupIndex].CKSurveyNum[ns][MALE_ID][a][iyr] = (int)(floor(bm->RBCestimation.RBCspeciesArray[groupIndex].ageprops[ns][a] * samplesize * (1.0 - sex_ratio)));
  1221:         }
- 1222:     }
 ```
 
 **Suggested fix (from review):** Compute age props explicitly here
@@ -1180,7 +1000,7 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 ## SS3-24
 
 **unit mismatch** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 1247-1306  
+**Found at (current code):** `atSS3DataGen.c` 1237, `atSS3DataGen.c` 1274, `atSS3DataGen.c` 572
 **Lines at review (Oct 2026):** 1242-1301
 
 **Function:** `RecordHistF()`
@@ -1189,49 +1009,37 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 
 `fishableBiomass` mixes units. AGE_STRUCTURED adds a cell total in mg N (`(sn+rn)*den`). AGE_STRUCTURED_BIOMASS and BIOMASS add a concentration (`tr[pid]`, mg N m-3) without `cell_vol`, which is computed at 1245 but unused. There is no `X_CN*mg_2_kg`, and `sel*q*spbiom` is summed once per fishery. It is then divided into CatchData, which is in kg, so Fhist has the wrong scale. There is no zero guard either. Function: `RecordHistF()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 1245–1284 (truncated))
+**Code at issue** — `atSS3DataGen.c` line 1237 (closest match to the quoted code; wording differs slightly)  
+Search for: `int minYr, ij, k, nf, n, r, sn, rn, den, stage, pid;`
 
 ```c
- 1245:     }
- 1246:     
- 1247:     for (ij = 0; ij < bm->nbox; ij++) {
- 1248:         if (bm->boxes[ij].type != BOUNDARY) {
- 1249:             for (k = 0; k < bm->boxes[ij].nz; k++) {
- 1250:                 bm->cell_vol = bm->boxes[ij].area * bm->boxes[ij].dz[k];
- 1251:                 
- 1252:                 switch (FunctGroupArray[sp].groupAgeType) {
- 1253:                 case AGE_STRUCTURED:
- 1254:                     for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
- 1255:                         sn = FunctGroupArray[sp].structNTracers[n];
- 1256:                         rn = FunctGroupArray[sp].resNTracers[n];
- 1257:                         den = FunctGroupArray[sp].NumsTracers[n];
- 1258:                         stage = FunctGroupArray[sp].cohort_stage[n];
- 1259:                         spbiom = (bm->boxes[ij].tr[k][sn] + bm->boxes[ij].tr[k][rn]) * bm->boxes[ij].tr[k][den];
- 1260:                         
- 1261:                         /* Consideration per fishery */
- 1262:                         for (nf = 0; nf < bm->K_num_fisheries; nf++) {
- 1263:                             sel = bm->selectivity[sp][nf][stage];
- 1264:                             q = bm->SP_FISHERYprms[sp][nf][q_id];
- 1265:                             
- 1266:                             fishableBiomass += sel * q * spbiom;
- 1267:                         }
- 1268:                     }
- 1269:                     break;
- 1270:                 case AGE_STRUCTURED_BIOMASS:
- 1271:                     for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+ 1235: //*****************************************************************************
+ 1236: void RecordHistF(MSEBoxModel *bm, int sp, int iyr) {
+ 1237→     int minYr, ij, k, nf, n, r, sn, rn, den, stage, pid;
+ 1238:     //int maxYr;
+ 1239:     double avgPeriod = 0.0;
+```
+
+**Code at issue** — `atSS3DataGen.c` line 1274 (closest match to the quoted code; wording differs slightly)  
+Search for: `spbiom = bm->boxes[ij].tr[k][pid];`
+
+```c
  1272:                         pid = FunctGroupArray[sp].totNTracers[n];
  1273:                         stage = FunctGroupArray[sp].cohort_stage[n];
- 1274:                         spbiom = bm->boxes[ij].tr[k][pid];
+ 1274→                         spbiom = bm->boxes[ij].tr[k][pid];
  1275:                         
  1276:                         /* Consideration per fishery */
- 1277:                         for (nf = 0; nf < bm->K_num_fisheries; nf++) {
- 1278:                             sel = bm->selectivity[sp][nf][stage];
- 1279:                             q = bm->SP_FISHERYprms[sp][nf][q_id];
- 1280:                             
- 1281:                             fishableBiomass += sel * q * spbiom;
- 1282:                         }
- 1283:                     }
- 1284:                     break;
+```
+
+**Code at issue** — `atSS3DataGen.c` line 572  
+Search for: `X_CN * mg_2_kg`
+
+```c
+  570:                 this_SSB += FunctGroupArray[groupIndex].SizeNumCaught[cohort][f][ij] + FunctGroupArray[groupIndex].SizeNumDiscard[cohort][f][ij];
+  571:             }
+  572→             this_SSB *= (bm->X_CN * mg_2_kg);
+  573:             bm->RBCestimation.RBCspeciesArray[groupIndex].actualcatchsize[r_id][stock_id][basecohort] += this_SSB;
+  574:         }
 ```
 
 **Suggested fix (from review):** Convert to kg, multiply concentration by volume, use max or combined selectivity, guard /0
@@ -1254,7 +1062,7 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 ## SS3-25
 
 **copy-paste / loop** · Conf H / Sev M  
-**Lines (current code):** 1291-1295  
+**Found at (current code):** `atSS3DataGen.c` 1292, `atSS3DataGen.c` 1295
 **Lines at review (Oct 2026):** 1286-1290
 
 **Function:** `RecordHistF()`
@@ -1263,16 +1071,24 @@ Writes run up to `Nages = MaxAge` (MeanWtAge/MeanLenAge) and `aa < MaxAge+1` (Ag
 
 In the BIOMASS case the fishery loop only assigns `sel` and `q`, and the `+=` sits after the loop, so only the last fishery's selectivity and q are used. Function: `RecordHistF()`.
 
-**Current code** (`atSS3Link/atSS3DataGen.c` lines 1289–1297)
+**Code at issue** — `atSS3DataGen.c` line 1292 (the line the review pointed to, found by its text)  
+Search for: `sel = bm->selectivity[sp][nf][0];`
 
 ```c
- 1289:                         
  1290:                     /* Consideration per fishery */
  1291:                     for (nf = 0; nf < bm->K_num_fisheries; nf++) {
- 1292:                         sel = bm->selectivity[sp][nf][0];
+ 1292→                         sel = bm->selectivity[sp][nf][0];
  1293:                         q = bm->SP_FISHERYprms[sp][nf][q_id];
  1294:                     }
- 1295:                     fishableBiomass += sel * q * spbiom;
+```
+
+**Code at issue** — `atSS3DataGen.c` line 1295 (the line the review pointed to, found by its text)  
+Search for: `fishableBiomass += sel * q * spbiom;`
+
+```c
+ 1293:                         q = bm->SP_FISHERYprms[sp][nf][q_id];
+ 1294:                     }
+ 1295→                     fishableBiomass += sel * q * spbiom;
  1296: 
  1297:                     break;
 ```

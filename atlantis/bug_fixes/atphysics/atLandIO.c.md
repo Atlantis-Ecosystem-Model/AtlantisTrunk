@@ -2,15 +2,15 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [PHY3-08](#phy3-08) | 37-46 | H/L | NULL dereference | If `tracerName` does not contain "Land_", `name` stays NULL and is passed to `strcmp` (crash). If "Land_" appe… |  | [ ] |
+| [PHY3-08](#phy3-08) | 37, 40 | H/L | NULL dereference | If `tracerName` does not contain "Land_", `name` stays NULL and is passed to `strcmp` (crash). If "Land_" appe… |  | [ ] |
 | [PHY3-09](#phy3-09) | 276 | H/L | copy-paste log text | `"Entering writeBMEpiData\n"` printed in `writeBMLandData()`. |  | [ ] |
 
 ---
@@ -18,7 +18,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-08
 
 **NULL dereference** · Conf H / Sev L  
-**Lines (current code):** 37-46  
+**Found at (current code):** `atLandIO.c` 37, `atLandIO.c` 40
 **Lines at review (Oct 2026):** 37-46
 
 **Function:** `Find_WC_Tracer()`
@@ -27,23 +27,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 If `tracerName` does not contain "Land_", `name` stays NULL and is passed to `strcmp` (crash). If "Land_" appears but not at the start, the offset is wrong. The function is currently unused (latent). Function: `Find_WC_Tracer()`.
 
-**Current code** (`atphysics/atLandIO.c` lines 35–48)
+**Code at issue** — `atLandIO.c` line 37 (the line the review pointed to, found by its text)  
+Search for: `name = strstr(tracerName, "Land_");`
 
 ```c
    35: 	char *name;
    36: 
-   37: 	name = strstr(tracerName, "Land_");
+   37→ 	name = strstr(tracerName, "Land_");
    38: 
    39: 	if(name != NULL){
-   40: 		name = tracerName + strlen("Land_");
+```
+
+**Code at issue** — `atLandIO.c` line 40 (the line the review pointed to, found by its text)  
+Search for: `name = tracerName + strlen("Land_");`
+
+```c
+   38: 
+   39: 	if(name != NULL){
+   40→ 		name = tracerName + strlen("Land_");
    41: 	}
    42: 
-   43: 
-   44: 	for(i = 0; i < bm->ntracer; i++){
-   45: 
-   46: 		if( strcmp(name, bm->tinfo[i].name) == 0 ){
-   47: 		  index = bm->tinfo[i].n;
-   48: 		  return index;
 ```
 
 **Suggested fix (from review):** `name = (strncmp(tracerName,"Land_",5)==0) ? tracerName+5 : tracerName;`
@@ -66,19 +69,20 @@ If `tracerName` does not contain "Land_", `name` stays NULL and is passed to `st
 ## PHY3-09
 
 **copy-paste log text** · Conf H / Sev L  
-**Lines (current code):** 276  
+**Found at (current code):** `atLandIO.c` 276
 **Lines at review (Oct 2026):** 276
 
 **Why it's thought to be a bug**
 
 `"Entering writeBMEpiData\n"` printed in `writeBMLandData()`.
 
-**Current code** (`atphysics/atLandIO.c` lines 274–278)
+**Code at issue** — `atLandIO.c` line 276  
+Search for: `"Entering writeBMEpiData\n"`
 
 ```c
   274: 
   275: 	if (verbose > 0)
-  276: 		fprintf(stderr, "Entering writeBMEpiData\n");
+  276→ 		fprintf(stderr, "Entering writeBMEpiData\n");
   277: 
   278: 	/* Set netCDF library error handling */
 ```

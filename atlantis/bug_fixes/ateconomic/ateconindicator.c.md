@@ -2,24 +2,24 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 2 lower-confidence notes.
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [ECIO-05](#ecio-05) | 625 vs 284 | M/M | unit mismatch | `Expected_Indicators()` computes `fuel_cost = (...) * fuel_cost_scalar;`. The same formula in `Dynamic_Econ_In… |  | [ ] |
-| [ECIO-06](#ecio-06) | 553-555 | L/L | side effect on shared state | `if (CurrentCatch_id < 1.0) SUBFLEET_ECONprms[nf][ns][CurrentCatch_id] = 1.0;` writes a floor into the real st… |  | [ ] |
-| [ECIO-07](#ecio-07) | 764, 778, 789-792 | L/M | mismatched accumulation period | `RevPerT_id = econindx[nf][SubfleetCash_id] / totcatch`. SubfleetCash is cumulative (reset only `if (bm->dayt … |  | [ ] |
+| [ECIO-05](#ecio-05) | 625, 17 | M/M | unit mismatch | `Expected_Indicators()` computes `fuel_cost = (...) * fuel_cost_scalar;`. The same formula in `Dynamic_Econ_In… |  | [ ] |
+| [ECIO-06](#ecio-06) | 349, 17 | L/L | side effect on shared state | `if (CurrentCatch_id < 1.0) SUBFLEET_ECONprms[nf][ns][CurrentCatch_id] = 1.0;` writes a floor into the real st… |  | [ ] |
+| [ECIO-07](#ecio-07) | 792, 701 | L/M | mismatched accumulation period | `RevPerT_id = econindx[nf][SubfleetCash_id] / totcatch`. SubfleetCash is cumulative (reset only `if (bm->dayt … |  | [ ] |
 
 ---
 
 ## ECIO-05
 
 **unit mismatch** · Conf M / Sev M  
-**Lines (current code):** 625 vs 284  
+**Found at (current code):** `ateconindicator.c` 625, `ateconindicator.c` 17
 **Lines at review (Oct 2026):** 625 vs 284
 
 **Function:** `Expected_Indicators()`
@@ -28,14 +28,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `Expected_Indicators()` computes `fuel_cost = (...) * fuel_cost_scalar;`. The same formula in `Dynamic_Econ_Indicators()` (l.284) divides by 100.0, with the comment "converting cents to $". So in the expected-indicator path, fuel cost (and therefore `cost_ind_id`, `cost_ton_ind_id` and `boat_cash_ind_id`) comes out 100x too large. Function: `Expected_Indicators()`.
 
-**Current code** (`ateconomic/ateconindicator.c` lines 623–627)
+**Code at issue** — `ateconindicator.c` line 625  
+Search for: `fuel_cost = (`
 
 ```c
   623: 	resid = tsEval(&this_fuel->ts, bm->FuelCost_id, bm->t);
   624: 	fuel_cost_scalar = bm->SUBFLEET_ECONprms[nf][ns][fuel_cost_id];
-  625: 	fuel_cost = (fuel_intercept + trend_coefft * bm->thisyear + month_coefft + auto_coefft * resid) * fuel_cost_scalar;
+  625→ 	fuel_cost = (fuel_intercept + trend_coefft * bm->thisyear + month_coefft + auto_coefft * resid) * fuel_cost_scalar;
   626: 	capital_cost = bm->SUBFLEET_ECONprms[nf][ns][capital_cost_id];
   627: 	gear_cost = bm->SUBFLEET_ECONprms[nf][ns][gear_cost_id];
+```
+
+**Code at issue** — `ateconindicator.c` line 17  
+Search for: `Dynamic_Econ_Indicators()`
+
+```c
+   15:  21/11/2006 removed "- cost" from calculation of
+   16:  bm->SUBFLEET_ECONprms[nf][ns][boat_cash_ind_id]
+   17→  in Dynamic_Econ_Indicators() as costs already
+   18:  included in calculation of the revenue term.
+   19: 
 ```
 
 **Suggested fix (from review):** Add `/ 100.0`, matching l.284.
@@ -58,7 +70,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-06
 
 **side effect on shared state** · Conf L / Sev L  
-**Lines (current code):** 553-555  
+**Found at (current code):** `ateconindicator.c` 349, `ateconindicator.c` 17
 **Lines at review (Oct 2026):** 553-555
 
 **Function:** `Dynamic_Econ_Indicators()`
@@ -67,16 +79,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `if (CurrentCatch_id < 1.0) SUBFLEET_ECONprms[nf][ns][CurrentCatch_id] = 1.0;` writes a floor into the real state variable instead of a local copy. Anything that reads CurrentCatch later in the month (before the reset at ateconomic.c:229) sees an invented 1 t catch. Function: `Dynamic_Econ_Indicators()`.
 
-**Current code** (`ateconomic/ateconindicator.c` lines 551–557)
+**Code at issue** — `ateconindicator.c` line 349 (closest match to the quoted code; wording differs slightly)  
+Search for: `bm->SUBFLEET_ECONprms[nf][ns][cpue_ind_id], bm->SUBFLEET_ECONprms[nf][ns][CurrentCatch_id]`
 
 ```c
-  551: 	 landed - if nothing landed little difference anyway in reality.
-  552: 	 */
-  553: 	if (bm->SUBFLEET_ECONprms[nf][ns][CurrentCatch_id] < 1.0)
-  554: 		bm->SUBFLEET_ECONprms[nf][ns][CurrentCatch_id] = 1.0;
-  555: 	bm->SUBFLEET_ECONprms[nf][ns][rev_land_ind_id] = revenue / (bm->SUBFLEET_ECONprms[nf][ns][CurrentCatch_id] + small_num);
-  556: 
-  557: 	/* Return on investment - profit / total investment (costs and capital dollars put into it) */
+  347: 	if (do_debug) {
+  348: 		fprintf(llogfp, "Time: %e, %s-%d has cpue_ind = %e (catch: %e, effort: %e)\n", bm->dayt, FisheryArray[nf].fisheryCode, ns,
+  349→ 				bm->SUBFLEET_ECONprms[nf][ns][cpue_ind_id], bm->SUBFLEET_ECONprms[nf][ns][CurrentCatch_id], bm->SUBFLEET_ECONprms[nf][ns][CurrentEffort_id]);
+  350: 	}
+  351:      */
+```
+
+**Code at issue** — `ateconindicator.c` line 17  
+Search for: `Dynamic_Econ_Indicators()`
+
+```c
+   15:  21/11/2006 removed "- cost" from calculation of
+   16:  bm->SUBFLEET_ECONprms[nf][ns][boat_cash_ind_id]
+   17→  in Dynamic_Econ_Indicators() as costs already
+   18:  included in calculation of the revenue term.
+   19: 
 ```
 
 **Suggested fix (from review):** Use a local `catch_floor = max(1.0, CurrentCatch)` for the division.
@@ -99,7 +121,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-07
 
 **mismatched accumulation period** · Conf L / Sev M  
-**Lines (current code):** 764, 778, 789-792  
+**Found at (current code):** `ateconindicator.c` 792, `ateconindicator.c` 701
 **Lines at review (Oct 2026):** 764, 778, 789-792
 
 **Function:** `Update_Econ_Indx()`
@@ -108,42 +130,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `RevPerT_id = econindx[nf][SubfleetCash_id] / totcatch`. SubfleetCash is cumulative (reset only `if (bm->dayt < 1.0)` and at ateconomic.c:73), while `totcatch` is rebuilt every call from `cumboatcatch_id`. If the two cover different periods, revenue per tonne is biased. The same applies to `RevPerEffort_id`, which uses `CumEffort`. Function: `Update_Econ_Indx()`.
 
-**Current code** (`ateconomic/ateconindicator.c` lines 762–794)
+**Code at issue** — `ateconindicator.c` line 792 (closest match to the quoted code; wording differs slightly)  
+Search for: `bm->econindx[nf][RevPerT_id] = bm->econindx[nf][SubfleetCash_id] / (totcatch + small_num);`
 
 ```c
-  762: 
-  763: 			/* Boat cash */
-  764: 			bm->econindx[nf][SubfleetCash_id] += bm->SUBFLEET_ECONprms[nf][ns][boat_cash_ind_id];
-  765: 
-  766: 			/* Leased quota value - only if commercial */
-  767: 			if (!flagrecfish)
-  768: 				bm->econindx[nf][LeaseVal_id] += bm->SUBFLEET_ECONprms[nf][ns][leased_Q_val_ind_id];
-  769: 			else
-  770: 				bm->econindx[nf][LeaseVal_id] = 0;
-  771: 
-  772: 			/* Return on investment */
-  773: 			bm->econindx[nf][InvestReturn_id] += bm->SUBFLEET_ECONprms[nf][ns][invest_return_ind_id];
-  774: 
-  775: 			for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-  776: 				if (FunctGroupArray[sp].isFished == TRUE) {
-  777: 					/* Revenue per tonne */
-  778: 					totcatch += bm->QuotaAlloc[nf][ns][sp][cumboatcatch_id];
-  779: 
-  780: 					/* Trading extent */
-  781: 					prop_olease = bm->QuotaAlloc[nf][ns][sp][permolease_id];
-  782: 					prop_tlease = bm->QuotaAlloc[nf][ns][sp][templease_id];
-  783: 
-  784: 					bm->econindx[nf][TradeExtent_id] += (prop_olease + prop_tlease);
-  785: 					numexchange++;
-  786: 				}
-  787: 			}
-  788: 		}
-  789: 		if (!totcatch)
   790: 			bm->econindx[nf][RevPerT_id] = 0;
   791: 		else
-  792: 			bm->econindx[nf][RevPerT_id] = bm->econindx[nf][SubfleetCash_id] / (totcatch + small_num);
+  792→ 			bm->econindx[nf][RevPerT_id] = bm->econindx[nf][SubfleetCash_id] / (totcatch + small_num);
   793: 		if (!numexchange)
   794: 			bm->econindx[nf][TradeExtent_id] = 0;
+```
+
+**Code at issue** — `ateconindicator.c` line 701  
+Search for: `if (bm->dayt < 1.0)`
+
+```c
+  699: 	for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+  700: 		/* Initialise for the first year */
+  701→ 		if (bm->dayt < 1.0) {
+  702: 			bm->econindx[nf][fleet_switch_id] = 0;
+  703: 			bm->econindx[nf][overallrent_id] = 0;
 ```
 
 **Suggested fix (from review):** Make sure numerator and denominator cover the same period.

@@ -2,22 +2,22 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **1 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [SJW3-08](#sjw3-08) | 204-213 | H/L | static state not reset / dangling pointer | `free_diffusion1d()` frees `Cm1, C, Cp1, rhs, ud` but does not set them to NULL nor reset `max_n = -1`. A late… |  | [ ] |
+| [SJW3-08](#sjw3-08) | 31, 102 | H/L | static state not reset / dangling pointer | `free_diffusion1d()` frees `Cm1, C, Cp1, rhs, ud` but does not set them to NULL nor reset `max_n = -1`. A late… |  | [ ] |
 
 ---
 
 ## SJW3-08
 
 **static state not reset / dangling pointer** · Conf H / Sev L  
-**Lines (current code):** 204-213  
+**Found at (current code):** `diffusion.c` 31, `diffusion.c` 102
 **Lines at review (Oct 2026):** 204-213
 
 **Function:** `free_diffusion1d()`
@@ -26,22 +26,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `free_diffusion1d()` frees `Cm1, C, Cp1, rhs, ud` but does not set them to NULL nor reset `max_n = -1`. A later `diffusion1d()` call in the same process (e.g. a second run when Atlantis is embedded/re-invoked, or a call after `atphysics.c:113` teardown) would use freed memory if `n <= max_n`, or double-free them if `n > max_n`. Function: `free_diffusion1d()`.
 
-**Current code** (`sjwlib/diffusion.c` lines 202–214)
+**Code at issue** — `diffusion.c` line 31  
+Search for: `max_n = -1`
 
 ```c
-  202:  *
-  203:  */
-  204: void free_diffusion1d(int dummy) {
-  205: 
-  206: 	if (Cm1 != NULL) {
-  207: 		free1d(Cm1);
-  208: 		free1d(C);
-  209: 		free1d(Cp1);
-  210: 		free1d(rhs);
-  211: 		free1d(ud);
-  212: 	}
-  213: }
-  214: 
+   29: 
+   30: /* Local temporary storage */
+   31→ static int max_n = -1;
+   32: static double *Cm1;
+   33: static double *C;
+```
+
+**Code at issue** — `diffusion.c` line 102  
+Search for: `n > max_n`
+
+```c
+  100: 
+  101:     /* Multiple layers - allocate temporary storage if necessary */
+  102→     if( n > max_n ) {
+  103: 	if( Cm1 != NULL ) {
+  104: 	    free1d(Cm1);
 ```
 
 **Suggested fix (from review):** After freeing, set all five pointers to NULL and `max_n = -1`.

@@ -2,17 +2,17 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 2; confidence H and severity H: 2; on the priority list: 2).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [EMISC-22](#emisc-22) ⭐ | 143-157 | H/H | data loss | A new zeroed 5D array is allocated and only `[speciesIndex][cohort][box]` is copied (the memcpy is commented o… |  | [ ] |
+| [EMISC-22](#emisc-22) ⭐ | 140 | H/H | data loss | A new zeroed 5D array is allocated and only `[speciesIndex][cohort][box]` is copied (the memcpy is commented o… |  | [ ] |
 | [EMISC-23](#emisc-23) | 143 | H/M | wrong dimension | `Util_Alloc_Init_5D_Double(3, maxMortChange, bm->nbox, 2, bm->K_num_tot_sp, 0)` uses stage dimension 2, but th… |  | [ ] |
-| [EMISC-24](#emisc-24) ⭐ | 210-219 | H/H | data loss | Same problem for habitats: only `BEDchange[habitatIndex]` is copied into the new `[K_num_bed_types][max][3]` a… |  | [ ] |
+| [EMISC-24](#emisc-24) ⭐ | 213 | H/H | data loss | Same problem for habitats: only `BEDchange[habitatIndex]` is copied into the new `[K_num_bed_types][max][3]` a… |  | [ ] |
 | [EMISC-25](#emisc-25) | 138 | H/L | debug output | An unconditional `printf("maxMortChange = %d\n", ...)` runs on every call. Function: `Scale_Group_Linear_Morta… |  | [ ] |
 
 ---
@@ -20,7 +20,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EMISC-22
 
 **data loss** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 143-157  
+**Found at (current code):** `atbiolUtil.c` 140
 **Lines at review (Oct 2026):** 143-157
 
 **Function:** `Scale_Group_Linear_Mortality()`
@@ -29,28 +29,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 A new zeroed 5D array is allocated and only `[speciesIndex][cohort][box]` is copied (the memcpy is commented out); then the old array is freed. Every other group/stage/box's scheduled linear-mortality changes are wiped, while `numMortChanges` still counts them. Function: `Scale_Group_Linear_Mortality()`.
 
-**Current code** (`atecology/atbiolUtil.c` lines 141–159)
+**Code at issue** — `atbiolUtil.c` line 140  
+Search for: `[speciesIndex][cohort][box]`
 
 ```c
+  138: 	printf("maxMortChange = %d\n", maxMortChange);
+  139: 	if (((int) numMortChanges[speciesIndex][cohort][box]) > maxMortChange) {
+  140→ 		maxMortChange = numMortChanges[speciesIndex][cohort][box];
   141: 	}
   142: 	/* Allocate a new array */
-  143: 	tempArray = Util_Alloc_Init_5D_Double(3, maxMortChange, bm->nbox, 2, bm->K_num_tot_sp, 0);
-  144: 
-  145: 	/* Copy all existing values across */
-  146: //	memcpy(tempArray, LinearMortChange, sizeof(LinearMortChange));
-  147: 
-  148: 	/* Now insert the new value in the correct place */
-  149: 	Util_Copy_Change_Values(bm, LinearMortChange[speciesIndex][cohort][box],
-  150: 			tempArray[speciesIndex][cohort][box],
-  151: 			numMortChanges[speciesIndex][cohort][box],
-  152: 			start, period, mult);
-  153: 
-  154: 	/* Now do some pointer magic and free up the 'old' array*/
-  155: 	tempArrayPointer = LinearMortChange;
-  156: 	LinearMortChange = tempArray;
-  157: 	free5d(tempArrayPointer);
-  158: 
-  159: 	for(i = 0; i < ((int) numMortChanges[speciesIndex][cohort][box]); i++){
 ```
 
 **Suggested fix (from review):** Copy all [sp][stage][box][0..oldmax) entries into tempArray before inserting
@@ -73,7 +60,7 @@ A new zeroed 5D array is allocated and only `[speciesIndex][cohort][box]` is cop
 ## EMISC-23
 
 **wrong dimension** · Conf H / Sev M  
-**Lines (current code):** 143  
+**Found at (current code):** `atbiolUtil.c` 143
 **Lines at review (Oct 2026):** 143
 
 **Function:** `Scale_Group_Linear_Mortality()`
@@ -82,12 +69,13 @@ A new zeroed 5D array is allocated and only `[speciesIndex][cohort][box]` is cop
 
 `Util_Alloc_Init_5D_Double(3, maxMortChange, bm->nbox, 2, bm->K_num_tot_sp, 0)` uses stage dimension 2, but the original allocation uses `K_num_max_stages` (atbiolsetup.c:2777). Groups with more than 2 stages index out of bounds after the first realloc. Function: `Scale_Group_Linear_Mortality()`.
 
-**Current code** (`atecology/atbiolUtil.c` lines 141–145)
+**Code at issue** — `atbiolUtil.c` line 143  
+Search for: `Util_Alloc_Init_5D_Double(3, maxMortChange, bm->nbox, 2, bm->K_num_tot_sp, 0)`
 
 ```c
   141: 	}
   142: 	/* Allocate a new array */
-  143: 	tempArray = Util_Alloc_Init_5D_Double(3, maxMortChange, bm->nbox, 2, bm->K_num_tot_sp, 0);
+  143→ 	tempArray = Util_Alloc_Init_5D_Double(3, maxMortChange, bm->nbox, 2, bm->K_num_tot_sp, 0);
   144: 
   145: 	/* Copy all existing values across */
 ```
@@ -112,7 +100,7 @@ A new zeroed 5D array is allocated and only `[speciesIndex][cohort][box]` is cop
 ## EMISC-24
 
 **data loss** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 210-219  
+**Found at (current code):** `atbiolUtil.c` 213
 **Lines at review (Oct 2026):** 210-219
 
 **Function:** `Scale_Habitat()`
@@ -121,23 +109,15 @@ A new zeroed 5D array is allocated and only `[speciesIndex][cohort][box]` is cop
 
 Same problem for habitats: only `BEDchange[habitatIndex]` is copied into the new `[K_num_bed_types][max][3]` array, so the scheduled changes of the other habitat types are zeroed. Function: `Scale_Habitat()`.
 
-**Current code** (`atecology/atbiolUtil.c` lines 208–221)
+**Code at issue** — `atbiolUtil.c` line 213  
+Search for: `BEDchange[habitatIndex]`
 
 ```c
-  208: 
-  209: 	/* Now allocate a temp array to store the updated values */
-  210: 	tempArray = Util_Alloc_Init_3D_Double(3, BEDchange_max_num, bm->K_num_bed_types, 0);
   211: 
   212: 	/* Now copy the values across inserting the new value in the correct place.*/
-  213: 	Util_Copy_Change_Values(bm, BEDchange[habitatIndex], tempArray[habitatIndex],
+  213→ 	Util_Copy_Change_Values(bm, BEDchange[habitatIndex], tempArray[habitatIndex],
   214: 			BEDchange_max_num, start, period, mult);
   215: 
-  216: 	/* Now do some pointer magic and free up the 'old' array*/
-  217: 	tempArrayPointer = BEDchange;
-  218: 	BEDchange = tempArray;
-  219: 	free3d(tempArrayPointer);
-  220: 
-  221: 	for(i = 0; i < BEDchange_max_num; i++){
 ```
 
 **Suggested fix (from review):** Copy all bed types' rows before inserting
@@ -160,7 +140,7 @@ Same problem for habitats: only `BEDchange[habitatIndex]` is copied into the new
 ## EMISC-25
 
 **debug output** · Conf H / Sev L  
-**Lines (current code):** 138  
+**Found at (current code):** `atbiolUtil.c` 138
 **Lines at review (Oct 2026):** 138
 
 **Function:** `Scale_Group_Linear_Mortality()`
@@ -169,12 +149,13 @@ Same problem for habitats: only `BEDchange[habitatIndex]` is copied into the new
 
 An unconditional `printf("maxMortChange = %d\n", ...)` runs on every call. Function: `Scale_Group_Linear_Mortality()`.
 
-**Current code** (`atecology/atbiolUtil.c` lines 136–140)
+**Code at issue** — `atbiolUtil.c` line 138  
+Search for: `printf("maxMortChange = %d\n",`
 
 ```c
   136: 	numMortChanges[speciesIndex][cohort][box]++;
   137: 
-  138: 	printf("maxMortChange = %d\n", maxMortChange);
+  138→ 	printf("maxMortChange = %d\n", maxMortChange);
   139: 	if (((int) numMortChanges[speciesIndex][cohort][box]) > maxMortChange) {
   140: 		maxMortChange = numMortChanges[speciesIndex][cohort][box];
 ```

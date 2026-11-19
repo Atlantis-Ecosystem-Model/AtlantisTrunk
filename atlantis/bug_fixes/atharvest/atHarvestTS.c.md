@@ -2,16 +2,16 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [HRV2-12](#hrv2-12) | 246 | M/M | wrong operator | The expanding branch is documented as "use original distribution", but it does `CatchTS_agedistrib[...][ij] +=… |  | [ ] |
-| [HRV2-13](#hrv2-13) | 195-206 | L/M | logic | In the flagkeepZeroCatchTS branch, when `CatchTS_agedistribOrig==0` the class is set to 0 and `cumtot` is rese… |  | [ ] |
+| [HRV2-13](#hrv2-13) | 240 | L/M | logic | In the flagkeepZeroCatchTS branch, when `CatchTS_agedistribOrig==0` the class is set to 0 and `cumtot` is rese… |  | [ ] |
 | [HRV2-14](#hrv2-14) | 272 | H/L | logging | `if (do_debug \|\| (CatchTS_agedistrib[fishery_id][sp][0] > 0))` writes to the log for every age class whenever … |  | [ ] |
 
 ---
@@ -19,7 +19,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-12
 
 **wrong operator** · Conf M / Sev M  
-**Lines (current code):** 246  
+**Found at (current code):** `atHarvestTS.c` 246
 **Lines at review (Oct 2026):** 246
 
 **Function:** `Harvest_Recalc_Time_Series_Distrib()`
@@ -28,12 +28,13 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The expanding branch is documented as "use original distribution", but it does `CatchTS_agedistrib[...][ij] += CatchTS_agedistribOrig[...][ij] + cumtot;`. That adds the original distribution on top of the current, contracted one, so the old distribution is never restored after normalisation. The depleted branch (241-242) correctly builds from Orig. Function: `Harvest_Recalc_Time_Series_Distrib()`.
 
-**Current code** (`atharvest/atHarvestTS.c` lines 244–248)
+**Code at issue** — `atHarvestTS.c` line 246  
+Search for: `CatchTS_agedistrib[`
 
 ```c
   244: 				bm->pSPcheck[sp][ij] = 1;
   245:             } else {
-  246: 				bm->CatchTS_agedistrib[fishery_id][sp][ij] += bm->CatchTS_agedistribOrig[fishery_id][sp][ij] + cumtot;
+  246→ 				bm->CatchTS_agedistrib[fishery_id][sp][ij] += bm->CatchTS_agedistribOrig[fishery_id][sp][ij] + cumtot;
   247: 				bm->DiscardTS_agedistrib[fishery_id][sp][ij] = bm->DiscardTS_agedistribOrig[fishery_id][sp][ij + ncum];
   248: 				cumtot = 0;
 ```
@@ -58,7 +59,7 @@ The expanding branch is documented as "use original distribution", but it does `
 ## HRV2-13
 
 **logic** · Conf L / Sev M  
-**Lines (current code):** 195-206  
+**Found at (current code):** `atHarvestTS.c` 240
 **Lines at review (Oct 2026):** 195-206
 
 **Function:** `Harvest_Recalc_Time_Series_Distrib()`
@@ -67,25 +68,15 @@ The expanding branch is documented as "use original distribution", but it does `
 
 In the flagkeepZeroCatchTS branch, when `CatchTS_agedistribOrig==0` the class is set to 0 and `cumtot` is reset to 0. The catch share accumulated from the depleted older classes is then thrown away instead of being carried down to the next class with catch. Function: `Harvest_Recalc_Time_Series_Distrib()`.
 
-**Current code** (`atharvest/atHarvestTS.c` lines 193–208)
+**Code at issue** — `atHarvestTS.c` line 240 (located by name only; check this is the right place)  
+Search for: `if ((step1 < (bm->min_dens * bm->nbox * 2)) || (bm->flagkeepZeroCatchTS && !bm->CatchTS_ag`
 
 ```c
-  193: 				ncum++;
-  194: 				bm->pSPcheck[sp][ij] = 1;
-  195:             } else if (bm->flagkeepZeroCatchTS) {
-  196:                 if (bm->CatchTS_agedistribOrig[fishery_id][sp][ij] > 0) {
-  197:                     bm->CatchTS_agedistrib[fishery_id][sp][ij] += cumtot;
-  198:                 } else {
-  199:                     bm->CatchTS_agedistrib[fishery_id][sp][ij] = bm->CatchTS_agedistribOrig[fishery_id][sp][ij];
-  200:                 }
-  201:                 if (bm->DiscardTS_agedistribOrig[fishery_id][sp][ij] > 0) {
-  202:                     bm->DiscardTS_agedistrib[fishery_id][sp][ij] = bm->DiscardTS_agedistribOrig[fishery_id][sp][ij + ncum];
-  203:                 } else {
-  204:                     bm->DiscardTS_agedistrib[fishery_id][sp][ij] = bm->DiscardTS_agedistribOrig[fishery_id][sp][ij];
-  205:                 }
-  206:                 cumtot = 0;
-  207:                 bm->pSPcheck[sp][ij] = 0;
-  208:             } else {
+  238: 				step1 += sptotden[sp][bij];
+  239: 			}
+  240→ 			if ((step1 < (bm->min_dens * bm->nbox * 2)) || (bm->flagkeepZeroCatchTS && !bm->CatchTS_agedistribOrig[fishery_id][sp][ij])){
+  241: 				cumtot += bm->CatchTS_agedistribOrig[fishery_id][sp][ij];
+  242: 				bm->CatchTS_agedistrib[fishery_id][sp][ij] = 0;
 ```
 
 **Suggested fix (from review):** Only reset cumtot when it was actually assigned
@@ -108,7 +99,7 @@ In the flagkeepZeroCatchTS branch, when `CatchTS_agedistribOrig==0` the class is
 ## HRV2-14
 
 **logging** · Conf H / Sev L  
-**Lines (current code):** 272  
+**Found at (current code):** `atHarvestTS.c` 272
 **Lines at review (Oct 2026):** 272
 
 **Function:** `Harvest_Recalc_Time_Series_Distrib()`
@@ -117,12 +108,13 @@ In the flagkeepZeroCatchTS branch, when `CatchTS_agedistribOrig==0` the class is
 
 `if (do_debug || (CatchTS_agedistrib[fishery_id][sp][0] > 0))` writes to the log for every age class whenever the youngest class has any catch share, on every recalculation. This looks like a debug leftover that bloats the log. Function: `Harvest_Recalc_Time_Series_Distrib()`.
 
-**Current code** (`atharvest/atHarvestTS.c` lines 270–274)
+**Code at issue** — `atHarvestTS.c` line 272  
+Search for: `if (do_debug || (bm->CatchTS_agedistrib[fishery_id][sp][0] > 0))`
 
 ```c
   270: 		}
   271: 
-  272: 		if (do_debug || (bm->CatchTS_agedistrib[fishery_id][sp][0] > 0)) {
+  272→ 		if (do_debug || (bm->CatchTS_agedistrib[fishery_id][sp][0] > 0)) {
   273: 			fprintf(llogfp, "Time: %e, %s-%d new_catchTSdistrib: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, ij, bm->CatchTS_agedistrib[fishery_id][sp][ij]);
   274: 		}
 ```

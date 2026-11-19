@@ -2,16 +2,16 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1), plus 2 lower-confidence notes.
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [PHY2-07](#phy2-07) ⭐ | 201-225 | H/H | duplicated logic / double application | In the no-water branch, `nut_scale = Get_PSS_Scalar(bm, s, variableIndex);` is followed by a copy of Get_PSS_S… |  | [ ] |
-| [PHY2-08](#phy2-08) | 209, 508 | M/M | wrong index | `strcasecmp(pss->ts.varname[variableIndex], "Si")` uses `variableIndex`, which counts only valid non-time, non… |  | [ ] |
+| [PHY2-07](#phy2-07) ⭐ | 202 | H/H | duplicated logic / double application | In the no-water branch, `nut_scale = Get_PSS_Scalar(bm, s, variableIndex);` is followed by a copy of Get_PSS_S… |  | [ ] |
+| [PHY2-08](#phy2-08) | 209 | M/M | wrong index | `strcasecmp(pss->ts.varname[variableIndex], "Si")` uses `variableIndex`, which counts only valid non-time, non… |  | [ ] |
 | [PHY2-09](#phy2-09) | 706 | H/L | format specifier | `quit("read_bm_ts: Can't open %%s\n", bm->inputFolder, bm->forceIfname)`: the `%%s` prints a literal "%s" and … |  | [ ] |
 
 ---
@@ -19,7 +19,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY2-07
 
 **duplicated logic / double application** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 201-225  
+**Found at (current code):** `atsourcesink.c` 202
 **Lines at review (Oct 2026):** 201-225
 
 **Function:** `sourceSink()`
@@ -28,38 +28,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 In the no-water branch, `nut_scale = Get_PSS_Scalar(bm, s, variableIndex);` is followed by a copy of Get_PSS_Scalar's own loop, which multiplies `nut_scale` again by the same `pssMult` factors. The scaling is applied twice (mult² after the change period, and the ramp is squared). The water branch (line 159) only calls Get_PSS_Scalar. The copied block also tests `bm->t == pssStart` (days) without `*86400` (line 218). Function: `sourceSink()`.
 
-**Current code** (`atphysics/atsourcesink.c` lines 199–227)
+**Code at issue** — `atsourcesink.c` line 202  
+Search for: `nut_scale = Get_PSS_Scalar(bm, s, variableIndex)`
 
 ```c
-  199: 					nut_scale = 1.0;
   200: 
   201: 					if (bm->nutrientChange) {
-  202:                         nut_scale = Get_PSS_Scalar(bm, s, variableIndex);
+  202→                         nut_scale = Get_PSS_Scalar(bm, s, variableIndex);
   203: 						/* Loop over each possible change */
   204: 						for (index = 0; index < bm->pss[s].numPssChanges; index++) {
-  205: 							if (bm->pss[s].pssChange[index][variableIndex] && (bm->t >= (bm->pss[s].pssStart[index][variableIndex] * 86400.0))) {
-  206: 								/* Must correct nutrient change period into seconds as that's what bm works in */
-  207: 								end_date = (bm->pss[s].pssPeriod[index][variableIndex] + bm->pss[s].pssStart[index][variableIndex]) * 86400.0;
-  208: 
-  209: 								if ((strcasecmp(pss->ts.varname[variableIndex], "Si") == 0) || (bm->pss[s].pssMult[index][variableIndex] == 1.0)) {
-  210: 									nut_scale = nut_scale * 1.0;
-  211: 								} else if (end_date < bm->t) {
-  212: 									if (bm->pulsechange) {
-  213: 										// Nothing to do as simply * 1.0
-  214: 									} else {
-  215: 										nut_scale = nut_scale * bm->pss[s].pssMult[index][variableIndex];
-  216: 									}
-  217: 								} else {
-  218:                                     if (bm->t == (bm->pss[s].pssStart[index][variableIndex])) {
-  219:                                         // Nothing to do as simply * 1.0
-  220:                                     } else {
-  221:                                         nut_scale = nut_scale * (bm->pss[s].pssMult[index][variableIndex] * ((bm->t - (bm->pss[s].pssStart[index][variableIndex] * 86400.0)) / (bm->pss[s].pssPeriod[index][variableIndex] * 86400.0)));
-  222:                                     }
-  223: 								}
-  224: 							}
-  225: 						}
-  226: 					}
-  227: 					if (verbose > 1) {
 ```
 
 **Suggested fix (from review):** Delete the loop at lines 203-225 and keep only the `Get_PSS_Scalar` call
@@ -82,7 +59,7 @@ In the no-water branch, `nut_scale = Get_PSS_Scalar(bm, s, variableIndex);` is f
 ## PHY2-08
 
 **wrong index** · Conf M / Sev M  
-**Lines (current code):** 209, 508  
+**Found at (current code):** `atsourcesink.c` 209
 **Lines at review (Oct 2026):** 209, 508
 
 **Function:** `sourceSink()`
@@ -91,12 +68,13 @@ In the no-water branch, `nut_scale = Get_PSS_Scalar(bm, s, variableIndex);` is f
 
 `strcasecmp(pss->ts.varname[variableIndex], "Si")` uses `variableIndex`, which counts only valid non-time, non-water tracer columns. `ts.varname` is indexed by the raw time-series column `i` and includes the time column (sjwlib/timeseries.c:146-156, pointsourcesink.c:165). So the Si exemption checks the wrong column, usually shifted by one because time is column 0, and Si can get scaled while the column before it is exempted. Function: `sourceSink()`, `Get_PSS_Scalar()`.
 
-**Current code** (`atphysics/atsourcesink.c` lines 207–211)
+**Code at issue** — `atsourcesink.c` line 209  
+Search for: `strcasecmp(pss->ts.varname[variableIndex], "Si")`
 
 ```c
   207: 								end_date = (bm->pss[s].pssPeriod[index][variableIndex] + bm->pss[s].pssStart[index][variableIndex]) * 86400.0;
   208: 
-  209: 								if ((strcasecmp(pss->ts.varname[variableIndex], "Si") == 0) || (bm->pss[s].pssMult[index][variableIndex] == 1.0)) {
+  209→ 								if ((strcasecmp(pss->ts.varname[variableIndex], "Si") == 0) || (bm->pss[s].pssMult[index][variableIndex] == 1.0)) {
   210: 									nut_scale = nut_scale * 1.0;
   211: 								} else if (end_date < bm->t) {
 ```
@@ -121,7 +99,7 @@ In the no-water branch, `nut_scale = Get_PSS_Scalar(bm, s, variableIndex);` is f
 ## PHY2-09
 
 **format specifier** · Conf H / Sev L  
-**Lines (current code):** 706  
+**Found at (current code):** `atsourcesink.c` 706
 **Lines at review (Oct 2026):** 706
 
 **Function:** `read_bm_ts_rewind()`
@@ -130,12 +108,13 @@ In the no-water branch, `nut_scale = Get_PSS_Scalar(bm, s, variableIndex);` is f
 
 `quit("read_bm_ts: Can't open %%s\n", bm->inputFolder, bm->forceIfname)`: the `%%s` prints a literal "%s" and both arguments are ignored. The function name in the message is also wrong. Function: `read_bm_ts_rewind()`.
 
-**Current code** (`atphysics/atsourcesink.c` lines 704–708)
+**Code at issue** — `atsourcesink.c` line 706  
+Search for: `quit("read_bm_ts: Can't open %%s\n", bm->inputFolder, bm->forceIfname)`
 
 ```c
   704: 	/* Open parameter file */
   705: 	if ((fp = Open_Input_File(bm->inputFolder,bm->forceIfname, "r")) == NULL)
-  706: 		quit("read_bm_ts: Can't open %%s\n", bm->inputFolder, bm->forceIfname);
+  706→ 		quit("read_bm_ts: Can't open %%s\n", bm->inputFolder, bm->forceIfname);
   707: 
   708: 	/* Find time series name in parameter file */
 ```

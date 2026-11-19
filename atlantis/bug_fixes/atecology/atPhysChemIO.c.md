@@ -2,22 +2,22 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **1 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [BMSG-20](#bmsg-20) | 77-79 vs 138-141 | M/M | inconsistent condition | The count uses `if(bm->track_rugosity_arag)` (truthy), but the add uses `if(bm->track_rugosity_arag == TRUE)`.… |  | [ ] |
+| [BMSG-20](#bmsg-20) | 77, 138, 40 | M/M | inconsistent condition | The count uses `if(bm->track_rugosity_arag)` (truthy), but the add uses `if(bm->track_rugosity_arag == TRUE)`.… |  | [ ] |
 
 ---
 
 ## BMSG-20
 
 **inconsistent condition** · Conf M / Sev M  
-**Lines (current code):** 77-79 vs 138-141  
+**Found at (current code):** `atPhysChemIO.c` 77, `atPhysChemIO.c` 138, `atPhysChemIO.c` 40
 **Lines at review (Oct 2026):** 77-79 vs 138-141
 
 **Function:** `Ecology_Assign_Physio_Chem()`
@@ -26,16 +26,37 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The count uses `if(bm->track_rugosity_arag)` (truthy), but the add uses `if(bm->track_rugosity_arag == TRUE)`. The flag is read with `integer_check` (atparamIO.c:209), so a value such as 2 reserves 2 slots that are never filled. Their `tracerIndex` pointers are garbage and get dereferenced in `Print_Flux()` and `Check_Layer_Initial_Biomass()` (`*PhysioChemArray[n].tracerIndex`). Function: `Ecology_Assign_Physio_Chem()`.
 
-**Current code** (`atecology/atPhysChemIO.c` lines 75–81)
+**Code at issue** — `atPhysChemIO.c` line 77  
+Search for: `if(bm->track_rugosity_arag)`
 
 ```c
    75: 		bm->K_num_physiochem += 14;  // The raw C and P nutrient tracers
    76: 	}
-   77: 	if(bm->track_rugosity_arag) {
+   77→ 	if(bm->track_rugosity_arag) {
    78: 		bm->K_num_physiochem += 2;
    79: 	}
-   80:     
-   81:     if (bm->track_wind) {
+```
+
+**Code at issue** — `atPhysChemIO.c` line 138  
+Search for: `if(bm->track_rugosity_arag == TRUE)`
+
+```c
+  136: 	}
+  137: 
+  138→ 	if(bm->track_rugosity_arag == TRUE) {
+  139: 		Add_Physio_Chem_Tracer(bm, llogfp, i++, "Rugosity", &Rugosity_i, 0, 0, 0, NULL, NULL);
+  140: 		Add_Physio_Chem_Tracer(bm, llogfp, i++, "AragoniteSaturation", &AragoniteSat_i, 0, 0, 0, NULL, NULL);
+```
+
+**Code at issue** — `atPhysChemIO.c` line 40 (closest match to the quoted code; wording differs slightly)  
+Search for: `PhysioChemArray[index].tracerIndex = tracerIndex;`
+
+```c
+   38: 	strcpy(PhysioChemArray[index].name, name);
+   39: 
+   40→ 	PhysioChemArray[index].tracerIndex = tracerIndex;
+   41: 	PhysioChemArray[index].diagTol = tol;
+   42: 	PhysioChemArray[index].diagFlux = flux;
 ```
 
 **Suggested fix (from review):** Use the same test in both places (e.g. `if (bm->track_rugosity_arag)` at line 138).

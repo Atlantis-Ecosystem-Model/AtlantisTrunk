@@ -156,7 +156,7 @@ void FindWhichData(MSEBoxModel *bm, int groupIndex, int iyr) {
 			}
 			//if (bm->RBCestimation.RBCspeciesArray[groupIndex].AgeFuture[it] != 0) {
             if ( tier == tier3 ) {
-				bm->RBCestimation.RBCspeciesArray[groupIndex].AgeYears[it][iyr] = 1;
+				bm->RBCestimation.RBCspeciesArray[groupIndex].AgeYears[iyr][it] = 1;   // Nov 2026: was [it][iyr] but AgeYears allocated [nYears][3] (ATS-01)
 				for (f = 0; f < Nfleets; f++) {
 					if (bm->RBCestimation.RBCspeciesArray[groupIndex].sumcatch[f] > 0.0)
 						bm->RBCestimation.RBCspeciesArray[groupIndex].AgeFltYr[it][f][iyr] = 1;
@@ -835,7 +835,7 @@ void GetFishLength_n_AgeData(MSEBoxModel *bm, int groupIndex, int iyr) {
                     //printf("Storing %d length samples in %d bins\n", nage_sample, Nages);
 
                      // Now store age data
-                    if (bm->RBCestimation.RBCspeciesArray[groupIndex].AgeYears[it][iyr] == 1){
+                    if (bm->RBCestimation.RBCspeciesArray[groupIndex].AgeYears[iyr][it] == 1){   // Nov 2026: was [it][iyr] (ATS-01)
                         // keep track of sample sizes of age records
                         bm->RBCestimation.RBCspeciesArray[groupIndex].AFss[f][s][iyr][it] += nage_sample;
                             

@@ -1,0 +1,49 @@
+atAssessTierSetup.c review fixes (ATS-01..13 except ATS-08)
+
+ATS-01: AgeYears is allocated Util_Alloc_Init_2D_Int(3, nYears), which
+gives [nYears][3], but atSS3DataGen.c indexed it AgeYears[it][iyr], so
+any year >= 3 ran past the end. Both uses now read AgeYears[iyr][it];
+the allocation is unchanged and its comment records the index order.
+
+ATS-02: agesel_bysex and fval were allocated (K_num_sexes, numCohorts),
+giving [numCohorts][sexes], but are used [s][a] in atManageTier.c, which
+overran the heap. Now allocated (numCohorts, K_num_sexes), giving
+[sexes][numCohorts]. The matching Util_Init_2D_Double resets in
+atManageTier.c were swapped to (K_num_sexes, numCohorts) so they don't
+overrun the corrected arrays.
+
+ATS-03: Tier_Assessment_Free no longer skips the close-kin, SlopeMat,
+FracLenS, Fupdated, FFs etc. frees for groups that are not tier-assessed.
+There was no matching test when these arrays were allocated, so they
+leaked.
+
+ATS-04: Tier_Assessment_Free now skips groups on isImpacted (was
+isFished) to match the allocation test, so fished-but-not-impacted
+groups no longer free unallocated pointers.
+
+ATS-06: getF20_40_48_len sets thisfval = (i+1)/nfintt at the end of
+iteration i, so F = 0 is no longer evaluated twice and F20/F40/F48 no
+longer lag one step.
+
+ATS-09: free arrays that were allocated in Tier_Assessment_Allocate but
+never freed: Xmove, DiscardType, AgeComp, AFss, LenComp, Tier3_Linf/k/t0,
+Tier5_Bstart, Tier5_r, T5_removal, TAC_mult, Obsageprop, MeanLenAgeS,
+Blocks, MULTISPestIDs and the bm->CloseKinEst struct array. The 5D int
+arrays (AgeComp, LenComp) are built on alloc5d, so they are released
+with free5d.
+
+ATS-10: cast NumFisheries to int for the %d in the assess_nf quit message.
+
+ATS-12: Prop_LatA floors siglen at small_num, so len[a] <= 0 or cv = 0
+no longer gives inf/NaN. YPRlen only computes the plus group when
+maxage > 0, so MaxAge = 1 no longer reads num[-1].
+
+Not changed: ATS-05, ATS-07, ATS-11 (not bugs) and ATS-13 (slot 3 of
+LengthN is never used). ATS-08 (fleet-to-metier mapping never
+populated) is waiting on a design choice; see the review file.
+
+bug_fixes/: every review file now locates the code at issue by
+searching for the code quoted in the review (with a "Search for"
+string), not by line number. Outcomes are recorded for ATS-01..13.
+
+Built clean (configure && make) in a scratch copy on macOS arm64.

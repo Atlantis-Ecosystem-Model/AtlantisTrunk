@@ -2,45 +2,46 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **10 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 4 lower-confidence notes.
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [PROC-19](#proc-19) | 943, 1096, 1216 | H/M | wrong semantics | `spawn_now = (int)EMBRYO[guild].Spawn_Now[cohort][next_spawn]` and `if ((int)(Spawn_Now[...] == TRUE))`. Spawn… |  | [ ] |
-| [PROC-20](#proc-20) | 845, 851 | H/M | copy-paste / wrong habitat | Algal epibenthic branch: detritus goes to `DetritusProd[WC][DLdet_id]` (832), but `Group_Transfer_Contaminant(… |  | [ ] |
-| [PROC-21](#proc-21) | 1456, 1546, 1582 | H/M | double counting | With track_atomic_ratio, `Gain_Element(... LabDetIndex ..., lysis[0] ...)` is called at 1437 using the Primary… |  | [ ] |
-| [PROC-22](#proc-22) | 1553-1570 | M/M | wrong habitat index | Dinoflag_Process handles `case WC: case ICE_BASED:` together, but all flux updates are hard-coded to `[WC]` (N… |  | [ ] |
-| [PROC-23](#proc-23) | 617 vs 629/633; 1570 vs 1582/1591 | M/M | inconsistent fluxes | `DetritusProd[..][DLdet_id] += lysis + mortality[0]`, but the element gain (Gain_Element), and the DebugInfo D… |  | [ ] |
-| [PROC-24](#proc-24) | 714 | M/M | unit mismatch | `cysts[...][cystenter_id] = (1.0 - (mS_sp + mL_sp + mE_sp)) * cysts[...]`. The mortality rates are per second … |  | [ ] |
-| [PROC-25](#proc-25) 🔀 | 305-309, 344 | M/M | inverted condition / double count | In the EPIFAUNA case, for SED_EP groups: `if (diagTol==2 && it_count==1) NutsProd[SED] += releaseNH; else Nuts… |  | [ ] |
-| [PROC-26](#proc-26) | 2175-2186 | M/M | inconsistent reset | After temporarily overwriting phytoplankton PREYinfo with sediment availability, the reset sets `PREYinfo[sp][… |  | [ ] |
-| [PROC-27](#proc-27) | 1679-1680, 1811-1812 | M/M | division by zero | With flagkdrop: `pow(PB_DL/(XPB_DL*DL), 3.0)` and `pow(BB_DL/(XBB_DL*DL), 3.0)` have no small_num. When DL (or… |  | [ ] |
-| [PROC-28](#proc-28) | 323-328, 352-358 | M/L | ungated debug | `if((bm->dayt > bm->checkstart) && (bm->checkbox == bm->current_box)) fprintf(bm->logFile, ...)` is not gated … |  | [ ] |
+| [PROC-19](#proc-19) | 949 | H/M | wrong semantics | `spawn_now = (int)EMBRYO[guild].Spawn_Now[cohort][next_spawn]` and `if ((int)(Spawn_Now[...] == TRUE))`. Spawn… |  | [ ] |
+| [PROC-20](#proc-20) | 838, 844 | H/M | copy-paste / wrong habitat | Algal epibenthic branch: detritus goes to `DetritusProd[WC][DLdet_id]` (832), but `Group_Transfer_Contaminant(… |  | [ ] |
+| [PROC-21](#proc-21) | 1452 | H/M | double counting | With track_atomic_ratio, `Gain_Element(... LabDetIndex ..., lysis[0] ...)` is called at 1437 using the Primary… |  | [ ] |
+| [PROC-22](#proc-22) | 1560 | M/M | wrong habitat index | Dinoflag_Process handles `case WC: case ICE_BASED:` together, but all flux updates are hard-coded to `[WC]` (N… |  | [ ] |
+| [PROC-23](#proc-23) | 610 | M/M | inconsistent fluxes | `DetritusProd[..][DLdet_id] += lysis + mortality[0]`, but the element gain (Gain_Element), and the DebugInfo D… |  | [ ] |
+| [PROC-24](#proc-24) | 720 | M/M | unit mismatch | `cysts[...][cystenter_id] = (1.0 - (mS_sp + mL_sp + mE_sp)) * cysts[...]`. The mortality rates are per second … |  | [ ] |
+| [PROC-25](#proc-25) 🔀 | 308 | M/M | inverted condition / double count | In the EPIFAUNA case, for SED_EP groups: `if (diagTol==2 && it_count==1) NutsProd[SED] += releaseNH; else Nuts… |  | [ ] |
+| [PROC-26](#proc-26) | 2182 | M/M | inconsistent reset | After temporarily overwriting phytoplankton PREYinfo with sediment availability, the reset sets `PREYinfo[sp][… |  | [ ] |
+| [PROC-27](#proc-27) | 1692, 1824 | M/M | division by zero | With flagkdrop: `pow(PB_DL/(XPB_DL*DL), 3.0)` and `pow(BB_DL/(XBB_DL*DL), 3.0)` have no small_num. When DL (or… |  | [ ] |
+| [PROC-28](#proc-28) | 323, 352 | M/L | ungated debug | `if((bm->dayt > bm->checkstart) && (bm->checkbox == bm->current_box)) fprintf(bm->logFile, ...)` is not gated … |  | [ ] |
 
 ---
 
 ## PROC-19
 
 **wrong semantics** · Conf H / Sev M  
-**Lines (current code):** 943, 1096, 1216  
+**Found at (current code):** `atGroupProcesses.c` 949
 **Lines at review (Oct 2026):** 943, 1096, 1216
 
 **Why it's thought to be a bug**
 
 `spawn_now = (int)EMBRYO[guild].Spawn_Now[cohort][next_spawn]` and `if ((int)(Spawn_Now[...] == TRUE))`. Spawn_Now stores spawn day-of-year (atannualbiology.c:248, 386-390), and atvertprocesses.c:1232 and atdemography.c:895 compare it with the day. So spawn_now is non-zero almost always, and `mat_pcnt` is only set when the spawn day equals 1. The feed-while-spawning reduction in Eat is effectively never applied correctly for AGE_STRUCTURED_BIOMASS inverts. Functions: `Invert_Consumers_Process()`, `Coral_Process()`.
 
-**Current code** (`atecology/atGroupProcesses.c` lines 941–945)
+**Code at issue** — `atGroupProcesses.c` line 949 (closest match to the quoted code; wording differs slightly)  
+Search for: `spawn_now = (int) (EMBRYO[guild].Spawn_Now[cohort][EMBRYO[guild].next_spawn]);`
 
 ```c
-  941: 	double O2 = tracerArray[Oxygen_i];
-  942: 	double E2_sp = FunctGroupArray[guild].speciesParams[E2_id];
-  943: 	double bact_DL = 0, bact_DR = 0, sedbact_DL = 0, sedbact_DR = 0;
-  944: 	double eatBiomass = -1;
-  945: 
+  947: 		spawn_now = 0;
+  948: 	else
+  949→ 		spawn_now = (int) (EMBRYO[guild].Spawn_Now[cohort][EMBRYO[guild].next_spawn]);
+  950: 
+  951: 	switch(habitatType){
 ```
 
 **Suggested fix (from review):** Compute spawning-now as in atvertprocesses.c (compare spawn_date and spawn_period with the current day)
@@ -63,7 +64,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PROC-20
 
 **copy-paste / wrong habitat** · Conf H / Sev M  
-**Lines (current code):** 845, 851  
+**Found at (current code):** `atGroupProcesses.c` 838, `atGroupProcesses.c` 844
 **Lines at review (Oct 2026):** 832, 838
 
 **Function:** `Phytoplankton_Process()`
@@ -72,20 +73,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Algal epibenthic branch: detritus goes to `DetritusProd[WC][DLdet_id]` (845), but `Group_Transfer_Contaminant(bm, boxLayerInfo, EPIFAUNA, SED, LabDetIndex, ...)` moves the contaminant into the SED habitat (the 4th arg is the habitat, atContaminants.c:960). This was copied from the seagrass branch (797), which does use SED detritus. Compare Update_Detritus 382-383 (`EPIFAUNA, WC`). Function: `Phytoplankton_Process()`.
 
-**Current code** (`atecology/atGroupProcesses.c` lines 843–853)
+**Code at issue** — `atGroupProcesses.c` line 838  
+Search for: `DetritusProd[WC][DLdet_id]`
 
 ```c
+  836: 				}
+  837: 
+  838→ 				boxLayerInfo->DetritusProd[WC][DLdet_id] += FunctGroupArray[guild].mortality[cohort] / wcLayerThick;
+  839: 
+  840: 				/* Contaminants transfer into detritus */
+```
+
+**Code at issue** — `atGroupProcesses.c` line 844  
+Search for: `Group_Transfer_Contaminant(bm, boxLayerInfo, EPIFAUNA, SED, LabDetIndex,`
+
+```c
+  842:                     //fprintf(bm->logFile,"Calling Group_Transfer_Contaminant from Update_Detritus EPIFAUNA SED - %s-%d with initialBiomass: %e mort: %e\n", FunctGroupArray[guild].groupCode, cohort, initialBiomass, FunctGroupArray[guild].mortality[cohort] / wcLayerThick);
   843:                     
-  844:                     Group_Transfer_Contaminant(bm, boxLayerInfo, EPIFAUNA, SED, LabDetIndex, 0, guild, cohort,  FunctGroupArray[guild].mortality[cohort] / wcLayerThick, 0, initialBiomass, bm->dtsz_stored, 1, 25);   // Was case 0 for need_prop
+  844→                     Group_Transfer_Contaminant(bm, boxLayerInfo, EPIFAUNA, SED, LabDetIndex, 0, guild, cohort,  FunctGroupArray[guild].mortality[cohort] / wcLayerThick, 0, initialBiomass, bm->dtsz_stored, 1, 25);   // Was case 0 for need_prop
   845: 				}
   846: 
-  847: 				if(bm->track_atomic_ratio == TRUE){
-  848: 
-  849: 					/* Change in Biomass in phyto due to mortality handled in final flux calc so just need to account for gain in DL here */
-  850: 					Gain_Element(bm, boxLayerInfo, WC, LabDetIndex, 0, guild, cohort, (FunctGroupArray[guild].mortality[cohort] / wcLayerThick), EPIFAUNA, isGlobal);
-  851: 
-  852: 					/* Gain due to growth */
-  853: 					Gain_Element(bm, boxLayerInfo, habitatType, guild, 0, guild, 0, FunctGroupArray[guild].growth[0],  EPIFAUNA, isGlobal);
 ```
 
 **Suggested fix (from review):** Change to `EPIFAUNA, WC`
@@ -108,7 +115,7 @@ Algal epibenthic branch: detritus goes to `DetritusProd[WC][DLdet_id]` (845), bu
 ## PROC-21
 
 **double counting** · Conf H / Sev M  
-**Lines (current code):** 1456, 1546, 1582  
+**Found at (current code):** `atGroupProcesses.c` 1452
 **Lines at review (Oct 2026):** 1437, 1526, 1562
 
 **Function:** `Dinoflag_Process()`
@@ -117,14 +124,15 @@ Algal epibenthic branch: detritus goes to `DetritusProd[WC][DLdet_id]` (845), bu
 
 With track_atomic_ratio, `Gain_Element(... LabDetIndex ..., lysis[0] ...)` is called at 1437 using the Primary_Production lysis. Lysis is then recomputed at 1526, and Gain_Element for DL is called again at 1562. DL elements (P/C) are gained twice per step. Function: `Dinoflag_Process()`.
 
-**Current code** (`atecology/atGroupProcesses.c` lines 1454–1458) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
+**Code at issue** — `atGroupProcesses.c` line 1452  
+Search for: `Gain_Element(`
 
 ```c
+ 1450: 
+ 1451: 				/* Gain due to growth */
+ 1452→ 				Gain_Element(bm, boxLayerInfo, habitatType, guild, 0, guild, 0, FunctGroupArray[guild].growth[0],  WC, isGlobal);
+ 1453: 			}
  1454: 
- 1455: 
- 1456:             // TODO: I think this is a bug and hangover from when did not have plankton mortality explciitly nut will screw with older models so include in bug trap flag
- 1457:             if (bm->flag_replicated_old_PPmort) {
- 1458:                 /* Zero out the mortality value so we can use generic rate of change equations later */
 ```
 
 **Suggested fix (from review):** Remove the call at 1437
@@ -147,7 +155,7 @@ With track_atomic_ratio, `Gain_Element(... LabDetIndex ..., lysis[0] ...)` is ca
 ## PROC-22
 
 **wrong habitat index** · Conf M / Sev M  
-**Lines (current code):** 1553-1570  
+**Found at (current code):** `atGroupProcesses.c` 1560
 **Lines at review (Oct 2026):** 1533-1550
 
 **Function:** `Dinoflag_Process()`
@@ -156,31 +164,15 @@ With track_atomic_ratio, `Gain_Element(... LabDetIndex ..., lysis[0] ...)` is ca
 
 Dinoflag_Process handles `case WC: case ICE_BASED:` together, but all flux updates are hard-coded to `[WC]` (NutsLost[WC], DetritusLost[WC], DetritusProd[WC], `GRAZEinfo[RefDetIndex][0][WC]`). For ice dinoflagellates the uptake and detritus fluxes go to the water column, and the ice detritus grazing is not removed. Phytoplankton_Process (878-883) correctly uses `habitatType`. Function: `Dinoflag_Process()`.
 
-**Current code** (`atecology/atGroupProcesses.c` lines 1551–1572)
+**Code at issue** — `atGroupProcesses.c` line 1560  
+Search for: `GRAZEinfo[RefDetIndex][0][WC]`
 
 ```c
- 1551: 					quit("ERROR - updateNH is infinite\n");
- 1552: 
- 1553: 				}
- 1554: 			}
- 1555: 
- 1556: 			boxLayerInfo->NutsLost[WC][NO_id] += uptakeNO;
- 1557: 			boxLayerInfo->NutsLost[WC][Si_id] += uptakeSi;
  1558: 			boxLayerInfo->NutsLost[WC][Fe_id] += uptakeFe;
  1559: 
- 1560: 			boxLayerInfo->DetritusLost[WC][DRdet_id] += GRAZEinfo[RefDetIndex][0][WC];
+ 1560→ 			boxLayerInfo->DetritusLost[WC][DRdet_id] += GRAZEinfo[RefDetIndex][0][WC];
  1561: 			boxLayerInfo->DetritusLost[WC][DLdet_id] += GRAZEinfo[LabDetIndex][0][WC];
  1562: 
- 1563: 			boxLayerInfo->DetritusProd[WC][DLdet_id] += FunctGroupArray[guild].lysis[cohort] + FunctGroupArray[guild].mortality[0];
- 1564: 
- 1565: 			/* Contaminants transfer */
- 1566: 			if(bm->track_contaminants){
- 1567: 				/* Gains in DL due to mortality */
- 1568:                 //fprintf(bm->logFile,"Calling Group_Transfer_Contaminant from Update_Detritus WC WC - %s-%d with initialBiomass: %e lysis: %e\n", FunctGroupArray[guild].groupCode, cohort, initialBiomass, FunctGroupArray[guild].lysis[cohort]);
- 1569:                 
- 1570:                 Group_Transfer_Contaminant(bm, boxLayerInfo, WC, WC, LabDetIndex, 0, guild, cohort, (FunctGroupArray[guild].lysis[cohort] + FunctGroupArray[guild].mortality[0]), 0, initialBiomass, bm->dtsz_stored, 1, 27);   // Was case 0 for need_prop
- 1571: 			}
- 1572: 
 ```
 
 **Suggested fix (from review):** Use `habitatType` in place of `WC`
@@ -203,37 +195,22 @@ Dinoflag_Process handles `case WC: case ICE_BASED:` together, but all flux updat
 ## PROC-23
 
 **inconsistent fluxes** · Conf M / Sev M  
-**Lines (current code):** 617 vs 629/633; 1570 vs 1582/1591  
+**Found at (current code):** `atGroupProcesses.c` 610
 **Lines at review (Oct 2026):** 604 vs 616/620; 1550 vs 1562/1571
 
 **Why it's thought to be a bug**
 
 `DetritusProd[..][DLdet_id] += lysis + mortality[0]`, but the element gain (Gain_Element), and the DebugInfo DL, only use `lysis`. With flag_replicated_old_PPmort off, mortality[0] is non-zero, so the P/C ratios of DL drift (N added without the matching elements). Functions: `Phytoplankton_Process()`, `Dinoflag_Process()`.
 
-**Current code** (`atecology/atGroupProcesses.c` lines 615–635)
+**Code at issue** — `atGroupProcesses.c` line 610 (closest match to the quoted code; wording differs slightly)  
+Search for: `boxLayerInfo->DetritusProd[habitatType][DLdet_id] += FunctGroupArray[guild].lysis[cohort] `
 
 ```c
-  615:                 
-  616:                 Group_Transfer_Contaminant(bm, boxLayerInfo, WC, WC, LabDetIndex, 0, guild, cohort,  (FunctGroupArray[guild].lysis[cohort] + FunctGroupArray[guild].mortality[0]), 0, initialBiomass, bm->dtsz_stored, 1, 20);  // Was case 0 for need_prop
-  617: 			}
-  618: 			FunctGroupArray[guild].chl = initialBiomass;
-  619: 
-  620: 			/* Diagnostic information storage */
-  621: 			boxLayerInfo->DebugInfo[guild][habitatType][DiagnostNH_id] = -FunctGroupArray[guild].uptakeNH[cohort];
-  622: 			boxLayerInfo->DebugInfo[guild][habitatType][DiagnostDL_id] = FunctGroupArray[guild].lysis[cohort];
-  623: 
-  624: 			if(bm->track_atomic_ratio == TRUE){
-  625: 				/* Change in Biomass in phyto due to lysis handled in final flux calc so just need to account for gain in DL here */
-  626: 				Gain_Element(bm, boxLayerInfo, habitatType, LabDetIndex, 0, guild, cohort, FunctGroupArray[guild].lysis[cohort], WC, isGlobal);
-  627: 
-  628: 				/* Gain due to growth */
-  629: 				Gain_Element(bm, boxLayerInfo, habitatType, guild, 0, guild, 0, FunctGroupArray[guild].growth[0],  WC, isGlobal);
-  630: 			}
-  631: 
-  632: 			break;
-  633: 		case SED:
-  634: 
-  635: 			if ((int) (FunctGroupArray[guild].speciesParams[flag_id])) {
+  608: 			boxLayerInfo->NutsLost[habitatType][C_id] += uptakeC;
+  609: 
+  610→ 			boxLayerInfo->DetritusProd[habitatType][DLdet_id] += FunctGroupArray[guild].lysis[cohort] + FunctGroupArray[guild].mortality[0];
+  611: 
+  612: 			/* Contaminants transfer into detritus */
 ```
 
 **Suggested fix (from review):** Include mortality[0] in Gain_Element and DebugInfo
@@ -256,7 +233,7 @@ Dinoflag_Process handles `case WC: case ICE_BASED:` together, but all flux updat
 ## PROC-24
 
 **unit mismatch** · Conf M / Sev M  
-**Lines (current code):** 714  
+**Found at (current code):** `atGroupProcesses.c` 720
 **Lines at review (Oct 2026):** 714
 
 **Function:** `Phytoplankton_Process()`
@@ -265,14 +242,15 @@ Dinoflag_Process handles `case WC: case ICE_BASED:` together, but all flux updat
 
 `cysts[...][cystenter_id] = (1.0 - (mS_sp + mL_sp + mE_sp)) * cysts[...]`. The mortality rates are per second (used as `rate * biomass` fluxes elsewhere), so this kills a negligible per-second fraction per call, with no dt, independent of timestep. Function: `Phytoplankton_Process()`.
 
-**Current code** (`atecology/atGroupProcesses.c` lines 712–716)
+**Code at issue** — `atGroupProcesses.c` line 720  
+Search for: `cysts[`
 
 ```c
-  712: 
-  713: 					//bm->calcTrackedMort[guild][0][0][ongoingM1_id] += (mL_sp * initialBiomass) * bm->SP_prms[guild][Mdt_id]); - won't count this now as confusing when trying to get estimates for the active component
-  714: 					FunctGroupArray[guild].chl = initialBiomass;
-  715: 
-  716: 					/* Diagnostic information storage */
+  718: 
+  719: 					/* Kill off cysts too -TODO should we actually used the SED pool as the cyst storage facility rather than a cysts array? */
+  720→ 					cysts[guild][bm->current_box][cystenter_id] = (1.0 - (mS_sp + mL_sp + mE_sp)) * cysts[guild][bm->current_box][cystenter_id];
+  721: 				}
+  722: 
 ```
 
 **Suggested fix (from review):** Use `(1.0 - (mS+mL+mE)*bm->dt)` (or exp(-rate*dt))
@@ -295,7 +273,7 @@ Dinoflag_Process handles `case WC: case ICE_BASED:` together, but all flux updat
 ## PROC-25
 
 **inverted condition / double count** · Conf M / Sev M  
-**Lines (current code):** 305-309, 344  
+**Found at (current code):** `atGroupProcesses.c` 308
 **Lines at review (Oct 2026):** 299-303, 338
 
 **Function:** `Update_Detritus()`
@@ -306,49 +284,15 @@ In the EPIFAUNA case, for SED_EP groups: `if (diagTol==2 && it_count==1) NutsPro
 
 > 🔀 **Changed by the merge of main (Nov 2026):** diagTol for CARRION/PWN changed. Check whether this finding is now fixed before acting.
 
-**Current code** (`atecology/atGroupProcesses.c` lines 303–342 (truncated))
+**Code at issue** — `atGroupProcesses.c` line 308 (the line the review pointed to, found by its text)  
+Search for: `boxLayerInfo->NutsProdGlobal[EPIFAUNA][SED][NH_id] += FunctGroupArray[guild].releaseNH[coh`
 
 ```c
-  303: 			}
-  304: 
-  305: 			if (FunctGroupArray[guild].diagTol == 2 && it_count == 1){
   306: 				boxLayerInfo->NutsProd[SED][NH_id] += FunctGroupArray[guild].releaseNH[cohort];
   307: 			} else {
-  308: 				boxLayerInfo->NutsProdGlobal[EPIFAUNA][SED][NH_id] += FunctGroupArray[guild].releaseNH[cohort]; // Was boxLayerInfo->NutsProd[WC][NH_id]
+  308→ 				boxLayerInfo->NutsProdGlobal[EPIFAUNA][SED][NH_id] += FunctGroupArray[guild].releaseNH[cohort]; // Was boxLayerInfo->NutsProd[WC][NH_id]
   309: 			}
   310: 
-  311: 		} else {
-  312: 			boxLayerInfo->DetritusProd[WC][DLdet_id] += FunctGroupArray[guild].prodnDL[cohort];
-  313: 			boxLayerInfo->DetritusProd[WC][DRdet_id] += FunctGroupArray[guild].prodnDR[cohort];
-  314: 			boxLayerInfo->NutsProd[WC][NH_id] += FunctGroupArray[guild].releaseNH[cohort];
-  315: 
-  316: 
-  317: 			if(bm->track_atomic_ratio == TRUE){
-  318: 				Gain_Element(bm, boxLayerInfo, WC, RefDetIndex, 0, guild, cohort, FunctGroupArray[guild].prodnDR[cohort], EPIFAUNA, isGlobal);
-  319: 				Gain_Element(bm, boxLayerInfo, WC, LabDetIndex, 0, guild, cohort, FunctGroupArray[guild].prodnDL[cohort], EPIFAUNA, isGlobal);
-  320: 			}
-  321: 		}
-  322:             
-  323:         if((bm->dayt > bm->checkstart) && (bm->checkbox == bm->current_box)) {
-  324:             fprintf(bm->logFile, "Time: %e box%d-%d %s epiDLprod: %Lf (%Lf) DLlost: %Lf (%Lf) graze %e (%e) prodnDet: %e\n",
-  325:                 bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[guild].groupCode, boxLayerInfo->DetritusProd[WC][DLdet_id], boxLayerInfo->DetritusProd[SED][DLdet_id],
-  326:                 boxLayerInfo->DetritusLost[WC][DLdet_id], boxLayerInfo->DetritusLost[SED][DLdet_id],
-  327:                 GRAZEinfo[LabDetIndex][0][WC], GRAZEinfo[LabDetIndex][0][SED], FunctGroupArray[guild].prodnDL[cohort]);
-  328:         }
-  329: 
-  330: 		/* Update global fluxes */
-  331: 		if (FunctGroupArray[guild].diagTol == 2 && it_count == 1) {
-  332: 			FunctGroupArray[pelagicBactIndex].preyEatenGlobal[0][EPIFAUNA][WC] += GRAZEinfo[pelagicBactIndex][0][WC];
-  333: 			FunctGroupArray[SedBactIndex].preyEatenGlobal[0][EPIFAUNA][SED] += GRAZEinfo[SedBactIndex][0][SED];
-  334: 			boxLayerInfo->DetritusLostGlobal[EPIFAUNA][WC][DRdet_id] += GRAZEinfo[RefDetIndex][0][WC];
-  335: 			boxLayerInfo->DetritusLostGlobal[EPIFAUNA][WC][DLdet_id] += GRAZEinfo[LabDetIndex][0][WC];
-  336: 			boxLayerInfo->DetritusLostGlobal[EPIFAUNA][SED][DRdet_id] += GRAZEinfo[RefDetIndex][0][SED];
-  337: 			boxLayerInfo->DetritusLostGlobal[EPIFAUNA][SED][DLdet_id] += GRAZEinfo[LabDetIndex][0][SED];
-  338: 
-  339: 
-  340: 			if (FunctGroupArray[processGuild].groupType == SED_EP_OTHER || FunctGroupArray[processGuild].groupType == SED_EP_FF
-  341: 					|| FunctGroupArray[processGuild].groupType == MOB_EP_OTHER) {
-  342: 				boxLayerInfo->DetritusProdGlobal[EPIFAUNA][SED][DLdet_id] += FunctGroupArray[guild].prodnDL[cohort];
 ```
 
 **Suggested fix (from review):** Always update NutsProd[SED] and leave the global flux to the block at 325-344
@@ -371,7 +315,7 @@ In the EPIFAUNA case, for SED_EP groups: `if (diagTol==2 && it_count==1) NutsPro
 ## PROC-26
 
 **inconsistent reset** · Conf M / Sev M  
-**Lines (current code):** 2175-2186  
+**Found at (current code):** `atGroupProcesses.c` 2182
 **Lines at review (Oct 2026):** 2157-2166
 
 **Function:** `Sediment_Epi_Other_Process()`
@@ -380,25 +324,15 @@ In the EPIFAUNA case, for SED_EP groups: `if (diagTol==2 && it_count==1) NutsPro
 
 After temporarily overwriting phytoplankton PREYinfo with sediment availability, the reset sets `PREYinfo[sp][chrt][WC] = localWCTracers[...]` without the `habitatCoeffs[WC]` (and ice MIXED) scaling used by Construct_Prey_Info (atprocess.c:2404, 2423), and leaves `PREYinfo[...][SED] = 0`. Predators processed later in the same cell see different phytoplankton availability. Function: `Sediment_Epi_Other_Process()`.
 
-**Current code** (`atecology/atGroupProcesses.c` lines 2173–2188)
+**Code at issue** — `atGroupProcesses.c` line 2182 (closest match to the quoted code; wording differs slightly)  
+Search for: `PREYinfo[sp][prey_chrt][WC] = boxLayerInfo->localWCTracers[FunctGroupArray[sp].totNTracers`
 
 ```c
- 2173: 		}
- 2174: 	}
- 2175: 
- 2176: 	/* reset planktonic groups to the values set in Epibenthic_Box() for the other predators -
- 2177: 	 * water column value scaled by habitat coefficient, phytoplankton are not put in the sediment slot there */
- 2178: 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
- 2179: 		if(FunctGroupArray[sp].speciesParams[flag_id] == TRUE){
  2180: 			if (FunctGroupArray[sp].groupType == LG_PHY || FunctGroupArray[sp].groupType == DINOFLAG || FunctGroupArray[sp].groupType == SM_PHY) {
  2181: 				for (prey_chrt = 0; prey_chrt < FunctGroupArray[sp].numCohortsXnumGenes; prey_chrt++) {
- 2182: 					PREYinfo[sp][prey_chrt][WC] = boxLayerInfo->localWCTracers[FunctGroupArray[sp].totNTracers[prey_chrt]] * FunctGroupArray[sp].habitatCoeffs[WC];
+ 2182→ 					PREYinfo[sp][prey_chrt][WC] = boxLayerInfo->localWCTracers[FunctGroupArray[sp].totNTracers[prey_chrt]] * FunctGroupArray[sp].habitatCoeffs[WC];
  2183: 					PREYinfo[sp][prey_chrt][SED] = 0.0;
  2184: 				}
- 2185: 			}
- 2186: 		}
- 2187: 	}
- 2188: 
 ```
 
 **Suggested fix (from review):** Save and restore the original values (or reapply the habitatCoeffs)
@@ -421,22 +355,33 @@ After temporarily overwriting phytoplankton PREYinfo with sediment availability,
 ## PROC-27
 
 **division by zero** · Conf M / Sev M  
-**Lines (current code):** 1679-1680, 1811-1812  
+**Found at (current code):** `atGroupProcesses.c` 1692, `atGroupProcesses.c` 1824
 **Lines at review (Oct 2026):** 1679-1680, 1811-1812
 
 **Why it's thought to be a bug**
 
 With flagkdrop: `pow(PB_DL/(XPB_DL*DL), 3.0)` and `pow(BB_DL/(XBB_DL*DL), 3.0)` have no small_num. When DL (or DR) is 0, the numerator is also 0, giving 0/0 = NaN growth (`max(0.0, NaN)` is unreliable). Functions: `Pelagic_Bacteria_Process()`, `Sediment_Bacterica_Process()`.
 
-**Current code** (`atecology/atGroupProcesses.c` lines 1677–1682)
+**Code at issue** — `atGroupProcesses.c` line 1692 (closest match to the quoted code; wording differs slightly)  
+Search for: `potential_PB = FunctGroupArray[guild].scaled_mum[cohort] * (boxLayerInfo->PB_DL * (1.0 - p`
 
 ```c
- 1677: 		PB = tracerArray[FunctGroupArray[guild].totNTracers[0]];
- 1678: 
- 1679: 		if (bm->debug == debug_prey_biology_process && bm->dayt >= bm->checkstart && bm->dayt < bm->checkstop) {
- 1680: 			fprintf(
- 1681: 					llogfp,
- 1682: 					"Pelagic_Bacteria_Process parameters: mL_sp = %e, FunctGroupArray[guild].speciesParams[mO_id] = %e, FunctGroupArray[guild].speciesParams[E3_id] = %e, FunctGroupArray[guild].speciesParams[FDMort_id] = %e\n",
+ 1690: 
+ 1691: 		if (flagkdrop)
+ 1692→ 			potential_PB = FunctGroupArray[guild].scaled_mum[cohort] * (boxLayerInfo->PB_DL * (1.0 - pow(boxLayerInfo->PB_DL / (XPB_DL * DL), 3.0))
+ 1693: 					+ boxLayerInfo->PB_DR * (1.0 - pow(boxLayerInfo->PB_DR / (XPB_DR * DR), 3.0)));
+ 1694: 		else {
+```
+
+**Code at issue** — `atGroupProcesses.c` line 1824  
+Search for: `pow(BB_DL / (XBB_DL * DL), 3.0)`
+
+```c
+ 1822: 
+ 1823: 		if (flagkdrop) {
+ 1824→ 			potential_BB = FunctGroupArray[guild].scaled_mum[cohort] * (BB_DL * (1.0 - pow(BB_DL / (XBB_DL * DL), 3.0)) + BB_DR * (1.0 - pow(BB_DR
+ 1825: 					/ (XBB_DR * DR), 3.0)));
+ 1826: 		} else {/* Gain due to growth */
 ```
 
 **Suggested fix (from review):** Add `+ small_num` to the denominators
@@ -459,7 +404,7 @@ With flagkdrop: `pow(PB_DL/(XPB_DL*DL), 3.0)` and `pow(BB_DL/(XBB_DL*DL), 3.0)` 
 ## PROC-28
 
 **ungated debug** · Conf M / Sev L  
-**Lines (current code):** 323-328, 352-358  
+**Found at (current code):** `atGroupProcesses.c` 323, `atGroupProcesses.c` 352
 **Lines at review (Oct 2026):** 317-322, 346-352
 
 **Function:** `Update_Detritus()`
@@ -468,49 +413,26 @@ With flagkdrop: `pow(PB_DL/(XPB_DL*DL), 3.0)` and `pow(BB_DL/(XBB_DL*DL), 3.0)` 
 
 `if((bm->dayt > bm->checkstart) && (bm->checkbox == bm->current_box)) fprintf(bm->logFile, ...)` is not gated on bm->debug or which_check. It prints two lines for every epibenthic group, every iteration, in the check box once past checkstart, which can flood the log. Function: `Update_Detritus()`.
 
-**Current code** (`atecology/atGroupProcesses.c` lines 321–360)
+**Code at issue** — `atGroupProcesses.c` line 323 (the line the review pointed to, found by its text)  
+Search for: `if((bm->dayt > bm->checkstart) && (bm->checkbox == bm->current_box)) {`
 
 ```c
   321: 		}
   322:             
-  323:         if((bm->dayt > bm->checkstart) && (bm->checkbox == bm->current_box)) {
+  323→         if((bm->dayt > bm->checkstart) && (bm->checkbox == bm->current_box)) {
   324:             fprintf(bm->logFile, "Time: %e box%d-%d %s epiDLprod: %Lf (%Lf) DLlost: %Lf (%Lf) graze %e (%e) prodnDet: %e\n",
   325:                 bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[guild].groupCode, boxLayerInfo->DetritusProd[WC][DLdet_id], boxLayerInfo->DetritusProd[SED][DLdet_id],
-  326:                 boxLayerInfo->DetritusLost[WC][DLdet_id], boxLayerInfo->DetritusLost[SED][DLdet_id],
-  327:                 GRAZEinfo[LabDetIndex][0][WC], GRAZEinfo[LabDetIndex][0][SED], FunctGroupArray[guild].prodnDL[cohort]);
-  328:         }
-  329: 
-  330: 		/* Update global fluxes */
-  331: 		if (FunctGroupArray[guild].diagTol == 2 && it_count == 1) {
-  332: 			FunctGroupArray[pelagicBactIndex].preyEatenGlobal[0][EPIFAUNA][WC] += GRAZEinfo[pelagicBactIndex][0][WC];
-  333: 			FunctGroupArray[SedBactIndex].preyEatenGlobal[0][EPIFAUNA][SED] += GRAZEinfo[SedBactIndex][0][SED];
-  334: 			boxLayerInfo->DetritusLostGlobal[EPIFAUNA][WC][DRdet_id] += GRAZEinfo[RefDetIndex][0][WC];
-  335: 			boxLayerInfo->DetritusLostGlobal[EPIFAUNA][WC][DLdet_id] += GRAZEinfo[LabDetIndex][0][WC];
-  336: 			boxLayerInfo->DetritusLostGlobal[EPIFAUNA][SED][DRdet_id] += GRAZEinfo[RefDetIndex][0][SED];
-  337: 			boxLayerInfo->DetritusLostGlobal[EPIFAUNA][SED][DLdet_id] += GRAZEinfo[LabDetIndex][0][SED];
-  338: 
-  339: 
-  340: 			if (FunctGroupArray[processGuild].groupType == SED_EP_OTHER || FunctGroupArray[processGuild].groupType == SED_EP_FF
-  341: 					|| FunctGroupArray[processGuild].groupType == MOB_EP_OTHER) {
-  342: 				boxLayerInfo->DetritusProdGlobal[EPIFAUNA][SED][DLdet_id] += FunctGroupArray[guild].prodnDL[cohort];
-  343: 				boxLayerInfo->DetritusProdGlobal[EPIFAUNA][SED][DRdet_id] += FunctGroupArray[guild].prodnDR[cohort];
-  344: 				boxLayerInfo->NutsProdGlobal[EPIFAUNA][SED][NH_id] += FunctGroupArray[guild].releaseNH[cohort];
-  345: 
-  346: 			} else {
-  347: 				boxLayerInfo->DetritusProdGlobal[EPIFAUNA][WC][DLdet_id] += FunctGroupArray[guild].prodnDL[cohort];
-  348: 				boxLayerInfo->DetritusProdGlobal[EPIFAUNA][WC][DRdet_id] += FunctGroupArray[guild].prodnDR[cohort];
-  349: 				boxLayerInfo->NutsProdGlobal[EPIFAUNA][WC][NH_id] += FunctGroupArray[guild].releaseNH[cohort];
+```
+
+**Code at issue** — `atGroupProcesses.c` line 352 (the line the review pointed to, found by its text)  
+Search for: `if((bm->dayt > bm->checkstart) && (bm->checkbox == bm->current_box)) {`
+
+```c
   350: 			}
   351:             
-  352:             if((bm->dayt > bm->checkstart) && (bm->checkbox == bm->current_box)) {
+  352→             if((bm->dayt > bm->checkstart) && (bm->checkbox == bm->current_box)) {
   353:                 fprintf(bm->logFile, "Time: %e box%d-%d %s epiDLprodGLOBAL: %Lf (%Lf) DLlostGLOBAL: %Lf (%Lf) grazeGLOBAL %e (%e) prodnGLOBAL: %e\n",
   354:                     bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[guild].groupCode,
-  355:                     boxLayerInfo->DetritusProdGlobal[EPIFAUNA][WC][DLdet_id], boxLayerInfo->DetritusProdGlobal[EPIFAUNA][SED][DLdet_id],
-  356:                     boxLayerInfo->DetritusLostGlobal[EPIFAUNA][WC][DLdet_id], boxLayerInfo->DetritusLostGlobal[EPIFAUNA][SED][DLdet_id],
-  357:                     GRAZEinfo[LabDetIndex][0][WC], GRAZEinfo[LabDetIndex][0][SED], FunctGroupArray[guild].prodnDL[cohort]);
-  358:             }
-  359:             
-  360: 		}
 ```
 
 **Suggested fix (from review):** Gate on `bm->debug == debug_biology_process` / which_check, or comment out

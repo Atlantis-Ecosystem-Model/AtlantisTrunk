@@ -2,22 +2,22 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **1 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [MNGIO-26](#mngio-26) | 81-89 | H/L | buffer overrun / leak | `malloc(sizeof(char*) * K + 1)` allocates K pointers plus 1 byte, so `names[K]` is out of bounds (operator pre… |  | [ ] |
+| [MNGIO-26](#mngio-26) | 85, 173 | H/L | buffer overrun / leak | `malloc(sizeof(char*) * K + 1)` allocates K pointers plus 1 byte, so `names[K]` is out of bounds (operator pre… |  | [ ] |
 
 ---
 
 ## MNGIO-26
 
 **buffer overrun / leak** · Conf H / Sev L  
-**Lines (current code):** 81-89  
+**Found at (current code):** `atRlink.c` 85, `atRlink.c` 173
 **Lines at review (Oct 2026):** 81-89
 
 **Function:** `R_Linkage_Start()`
@@ -26,22 +26,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `malloc(sizeof(char*) * K + 1)` allocates K pointers plus 1 byte, so `names[K]` is out of bounds (operator precedence). `malloc(5)` followed by `strcpy(..., groupCode)` overflows for codes over 4 characters (groupCode is char[20], atFunctGroup.h:80). names is never freed. This is latent: atmanage/Makefile.am:11 lists atRlink.h, not atRlink.c, so this file is not compiled. Its live duplicate is MNGIO-40. Function: `R_Linkage_Start()`.
 
-**Current code** (`atmanage/atRlink.c` lines 79–91)
+**Code at issue** — `atRlink.c` line 85  
+Search for: `strcpy(`
 
 ```c
-   79:     printf("R_Linkage_Start: Preparing R data structure for %d species\n", bm->K_num_tot_sp);
-   80:     numyr = (int)floor(ROUNDGUARD + ((bm->tstop - bm->tstart)/(86400.0*365.0)));
-   81:     names = (char**) malloc(sizeof(char*) * bm->K_num_tot_sp + 1);
-   82: 
    83:     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
    84:         names[sp] = (char*) malloc(sizeof(char) * 5);
-   85:         strcpy(names[sp], FunctGroupArray[sp].groupCode);
+   85→         strcpy(names[sp], FunctGroupArray[sp].groupCode);
    86:     }
    87: 
-   88:     names[bm->K_num_tot_sp] = (char*) malloc(sizeof(char) * 5);
-   89:     strcpy(names[sp], "");
-   90: 
-   91:     printf("R_Linkage_Start: Now creating R objects\n");
+```
+
+**Code at issue** — `atRlink.c` line 173  
+Search for: `, groupCode)`
+
+```c
+  171: 	exec_r(test);
+  172: 
+  173→ 	//snprintf(test, sizeof(test), "print(biomassIndex[[\"%s\"]])", groupCode);
+  174: 	//printf("%s\n", test);
+  175: 	//exec_r(test);
 ```
 
 **Suggested fix (from review):** `malloc(sizeof(char*)*(K+1))`, `strdup(groupCode)`, then free. Or delete the dead file.

@@ -133,7 +133,7 @@ int Tier_Assessment_Allocate(MSEBoxModel *bm) {
 		/* Data generation */
         bm->RBCestimation.RBCspeciesArray[groupIndex].AgeFuture = Util_Alloc_Init_1D_Int(3, 0);          /* Flag for  future age  data (retained, whole, discard) */
         bm->RBCestimation.RBCspeciesArray[groupIndex].AgeN = Util_Alloc_Init_1D_Int(3, 0);               /* Sample size of age comps  (retained, whole, discard) */
-		bm->RBCestimation.RBCspeciesArray[groupIndex].AgeYears = Util_Alloc_Init_2D_Int(3, nYears, 0);          /* Flags which years for which to generate age comps (retained, whole, discard) */
+		bm->RBCestimation.RBCspeciesArray[groupIndex].AgeYears = Util_Alloc_Init_2D_Int(3, nYears, 0);          /* Flags which years for which to generate age comps (retained, whole, discard). Gives [nYears][3] so index as AgeYears[iyr][it] */
 		bm->RBCestimation.RBCspeciesArray[groupIndex].AgeFltYr = Util_Alloc_Init_3D_Int(nYears, bm->K_num_fisheries, 3, 0);         /* Flags AF years, fleets in past (r,w,d) */
 		bm->RBCestimation.RBCspeciesArray[groupIndex].AgeComp = Util_Alloc_Init_5D_Int(bm->RBCestimation.OverallMaxAge, 4, nYears, bm->K_num_sexes, bm->K_num_fisheries, 0);        /* Generated age composition data */
 		bm->RBCestimation.RBCspeciesArray[groupIndex].AFss = Util_Alloc_Init_4D_Int(4, nYears, bm->K_num_sexes, bm->K_num_fisheries, 0);
@@ -449,10 +449,11 @@ int Tier_Assessment_PostLoad_Allocate(MSEBoxModel *bm) {
         
         bm->RBCestimation.RBCspeciesArray[groupIndex].discrate = Util_Alloc_Init_1D_Double(nYears, 0.0);
         
-        bm->RBCestimation.RBCspeciesArray[groupIndex].agesel_bysex = Util_Alloc_Init_2D_Double(bm->K_num_sexes, FunctGroupArray[groupIndex].numCohorts, 0.0);
-        
+        /* Nov 2026: dimensions swapped (ATS-02) - used as [s][a] so need [K_num_sexes][numCohorts], i.e. Alloc(numCohorts, K_num_sexes) */
+        bm->RBCestimation.RBCspeciesArray[groupIndex].agesel_bysex = Util_Alloc_Init_2D_Double(FunctGroupArray[groupIndex].numCohorts, bm->K_num_sexes, 0.0);
+
         if (tier == tier1) { // As only used in tier1 routines
-            bm->RBCestimation.RBCspeciesArray[groupIndex].fval = Util_Alloc_Init_2D_Double(bm->K_num_sexes, FunctGroupArray[groupIndex].numCohorts, 0.0);
+            bm->RBCestimation.RBCspeciesArray[groupIndex].fval = Util_Alloc_Init_2D_Double(FunctGroupArray[groupIndex].numCohorts, bm->K_num_sexes, 0.0);
         }
         
         if (Tier3maxage < maxage)
@@ -579,7 +580,7 @@ int Tier_Assessment_Free(MSEBoxModel *bm) {
 	for (groupIndex = 0; groupIndex < bm->K_num_tot_sp; groupIndex++) {
         tier = (int) (FunctGroupArray[groupIndex].speciesParams[tier_id]);
         
-        if ((FunctGroupArray[groupIndex].speciesParams[assess_flag_id] == FALSE) && (FunctGroupArray[groupIndex].isFished == FALSE))
+        if ((FunctGroupArray[groupIndex].speciesParams[assess_flag_id] == FALSE) && (FunctGroupArray[groupIndex].isImpacted == FALSE))
             continue;
         
         printf("Doing %s assess free\n", FunctGroupArray[groupIndex].groupCode);
@@ -726,9 +727,11 @@ int Tier_Assessment_Free(MSEBoxModel *bm) {
             free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].T5_Avlen_atF);
         }
         
+        /** Drop this test as there is not a matching test during array allocaiton
         if ((FunctGroupArray[groupIndex].speciesParams[tier_id] == 0) || (FunctGroupArray[groupIndex].speciesParams[assess_flag_id] == FALSE)) // Not needed as not assessed
             continue;
-        
+        **/
+         
         free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].propR);
         free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].propSR);
         free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].propCount);
@@ -884,7 +887,49 @@ int Tier_Assessment_Free(MSEBoxModel *bm) {
         if(bm->RBCestimation.RBCspeciesArray[groupIndex].FFs)
             free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].FFs);
 
+        /* Nov 2026: arrays allocated in Tier_Assessment_Allocate that were never freed (ATS-09).
+           The 5D int arrays come from Util_Alloc_Init_5D_Int (built on alloc5d) and there is no i_free5d,
+           so they are released with free5d */
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].Xmove)
+            free5d(bm->RBCestimation.RBCspeciesArray[groupIndex].Xmove);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].DiscardType)
+            i_free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].DiscardType);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].AgeComp)
+            free5d((double *****)bm->RBCestimation.RBCspeciesArray[groupIndex].AgeComp);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].AFss)
+            i_free4d(bm->RBCestimation.RBCspeciesArray[groupIndex].AFss);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].LenComp)
+            free5d((double *****)bm->RBCestimation.RBCspeciesArray[groupIndex].LenComp);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].Tier3_Linf)
+            free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].Tier3_Linf);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].Tier3_k)
+            free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].Tier3_k);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].Tier3_t0)
+            free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].Tier3_t0);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].Tier5_Bstart)
+            free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].Tier5_Bstart);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].Tier5_r)
+            free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].Tier5_r);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].T5_removal)
+            free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].T5_removal);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].TAC_mult)
+            free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].TAC_mult);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].Obsageprop)
+            free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].Obsageprop);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAgeS)
+            free4d(bm->RBCestimation.RBCspeciesArray[groupIndex].MeanLenAgeS);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].Blocks)
+            free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].Blocks);
+
 	}
+
+    if(bm->RBCestimation.MULTISPestIDs)
+        i_free1d(bm->RBCestimation.MULTISPestIDs);   // Nov 2026: was never freed (ATS-09)
+
+    /* Nov 2026: per-species close-kin structure array (malloc'd in atassessParamIO.c) was never freed (ATS-09).
+       Its member arrays are freed in the species loop above */
+    if(bm->CloseKinEst)
+        free(bm->CloseKinEst);
 
     if(bm->RBCestimation.Catch_by_Metier)
         free4d(bm->RBCestimation.Catch_by_Metier);
@@ -924,6 +969,8 @@ void Prop_LatA(MSEBoxModel *bm, int species, double *len, double **p_al){
 	for (a = 0; a < bm->RBCestimation.RBCspeciesParam[species][MaxAge_id]; a++) {
 		meanlen = len[a];
 		siglen = bm->RBCestimation.RBCspeciesParam[species][Tier5_cv_id] * meanlen;
+        if (siglen < small_num)   // Nov 2026: guard against divide by zero when len[a] <= 0 or cv = 0 (ATS-12) - gives all of age a in the bin containing meanlen
+            siglen = small_num;
 		xlim = (bm->RBCestimation.RBCspeciesArray[species].LoLenBin[1] - meanlen) / siglen;
 		accum = Assess_errfun(xlim);
 		p_al[a][0] = accum;
@@ -975,8 +1022,10 @@ void YPRlen(MSEBoxModel *bm, int species, double fval, double natM, double *spbp
 	for (a = 1; a < maxage; a++)
 		bm->RBCestimation.RBCspeciesArray[species].num[a] = bm->RBCestimation.RBCspeciesArray[species].num[a-1] * exp(-1.0 * bm->RBCestimation.RBCspeciesArray[species].z[a-1]);
 
-	// plus group
-	bm->RBCestimation.RBCspeciesArray[species].num[maxage] = bm->RBCestimation.RBCspeciesArray[species].num[maxage-1] * exp(-1.0 * bm->RBCestimation.RBCspeciesArray[species].z[maxage-1]) / (1.0-exp(-1.0 * bm->RBCestimation.RBCspeciesArray[species].z[maxage]));
+	// plus group - Nov 2026: only when there is more than one age class, otherwise num[maxage-1] is num[-1] (ATS-12)
+	if (maxage > 0) {
+		bm->RBCestimation.RBCspeciesArray[species].num[maxage] = bm->RBCestimation.RBCspeciesArray[species].num[maxage-1] * exp(-1.0 * bm->RBCestimation.RBCspeciesArray[species].z[maxage-1]) / (1.0-exp(-1.0 * bm->RBCestimation.RBCspeciesArray[species].z[maxage]));
+	}
 
 	// YPR
 	for (a = 0 ; a <maxage + 1; a++) {
@@ -1079,7 +1128,7 @@ void getF20_40_48_init_len(MSEBoxModel *bm, int species){
 		if (spbf > (spbf0 * 0.4)) bm->RBCestimation.RBCspeciesParam[species][F40_id] = thisfval;
 		if (spbf > (spbf0 * 0.48)) bm->RBCestimation.RBCspeciesParam[species][F48_id] = thisfval;
 
-		thisfval = i / nfintt;
+        thisfval = (double)(i + 1) / nfintt;
 	}
 
 }
@@ -1464,7 +1513,7 @@ int Tier_Assessment_Setup(MSEBoxModel *bm) {
 		bm->RBCestimation.RBCspeciesParam[groupIndex][EstBcurr_id] = bm->RBCestimation.RBCspeciesParam[groupIndex][EstB0_id] * bm->RBCestimation.RBCspeciesParam[groupIndex][EstDepletion_id];
         
         if (tot_nf > bm->RBCestimation.RBCspeciesParam[groupIndex][NumFisheries_id]) {
-            quit("max number of fisheries from assess_nf (%d) exceeds defined NumFisheries (%d), please correct in assess.prm\n", tot_nf, bm->RBCestimation.RBCspeciesParam[groupIndex][NumFisheries_id]);
+            quit("max number of fisheries from assess_nf (%d) exceeds defined NumFisheries (%d), please correct in assess.prm\n", tot_nf, (int)(bm->RBCestimation.RBCspeciesParam[groupIndex][NumFisheries_id]));  // Nov 2026: cast as %d was given a double (ATS-10)
         } else {
             bm->RBCestimation.RBCspeciesParam[groupIndex][NumFisheries_id] = tot_nf;
             // To save iteration space

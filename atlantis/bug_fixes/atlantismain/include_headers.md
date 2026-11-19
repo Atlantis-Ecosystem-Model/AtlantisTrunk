@@ -2,19 +2,19 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **5 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [MAIN-09](#main-09) | 408-414 | H/L | copy-paste / wrong guard | `#ifndef min` / `#define min` is followed by `#if !defined(min)` / `#define max`. Because min was just defined… |  | [ ] |
-| [MAIN-10](#main-10) | 333-340, 153 | M/L | preprocessor logic | `#ifndef SMALL_LOG_FILE_SIZE ... #elif BETH_LOG_FILE_SIZE ... #else`: the BETH option is only checked when SMA… |  | [ ] |
-| [MAIN-11](#main-11) | 389-402 | L/M | conflicting enum/define values | `nlevel_id` and `growth_id` both equal `ICE_BASED+1` (5), which is also `MIXED`. `death_id` (6) equals `nTotHa… |  | [ ] |
-| [BMH-01](#bmh-01) | 6302, 6321, 6323, 6347, 6365, 6366, 6367, 6237? | H/L | dead declarations | Eight prototypes have no definition anywhere in the source tree (externalLibs/netcdf excluded) and no call sit… |  | [ ] |
-| [BMH-02](#bmh-02) | 6280-6281? (defs atmanage/atRlink.c:298, 359; atmanage/atRlinkRedus.c:269, 323) | H/L | duplicate definition (latent) | `freeRedus()` and `REDUS_management()` are each defined twice, in atRlink.c and in atRlinkRedus.c. Both copies… |  | [ ] |
+| [MAIN-09](#main-09) | 407 | H/L | copy-paste / wrong guard | `#ifndef min` / `#define min` is followed by `#if !defined(min)` / `#define max`. Because min was just defined… |  | [ ] |
+| [MAIN-10](#main-10) | 336 | M/L | preprocessor logic | `#ifndef SMALL_LOG_FILE_SIZE ... #elif BETH_LOG_FILE_SIZE ... #else`: the BETH option is only checked when SMA… |  | [ ] |
+| [MAIN-11](#main-11) | 400 | L/M | conflicting enum/define values | `nlevel_id` and `growth_id` both equal `ICE_BASED+1` (5), which is also `MIXED`. `death_id` (6) equals `nTotHa… |  | [ ] |
+| [BMH-01](#bmh-01) | 6320 | H/L | dead declarations | Eight prototypes have no definition anywhere in the source tree (externalLibs/netcdf excluded) and no call sit… |  | [ ] |
+| [BMH-02](#bmh-02) | 6363 | H/L | duplicate definition (latent) | `freeRedus()` and `REDUS_management()` are each defined twice, in atRlink.c and in atRlinkRedus.c. Both copies… |  | [ ] |
 
 ## Reviewer notes for this file
 
@@ -36,27 +36,22 @@ No `K_num_*`, `num_*` or `tot_*` count is smaller than or equal to an id in its 
 ## MAIN-09
 
 **copy-paste / wrong guard** · Conf H / Sev L  
-**Lines (current code):** 408-414  
+**Found at (current code):** `atlantisboxmodel.h` 407
 **Lines at review (Oct 2026):** 408-414
 
 **Why it's thought to be a bug**
 
 `#ifndef min` / `#define min` is followed by `#if !defined(min)` / `#define max`. Because min was just defined, the max guard is always false, so this header never defines `max`. It only compiles because sjwlib/include/sjwlib.h:71 defines max. The code is latent and fragile, and with the `>=` version the two definitions also differ.
 
-**Current code** (`sjwlib/include/sjwlib.h` lines 86–96) — code appears to have moved -320 lines since the review
+**Code at issue** — `atlantisboxmodel.h` line 407  
+Search for: `#if !defined(min)`
 
 ```c
-   86: 
-   87: /* Maximum length of a file name */
-   88: #define MAXFNAMELEN (200)
-   89: 
-   90: #include "sjwalloc.h"
-   91: #include "txt_param.h"
-   92: #include "polyline.h"
-   93: #include "colourtable.h"
-   94: #include "mapproj.h"
-   95: #include "datafile.h"
-   96: #include "pointsourcesink.h"
+  405: /* Useful macros */
+  406: /**/
+  407→ //#if !defined(min)
+  408: #ifndef min
+  409: #define min(x,y)  ( (x) <= (y) ? (x) : (y) )
 ```
 
 **Suggested fix (from review):** Change the guard to `#ifndef max`
@@ -79,12 +74,23 @@ No `K_num_*`, `num_*` or `tot_*` count is smaller than or equal to an id in its 
 ## MAIN-10
 
 **preprocessor logic** · Conf M / Sev L  
-**Lines (current code):** 333-340, 153  
+**Found at (current code):** `atlantisboxmodel.h` 336
 **Lines at review (Oct 2026):** 333-340, 153
 
 **Why it's thought to be a bug**
 
 `#ifndef SMALL_LOG_FILE_SIZE ... #elif BETH_LOG_FILE_SIZE ... #else`: the BETH option is only checked when SMALL_LOG_FILE_SIZE is defined, so defining BETH_LOG_FILE_SIZE alone has no effect. The revision note at line 153 also gives stale sizes (1.024e9/1.024e3, against the actual 2.024e8/1.024e7).
+
+**Code at issue** — `atlantisboxmodel.h` line 336 (the line the review pointed to, found by its text)  
+Search for: `#elif BETH_LOG_FILE_SIZE`
+
+```c
+  334: #ifndef SMALL_LOG_FILE_SIZE
+  335: #define MAX_LOG_FILE_SIZE 2.024e8
+  336→ #elif BETH_LOG_FILE_SIZE
+  337: #define MAX_LOG_FILE_SIZE 1.024e8
+  338: #else
+```
 
 **Suggested fix (from review):** Restructure as `#if defined(BETH_LOG_FILE_SIZE) ... #elif defined(SMALL_LOG_FILE_SIZE) ... #else`
 
@@ -106,34 +112,22 @@ No `K_num_*`, `num_*` or `tot_*` count is smaller than or equal to an id in its 
 ## MAIN-11
 
 **conflicting enum/define values** · Conf L / Sev M  
-**Lines (current code):** 389-402  
+**Found at (current code):** `atlantisboxmodel.h` 400
 **Lines at review (Oct 2026):** 389-402
 
 **Why it's thought to be a bug**
 
 `nlevel_id` and `growth_id` both equal `ICE_BASED+1` (5), which is also `MIXED`. `death_id` (6) equals `nTotHabTypes`. Arrays sized `nlevel_id` cannot take a `growth_id`/`death_id` index, and a `fluxnum` of MIXED cannot be told apart from growth_id (atecology/atfluxbreakdown.c:80, atecology.c:1350). There is no compile error only because no switch also has `case MIXED`. Arrays indexed by fluxnum were not traced.
 
-**Current code** (`atecology/atfluxbreakdown.c` lines 216–233) — code appears to have moved -171 lines since the review
+**Code at issue** — `atlantisboxmodel.h` line 400  
+Search for: `ICE_BASED + 1`
 
 ```c
-  216: 								maxflux = valcheck;
-  217: 								flux_sp = fgIndex;
-  218: 								fluxnum = death_id;
-  219: 								fcnum = n;
-  220: 							}
-  221: 						}
-  222: 					}
-  223: 					break;
-  224: 				case AGE_STRUCTURED_BIOMASS:	/* Intentional */
-  225: 				case BIOMASS:
-  226: 					for (n = 0; n < FunctGroupArray[fgIndex].numCohortsXnumGenes; n++) {
-  227: 						if (FunctGroupArray[fgIndex].habitatType == EPIFAUNA){
-  228: 							if (fabs(localEPIFlux[FunctGroupArray[fgIndex].totNTracers[n]]) > maxflux) {
-  229: 								ans = FunctGroupArray[fgIndex].totNTracers[n];
-  230: 								maxflux = localEPIFlux[FunctGroupArray[fgIndex].totNTracers[n]];
-  231: 								flux_sp = fgIndex;
-  232: 								fluxnum = EPIFAUNA;
-  233: 								fcnum = n;
+  398: #define nHabTypes 3
+  399: 
+  400→ #define nlevel_id (ICE_BASED + 1)
+  401: #define growth_id (ICE_BASED + 1)  /* growth_id and death_id are used with WC, SED and EPIFAUNA in MaxFluxCheck */
+  402: #define death_id (ICE_BASED + 2)
 ```
 
 **Suggested fix (from review):** Define growth_id/death_id as `nTotHabTypes`, `nTotHabTypes+1` and size the flux arrays to match
@@ -156,17 +150,22 @@ No `K_num_*`, `num_*` or `tot_*` count is smaller than or equal to an id in its 
 ## BMH-01
 
 **dead declarations** · Conf H / Sev L  
-**Lines (current code):** 6302, 6321, 6323, 6347, 6365, 6366, 6367, 6237?  
+**Found at (current code):** `atlantisboxmodel.h` 6320
 **Lines at review (Oct 2026):** 6110, 6129, 6131, 6155, 6173, 6174, 6175, 6237
 
 **Why it's thought to be a bug**
 
 Eight prototypes have no definition anywhere in the source tree (externalLibs/netcdf excluded) and no call sites: `alloc_names`, `readRunParams`, `readSourceSink`, `writeBMSummaryEpiInfo`, `setfisheryNameID`, `setfisheryParamNameID`, `setspNameID`, `setSPid`. The code says some were removed on purpose: atmanage/atManageSetup.c:157 "Deleted the setSPid function", and atphysics/atparamIO.c:32 says readRunParams was replaced (now `Util_Read_Run_XML`). They are harmless today, but if someone adds a call, the build fails at link time instead of at compile time. Functions: as listed.
 
-**Current code** (`atmanage/atManageSetup.c` lines 6108–1605) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code
+**Code at issue** — `atlantisboxmodel.h` line 6320 (located by name only; check this is the right place)  
+Search for: `void setSPid(MSEBoxModel *bm);`
 
 ```c
-
+ 6318: 
+ 6319: /* Fisheries related prototypes */
+ 6320→ void setSPid(MSEBoxModel *bm);
+ 6321: void Harvest_Read_Time_Series(char *folderPath, char *name, char *tsname, char *t_units, FisheryTimeSeries **ts, int *nts, int *typets);
+ 6322: void Harvest_Free_Time_Series(FisheryTimeSeries *fts, int nnts);
 ```
 
 **Suggested fix (from review):** Delete the 8 prototypes
@@ -189,21 +188,22 @@ Eight prototypes have no definition anywhere in the source tree (externalLibs/ne
 ## BMH-02
 
 **duplicate definition (latent)** · Conf H / Sev L  
-**Lines (current code):** 6280-6281? (defs atmanage/atRlink.c:298, 359; atmanage/atRlinkRedus.c:269, 323)  
+**Found at (current code):** `atlantisboxmodel.h` 6363
 **Lines at review (Oct 2026):** 6280-6281 (defs atmanage/atRlink.c:298, 359; atmanage/atRlinkRedus.c:269, 323)
 
 **Why it's thought to be a bug**
 
 `freeRedus()` and `REDUS_management()` are each defined twice, in atRlink.c and in atRlinkRedus.c. Both copies have identical signatures and both sit under `#ifdef RASSESS_LINK_ENABLED`. atRlink.c is not listed in atmanage/Makefile.am (line 11 lists only atRlinkRedus.c, atRlinkRBC.c and atRlinkRAssess.c) or in any other build file, so it is a stale copy that does not link today. If it is ever added back to the sources, the build gets duplicate-symbol link errors, and in the meantime the two copies can drift apart. Callers (atlantismain.c:880, atmanage/atManageAnnual.c:2176) bind to the atRlinkRedus.c versions. Functions: `freeRedus()`, `REDUS_management()`.
 
-**Current code** (`atmanage/atRlink.c` lines 296–300)
+**Code at issue** — `atlantisboxmodel.h` line 6363  
+Search for: `freeRedus()`
 
 ```c
-  296: }
-  297: 
-  298: int freeRedus()
-  299: {
-  300:  /*
+ 6361: /* Redus management related prototypes */
+ 6362: void Redus_Linkage_Start(MSEBoxModel *bm);
+ 6363→ int freeRedus();
+ 6364: void REDUS_management(MSEBoxModel *bm, FILE *llogfp);
+ 6365: void RAssessSurvey(MSEBoxModel *bm, FILE *llogfp);
 ```
 
 **Suggested fix (from review):** Delete atmanage/atRlink.c, or move it to an archive folder

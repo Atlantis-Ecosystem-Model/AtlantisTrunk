@@ -2,28 +2,28 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **7 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1), plus 2 lower-confidence notes.
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [LINK-16](#link-16) ⭐ | 440 | H/H | off-by-one / wrong condition | `if (bestScenarioIndex > 0 && bestStrategyIndex > 0) Implement_Strategy(...)` — indices are 0-based and -1 mea… |  | [ ] |
-| [LINK-17](#link-17) | 592-594 | H/M | copy-paste | `"Change in Seagrass Area"` returns `Assess_Get_Physical_Sampled_Value(bm, o2_wc_id, b)`, the dissolved oxygen… |  | [ ] |
-| [LINK-18](#link-18) | 155-163, 616-617 | M/M | uninitialised / div-by-zero | `currentValue` is only set in the STANDARD_DEV branch (line 163), not for PERCENT indicators. The REACTIVE_MAN… |  | [ ] |
-| [LINK-19](#link-19) | 114-119, 152, 298, 348 | M/M | stale value / div-by-zero | In the second loop every indicator gets `runScenarios = TRUE` (line 117; the comment above says "not running" … |  | [ ] |
+| [LINK-17](#link-17) | 592 | H/M | copy-paste | `"Change in Seagrass Area"` returns `Assess_Get_Physical_Sampled_Value(bm, o2_wc_id, b)`, the dissolved oxygen… |  | [ ] |
+| [LINK-18](#link-18) | 163 | M/M | uninitialised / div-by-zero | `currentValue` is only set in the STANDARD_DEV branch (line 163), not for PERCENT indicators. The REACTIVE_MAN… |  | [ ] |
+| [LINK-19](#link-19) | 117, 101, 348 | M/M | stale value / div-by-zero | In the second loop every indicator gets `runScenarios = TRUE` (line 117; the comment above says "not running" … |  | [ ] |
 | [LINK-20](#link-20) | 157 | M/M | div-by-zero | `requiredChange = requiredChange / indicatorValue * 100;` — no guard if the sampled indicator value is 0 (e.g.… |  | [ ] |
-| [LINK-21](#link-21) | 96, 138 | L/M | logic | `if (change > requiredChange \|\| requiredChange == 0)` selects the most positive change, not the largest magnit… |  | [ ] |
-| [LINK-22](#link-22) | 335, 348-349 | L/L | div-by-zero | `normaliseVar = variance/varSum` (varSum can be 0; the value is only logged). The distance divides by `(1 - va… |  | [ ] |
+| [LINK-21](#link-21) | 96 | L/M | logic | `if (change > requiredChange \|\| requiredChange == 0)` selects the most positive change, not the largest magnit… |  | [ ] |
+| [LINK-22](#link-22) | 335 | L/L | div-by-zero | `normaliseVar = variance/varSum` (varSum can be 0; the value is only logged). The distance divides by `(1 - va… |  | [ ] |
 
 ---
 
 ## LINK-16
 
 **off-by-one / wrong condition** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 440  
+**Found at (current code):** `atCLAMManage.c` 440
 **Lines at review (Oct 2026):** 440
 
 **Function:** `Run_CLAM()`
@@ -32,12 +32,13 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `if (bestScenarioIndex > 0 && bestStrategyIndex > 0) Implement_Strategy(...)` — indices are 0-based and -1 means "not found" (lines 405-406). A best result in scenario 0 or strategy 0 is never implemented. Function: `Run_CLAM()`.
 
-**Current code** (`atCLAMLink/atCLAMManage.c` lines 438–442)
+**Code at issue** — `atCLAMManage.c` line 440  
+Search for: `if (bestScenarioIndex > 0 && bestStrategyIndex > 0)`
 
 ```c
   438: 
   439: 	fprintf(llogfp, "CLAM: bestScenarioIndex %d, bestStrategyIndex %d\n", bestScenarioIndex, bestStrategyIndex);
-  440: 	if (bestScenarioIndex > 0 && bestStrategyIndex > 0)
+  440→ 	if (bestScenarioIndex > 0 && bestStrategyIndex > 0)
   441: 		Implement_Strategy(bm, bestScenarioIndex, bestStrategyIndex, llogfp);
   442: 	else {
 ```
@@ -62,7 +63,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-17
 
 **copy-paste** · Conf H / Sev M  
-**Lines (current code):** 592-594  
+**Found at (current code):** `atCLAMManage.c` 592
 **Lines at review (Oct 2026):** 592-594
 
 **Function:** `Get_Box_Indicator_Value()`
@@ -71,16 +72,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `"Change in Seagrass Area"` returns `Assess_Get_Physical_Sampled_Value(bm, o2_wc_id, b)`, the dissolved oxygen tracer copied from the block above. The seagrass indicator is therefore driven by O2. Function: `Get_Box_Indicator_Value()`.
 
-**Current code** (`atCLAMLink/atCLAMManage.c` lines 590–596)
+**Code at issue** — `atCLAMManage.c` line 592  
+Search for: `"Change in Seagrass Area"`
 
 ```c
   590: 		return Assess_Get_Physical_Sampled_Value(bm, o2_wc_id, b);
   591: 	}
-  592: 	if (strcmp(indicators[indicatorIndex].CLAMOutputName, "Change in Seagrass Area") == 0) {
+  592→ 	if (strcmp(indicators[indicatorIndex].CLAMOutputName, "Change in Seagrass Area") == 0) {
   593: 		return Assess_Get_Physical_Sampled_Value(bm, o2_wc_id, b);
   594: 	}
-  595: 	quit("Get_Box_Indicator_Value: Monitoring of indicator %s not yet implemented\n", indicators[indicatorIndex].CLAMOutputName);
-  596: 
 ```
 
 **Suggested fix (from review):** Return the seagrass cover/area value (or quit as "not implemented").
@@ -103,27 +103,20 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-18
 
 **uninitialised / div-by-zero** · Conf M / Sev M  
-**Lines (current code):** 155-163, 616-617  
+**Found at (current code):** `atCLAMManage.c` 163
 **Lines at review (Oct 2026):** 155-163, 616-617
 
 **Why it's thought to be a bug**
 
 `currentValue` is only set in the STANDARD_DEV branch (line 163), not for PERCENT indicators. The REACTIVE_MANAGER weighting divides by `indicators[i].currentValue` (uninitialised malloc memory, or 0). Functions: `CLAM_Check_Indicators()`, `Determine_Indicator_Weightings()`.
 
-**Current code** (`atCLAMLink/atCLAMManage.c` lines 153–165)
+**Code at issue** — `atCLAMManage.c` line 163  
+Search for: `indicators[i].currentValue`
 
 ```c
-  153: 				/* Assign the impact values for this indicator */
-  154: 				// allocatedImpactWeightings(bm, i, requiredChange);
-  155: 				if (CLAMOutputOptions[indicators[i].CLAMOutputIndex].outputType == PERCENT) {
-  156: 					/* Calculate the percentage change required */
-  157: 					requiredChange = requiredChange / indicatorValue * 100;
-  158: 					indicators[i].targetChange = requiredChange;
-  159: 				} else {
-  160: 
   161: 					requiredChange = requiredChange / SD;
   162: 					indicators[i].targetChange = requiredChange;
-  163: 					indicators[i].currentValue = indicatorValue;
+  163→ 					indicators[i].currentValue = indicatorValue;
   164: 				}
   165: 				/* log the info to the log file */
 ```
@@ -148,56 +141,44 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-19
 
 **stale value / div-by-zero** · Conf M / Sev M  
-**Lines (current code):** 114-119, 152, 298, 348  
+**Found at (current code):** `atCLAMManage.c` 117, `atCLAMManage.c` 101, `atCLAMManage.c` 348
 **Lines at review (Oct 2026):** 114-119, 152, 298, 348
 
 **Why it's thought to be a bug**
 
 In the second loop every indicator gets `runScenarios = TRUE` (line 117; the comment above says "not running" — a copy-paste of line 74). `targetChange` is only updated when `requiredChange != 0`, so an indicator in range keeps a stale or uninitialised `targetChange`. Run_CLAM then divides by `fabs(targetChange)` (line 348), which gives inf/NaN when it is 0. Functions: `CLAM_Check_Indicators()`, `Run_CLAM()`.
 
-**Current code** (`atCLAMLink/atCLAMManage.c` lines 112–151 (truncated))
+**Code at issue** — `atCLAMManage.c` line 117  
+Search for: `runScenarios = TRUE`
 
 ```c
-  112: 	if (runCLAM) {
-  113: 		printf("numIndicators = %d\n", numIndicators);
-  114: 		for (i = 0; i < numIndicators; i++) {
   115: 
   116: 			/* By default we are not running the scenarios attached to this indicator */
-  117: 			indicators[i].runScenarios = TRUE;
+  117→ 			indicators[i].runScenarios = TRUE;
   118: 			//numOutputStates = CLAMOutputOptions[indicators[i].CLAMOutputIndex].numStates;
   119: 			requiredChange = 0;
-  120: 
-  121: 			/* How we calculate the required change depends on the type of indicator.
-  122: 			 * If its a standard dev indicator then we calculate the standard deviation over all boxes.
-  123: 			 * If its a percent change indicator then we calculate the indicator value in a number of special boxes.
-  124: 			 */
-  125: 			/* For each site of interest - get the required change. Just look at the intense sites.*/
-  126: 			for (bb = 0; bb < bm->nsbox_i; bb++) {
-  127: 				b = bm->nsboxes[bb];
-  128: 				tempIndicatorValue = Get_Box_Indicator_Value(bm, i, b);
-  129: 
-  130: 				printf("name = %s, tempIndicatorValue = %e\n", indicators[i].CLAMOutputName, tempIndicatorValue);
-  131: 				/* Check that the indicator is inside the allowed range */
-  132: 				//if (tempIndicatorValue < indicators[i].minValue || tempIndicatorValue > indicators[i].maxValue) {
-  133: 
-  134: 				/* get the required change */
-  135: 				change = indicators[i].idealValue - tempIndicatorValue;
-  136: 
-  137: 				/* Save if its the max required change - might need other ways of doing this - might want to do weighted average over sites */
-  138: 				if (change > requiredChange || requiredChange == 0) {
-  139: 					requiredChange = change;
-  140: 					indicatorValue = tempIndicatorValue;
-  141: 
-  142: 					/* if this indicator values are returned from the CLAM in SD then get the SD of this indicator so we can
-  143: 					 * work out the required change as a prop of the SD.
-  144: 					 */
-  145: 					if (CLAMOutputOptions[indicators[i].CLAMOutputIndex].outputType == STANDARD_DEV) {
-  146: 
-  147: 						SD = Get_Indicator_SD(bm, i, b);
-  148: 					}
-  149: 				}
-  150: 				//}
-  151: 			}
+```
+
+**Code at issue** — `atCLAMManage.c` line 101  
+Search for: `requiredChange != 0`
+
+```c
+   99: 			}
+  100: 		}
+  101→ 		if (requiredChange != 0) {
+  102: 			runCLAM = TRUE;
+  103: 
+```
+
+**Code at issue** — `atCLAMManage.c` line 348  
+Search for: `fabs(targetChange)`
+
+```c
+  346: 							} else {
+  347: 								distance[scenarioIndex][strategyIndex][indicatorIndex] = //variance[scenarioIndex][strategyIndex][indicatorIndex] / varSum *
+  348→ 										fabs(targetChange - expectedValue[scenarioIndex][strategyIndex][indicatorIndex]) / (fabs(targetChange) * (1
+  349: 												- variance[scenarioIndex][strategyIndex][indicatorIndex]));
+  350: 								//variance[scenarioIndex][strategyIndex][indicatorIndex] / fabs(targetChange));
 ```
 
 **Suggested fix (from review):** Set targetChange = 0 for in-range indicators and skip the distance division when it is 0.
@@ -220,7 +201,7 @@ In the second loop every indicator gets `runScenarios = TRUE` (line 117; the com
 ## LINK-20
 
 **div-by-zero** · Conf M / Sev M  
-**Lines (current code):** 157  
+**Found at (current code):** `atCLAMManage.c` 157
 **Lines at review (Oct 2026):** 157
 
 **Function:** `CLAM_Check_Indicators()`
@@ -229,12 +210,13 @@ In the second loop every indicator gets `runScenarios = TRUE` (line 117; the com
 
 `requiredChange = requiredChange / indicatorValue * 100;` — no guard if the sampled indicator value is 0 (e.g. algae or seagrass absent). Function: `CLAM_Check_Indicators()`.
 
-**Current code** (`atCLAMLink/atCLAMManage.c` lines 155–159)
+**Code at issue** — `atCLAMManage.c` line 157  
+Search for: `requiredChange = requiredChange / indicatorValue * 100`
 
 ```c
   155: 				if (CLAMOutputOptions[indicators[i].CLAMOutputIndex].outputType == PERCENT) {
   156: 					/* Calculate the percentage change required */
-  157: 					requiredChange = requiredChange / indicatorValue * 100;
+  157→ 					requiredChange = requiredChange / indicatorValue * 100;
   158: 					indicators[i].targetChange = requiredChange;
   159: 				} else {
 ```
@@ -259,7 +241,7 @@ In the second loop every indicator gets `runScenarios = TRUE` (line 117; the com
 ## LINK-21
 
 **logic** · Conf L / Sev M  
-**Lines (current code):** 96, 138  
+**Found at (current code):** `atCLAMManage.c` 96
 **Lines at review (Oct 2026):** 96, 138
 
 **Function:** `CLAM_Check_Indicators()`
@@ -268,12 +250,13 @@ In the second loop every indicator gets `runScenarios = TRUE` (line 117; the com
 
 `if (change > requiredChange || requiredChange == 0)` selects the most positive change, not the largest magnitude, so when all changes are negative it keeps the smallest decrease. This contradicts the comment "Save if its the max required change". Function: `CLAM_Check_Indicators()`.
 
-**Current code** (`atCLAMLink/atCLAMManage.c` lines 94–98)
+**Code at issue** — `atCLAMManage.c` line 96  
+Search for: `if (change > requiredChange || requiredChange == 0)`
 
 ```c
    94: 
    95: 				/* Save if its the max required change - might need other ways of doing this - might want to do weighted average over sites */
-   96: 				if (change > requiredChange || requiredChange == 0) {
+   96→ 				if (change > requiredChange || requiredChange == 0) {
    97: 					requiredChange = change;
    98: 				}
 ```
@@ -298,7 +281,7 @@ In the second loop every indicator gets `runScenarios = TRUE` (line 117; the com
 ## LINK-22
 
 **div-by-zero** · Conf L / Sev L  
-**Lines (current code):** 335, 348-349  
+**Found at (current code):** `atCLAMManage.c` 335
 **Lines at review (Oct 2026):** 335, 348-349
 
 **Function:** `Run_CLAM()`
@@ -307,28 +290,15 @@ In the second loop every indicator gets `runScenarios = TRUE` (line 117; the com
 
 `normaliseVar = variance/varSum` (varSum can be 0; the value is only logged). The distance divides by `(1 - variance)`, which is 0 when variance == 1. Function: `Run_CLAM()`.
 
-**Current code** (`atCLAMLink/atCLAMManage.c` lines 333–351)
+**Code at issue** — `atCLAMManage.c` line 335 (closest match to the quoted code; wording differs slightly)  
+Search for: `double normaliseVar = variance[scenarioIndex][strategyIndex][indicatorIndex] / varSum;`
 
 ```c
   333: 								&& CLAMScenarioOptions[scenarioIndex].strategies[strategyIndex].isEnabled > 0) {
   334: 
-  335: 							double normaliseVar = variance[scenarioIndex][strategyIndex][indicatorIndex] / varSum;
+  335→ 							double normaliseVar = variance[scenarioIndex][strategyIndex][indicatorIndex] / varSum;
   336: 
   337: 							fprintf(llogfp, "normaliseVar = %e\n", normaliseVar);
-  338: 							/* Calculate the distance to the required value */
-  339: 							if (expectedValue[scenarioIndex][strategyIndex][indicatorIndex] == 0 && variance[scenarioIndex][strategyIndex][indicatorIndex] == 0) {
-  340: 								distance[scenarioIndex][strategyIndex][indicatorIndex] = 0.0;
-  341: 							} else if (variance[scenarioIndex][strategyIndex][indicatorIndex] == 0) {
-  342: 								distance[scenarioIndex][strategyIndex][indicatorIndex] = fabs(targetChange
-  343: 										- expectedValue[scenarioIndex][strategyIndex][indicatorIndex]);
-  344: 								sum = sum + distance[scenarioIndex][strategyIndex][indicatorIndex];
-  345: 								count++;
-  346: 							} else {
-  347: 								distance[scenarioIndex][strategyIndex][indicatorIndex] = //variance[scenarioIndex][strategyIndex][indicatorIndex] / varSum *
-  348: 										fabs(targetChange - expectedValue[scenarioIndex][strategyIndex][indicatorIndex]) / (fabs(targetChange) * (1
-  349: 												- variance[scenarioIndex][strategyIndex][indicatorIndex]));
-  350: 								//variance[scenarioIndex][strategyIndex][indicatorIndex] / fabs(targetChange));
-  351: 								//fprintf(llogfp, "fabs(targetChange - expectedValue[scenarioIndex][strategyIndex][indicatorIndex]) = %e\n", fabs(targetChange - expectedValue[scenarioIndex][strategyIndex][indicatorIndex]));
 ```
 
 **Suggested fix (from review):** Guard the denominators.

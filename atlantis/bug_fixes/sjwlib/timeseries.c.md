@@ -2,24 +2,24 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [SJW2-14](#sjw2-14) | 337-361 | M/M | NULL dereference | `ATT_DOUBLE(x0,0)` etc. expand to `(a)->type` (datafile.h:126,131), but `dfGetGlobalAttribute` returns NULL wh… |  | [ ] |
-| [SJW2-15](#sjw2-15) | 601-614 | M/L | stale copy | After converting units, `ts->t_units`, `df->rec_units` and `df->variables[ri].units` are updated, but the sepa… |  | [ ] |
-| [SJW2-16](#sjw2-16) | 108-114, 117-139, 515-516, 563 | L/L | NULL dereference / uninitialised | If the file has no record variable and no `t`/`time` variable, `ts->t` stays NULL, and `tsMultiCheck`/`tsMulti… |  | [ ] |
+| [SJW2-14](#sjw2-14) | 350, 337 | M/M | NULL dereference | `ATT_DOUBLE(x0,0)` etc. expand to `(a)->type` (datafile.h:126,131), but `dfGetGlobalAttribute` returns NULL wh… |  | [ ] |
+| [SJW2-15](#sjw2-15) | 604, 612, 167 | M/L | stale copy | After converting units, `ts->t_units`, `df->rec_units` and `df->variables[ri].units` are updated, but the sepa… |  | [ ] |
+| [SJW2-16](#sjw2-16) | 515, 120 | L/L | NULL dereference / uninitialised | If the file has no record variable and no `t`/`time` variable, `ts->t` stays NULL, and `tsMultiCheck`/`tsMulti… |  | [ ] |
 
 ---
 
 ## SJW2-14
 
 **NULL dereference** · Conf M / Sev M  
-**Lines (current code):** 337-361  
+**Found at (current code):** `timeseries.c` 350, `timeseries.c` 337
 **Lines at review (Oct 2026):** 337-361
 
 **Function:** `tsEvalXYR()`
@@ -28,38 +28,26 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `ATT_DOUBLE(x0,0)` etc. expand to `(a)->type` (datafile.h:126,131), but `dfGetGlobalAttribute` returns NULL when `xorigin`/`dx`/`rotation`/`arc`/`rmin` is missing, which segfaults. `str = ATT_TEXT(gt)` is NULL if `gridtype` is not text, and is then passed to `strcasecmp`. Function: `tsEvalXYR()`.
 
-**Current code** (`sjwlib/timeseries.c` lines 335–363)
+**Code at issue** — `timeseries.c` line 350  
+Search for: `ATT_DOUBLE(x0,0)`
+
+```c
+  348: 							Attribute *dy = dfGetGlobalAttribute(df, "dy");
+  349: 							Attribute *rot = dfGetGlobalAttribute(df, "rotation");
+  350→ 							snprintf(analytic, sizeof(analytic), "rectangular 0.0 0.0 %d %d %g %g %g %g %g", dim1size, dim2size, ATT_DOUBLE(x0,0), ATT_DOUBLE(y0,0),
+  351: 									ATT_DOUBLE(dx,0), ATT_DOUBLE(dy,0), ATT_DOUBLE(rot,0));
+  352: 						}
+```
+
+**Code at issue** — `timeseries.c` line 337  
+Search for: `str = ATT_TEXT(gt)`
 
 ```c
   335: 					if (gt != NULL) {
   336: 						char analytic[MAXLINELEN];
-  337: 						str = ATT_TEXT(gt);
+  337→ 						str = ATT_TEXT(gt);
   338: 
   339: 						analytic[0] = 0;
-  340: 						/* We have a analytic expression. Determine the type
-  341: 						 * and add this as as an attribute to the x and y
-  342: 						 * variables in the datafile structure.
-  343: 						 * Always assume cell edge. */
-  344: 						if (strcasecmp(str, "rectangular") == 0) {
-  345: 							Attribute *x0 = dfGetGlobalAttribute(df, "xorigin");
-  346: 							Attribute *y0 = dfGetGlobalAttribute(df, "yorigin");
-  347: 							Attribute *dx = dfGetGlobalAttribute(df, "dx");
-  348: 							Attribute *dy = dfGetGlobalAttribute(df, "dy");
-  349: 							Attribute *rot = dfGetGlobalAttribute(df, "rotation");
-  350: 							snprintf(analytic, sizeof(analytic), "rectangular 0.0 0.0 %d %d %g %g %g %g %g", dim1size, dim2size, ATT_DOUBLE(x0,0), ATT_DOUBLE(y0,0),
-  351: 									ATT_DOUBLE(dx,0), ATT_DOUBLE(dy,0), ATT_DOUBLE(rot,0));
-  352: 						}
-  353: 
-  354: 						else if (strcasecmp(str, "polar") == 0) {
-  355: 							Attribute *x0 = dfGetGlobalAttribute(df, "xorigin");
-  356: 							Attribute *y0 = dfGetGlobalAttribute(df, "yorigin");
-  357: 							Attribute *arc = dfGetGlobalAttribute(df, "arc");
-  358: 							Attribute *rmin = dfGetGlobalAttribute(df, "rmin");
-  359: 							Attribute *rot = dfGetGlobalAttribute(df, "rotation");
-  360: 							snprintf(analytic, sizeof(analytic), "polar 0.0 0.0 %d %d %g %g %g %g %g", dim1size, dim2size, ATT_DOUBLE(x0,0), ATT_DOUBLE(y0,0),
-  361: 									ATT_DOUBLE(arc,0), ATT_DOUBLE(rmin,0), ATT_DOUBLE(rot,0));
-  362: 						}
-  363: 
 ```
 
 **Suggested fix (from review):** Check each attribute for NULL (and `str != NULL`) before use; quit with a clear message.
@@ -82,7 +70,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-15
 
 **stale copy** · Conf M / Sev L  
-**Lines (current code):** 601-614  
+**Found at (current code):** `timeseries.c` 604, `timeseries.c` 612, `timeseries.c` 167
 **Lines at review (Oct 2026):** 601-614
 
 **Function:** `tsNewTimeUnits()`
@@ -91,27 +79,37 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 After converting units, `ts->t_units`, `df->rec_units` and `df->variables[ri].units` are updated, but the separate copy `ts->varunit[df->ri]` (strcpy'd in `tsRead`, lines 162-168) still holds the old units. Function: `tsNewTimeUnits()`.
 
-**Current code** (`sjwlib/timeseries.c` lines 599–616)
+**Code at issue** — `timeseries.c` line 604  
+Search for: `ts->t_units`
 
 ```c
-  599:  * This routine calls quit() if anything goes wrong
-  600:  */
-  601: void tsNewTimeUnits(TimeSeries *ts, char *newunits) {
   602: 	Datafile *df = ts->df;
   603: 
-  604: 	ChangeTimeUnits(ts->t_units, newunits, df->records, (int)df->nrecords);
+  604→ 	ChangeTimeUnits(ts->t_units, newunits, df->records, (int)df->nrecords);
   605: 
   606: 	/* Store new units in time series */
-  607: 	if ((ts->t_units = (char *) realloc((void *) ts->t_units, strlen(newunits) + 1)) == NULL)
-  608: 		quit("tsNewTimeUnits: Can't allocate memory for new units\n");
-  609: 	strcpy(ts->t_units, newunits);
+```
+
+**Code at issue** — `timeseries.c` line 612  
+Search for: `df->rec_units`
+
+```c
   610: 
   611: 	/* Propogate the change into the DataFile */
-  612: 	df->rec_units = ts->t_units;
+  612→ 	df->rec_units = ts->t_units;
   613: 	df->variables[df->ri].units = ts->t_units;
   614: }
-  615: 
-  616: /** Free memory associated with a time series.
+```
+
+**Code at issue** — `timeseries.c` line 167 (closest match to the quoted code; wording differs slightly)  
+Search for: `strcpy(ts->varunit[i], df->variables[i].units);`
+
+```c
+  165: 			if (ts->varunit[i] == NULL)
+  166: 				quit("tsRead: Failed to allocate memory.\n");
+  167→ 			strcpy(ts->varunit[i], df->variables[i].units);
+  168: 		}
+  169: 	}
 ```
 
 **Suggested fix (from review):** Also update `ts->varunit[df->ri]`.
@@ -134,7 +132,7 @@ After converting units, `ts->t_units`, `df->rec_units` and `df->variables[ri].un
 ## SJW2-16
 
 **NULL dereference / uninitialised** · Conf L / Sev L  
-**Lines (current code):** 108-114, 117-139, 515-516, 563  
+**Found at (current code):** `timeseries.c` 515, `timeseries.c` 120
 **Lines at review (Oct 2026):** 108-114, 117-139, 515-516, 563
 
 **Function:** `tsRead()`
@@ -143,45 +141,26 @@ After converting units, `ts->t_units`, `df->rec_units` and `df->variables[ri].un
 
 If the file has no record variable and no `t`/`time` variable, `ts->t` stays NULL, and `tsMultiCheck`/`tsMultiEvalXYZ` dereference `ts->t[0]`. For NetCDF with `nd > 3`, `ts->type` is left unset (`default: break`). Function: `tsRead()`.
 
-**Current code** (`sjwlib/timeseries.c` lines 106–141)
+**Code at issue** — `timeseries.c` line 515  
+Search for: `ts->t[0]`
 
 ```c
-  106: 
-  107: 	dfRead(folderName, name, df);
-  108: 	if (df->records == NULL) {
-  109: 		index = dfIndex(df, "t");
-  110: 		if (index >= 0)
-  111: 			dfSetRecord(df, index);
-  112: 		else if ((index = dfIndex(df, "time")) >= 0)
-  113: 			dfSetRecord(df, index);
-  114: 	}
-  115: 
-  116: 	/* Copy the convenience variables over */
-  117: 	if (df->type == DFT_NETCDF) {
+  513: 			if (varid >= 0) {
+  514: 				found_var = 1;
+  515→ 				f_tstart = (ts->t[0] < f_tstart) ? ts->t[0] : f_tstart;
+  516: 				f_tstop = (ts->t[ts->nt - 1] > f_tstop) ? ts->t[ts->nt - 1] : f_tstop;
+  517: 			}
+```
+
+**Code at issue** — `timeseries.c` line 120  
+Search for: `ts->type`
+
+```c
   118: 		switch (df->nd) {
   119: 		case 0:
-  120: 			ts->type = TS_NC0;
+  120→ 			ts->type = TS_NC0;
   121: 			break;
   122: 
-  123: 		case 1:
-  124: 			ts->type = TS_NC1;
-  125: 			break;
-  126: 
-  127: 		case 2:
-  128: 			ts->type = TS_NC2;
-  129: 			break;
-  130: 
-  131: 		case 3:
-  132: 			ts->type = TS_NC3;
-  133: 			break;
-  134: 
-  135: 		default:
-  136: 			break;
-  137: 		}
-  138: 	} else
-  139: 		ts->type = TS_ASCII;
-  140: 
-  141: 	ts->name = df->name;
 ```
 
 **Suggested fix (from review):** Quit if `ts->t == NULL`; set a type or quit in the default branch.

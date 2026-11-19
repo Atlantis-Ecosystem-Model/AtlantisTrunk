@@ -2,25 +2,25 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [SJW2-01](#sjw2-01) ⭐ | 298-347, 561-604 | H/H | invalid free / realloc of caller memory | `add_argument()` copies the caller's string pointers into the new array (`new_args[i+1] = args[i]`, line 587).… |  | [ ] |
-| [SJW2-02](#sjw2-02) | 401-405 | H/M | wrong formula | `mp->ellip_flat = 1 / (1 - sqrt(1 - ecc * ecc));` In PROJ, `es` is the eccentricity squared, and flattening is… |  | [ ] |
-| [SJW2-03](#sjw2-03) | 561-590, 1043-1051 | H/L | memory leak | `add_argument()` ignores `freeOld` (that code is commented out), so each chained call leaks the previous point… |  | [ ] |
-| [SJW2-04](#sjw2-04) | 548-556 | M/L | prefix match | `strncasecmp(tag, args[i], strlen(tag))` matches any argument that starts with the tag. So `get_argument_value… |  | [ ] |
+| [SJW2-01](#sjw2-01) ⭐ | 587, 301, 599 | H/H | invalid free / realloc of caller memory | `add_argument()` copies the caller's string pointers into the new array (`new_args[i+1] = args[i]`, line 587).… |  | [ ] |
+| [SJW2-02](#sjw2-02) | 404 | H/M | wrong formula | `mp->ellip_flat = 1 / (1 - sqrt(1 - ecc * ecc));` In PROJ, `es` is the eccentricity squared, and flattening is… |  | [ ] |
+| [SJW2-03](#sjw2-03) | 568 | H/L | memory leak | `add_argument()` ignores `freeOld` (that code is commented out), so each chained call leaks the previous point… |  | [ ] |
+| [SJW2-04](#sjw2-04) | 552, 382, 948 | M/L | prefix match | `strncasecmp(tag, args[i], strlen(tag))` matches any argument that starts with the tag. So `get_argument_value… |  | [ ] |
 
 ---
 
 ## SJW2-01
 
 **invalid free / realloc of caller memory** · Conf H / Sev H ⭐ priority  
-**Lines (current code):** 298-347, 561-604  
+**Found at (current code):** `mapproj.c` 587, `mapproj.c` 301, `mapproj.c` 599
 **Lines at review (Oct 2026):** 298-347, 561-604
 
 **Function:** `mpInitialise()`
@@ -29,49 +29,37 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `add_argument()` copies the caller's string pointers into the new array (`new_args[i+1] = args[i]`, line 587). Then `subst_argument_value("proj", ...)` calls `realloc(args[index], ...)` (line 599) on the caller's `proj=` string. The amg/mga branches also `free()` every `new_args[i]` (lines 303-307, 316-320), which includes the caller's original strings. Every caller builds `args` with `parseline()` (sjwlib/text_input.c:85), which returns pointers into a stack buffer (atphysics/atgeomIO.c:788-807, atecology/dump.c:143-152, sjwlib/dfcoords.c:1463-1470). So `proj=utm`, `proj=amg` or `proj=mga` calls realloc/free on non-heap memory, which is undefined behaviour and on macOS aborts with "pointer being realloc'd was not allocated". The amg/mga path also leaves dangling pointers in the caller's array. Function: `mpInitialise()` / `add_argument()` / `subst_argument_value()`.
 
-**Current code** (`sjwlib/mapproj.c` lines 296–335 (truncated))
+**Code at issue** — `mapproj.c` line 587  
+Search for: `new_args[i+1] = args[i]`
 
 ```c
-  296: 
-  297: 	/* Australian Map Grid */
-  298: 	if (strcasecmp(projname, "amg") == 0) {
+  585: 
+  586:     for (i=0; i<nargs; ++i)
+  587→        new_args[i+1] = args[i];
+  588: 
+  589: 	return new_args;
+```
+
+**Code at issue** — `mapproj.c` line 301  
+Search for: `subst_argument_value("proj",`
+
+```c
   299: 		new_args = add_argument("ellps=agd66", nargs, args, &new_nargs, FALSE);
   300: 		new_args = add_argument("south", new_nargs, new_args, &new_nargs, TRUE);
-  301: 		subst_argument_value("proj", "utm", new_nargs, new_args);
+  301→ 		subst_argument_value("proj", "utm", new_nargs, new_args);
   302: 		mp = mpInitialise(new_nargs, new_args);
   303: 		for (i = 0; i < new_nargs; i++) {
-  304: 			if (new_args[i])
-  305: 				free(new_args[i]);
-  306: 		}
-  307: 		free(new_args);
-  308: 	}
-  309: 
-  310: 	/* Map Grid of Australia */
-  311: 	else if (strcasecmp(projname, "mga") == 0) {
-  312: 		new_args = add_argument("ellps=gda94", nargs, args, &new_nargs, FALSE);
-  313: 		new_args = add_argument("south", new_nargs, new_args, &new_nargs, TRUE);
-  314: 		subst_argument_value("proj", "utm", new_nargs, new_args);
-  315: 		mp = mpInitialise(new_nargs, new_args);
-  316: 		for (i = 0; i < new_nargs; i++) {
-  317: 			if (new_args[i])
-  318: 				free(new_args[i]);
-  319: 		}
-  320: 		free(new_args);
-  321: 	}
-  322: 
-  323: 	/* Universal Transverse Mercator */
-  324: 	else if (strcasecmp(projname, "utm") == 0) {
-  325: 		char buf[256];
-  326: 		int is_north = (find_argument("south", nargs, args) < 0);
-  327: 
-  328: 		new_args = add_argument("x_0=500000.0", nargs, args, &new_nargs, FALSE);
-  329: 
-  330: 		if (is_north)
-  331: 			new_args = add_argument("y_0=0.0", new_nargs, new_args, &new_nargs, TRUE);
-  332: 		else
-  333: 			new_args = add_argument("y_0=10000000.0", new_nargs, new_args, &new_nargs, TRUE);
-  334: 
-  335: 		snprintf(buf, sizeof(buf), "lon_0=%f", UTM_ZONE(new_nargs, new_args) * 6 - 183);
+```
+
+**Code at issue** — `mapproj.c` line 599  
+Search for: `realloc(args[index],`
+
+```c
+  597:     if (index >= 0){
+  598:         size_t needed = strlen(arg) + 1 + strlen(value) + 1;  // arg + '=' + value + '\0'
+  599→         args[index] = (char *)realloc(args[index], needed);  // So can have the size "needed" for the snprintf call
+  600:         snprintf(args[index], needed, "%s=%s", arg, value);
+  601:         
 ```
 
 **Suggested fix (from review):** In `add_argument` use `strdup(args[i])` (and honour `freeOld`), so that the code owns every string it reallocs or frees.
@@ -94,7 +82,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-02
 
 **wrong formula** · Conf H / Sev M  
-**Lines (current code):** 401-405  
+**Found at (current code):** `mapproj.c` 404
 **Lines at review (Oct 2026):** 401-405
 
 **Function:** `mpInitialise()`
@@ -103,18 +91,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `mp->ellip_flat = 1 / (1 - sqrt(1 - ecc * ecc));` In PROJ, `es` is the eccentricity squared, and flattening is `f = 1 - sqrt(1 - es)`. The code squares `es` again and takes the reciprocal. With `es=0` (sphere) this gives `1/0 = inf`; for real ellipsoids it gives about 300 instead of 0.0033. Every later `e2` in `merc_init`/`tcc_init`/`lcc_init` is then wrong. Function: `mpInitialise()`.
 
-**Current code** (`sjwlib/mapproj.c` lines 399–407)
+**Code at issue** — `mapproj.c` line 404  
+Search for: `mp->ellip_flat = 1 / (1 - sqrt(1 - ecc * ecc))`
 
 ```c
-  399: 				mp->ellip_flat = 1 / atof(rf);
-  400: 
-  401: 			/* Get eccentricity */
   402: 			if (es != NULL) {
   403: 				double ecc = atof(es);
-  404: 				mp->ellip_flat = 1 / (1 - sqrt(1 - ecc * ecc));
+  404→ 				mp->ellip_flat = 1 / (1 - sqrt(1 - ecc * ecc));
   405: 			}
   406: 		}
-  407: 
 ```
 
 **Suggested fix (from review):** `mp->ellip_flat = 1 - sqrt(1 - atof(es));`
@@ -137,7 +122,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-03
 
 **memory leak** · Conf H / Sev L  
-**Lines (current code):** 561-590, 1043-1051  
+**Found at (current code):** `mapproj.c` 568
 **Lines at review (Oct 2026):** 561-590, 1043-1051
 
 **Function:** `add_argument()`
@@ -146,43 +131,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `add_argument()` ignores `freeOld` (that code is commented out), so each chained call leaks the previous pointer array. The utm branch never frees `new_args` (lines 342-346 are commented out), and `serov_init` leaks too. The allocation `malloc(sizeof(char *)*strlen(arg)+1)` (line 583) over-allocates by 8x. Function: `add_argument()`.
 
-**Current code** (`sjwlib/mapproj.c` lines 559–592)
+**Code at issue** — `mapproj.c` line 568  
+Search for: `malloc(sizeof(char *) * strlen(arg) + 1)`
 
 ```c
-  559: /* Add a new argument to the list.
-  560:  */
-  561: static char** add_argument(char *arg, int nargs, char *args[], int *new_nargs, int freeOld) {
-  562: 	char **new_args;
-  563: 	int i;
-  564: 
-  565: 	*new_nargs = nargs + 1;
   566: 	//new_args = c_alloc2d((*new_nargs), STRLEN);
   567: //	new_args = (char**) malloc(sizeof(char*) * (*new_nargs));
-  568: //	new_args[0] = (char *) malloc(sizeof(char *) * strlen(arg) + 1);
+  568→ //	new_args[0] = (char *) malloc(sizeof(char *) * strlen(arg) + 1);
   569: //	strcpy(new_args[0], arg);
   570: //
-  571: //	for (i = 0; i < nargs; ++i)
-  572: //		new_args[i + 1] = strdup(args[i]);
-  573: //
-  574: //	if (freeOld) {
-  575: //		for (i = 0; i < nargs; ++i) {
-  576: //			if (args[i])
-  577: //				free(args[i]);
-  578: //		}
-  579: //		free(args);
-  580: //	}
-  581: 
-  582:     new_args = (char**)malloc(sizeof(char*)*(size_t)(*new_nargs));
-  583:     new_args[0] = (char *)malloc(sizeof(char *)*strlen(arg)+1);
-  584:     strcpy(new_args[0], arg);
-  585: 
-  586:     for (i=0; i<nargs; ++i)
-  587:        new_args[i+1] = args[i];
-  588: 
-  589: 	return new_args;
-  590: }
-  591: 
-  592: /* Subsitute an argument.
 ```
 
 **Suggested fix (from review):** Free the old array when `freeOld`, and allocate `strlen(arg)+1`.
@@ -205,7 +162,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-04
 
 **prefix match** · Conf M / Sev L  
-**Lines (current code):** 548-556  
+**Found at (current code):** `mapproj.c` 552, `mapproj.c` 382, `mapproj.c` 948
 **Lines at review (Oct 2026):** 548-556
 
 **Function:** `find_argument()`
@@ -214,22 +171,37 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `strncasecmp(tag, args[i], strlen(tag))` matches any argument that starts with the tag. So `get_argument_value("a", ...)`/`("b", ...)` (lines 382-383) match unrelated arguments such as `axis=...` or `b...`, and `"lat_0"`-style lookups also match longer keys. `atof` of the wrong value then silently sets the ellipsoid axes. Function: `find_argument()`.
 
-**Current code** (`sjwlib/mapproj.c` lines 546–558)
+**Code at issue** — `mapproj.c` line 552  
+Search for: `strncasecmp(tag, args[i], strlen(tag))`
 
 ```c
-  546:  * @return index of tag in list or -1.
-  547:  */
-  548: static int find_argument(char *tag, int nargs, char *args[]) {
-  549: 	int i;
   550: 
   551: 	for (i = 0; i < nargs; ++i) {
-  552: 		if (strncasecmp(tag, args[i], strlen(tag)) == 0)
+  552→ 		if (strncasecmp(tag, args[i], strlen(tag)) == 0)
   553: 			return i;
   554: 	}
-  555: 
-  556: 	return -1;
-  557: }
-  558: 
+```
+
+**Code at issue** — `mapproj.c` line 382  
+Search for: `get_argument_value("a",`
+
+```c
+  380: 
+  381: 		if (!got_ellip_data) {
+  382→ 			char *major = get_argument_value("a", nargs, args, 0);
+  383: 			char *minor = get_argument_value("b", nargs, args, 0);
+  384: 			char *rf = get_argument_value("rf", nargs, args, 0);
+```
+
+**Code at issue** — `mapproj.c` line 948  
+Search for: `"lat_0"`
+
+```c
+  946: 
+  947: 	/* If lat_0 is not provided, then compute it. */
+  948→ 	if (find_argument("lat_0", nargs, args) < 0) {
+  949: 		data->sinphi0 = data->nn;
+  950: 		data->phi0 = asin(data->sinphi0);
 ```
 
 **Suggested fix (from review):** Also require `args[i][strlen(tag)]` to be `'='` or `'\0'`.

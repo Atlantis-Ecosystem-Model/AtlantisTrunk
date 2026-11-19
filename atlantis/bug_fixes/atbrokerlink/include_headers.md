@@ -2,35 +2,36 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
+Each finding's **Code at issue** is located by searching the current code for the code quoted in the review, not by line number. Use the **Search for** text with your editor's Find, because line numbers will keep changing as fixes go in. → marks the matching line. If only a close match or a name could be found, the block says so. ⚠ means the quoted code is no longer in the file: it may have been changed or already fixed. **Lines at review** are the October numbers. Line numbers in the description text are approximate.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Found at | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [LINK-68](#link-68) | Deserialiser.h:12 | M/L | prototype mismatch | `double Deserialiser_Init(void *bytes);` (external linkage, void*) conflicts with the `static double Deseriali… |  | [ ] |
-| [LINK-69](#link-69) | ImportExportData.h | L/L | missing prototype | `Link_SetDetritus` and `Link_GetMortality` are defined in ImportExportData.c but not declared, so any future c… |  | [ ] |
+| [LINK-68](#link-68) | 12 | M/L | prototype mismatch | `double Deserialiser_Init(void *bytes);` (external linkage, void*) conflicts with the `static double Deseriali… |  | [ ] |
+| [LINK-69](#link-69) | 420 | L/L | missing prototype | `Link_SetDetritus` and `Link_GetMortality` are defined in ImportExportData.c but not declared, so any future c… |  | [ ] |
 
 ---
 
 ## LINK-68
 
 **prototype mismatch** · Conf M / Sev L  
-**Lines (current code):** Deserialiser.h:12  
+**Found at (current code):** `Deserialiser.h` 12
 **Lines at review (Oct 2026):** Deserialiser.h:12
 
 **Why it's thought to be a bug**
 
 `double Deserialiser_Init(void *bytes);` (external linkage, void*) conflicts with the `static double Deserialiser_Init(Requests__Request *)` in Deserialiser.c:25. It only compiles because Deserialiser.c does not include this header. LinkageInterface.h also declares functions that do not exist (Linkage_SetPolygons, Linkage_SerialiseCommand), and network.h declares Close_Message.
 
-**Current code** (`atbrokerlink/include/Deserialiser.h` lines 10–14)
+**Code at issue** — `Deserialiser.h` line 12  
+Search for: `double Deserialiser_Init(void *bytes)`
 
 ```c
    10: 
    11: 
-   12: double Deserialiser_Init(void *bytes);
+   12→ double Deserialiser_Init(void *bytes);
    13: Message *Deserialise_Message(MSEBoxModel *bm, LinkageInterface *interface, Message *message);
    14: //int Deserialiser_InitResp(void *resp);
 ```
@@ -55,12 +56,23 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-69
 
 **missing prototype** · Conf L / Sev L  
-**Lines (current code):** ImportExportData.h  
+**Found at (current code):** `ImportExportData.c` 420
 **Lines at review (Oct 2026):** ImportExportData.h
 
 **Why it's thought to be a bug**
 
 `Link_SetDetritus` and `Link_GetMortality` are defined in ImportExportData.c but not declared, so any future caller gets an implicit declaration.
+
+**Code at issue** — `ImportExportData.c` line 420 (located by name only; check this is the right place)  
+Search for: `int Link_GetMortality(MSEBoxModel *bm, char *groupCode, int numBoxes, int *boxIndexValues,`
+
+```c
+  418: }
+  419: 
+  420→ int Link_GetMortality(MSEBoxModel *bm, char *groupCode, int numBoxes, int *boxIndexValues, double *boxValues) {
+  421: 	quit("Linkage - Link_GetMortality - Function not yet supported\n");
+  422: 
+```
 
 **Suggested fix (from review):** Add the prototypes.
 
