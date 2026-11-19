@@ -1,0 +1,21 @@
+Populate fleet<->metier mapping from assess_nf_ (ATS-08)
+
+speciesRPFleetToMetier and speciesMetierToRPFleet were set to 0 and never
+filled, so every assessment fleet mapped to metier 0. The atSS3LinkIO
+"> -1" tests were therefore always true.
+
+- Both arrays now start at -1 (no mapping).
+- Tier_Assessment_Setup fills them from assess_nf_ before the
+  useMultispAssess loop:
+  - speciesMetierToRPFleet[sp][nf] = assess_nf for every fishery.
+  - speciesRPFleetToMetier[f][sp] = the first fishery mapped to fleet f
+    that catches the species (FISHERYtarget, q > 0 or mFC > 0). It stays
+    -1 if none does, so fisheries that are only in fleet 0 because 0 is
+    the assess_nf_ default are skipped.
+- Guards against -1 in the useMultispAssess and LastMetier loops, and
+  for Catch_by_Metier in atRlinkRBC.c.
+
+Note: the R input file now gets real fishery indices (and possibly -1)
+in "Which metiers related to which fleets", where it used to get all 0.
+
+Built clean (make) in a scratch copy on macOS arm64; not run.

@@ -49,8 +49,10 @@ int Tier_Assessment_Allocate(MSEBoxModel *bm) {
     nPast = (int)bm->RBCestimation.HistYrMax - (int)bm->RBCestimation.HistYrMin + 1;
     nYears = nFuture + nPast;
     
-    bm->RBCestimation.speciesMetierToRPFleet = Util_Alloc_Init_2D_Int(bm->K_num_fisheries, bm->K_num_tot_sp, 0);
-    bm->RBCestimation.speciesRPFleetToMetier = Util_Alloc_Init_2D_Int(bm->K_num_tot_sp, bm->K_num_fisheries, 0);
+    /* Nov 2026: initialise to -1 (no mapping) rather than 0, as 0 is a valid fleet/metier index.
+       Filled from assess_nf_ in Tier_Assessment_Setup (ATS-08) */
+    bm->RBCestimation.speciesMetierToRPFleet = Util_Alloc_Init_2D_Int(bm->K_num_fisheries, bm->K_num_tot_sp, -1);
+    bm->RBCestimation.speciesRPFleetToMetier = Util_Alloc_Init_2D_Int(bm->K_num_tot_sp, bm->K_num_fisheries, -1);
     bm->RBCestimation.metierArray = (METarrays *) malloc(sizeof(METarrays) * (unsigned long int)bm->K_num_fisheries);
     
     bm->RBCestimation.F_actFleet = Util_Alloc_Init_2D_Double(bm->K_num_fisheries, bm->K_num_tot_sp, 0.0);
@@ -1457,9 +1459,29 @@ int Tier_Assessment_Setup(MSEBoxModel *bm) {
 		}
         
         Nfleet = (int)(bm->RBCestimation.RBCspeciesParam[groupIndex][NumFisheries_id]);
+
+        /* Nov 2026: populate the metier (Atlantis fishery) <-> assessment fleet mapping from assess_nf_ (ATS-08).
+           Previously never filled, so every fleet mapped to metier 0.
+           speciesMetierToRPFleet[sp][nf] = assessment fleet that fishery nf feeds (set for every fishery).
+           speciesRPFleetToMetier[f][sp] = representative metier for fleet f: the first fishery mapped to f
+           that actually catches the species (targets it, q > 0 or mFC > 0). Stays -1 if no fishery mapped
+           to f catches it, so fisheries that are only in fleet 0 because 0 is the assess_nf_ default are skipped. */
+        for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+            int f = (int)(bm->SP_FISHERYprms[groupIndex][nf][assess_nf_id]);
+            if ((f < 0) || (f >= bm->K_num_fisheries))
+                continue;
+            bm->RBCestimation.speciesMetierToRPFleet[groupIndex][nf] = f;
+            if ((bm->RBCestimation.speciesRPFleetToMetier[f][groupIndex] < 0)
+                && (bm->FISHERYtarget[nf][groupIndex] || (bm->SP_FISHERYprms[groupIndex][nf][q_id] > 0.0) || (bm->SP_FISHERYprms[groupIndex][nf][mFC_id] > 0.0))) {
+                bm->RBCestimation.speciesRPFleetToMetier[f][groupIndex] = nf;
+            }
+        }
+
         if (bm->useMultispAssess) {
             for (m = 0; m < Nfleet; m++) {
                 mid = bm->RBCestimation.speciesRPFleetToMetier[m][groupIndex];  // metier for this fishery
+                if (mid < 0)
+                    continue;  // Nov 2026: no fishery in this fleet catches the species (ATS-08)
                 bm->RBCestimation.speciesMetierToRPFleet[groupIndex][mid] = m;
                 strcpy(bm->RBCestimation.metierArray[mid].metierCode, FisheryArray[m].fisheryCode);
                 bm->RBCestimation.metierArray[mid].PGMSYlinks = PGMSYLinksInputs[mid];
@@ -1468,7 +1490,7 @@ int Tier_Assessment_Setup(MSEBoxModel *bm) {
         
         for (m = 0; m < Nfleet; m++) {
             nf = bm->RBCestimation.speciesRPFleetToMetier[m][groupIndex];
-            if (nf > bm->RBCestimation.LastMetier) {
+            if ((nf >= 0) && (nf > bm->RBCestimation.LastMetier)) {  // Nov 2026: -1 = no metier for this fleet (ATS-08)
                 bm->RBCestimation.LastMetier = nf;
             }
         }

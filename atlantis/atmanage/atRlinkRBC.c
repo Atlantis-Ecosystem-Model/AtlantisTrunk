@@ -300,6 +300,8 @@ void Read_PGMSY_output(MSEBoxModel *bm, int year, FILE *llogfp) {
             // Assign metier catches
             for (m = 0; m < bm->RBCestimation.RBCspeciesParam[spID][NumFisheries_id]; m++) {
                 nf = bm->RBCestimation.speciesRPFleetToMetier[m][spID];
+                if (nf < 0)
+                    continue;  // Nov 2026: no metier for this fleet so nowhere to store its catch (ATS-08)
                 bm->RBCestimation.Catch_by_Metier[spID][year][i][nf] = values[2+m];
             }
             

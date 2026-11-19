@@ -31,7 +31,8 @@ Before starting on the bug files, work through **[00_merge_from_main.md](00_merg
 |---|---|---|---|---|
 | 000 | 2026-11-19 | [00_merge_from_main.md](00_merge_from_main.md) | merge origin/main — committed as `1c3b874` | [000_merge_origin_main.txt](commit_messages/000_merge_origin_main.txt) (not used — default merge message) |
 | 001 | 2026-11-19 | atdemography.c, outamps, bug_fixes/ | A-01 tempPopRatio index; remove outamps; review files | [001_post_merge_fixup.txt](commit_messages/001_post_merge_fixup.txt) |
-| 002 | 2026-11-19 | [atassess/atAssessTierSetup.c](atassess/atAssessTierSetup.c.md) | ATS-01–13 done except ATS-08 (awaiting your choice); code-located snippets in all review files | [002_atAssessTierSetup_ATS.txt](commit_messages/002_atAssessTierSetup_ATS.txt) |
+| 002 | 2026-11-19 | [atassess/atAssessTierSetup.c](atassess/atAssessTierSetup.c.md) | ATS-01–13 done except ATS-08 — committed `28f0213`; code-located snippets in all review files | [002_atAssessTierSetup_ATS.txt](commit_messages/002_atAssessTierSetup_ATS.txt) |
+| 003 | 2026-11-20 | [atassess/atAssessTierSetup.c](atassess/atAssessTierSetup.c.md), atmanage/atRlinkRBC.c | ATS-08 fleet↔metier mapping populated from assess_nf_ (option b) | [003_atAssessTierSetup_ATS-08.txt](commit_messages/003_atAssessTierSetup_ATS-08.txt) |
 |  |  |  |  |  |
 
 ## Suggested order (most high-confidence + high-severity first)

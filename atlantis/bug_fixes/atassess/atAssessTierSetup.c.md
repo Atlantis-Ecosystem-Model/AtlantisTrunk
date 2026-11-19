@@ -17,7 +17,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 | [ATS-05](#ats-05) | 1455 | M/H | wrong operator | `isTAC \|\| (TACamt < no_quota)` sums the `no_quota` sentinel into `TACinitial`/`RBC_old`. Elsewhere this test i… | C | [x] |
 | [ATS-06](#ats-06) | 1085 | H/M | off-by-one | `thisfval = i/nfintt` at the end of iteration i, so F=0 is evaluated twice and every step lags by one. F20/40/… | fixed (Beth) | [x] |
 | [ATS-07](#ats-07) | 1418 | M/M | wrong variable | `metierArray[mid].metierCode` is copied from `FisheryArray[m]` (assessment fleet index) rather than `FisheryAr… | C | [x] |
-| [ATS-08](#ats-08) | 53, 1416 | M/M | uninitialised mapping | `speciesRPFleetToMetier` is initialised to 0 and never populated anywhere, so every fleet maps to metier 0. at… | A → needs your choice | [ ] |
+| [ATS-08](#ats-08) | 53, 1416 | M/M | uninitialised mapping | `speciesRPFleetToMetier` is initialised to 0 and never populated anywhere, so every fleet maps to metier 0. at… | A (option b) | [x] |
 | [ATS-09](#ats-09) | 315 | H/L | memory leak | Never freed: AgeComp, AFss, LenComp, Xmove, DiscardType, Blocks, Obsageprop, MeanLenAgeS, T5_removal, TAC_mult… | A | [x] |
 | [ATS-10](#ats-10) | 1472 | H/L | printf mismatch | `%d` used for a `double` (`RBCspeciesParam[..][NumFisheries_id]`). | A | [x] |
 | [ATS-11](#ats-11) | 1545 | L/L | logic | `Lastsp` is only incremented when >0, so if the last assessed group is index 0 it's skipped by `sp < Lastsp` l… | C | [x] |
@@ -335,21 +335,26 @@ Search for: `mid = bm->RBCestimation.speciesRPFleetToMetier[m][groupIndex];  // 
 
 **Your comments:**
 
-> 
+> Please use option (b) of your proposed fix
 
-**Outcome:** 2026-11-20. Investigated, **not yet changed**: populating the mapping needs a decision from you.
+**Outcome:** 2026-11-20. Fixed with option (b), per your decision. Batch 003.
 
-- **No lost read code.** `speciesRPFleetToMetier` and `speciesMetierToRPFleet` have never been filled in any commit since the initial one (`ccf69e2`), so every assessment fleet maps to metier 0.
-- **The mapping already exists as an input:** `assess_nf_` (`SP_FISHERYprms[sp][nf][assess_nf_id]`, "Mapping of operating model fleets to assessment fleets"). It puts Atlantis fishery `nf` into assessment fleet `f`. atSS3DataGen.c and atPGMSY.c already use it, treating a metier as an Atlantis fishery (e.g. `CscalarMetier[nf]`). `NumFisheries` is set to the largest `assess_nf` + 1 (search `tot_nf++;`).
-- **Catch:** the mapping is many-to-one (several fisheries can feed one assessment fleet), but `speciesRPFleetToMetier[f][sp]` holds only one metier per fleet.
-- **Also:** it is used at `mid = bm->RBCestimation.speciesRPFleetToMetier[m][groupIndex];` *before* `NumFisheries` is reset from `assess_nf`, so any fill must come before that loop.
+- **Initialised to -1:** both `speciesMetierToRPFleet` and `speciesRPFleetToMetier` now start at -1 (no mapping), not 0. Search `initialise to -1 (no mapping)`.
+- **Filled from `assess_nf_`:** this happens in `Tier_Assessment_Setup`, just before the `if (bm->useMultispAssess)` loop. Search `populate the metier (Atlantis fishery) <-> assessment fleet mapping`.
+  - `speciesMetierToRPFleet[sp][nf] = assess_nf[sp][nf]` for every fishery.
+  - `speciesRPFleetToMetier[f][sp]` is the **first fishery mapped to fleet `f` that actually catches the species**. "Catches" means `FISHERYtarget[nf][sp]`, `q > 0`, or `mFC > 0`. If no fishery in fleet `f` catches the species, the entry stays -1.
+  - Fleet values outside 0..K_num_fisheries-1 are skipped.
+- **Guards against -1:**
+  - In the `useMultispAssess` loop, fleets with no metier are skipped.
+  - In the `LastMetier` loop, -1 is ignored. It already was in effect, but the check is now explicit.
+  - In atRlinkRBC.c, `Catch_by_Metier[...][nf]` is skipped for -1. Search `nowhere to store its catch`.
+- **SS3 writers:** the atSS3LinkIO.c tests (`speciesRPFleetToMetier[...] > -1`) now mean something, but they only choose between two comment labels, so the SS3 file layout is unchanged.
+- **Knock-ons to note, not changed:**
+  - **ATS-07 line:** the line you kept (`strcpy(metierArray[mid].metierCode, FisheryArray[m].fisheryCode)`) now gives metier `mid` the code of fishery `m`, where `m` is a fleet number. The SS3 writer comments print `FisheryArray[fleet]` in the same way.
+  - **R input file:** `speciesRPFleetToMetier` is written to it ("Which metiers related to which fleets"), so the R side will now see real fishery indices and possibly -1, where before it saw all 0.
+  - **`[sp+1]` index:** atSS3LinkIO.c indexes `speciesRPFleetToMetier[f][sp+1]` in two places. That is already logged as SS3IO-27 in atSS3LinkIO.c.md.
 
-**Proposed fix** (search `speciesMetierToRPFleet = Util_Alloc_Init_2D_Int`):
-1. Initialise both arrays to -1 instead of 0.
-2. Before the `if (bm->useMultispAssess)` loop, for each fishery `nf`: set `f = assess_nf[sp][nf]`, `speciesMetierToRPFleet[sp][nf] = f`, and if `speciesRPFleetToMetier[f][sp]` is still -1, set it to `nf`. **Which fishery should represent fleet `f` is your call:** (a) the first fishery with that `assess_nf`; or (b) the first one that actually catches the species (e.g. `FISHERYtarget` or non-zero selectivity). Option (b) avoids fisheries that only map to fleet 0 because 0 is `assess_nf`'s default.
-3. Guard the three places that use the value as an index without checking for -1: the `useMultispAssess` loop and the `LastMetier` loop here, and `Catch_by_Metier[...][nf]` in atRlinkRBC.c.
-
-Please choose (a) or (b), or say otherwise, in the comments.
+Built clean in a scratch copy; not run.
 
 ---
 
