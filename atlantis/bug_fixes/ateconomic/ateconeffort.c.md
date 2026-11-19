@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **12 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [QUOT-16](#quot-16) | 131-136, 292, 329, 390-413 | H/M | accumulator not reset / double application | `old_effort`/`new_effort`/`redo_effort`/`max_eff_ratio` are reset once per fishery but accumulated over subfle… |  | [ ] |
 | [QUOT-17](#quot-17) | 138, 274, 305/317, 210 | H/M | flag not reset | `redo_needed` is cleared at 274 and then set to 1 in the month loop (305/317). It is not cleared before the ne… |  | [ ] |
@@ -28,7 +28,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## QUOT-16
 
 **accumulator not reset / double application** · Conf H / Sev M  
-**Listed lines:** 131-136, 292, 329, 390-413
+**Lines (current code):** 131-136, 292, 329, 390-413  
+**Lines at review (Oct 2026):** 131-136, 292, 329, 390-413
 
 **Function:** `Monthly_Effort_Schedule()`
 
@@ -71,7 +72,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## QUOT-17
 
 **flag not reset** · Conf H / Sev M  
-**Listed lines:** 138, 274, 305/317, 210
+**Lines (current code):** 138, 274, 305/317, 210  
+**Lines at review (Oct 2026):** 138, 274, 305/317, 210
 
 **Function:** `Monthly_Effort_Schedule()`
 
@@ -109,7 +111,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## QUOT-18
 
 **accumulator not reset** · Conf M / Sev M  
-**Listed lines:** 106, 213-215, 225
+**Lines (current code):** 106, 213-215, 225  
+**Lines at review (Oct 2026):** 106, 213-215, 225
 
 **Function:** `Monthly_Effort_Schedule()`
 
@@ -147,7 +150,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## QUOT-19
 
 **integer truncation** · Conf M / Sev M  
-**Listed lines:** 282
+**Lines (current code):** 282  
+**Lines at review (Oct 2026):** 282
 
 **Function:** `Monthly_Effort_Schedule()`
 
@@ -185,7 +189,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## QUOT-20
 
 **division by zero** · Conf M / Sev L  
-**Listed lines:** 257
+**Lines (current code):** 257  
+**Lines at review (Oct 2026):** 257
 
 **Function:** `Monthly_Effort_Schedule()`
 
@@ -223,7 +228,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## QUOT-21
 
 **accumulator not reset** · Conf H / Sev M  
-**Listed lines:** 561, 679-685
+**Lines (current code):** 561, 679-685  
+**Lines at review (Oct 2026):** 561, 679-685
 
 **Function:** `Multi_Plan_Effort_Final_Allocation()`
 
@@ -261,7 +267,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## QUOT-22
 
 **inconsistent accumulation** · Conf M / Sev M  
-**Listed lines:** 824, 853-878
+**Lines (current code):** 824, 853-878  
+**Lines at review (Oct 2026):** 824, 853-878
 
 **Function:** `Multi_Plan_Effort_Final_Allocation()`
 
@@ -334,7 +341,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## QUOT-23
 
 **reset inside wrong loop** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 1048-1052, 1365
+**Lines (current code):** 1048-1052, 1365  
+**Lines at review (Oct 2026):** 1048-1052, 1365
 
 **Function:** `Holland_Effort_Final_Allocation()`
 
@@ -376,7 +384,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## QUOT-24
 
 **accumulator not reset** · Conf M / Sev M  
-**Listed lines:** 1033-1035, 1146
+**Lines (current code):** 1033-1035, 1146  
+**Lines at review (Oct 2026):** 1033-1035, 1146
 
 **Function:** `Holland_Effort_Final_Allocation()`
 
@@ -416,7 +425,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## QUOT-25
 
 **unit mismatch / repeated accumulation** · Conf M / Sev M  
-**Listed lines:** 1070-1076
+**Lines (current code):** 1070-1076  
+**Lines at review (Oct 2026):** 1070-1076
 
 **Function:** `Holland_Effort_Final_Allocation()`
 
@@ -460,7 +470,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## QUOT-26
 
 **overwritten in loop** · Conf H / Sev M  
-**Listed lines:** 1392-1395, 1440-1478
+**Lines (current code):** 1392-1395, 1440-1478  
+**Lines at review (Oct 2026):** 1392-1395, 1440-1478
 
 **Function:** `Holland_Effort_Final_Allocation()`
 
@@ -501,7 +512,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## QUOT-27
 
 **wrong variable (log)** · Conf H / Sev L  
-**Listed lines:** 1458
+**Lines (current code):** 1458  
+**Lines at review (Oct 2026):** 1458
 
 **Function:** `Holland_Effort_Final_Allocation()`
 
@@ -509,7 +521,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Debug fprintf prints `ns` (stale; equals nsubfleets after the loop) instead of `nss`. Function: `Holland_Effort_Final_Allocation()`.
 
-**Current code** (`ateconomic/ateconeffort.c` lines 1456–1460) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Holland_Effort_Final_Allocation()` now starts at line 899
+**Current code** (`ateconomic/ateconeffort.c` lines 1456–1460)
 
 ```c
  1456:                                                     fprintf(llogfp,

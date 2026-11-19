@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [PHY2-10](#phy2-10) ⭐ | 699-704, 596-597 | H/H | loop direction / wrong layer | `for(kk=k; kk<ice->currentnz; kk++) copy_ice_layer(ice,kk,kk+1);` shifts forward in ascending order, so every … |  | [ ] |
 | [PHY2-11](#phy2-11) | 728 | H/M | off-by-one | `clear_ice_layer(ice, ice->currentnz); ice->currentnz--;` clears one slot past the last active layer. When `cu… |  | [ ] |
@@ -18,7 +18,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY2-10
 
 **loop direction / wrong layer** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 699-704, 596-597
+**Lines (current code):** 699-704, 596-597  
+**Lines at review (Oct 2026):** 699-704, 596-597
 
 **Function:** `insert_ice_layer()`
 
@@ -61,7 +62,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY2-11
 
 **off-by-one** · Conf H / Sev M  
-**Listed lines:** 728
+**Lines (current code):** 728  
+**Lines at review (Oct 2026):** 728
 
 **Function:** `delete_ice_layer()`
 

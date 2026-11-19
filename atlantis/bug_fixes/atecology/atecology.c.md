@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **23 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 6 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [ECOL-01](#ecol-01) | 3304 | H/M | copy-paste / wrong id constant | `Reset_Arrays(bm, SED, it_count, boxLayerInfo, llogfp);` inside the ice box. Because of this the `[ICE_BASED]`… |  | [ ] |
 | [ECOL-02](#ecol-02) | 625-626, 2368-2369 | H/M | unit mismatch (biomass vs numbers) | `SizeNumDiscard[cohort][nf][box] += DependDiscardsTot*dt*cell_vol` and `FCdiscard[guild][cohort] += ...` add m… |  | [ ] |
@@ -16,7 +16,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 | [ECOL-04](#ecol-04) | 2616-2622 | H/M | copy-paste / wrong habitat index | In the old-diet multi-cohort branch for EPIFAUNA groups: `grazeEaten += preyEaten[ct][WC]; grazeEaten *= local… |  | [ ] |
 | [ECOL-05](#ecol-05) | 2747-2753 | H/M | copy-paste / wrong tracer array | In the SED branch (old diet, multi-cohort): `grazeEaten *= (localWCTracers[...totNTracers[cohort]] / totalBiom… |  | [ ] |
 | [ECOL-06](#ecol-06) | 2631-2632 | H/M | swapped indices | `grazeEaten = FunctGroupArray[guild].preyEaten[0][cohort];` (TODO in the code says "check this is really aroun… |  | [ ] |
-| [ECOL-07](#ecol-07) | 1136-1147 | H/M | wrong operator (= vs +=) | Layers run top->bottom (atbiology.c:414). The top layer sets `PelDem_ratio_i = PDratio`, but the else branch "… |  | [ ] |
+| [ECOL-07](#ecol-07) | 1135-1146 | H/M | wrong operator (= vs +=) | Layers run top->bottom (atbiology.c:414). The top layer sets `PelDem_ratio_i = PDratio`, but the else branch "… |  | [ ] |
 | [ECOL-08](#ecol-08) | 3923-3930 | M/M | off-by-one / range | `for (kij = 0; kij < EPIFAUNA; kij++)` reconciles NutsProd/NutsLost/DetritusProd/DetritusLost only for WC and … |  | [ ] |
 | [ECOL-09](#ecol-09) | 3331-3340 | M/M | copy-paste | The ice box sets `SP_IRR` for groups with `habitatType == SED` and SED phyto types (copied from Sediment_Box, … |  | [ ] |
 | [ECOL-10](#ecol-10) | 2329-2360 | M/M | unit mismatch | Dependent-discard reality check: `tot_dis` is the sum of `DependDiscardsTot*dt` (mg N m-3), but for EPIFAUNA `… |  | [ ] |
@@ -39,13 +39,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECOL-01
 
 **copy-paste / wrong id constant** · Conf H / Sev M  
-**Listed lines:** 3304
+**Lines (current code):** 3304  
+**Lines at review (Oct 2026):** 3304
 
 **Function:** `Ice_Box()`
 
 **Why it's thought to be a bug**
 
-`Reset_Arrays(bm, SED, it_count, boxLayerInfo, llogfp);` inside the ice box. Because of this the `[ICE_BASED]` slices of `preyEatenGlobal[cohort][habitat_type][hab]`, `NutsProdGlobal/NutsLostGlobal/DetritusProdGlobal/DetritusLostGlobal[habitat_type]`, `ratio*Global[habitat_type]` and `DebugFluxInfo[which_check][ICE_BASED]` are never zeroed at it_count==1. The SED slices get zeroed instead. `preyEatenGlobal` is accumulated with `+=` (atprocess.c:2304,2308), so `Reconcile_Global_Values(bm,...,ICE_BASED)` (line 3448) adds global values for it_count>1 that grow with every step and every box. Function: `Ice_Box()`.
+`Reset_Arrays(bm, SED, it_count, boxLayerInfo, llogfp);` inside the ice box. Because of this the `[ICE_BASED]` slices of `preyEatenGlobal[cohort][habitat_type][hab]`, `NutsProdGlobal/NutsLostGlobal/DetritusProdGlobal/DetritusLostGlobal[habitat_type]`, `ratio*Global[habitat_type]` and `DebugFluxInfo[which_check][ICE_BASED]` are never zeroed at it_count==1. The SED slices get zeroed instead. `preyEatenGlobal` is accumulated with `+=` (atprocess.c:2464,2468), so `Reconcile_Global_Values(bm,...,ICE_BASED)` (line 3448) adds global values for it_count>1 that grow with every step and every box. Function: `Ice_Box()`.
 
 **Current code** (`atecology/atecology.c` lines 3302–3306)
 
@@ -77,11 +78,12 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECOL-02
 
 **unit mismatch (biomass vs numbers)** · Conf H / Sev M  
-**Listed lines:** 625-626, 2368-2369
+**Lines (current code):** 625-626, 2368-2369  
+**Lines at review (Oct 2026):** 625-626, 2368-2369
 
 **Why it's thought to be a bug**
 
-`SizeNumDiscard[cohort][nf][box] += DependDiscardsTot*dt*cell_vol` and `FCdiscard[guild][cohort] += ...` add mg N to arrays that hold numbers at age. The normal path stores `age_discard*dt*cell_vol` with `age_discard = discards / Wgt` (atharvest/atHarvest.c:587,596 -> atprocess.c:2008,2015). Line 2369 also leaves out `*dt*cell_vol`, which is inconsistent with line 626. Only matters when `flagdepend_dis` is on. Functions: `Water_Column_Box()`, `Epibenthic_Box()`.
+`SizeNumDiscard[cohort][nf][box] += DependDiscardsTot*dt*cell_vol` and `FCdiscard[guild][cohort] += ...` add mg N to arrays that hold numbers at age. The normal path stores `age_discard*dt*cell_vol` with `age_discard = discards / Wgt` (atharvest/atHarvest.c:587,596 -> atprocess.c:2171,2178). Line 2369 also leaves out `*dt*cell_vol`, which is inconsistent with line 626. Only matters when `flagdepend_dis` is on. Functions: `Water_Column_Box()`, `Epibenthic_Box()`.
 
 **Current code** (`atecology/atecology.c` lines 623–628)
 
@@ -114,7 +116,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECOL-03
 
 **accumulator not reset in right loop** · Conf H / Sev M  
-**Listed lines:** 2310-2345
+**Lines (current code):** 2310-2345  
+**Lines at review (Oct 2026):** 2310-2345
 
 **Function:** `Epibenthic_Box()`
 
@@ -122,9 +125,12 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `sp_scalar = 1.0` is set once per guild (2310), but for EPIFAUNA groups `sp_scalar *= wcLayerThick;` (2345) runs inside the cohort loop. For multi-cohort epifauna (AGE_STRUCTURED_BIOMASS) the scalar becomes wcLayerThick^n, so `dead[cohort] += DependDiscardsTot*sp_scalar` (2373) is wrong for cohorts after the first one with discards. Function: `Epibenthic_Box()`.
 
-**Current code** (`atecology/atecology.c` lines 2311–2350) — code appears to have moved +3 lines since the review
+**Current code** (`atecology/atecology.c` lines 2308–2347)
 
 ```c
+ 2308: 
+ 2309:                         /* Reality check */
+ 2310:                         // Find total to be discarded
  2311:                         tot_dis = 0.0;
  2312:                         for(nf=0; nf<bm->K_num_fisheries; nf++){
  2313:                             tot_dis += bm->DependDiscardsTot[nf][guild][cohort] * bm->dt;
@@ -162,9 +168,6 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
  2345:                         realism_scalar = 1.0;
  2346:                         if (tot_dis > this_bio)
  2347:                             realism_scalar = this_bio / (tot_dis + small_num);
- 2348:                         
- 2349: 						for(nf=0; nf<bm->K_num_fisheries; nf++){
- 2350:                             if(bm->DependDiscardsTot[nf][guild][cohort]) {
 ```
 
 **Suggested fix (from review):** Reset `sp_scalar = 1.0;` at the top of the cohort loop
@@ -187,7 +190,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECOL-04
 
 **copy-paste / wrong habitat index** · Conf H / Sev M  
-**Listed lines:** 2616-2622
+**Lines (current code):** 2616-2622  
+**Lines at review (Oct 2026):** 2616-2622
 
 **Function:** `Epibenthic_Box()`
 
@@ -195,10 +199,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 In the old-diet multi-cohort branch for EPIFAUNA groups: `grazeEaten += preyEaten[ct][WC]; grazeEaten *= localWCTracers[...totNTracers[cohort]] / totalBiomass;`. But `totalBiomass` is summed from `localEPITracers` (2602) and the single-cohort branch uses `preyEaten[0][EPIFAUNA]` (2624). So predation is taken from the wrong habitat and split by the wrong tracer. Function: `Epibenthic_Box()`.
 
-**Current code** (`atecology/atecology.c` lines 2613–2623)
+**Current code** (`atecology/atecology.c` lines 2614–2624)
 
 ```c
- 2613: 
  2614: 								} else {
  2615: 									grazeEaten = FunctGroupArray[guild].preyEaten[cohort][EPIFAUNA];
  2616: 								}
@@ -209,6 +212,7 @@ In the old-diet multi-cohort branch for EPIFAUNA groups: `grazeEaten += preyEate
  2621: 								boxLayerInfo->localEPIFlux[FunctGroupArray[guild].totNTracers[cohort]] = FunctGroupArray[guild].growth[cohort]
  2622: 										- FunctGroupArray[guild].mortality[cohort] - dead - (double)grazeEaten;
  2623: 
+ 2624: 								if(bm->track_atomic_ratio == TRUE){
 ```
 
 **Suggested fix (from review):** Use `preyEaten[ct][EPIFAUNA]` and `localEPITracers[...]`
@@ -231,7 +235,8 @@ In the old-diet multi-cohort branch for EPIFAUNA groups: `grazeEaten += preyEate
 ## ECOL-05
 
 **copy-paste / wrong tracer array** · Conf H / Sev M  
-**Listed lines:** 2747-2753
+**Lines (current code):** 2747-2753  
+**Lines at review (Oct 2026):** 2747-2753
 
 **Function:** `Epibenthic_Box()`
 
@@ -275,13 +280,14 @@ In the SED branch (old diet, multi-cohort): `grazeEaten *= (localWCTracers[...to
 ## ECOL-06
 
 **swapped indices** · Conf H / Sev M  
-**Listed lines:** 2631-2632
+**Lines (current code):** 2631-2632  
+**Lines at review (Oct 2026):** 2631-2632
 
 **Function:** `Epibenthic_Box()`
 
 **Why it's thought to be a bug**
 
-`grazeEaten = FunctGroupArray[guild].preyEaten[0][cohort];` (TODO in the code says "check this is really around the right way"). `preyEaten` is `Util_Alloc_Init_2D_Long_Double(num_active_habitats, numCohortsXnumGenes)`, i.e. `[cohort][hab]` (atUtilGroupIO.c:821). This indexes habitat by cohort: it reads the wrong value, and for cohort >= num_active_habitats it reads past row 0. Applies to seagrass with `flag_macro_model`. Function: `Epibenthic_Box()`.
+`grazeEaten = FunctGroupArray[guild].preyEaten[0][cohort];` (TODO in the code says "check this is really around the right way"). `preyEaten` is `Util_Alloc_Init_2D_Long_Double(num_active_habitats, numCohortsXnumGenes)`, i.e. `[cohort][hab]` (atUtilGroupIO.c:820). This indexes habitat by cohort: it reads the wrong value, and for cohort >= num_active_habitats it reads past row 0. Applies to seagrass with `flag_macro_model`. Function: `Epibenthic_Box()`.
 
 **Current code** (`atecology/atecology.c` lines 2629–2634)
 
@@ -314,22 +320,18 @@ In the SED branch (old diet, multi-cohort): `grazeEaten *= (localWCTracers[...to
 ## ECOL-07
 
 **wrong operator (= vs +=)** · Conf H / Sev M  
-**Listed lines:** 1136-1147
+**Lines (current code):** 1135-1146  
+**Lines at review (Oct 2026):** 1136-1147
 
 **Function:** `Water_Column_Box()`
 
 **Why it's thought to be a bug**
 
-Layers run top->bottom (atbiology.c:414). The top layer sets `PelDem_ratio_i = PDratio`, but the else branch "increment[s] the global average" with `=`: `localDiagTracers[PelDem_ratio_i] = PDratio / nz;` (same for PiscPlank). So the final indicator is just the bottom layer ratio/nz. The top-layer value is also not divided by nz. Function: `Water_Column_Box()`.
+Layers run top->bottom (atbiology.c:449). The top layer sets `PelDem_ratio_i = PDratio`, but the else branch "increment[s] the global average" with `=`: `localDiagTracers[PelDem_ratio_i] = PDratio / nz;` (same for PiscPlank). So the final indicator is just the bottom layer ratio/nz. The top-layer value is also not divided by nz. Function: `Water_Column_Box()`.
 
-**Current code** (`atecology/atecology.c` lines 1128–1143) — code appears to have moved -6 lines since the review
+**Current code** (`atecology/atecology.c` lines 1133–1148) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
- 1128: 			boxLayerInfo->localDiagTracers[PiscPlank_ratio_i] = FVFPratio / bm->boxes[bm->current_box].nz;
- 1129: 			if (DivHere > boxLayerInfo->localDiagTracers[DivCount_i])
- 1130: 				boxLayerInfo->localDiagTracers[DivCount_i] = DivHere;
- 1131: 		}
- 1132: 	}
  1133:     
  1134: 	//TODO: Rewrite to allow for age structured biomass groups.
  1135: 	/* Update mortality estimates - Start with vertebrates */
@@ -341,6 +343,11 @@ Layers run top->bottom (atbiology.c:414). The top layer sets `PelDem_ratio_i = P
  1141: 				if (fished_chrt < ((FunctGroupArray[guild].numCohortsXnumGenes) / 2))
  1142: 					fished_chrt = ((FunctGroupArray[guild].numCohortsXnumGenes)/ 2);
  1143: 
+ 1144: 				/* This value will also take into account other forms of mortality - linear + quadratic. Think that
+ 1145: 				 * theF value should just be loss due to fishing.
+ 1146: 				 * Question is if the M value should include the other forms of mortality
+ 1147: 				 * - might need to break the dead into fished and naturalDead.
+ 1148: 				 *
 ```
 
 **Suggested fix (from review):** Top: `= PDratio / nz`; else: `+= PDratio / nz` (same for FVFPratio)
@@ -363,7 +370,8 @@ Layers run top->bottom (atbiology.c:414). The top layer sets `PelDem_ratio_i = P
 ## ECOL-08
 
 **off-by-one / range** · Conf M / Sev M  
-**Listed lines:** 3923-3930
+**Lines (current code):** 3923-3930  
+**Lines at review (Oct 2026):** 3923-3930
 
 **Function:** `Reconcile_Global_Values()`
 
@@ -408,7 +416,8 @@ Layers run top->bottom (atbiology.c:414). The top layer sets `PelDem_ratio_i = P
 ## ECOL-09
 
 **copy-paste** · Conf M / Sev M  
-**Listed lines:** 3331-3340
+**Lines (current code):** 3331-3340  
+**Lines at review (Oct 2026):** 3331-3340
 
 **Function:** `Ice_Box()`
 
@@ -455,7 +464,8 @@ The ice box sets `SP_IRR` for groups with `habitatType == SED` and SED phyto typ
 ## ECOL-10
 
 **unit mismatch** · Conf M / Sev M  
-**Listed lines:** 2329-2360
+**Lines (current code):** 2329-2360  
+**Lines at review (Oct 2026):** 2329-2360
 
 **Function:** `Epibenthic_Box()`
 
@@ -524,7 +534,8 @@ Dependent-discard reality check: `tot_dis` is the sum of `DependDiscardsTot*dt` 
 ## ECOL-11
 
 **wrong operator (= vs +=)** · Conf H / Sev L  
-**Listed lines:** 2974-2977
+**Lines (current code):** 2974-2977  
+**Lines at review (Oct 2026):** 2974-2977
 
 **Function:** `Epibenthic_Box()`
 
@@ -532,17 +543,17 @@ Dependent-discard reality check: `tot_dis` is the sum of `DependDiscardsTot*dt` 
 
 ICE_BASED cover biomass: `biomass = initialIceBiomass[...totNTracers[cohort]];` inside the cohort loop keeps only the last cohort. The EPIFAUNA/LAND cases use `+=`. Function: `Epibenthic_Box()`.
 
-**Current code** (`atecology/atecology.c` lines 2959–2966) — code appears to have moved -13 lines since the review
+**Current code** (`atecology/atecology.c` lines 2972–2979) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
- 2959: 			} else if (FunctGroupArray[guild].speciesParams[flag_lim_id] == ersem_ben_lim) {
- 2960: 				boxLayerInfo->localEPITracers[FunctGroupArray[guild].CoverTracer]
- 2961: 						= min(1.0, biomass / (50.0 * FunctGroupArray[guild].speciesParams[thresh_id]));
- 2962: 			}
- 2963: 		}
- 2964: 	}
- 2965: 
- 2966: 
+ 2972: 		boxLayerInfo->localDiagTracers[DivCount_i] += DivHere;
+ 2973: 		boxLayerInfo->localDiagTracers[InfEpi_ratio_i] += InfEpiRatio;
+ 2974: 	}
+ 2975: 
+ 2976: 	boxLayerInfo->localSEDTracers[Stress_i] = surf_stress;
+ 2977: 
+ 2978: 	/** check diagnostics **/
+ 2979: 	if (bm->which_check < not_tracking_flux) {
 ```
 
 **Suggested fix (from review):** `biomass += ...`
@@ -565,20 +576,21 @@ ICE_BASED cover biomass: `biomass = initialIceBiomass[...totNTracers[cohort]];` 
 ## ECOL-12
 
 **always-false condition / unreachable case** · Conf H / Sev L  
-**Listed lines:** 1340, 3164 (also 1985, 3642)
+**Lines (current code):** 1340, 3164 (also 1985, 3642)  
+**Lines at review (Oct 2026):** 1340, 3164 (also 1985, 3642)
 
 **Why it's thought to be a bug**
 
 `if (flux_model_id > 0) { switch ... case WC: ...}`. WC == 0 (atlantisboxmodel.h:390), and Max_Flux_Check returns `fluxnum = WC` for water-column culprits, so the WC diagnostic branch can never run and "Can't give details" is printed instead. Note: if fixed to `>= 0`, nutrient culprits set `flux_sp = bm->K_num_tot_sp` (atfluxbreakdown.c:117), and `FunctGroupArray[flux_sp].groupCode` would then read out of bounds. Functions: `Water_Column_Box()`, `Epibenthic_Box()`.
 
-**Current code** (`atecology/atecology.c` lines 1336–1340)
+**Current code** (`atecology/atecology.c` lines 1338–1342)
 
 ```c
- 1336: 					break;
- 1337: 				case death_id:
  1338: 					fprintf(llogfp, "Water_Column_Box: biggest flux is due to the death of %s-%d\n", FunctGroupArray[flux_sp].groupCode, fluxnum);
  1339: 					break;
  1340: 				default:
+ 1341: 					quit("No such flux_model defined - how did it get here in the Epibenthic_Box calculations?\n");
+ 1342: 					break;
 ```
 
 **Suggested fix (from review):** Use `>= 0` and guard `flux_sp < bm->K_num_tot_sp` before printing groupCode
@@ -601,7 +613,8 @@ ICE_BASED cover biomass: `biomass = initialIceBiomass[...totNTracers[cohort]];` 
 ## ECOL-13
 
 **cohort vs cohort x genotype** · Conf M / Sev L  
-**Listed lines:** 1156-1169
+**Lines (current code):** 1156-1169  
+**Lines at review (Oct 2026):** 1156-1169
 
 **Function:** `Water_Column_Box()`
 
@@ -652,7 +665,8 @@ ICE_BASED cover biomass: `biomass = initialIceBiomass[...totNTracers[cohort]];` 
 ## ECOL-14
 
 **wrong habitat index / wrong cohort** · Conf M / Sev L  
-**Listed lines:** 1914-1923
+**Lines (current code):** 1914-1923  
+**Lines at review (Oct 2026):** 1914-1923
 
 **Function:** `Sediment_Box()`
 
@@ -699,7 +713,8 @@ Sediment pseudo-M estimate: detritus uses `preyEaten[0][WC]` in the sediment box
 ## ECOL-15
 
 **cohort index** · Conf M / Sev L  
-**Listed lines:** 2937-2940
+**Lines (current code):** 2937-2940  
+**Lines at review (Oct 2026):** 2937-2940
 
 **Function:** `Epibenthic_Box()`
 
@@ -707,17 +722,17 @@ Sediment pseudo-M estimate: detritus uses `preyEaten[0][WC]` in the sediment box
 
 The epibenthic pseudo-M only uses `mortality[0]` and `preyEaten[0][...]`, so multi-cohort epifauna (e.g. age-structured seagrass) lose all cohorts except the first. Function: `Epibenthic_Box()`.
 
-**Current code** (`atecology/atecology.c` lines 2911–2918) — code appears to have moved -24 lines since the review
+**Current code** (`atecology/atecology.c` lines 2935–2942) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
- 2911: 					+ ((FunctGroupArray[guild].habitatType == EPIFAUNA) * (double)FunctGroupArray[guild].preyEaten[0][WC] )
- 2912: 					+ ((FunctGroupArray[guild].habitatType == EPIFAUNA) * (double)FunctGroupArray[guild].preyEaten[0][SED] )
- 2913: 					+ ((FunctGroupArray[guild].habitatType == EPIFAUNA) * (double)FunctGroupArray[guild].preyEaten[0][EPIFAUNA] );
- 2914: 
- 2915: 			}
- 2916: 		}
- 2917: 	}
- 2918: 
+ 2935: 				for (cohort = 0; cohort < FunctGroupArray[guild].numCohortsXnumGenes; cohort++) {
+ 2936: 					biomass += initialEpiBiomass[FunctGroupArray[guild].totNTracers[cohort]];
+ 2937: 				}
+ 2938: 				break;
+ 2939: 			case LAND_BASED:
+ 2940: 			
+ 2941: 				quit("Not yet supporting land based habitats");
+ 2942: 				biomass = 0.0;
 ```
 
 **Suggested fix (from review):** Loop over cohorts
@@ -740,25 +755,26 @@ The epibenthic pseudo-M only uses `mortality[0]` and `preyEaten[0][...]`, so mul
 ## ECOL-16
 
 **buffer extent mismatch** · Conf M / Sev L  
-**Listed lines:** 3985-3988
+**Lines (current code):** 3985-3988  
+**Lines at review (Oct 2026):** 3985-3988
 
 **Function:** `Reset_Arrays()`
 
 **Why it's thought to be a bug**
 
-`for (k = 0; k < numStages; k++) grow[kij][k] = 0.0;`. `grow` is allocated `[numCohortsXnumGenes][RN_id+1]` (atUtilGroupIO.c:748), and the index is SN_id/RN_id, not life stage. If numStages==1, `grow[][RN_id]` is not reset. If numStages>2, the loop writes past the row. Function: `Reset_Arrays()`.
+`for (k = 0; k < numStages; k++) grow[kij][k] = 0.0;`. `grow` is allocated `[numCohortsXnumGenes][RN_id+1]` (atUtilGroupIO.c:747), and the index is SN_id/RN_id, not life stage. If numStages==1, `grow[][RN_id]` is not reset. If numStages>2, the loop writes past the row. Function: `Reset_Arrays()`.
 
-**Current code** (`atecology/atecology.c` lines 3972–3979) — code appears to have moved -11 lines since the review
+**Current code** (`atecology/atecology.c` lines 3983–3990) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
- 3972: 
- 3973: 			for (hab = 0; hab < bm->num_active_habitats; hab++) {
- 3974: 				for (cohort = 0; cohort < FunctGroupArray[guild].numCohortsXnumGenes; cohort++) {
- 3975: 					PREYinfo[guild][cohort][hab] = 0.0;
- 3976: 					FunctGroupArray[guild].preyEaten[cohort][hab] = 0.0;
- 3977: 					/* Set the global value to zero on the first iteration in this time step */
- 3978: 					if (it_count == 1)
- 3979: 						FunctGroupArray[guild].preyEatenGlobal[cohort][habitat_type][hab] = 0.0;
+ 3983: 	}
+ 3984: 
+ 3985: 	if (bm->which_check < not_tracking_flux) {
+ 3986: 		boxLayerInfo->DebugFluxInfo[bm->which_check][habitat_type][gain_id] = 0;
+ 3987: 		boxLayerInfo->DebugFluxInfo[bm->which_check][habitat_type][loss_id] = 0;
+ 3988: 	}
+ 3989: 
+ 3990: 	if (it_count == 1) {
 ```
 
 **Suggested fix (from review):** Loop `k <= RN_id`
@@ -781,7 +797,8 @@ The epibenthic pseudo-M only uses `mortality[0]` and `preyEaten[0][...]`, so mul
 ## ECOL-17
 
 **wrong tracer array** · Conf M / Sev L  
-**Listed lines:** 2424-2430
+**Lines (current code):** 2424-2430  
+**Lines at review (Oct 2026):** 2424-2430
 
 **Function:** `Epibenthic_Box()`
 
@@ -789,20 +806,20 @@ The epibenthic pseudo-M only uses `mortality[0]` and `preyEaten[0][...]`, so mul
 
 In the Infauna/Epifauna ratio, MB (habitatType SED, see 1499 and comment at 2952) is added as `initialWaterBiomass[...] * smLayerThick`: a water-column concentration multiplied by sediment thickness. It should be the sediment biomass. Function: `Epibenthic_Box()`.
 
-**Current code** (`atecology/atecology.c` lines 2417–2427) — code appears to have moved -5 lines since the review
+**Current code** (`atecology/atecology.c` lines 2422–2432)
 
 ```c
- 2417: 							Epifauna += initialEpiBiomass[FunctGroupArray[guild].totNTracers[cohort]];
- 2418: 					} else if (FunctGroupArray[guild].isInfauna == TRUE){
- 2419: 						Infauna += initialSedBiomass[FunctGroupArray[guild].totNTracers[cohort]];
- 2420: 					}
- 2421: 				}
  2422: 			}
  2423: 		}
  2424: 
  2425: 		/* Infauna vs Epifauna ratio - convert infauna to m-2 from m-3 first.
  2426: 		 Note that MB count as epifauna here as live on sediment surface
  2427: 		 */
+ 2428: 
+ 2429: 		InfEpiRatio = (Infauna * smLayerThick) / (Epifauna + small_num);
+ 2430: 	}
+ 2431: 
+ 2432: 	/****************************** ECOLOGICAL PROCESSES *********************************/
 ```
 
 **Suggested fix (from review):** `initialSedBiomass[...] * smLayerThick`
@@ -825,7 +842,8 @@ In the Infauna/Epifauna ratio, MB (habitatType SED, see 1499 and comment at 2952
 ## ECOL-18
 
 **copy-paste** · Conf H / Sev L  
-**Listed lines:** 3689-3691
+**Lines (current code):** 3689-3691  
+**Lines at review (Oct 2026):** 3689-3691
 
 **Function:** `Ice_Box()`
 
@@ -833,16 +851,16 @@ In the Infauna/Epifauna ratio, MB (habitatType SED, see 1499 and comment at 2952
 
 The ice box QNAN guard tests `localSEDFlux[NH3_i]` and calls `Call_Diagnostics(..., SED, ...)`, so NaNs in `localICEFlux` are never caught. Function: `Ice_Box()`.
 
-**Current code** (`atecology/atecology.c` lines 3665–3671) — code appears to have moved -22 lines since the review
+**Current code** (`atecology/atecology.c` lines 3687–3693) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
- 3665: 	if (!(_finite(boxLayerInfo->localSEDFlux[NH3_i]))) {
- 3666: 		/* Check diagnostic terms */
- 3667: 		Call_Diagnostics(bm, boxLayerInfo, SED, llogfp, 1);
- 3668: 
- 3669: 		/* List all figures */
- 3670: 		Print_Flux(bm, ICE_BASED, VERTinfo, qnancheck, 0.0, 0.0, 0.0, 0.0, 0.0, iceFlux, 0.0, iceFlux, 0.0, boxLayerInfo->localWCFlux, boxLayerInfo->localSEDFlux,
- 3671: 				boxLayerInfo->localEPIFlux, llogfp);
+ 3687: 	/**
+ 3688: 	 Vertebrates - if in lowest watercolumn layer than this will all actually happen
+ 3689: 	 in Epibenthic_Box()
+ 3690: 	 **/
+ 3691: 
+ 3692: 	if (habitatType == EPIFAUNA || (habitatType == WC && (bm->current_layer != 0 || waterboundary))) {
+ 3693: 
 ```
 
 **Suggested fix (from review):** Test `localICEFlux[NH3_i]`, use ICE_BASED
@@ -865,21 +883,22 @@ The ice box QNAN guard tests `localSEDFlux[NH3_i]` and calls `Call_Diagnostics(.
 ## ECOL-19
 
 **copy-paste** · Conf H / Sev L  
-**Listed lines:** 1364-1365, 2005-2006
+**Lines (current code):** 1364-1365, 2005-2006  
+**Lines at review (Oct 2026):** 1364-1365, 2005-2006
 
 **Why it's thought to be a bug**
 
 In the flux-imbalance path, `Call_Diagnostics(bm, boxLayerInfo, EPIFAUNA, llogfp, 0)` is called from `Water_Column_Box()` and `Sediment_Box()` (should be WC / SED). The guard also uses `(current_box == checkbox) || (dayt >= checkstart)`, whereas the normal call (1249/1955) uses `&&`.
 
-**Current code** (`atecology/atecology.c` lines 1368–1373) — code appears to have moved +6 lines since the review
+**Current code** (`atecology/atecology.c` lines 1362–1367)
 
 ```c
- 1368: 			/* List all figures */
- 1369: 
- 1370: 			fprintf(llogfp, "debug Water_Column_Box, bm->current_box = %d, currentLayer = %d, it_count = %d\n", bm->current_box, bm->current_layer, it_count);
- 1371: 			Print_Flux(bm, WC, VERTinfo, noqnanverbose, wcFlux, wcFlux1, wcFlux2, wcFlux3, 0, 0, 0, wcFlux, wcFishing, boxLayerInfo->localWCFlux,
- 1372: 					boxLayerInfo->localSEDFlux, boxLayerInfo->localEPIFlux, llogfp);
- 1373: 
+ 1362: 					wcFlux);
+ 1363: 
+ 1364: 		}
+ 1365: 
+ 1366: 		if (((verbose && (bm->current_box == bm->checkbox) && (bm->dayt >= bm->checkstart)) || (bm->debug == debug_prey_biology_process && bm->dayt
+ 1367: 				>= bm->checkstart && bm->dayt < bm->checkstop))) {
 ```
 
 **Suggested fix (from review):** Pass WC / SED; use `&&`
@@ -902,15 +921,19 @@ In the flux-imbalance path, `Call_Diagnostics(bm, boxLayerInfo, EPIFAUNA, llogfp
 ## ECOL-20
 
 **ungated debug output (log size)** · Conf H / Sev L  
-**Listed lines:** 1077-1098, 2806-2831
+**Lines (current code):** 1077-1098, 2806-2831  
+**Lines at review (Oct 2026):** 1077-1098, 2806-2831
 
 **Why it's thought to be a bug**
 
 `fprintf(llogfp, "day: %e box%d-%d doing %s with flux entering...")` runs for every physio-chem tracer, layer and adaptive substep whenever `dayt >= checkstart && checkbox == current_box`, with no `bm->debug`/verbose gate. This can produce very large logs, similar to the printf removed in commit f56b3e7. Functions: `Water_Column_Box()`, `Epibenthic_Box()`.
 
-**Current code** (`atecology/atecology.c` lines 1078–1103) — code appears to have moved +3 lines since the review
+**Current code** (`atecology/atecology.c` lines 1075–1100)
 
 ```c
+ 1075: 		if (PhysioChemArray[index].ROCFunction != NULL) {
+ 1076: 			PhysioChemArray[index].ROCFunction(bm, llogfp, WC, index, boxLayerInfo);
+ 1077: 			if(bm->ecotest > 1){
  1078: 				/* Check the tracer values */
  1079: 				if(!_finite(boxLayerInfo->localWCFlux[*PhysioChemArray[index].tracerIndex])){
  1080: 					quit("Water_Column_Box - Nutrient %s is infinite in box %d:%d\n", PhysioChemArray[index].name, bm->current_box, bm->current_layer);
@@ -934,9 +957,6 @@ In the flux-imbalance path, `Call_Diagnostics(bm, boxLayerInfo, EPIFAUNA, llogfp
  1098: 
  1099: 		/** Update overall catch at age distributions with those from the current
  1100: 		 water column layer
- 1101: 		 **/
- 1102: 		for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
- 1103: 			if (FunctGroupArray[guild].speciesParams[flag_id] == TRUE) {
 ```
 
 **Suggested fix (from review):** Gate on a debug flag (e.g. `bm->debug == debug_biology_process`)
@@ -959,7 +979,8 @@ In the flux-imbalance path, `Call_Diagnostics(bm, boxLayerInfo, EPIFAUNA, llogfp
 ## ECOL-21
 
 **accumulator not reset** · Conf H / Sev L  
-**Listed lines:** 3348-3356
+**Lines (current code):** 3348-3356  
+**Lines at review (Oct 2026):** 3348-3356
 
 **Function:** `Ice_Box()`
 
@@ -967,9 +988,15 @@ In the flux-imbalance path, `Call_Diagnostics(bm, boxLayerInfo, EPIFAUNA, llogfp
 
 PREYinfo is reset only for cohort 0, but AGE_STRUCTURED_BIOMASS cohorts use `PREYinfo[guild][cohort][ICE_BASED] += ...`. Latent for now: such groups with an ice coefficient >0 quit at 3430, and with a coefficient of 0 the term adds 0. Function: `Ice_Box()`.
 
-**Current code** (`atecology/atecology.c` lines 3352–3364) — code appears to have moved +6 lines since the review
+**Current code** (`atecology/atecology.c` lines 3346–3358)
 
 ```c
+ 3346: 	 ***/
+ 3347: 
+ 3348: 	/****************************** ECOLOGICAL INDICATORS *******************************/
+ 3349: 	if (it_count == 1) {
+ 3350: 		DivHere = 0;
+ 3351: 
  3352: 		/* Local diversity proxy */
  3353: 		for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
  3354: 			if (FunctGroupArray[guild].habitatType == ICE_BASED) {
@@ -977,12 +1004,6 @@ PREYinfo is reset only for cohort 0, but AGE_STRUCTURED_BIOMASS cohorts use `PRE
  3356: 					DivHere++;
  3357: 			}
  3358: 
- 3359: 		}
- 3360: 	}
- 3361: 
- 3362: 	/**
- 3363: 	 * Initial the invertebrate variables.
- 3364: 	 */
 ```
 
 **Suggested fix (from review):** Use `=` (as in Sediment_Box line 1519)
@@ -1005,27 +1026,16 @@ PREYinfo is reset only for cohort 0, but AGE_STRUCTURED_BIOMASS cohorts use `PRE
 ## ECOL-22
 
 **wrong operator / habitat index (diagnostics)** · Conf M / Sev L  
-**Listed lines:** 2594-2655, 3723-3725
+**Lines (current code):** 2594-2655, 3723-3725  
+**Lines at review (Oct 2026):** 2594-2655, 3723-3725
 
 **Why it's thought to be a bug**
 
 The DebugFluxInfo for EPIFAUNA groups is stored under `[guild][WC]`, and `gain/loss = ...` uses `=` inside the cohort loop, so only the last cohort is kept (the WC/SED branches at 2719-2720 use `+=`). The same `=`-in-cohort-loop pattern appears in `Update_Vertebrate_Tracers()` 3723-3725. This only affects DiagNGain/Loss tracking. Functions: `Epibenthic_Box()`, `Update_Vertebrate_Tracers()`.
 
-**Current code** (`atecology/atecology.c` lines 2580–2614 (range truncated)) — code appears to have moved -12 lines since the review
+**Current code** (`atecology/atecology.c` lines 2592–2631 (truncated))
 
 ```c
- 2580: 
- 2581: 						boxLayerInfo->DebugFluxInfo[guild][WC][loss_id] = 0;
- 2582: 						boxLayerInfo->DebugFluxInfo[guild][WC][gain_id] = 0;
- 2583: 
- 2584: 						if (FunctGroupArray[guild].habitatType == EPIFAUNA) {
- 2585: 
- 2586: 							/* Get the total biomass */
- 2587: 							totalBiomass = 0.0;
- 2588: 							for (cohort = 0; cohort < FunctGroupArray[guild].numCohortsXnumGenes; cohort++) {
- 2589: 								totalBiomass += boxLayerInfo->localEPITracers[FunctGroupArray[guild].totNTracers[cohort]];
- 2590: 							}
- 2591: 							totalBiomass += small_num;
  2592: 
  2593: 							for (cohort = 0; cohort < FunctGroupArray[guild].numCohortsXnumGenes; cohort++) {
  2594: 								double dead;
@@ -1049,6 +1059,23 @@ The DebugFluxInfo for EPIFAUNA groups is stored under `[guild][WC]`, and `gain/l
  2612: 									}
  2613: 
  2614: 								} else {
+ 2615: 									grazeEaten = FunctGroupArray[guild].preyEaten[cohort][EPIFAUNA];
+ 2616: 								}
+ 2617: 
+ 2618: 								if(FunctGroupArray[guild].groupType == SEAGRASS && bm->flag_macro_model == TRUE){
+ 2619: 									grazeEaten = FunctGroupArray[guild].preyEaten[0][cohort];   // TODO: check this is really around the right way
+ 2620: 								}
+ 2621: 								boxLayerInfo->localEPIFlux[FunctGroupArray[guild].totNTracers[cohort]] = FunctGroupArray[guild].growth[cohort]
+ 2622: 										- FunctGroupArray[guild].mortality[cohort] - dead - (double)grazeEaten;
+ 2623: 
+ 2624: 								if(bm->track_atomic_ratio == TRUE){
+ 2625: 									/* Predation and growth due to predation is handled separately */
+ 2626: 									Loose_Element(bm, boxLayerInfo, EPIFAUNA, guild, cohort,
+ 2627: 											(dead + FunctGroupArray[guild].mortality[cohort]),
+ 2628: 											EPIFAUNA, isGlobal);
+ 2629: 								}
+ 2630: 
+ 2631: 								/**
 ```
 
 **Suggested fix (from review):** Use `+=` after zeroing; index by EPIFAUNA
@@ -1071,20 +1098,21 @@ The DebugFluxInfo for EPIFAUNA groups is stored under `[guild][WC]`, and `gain/l
 ## ECOL-23
 
 **wrong error message** · Conf H / Sev L  
-**Listed lines:** 1357
+**Lines (current code):** 1357  
+**Lines at review (Oct 2026):** 1357
 
 **Why it's thought to be a bug**
 
 The `quit("... in the Epibenthic_Box calculations?")` is inside `Water_Column_Box()`.
 
-**Current code** (`atecology/atecology.c` lines 1359–1363) — code appears to have moved +4 lines since the review
+**Current code** (`atecology/atecology.c` lines 1355–1359) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
+ 1355: 					boxLayerInfo->localSEDFlux, boxLayerInfo->localEPIFlux, llogfp);
+ 1356: 
+ 1357: 			printf("\nbox: %d, layer: %d, on day: %e, wcFlux: %e (wcFlux1: %e, wcFlux2: %e, wcFlux3: %e)\n", bm->current_box, bm->current_layer, bm->dayt,
+ 1358: 					wcFlux, wcFlux1, wcFlux2, wcFlux3);
  1359: 
- 1360: 			Textfile_Dump(bm, llogfp);
- 1361: 			quit("Error on flux balance in water column cell on day: %e, in box: %d, layer: %d, wcFlux: %e\n", bm->dayt, bm->current_box, bm->current_layer,
- 1362: 					wcFlux);
- 1363: 
 ```
 
 **Suggested fix (from review):** Say Water_Column_Box

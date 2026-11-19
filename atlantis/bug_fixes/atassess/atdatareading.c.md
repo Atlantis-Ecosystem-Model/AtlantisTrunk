@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **6 findings** (severity H: 2; confidence H and severity H: 2; on the priority list: 2).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [DAT-1](#dat-1) ⭐ | 325-333, 348-355 | H/H | wrong slot | SED_BACT, SM_INF, LG_INF, MPB and sediment PHYTOBEN/TURF are stored in `biolbiom[..][SED]`; all non-detritus r… |  | [ ] |
 | [DAT-2](#dat-2) ✔ ⭐ | 226-227 | H/H | never reset | `zonearea[z] +=` runs every sampling step; it is zeroed only once (atsamplesetup.c:412). |  | [ ] |
@@ -22,15 +22,23 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## DAT-1
 
 **wrong slot** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 325-333, 348-355
+**Lines (current code):** 325-333, 348-355  
+**Lines at review (Oct 2026):** 325-333, 348-355
 
 **Why it's thought to be a bug**
 
 SED_BACT, SM_INF, LG_INF, MPB and sediment PHYTOBEN/TURF are stored in `biolbiom[..][SED]`; all non-detritus readers use `[WC]`, so they read zero.
 
-**Current code** (`atassess/atdatareading.c` lines 330–364) — code appears to have moved +7 lines since the review
+**Current code** (`atassess/atdatareading.c` lines 323–357)
 
 ```c
+  323: 						/* ignore the vertebrates and age structured fished invertebrates (for now) */
+  324: 						break;
+  325: 					case SED_BACT:
+  326: 					case SM_INF:
+  327: 					case LG_INF:
+  328: 					case MICROPHTYBENTHOS:
+  329: 						if (bm->flagecosysassess)
   330: 							/* Sediment biomass data */
   331: 							for (k = 0; k < bm->sednz; k++)
   332: 								biolbiom[sp][b][SED] += bm->sedtr[b][k][FunctGroupArray[sp].totNTracers[0]] * bm->boxes[b].sm.dz[k];
@@ -59,13 +67,6 @@ SED_BACT, SM_INF, LG_INF, MPB and sediment PHYTOBEN/TURF are stored in `biolbiom
   355: 								}
   356: 							else {
   357: 								biolbiom[sp][b][WC] += bm->epi[b][FunctGroupArray[sp].totNTracers[0]];
-  358: 							}
-  359: 						}
-  360: 						break;
-  361: 					case REF_DET:
-  362: 					case LAB_DET:
-  363: 					case CARRION:
-  364: 						if (bm->flagecosysassess) {
 ```
 
 **Suggested fix (from review):** store in WC, or read both
@@ -88,11 +89,12 @@ SED_BACT, SM_INF, LG_INF, MPB and sediment PHYTOBEN/TURF are stored in `biolbiom
 ## DAT-2
 
 **never reset** · Conf H / Sev H ✔ re-checked ⭐ priority  
-**Listed lines:** 226-227
+**Lines (current code):** 226-227  
+**Lines at review (Oct 2026):** 226-227
 
 **Why it's thought to be a bug**
 
-`zonearea[z] +=` runs every sampling step; it is zeroed only once (atsamplesetup.c:412).
+`zonearea[z] +=` runs every sampling step; it is zeroed only once (atsamplesetup.c:413).
 
 **Current code** (`atassess/atdatareading.c` lines 224–229)
 
@@ -125,7 +127,8 @@ SED_BACT, SM_INF, LG_INF, MPB and sediment PHYTOBEN/TURF are stored in `biolbiom
 ## DAT-3
 
 **units** · Conf M / Sev M  
-**Listed lines:** 261-273
+**Lines (current code):** 261-273  
+**Lines at review (Oct 2026):** 261-273
 
 **Why it's thought to be a bug**
 
@@ -173,7 +176,8 @@ Salinity, light, temperature and O2 are summed over layers, not depth-averaged (
 ## DAT-4
 
 **units** · Conf L / Sev M  
-**Listed lines:** 536-538
+**Lines (current code):** 536-538  
+**Lines at review (Oct 2026):** 536-538
 
 **Why it's thought to be a bug**
 
@@ -211,20 +215,21 @@ Production is multiplied by numbers but consumption is not.
 ## DAT-5
 
 **reused variable** · Conf H / Sev L  
-**Listed lines:** 474
+**Lines (current code):** 474  
+**Lines at review (Oct 2026):** 474
 
 **Why it's thought to be a bug**
 
 Zone variable `z` is reused as a cohort loop index.
 
-**Current code** (`atassess/atdatareading.c` lines 453–457) — code appears to have moved -19 lines since the review
+**Current code** (`atassess/atdatareading.c` lines 472–476) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  453: 							if ((biolVERTinfo[bstruct_id][sp][cohort][b]) && (biolVERTinfo[bres_id][sp][cohort][b])
-  454: 									&& (biolVERTinfo[bstocknums_id][sp][cohort][b])) {
-  455: 								stage = FunctGroupArray[sp].cohort_stage[cohort];
-  456: 								bm->rep_box_of_zone[sp][z][stage] = b;
-  457: 							}
+  472: 				for (k = 0; k < bm->K_num_tot_sp; k++) {
+  473: 					if (FunctGroupArray[k].isVertebrate == TRUE) {
+  474: 						for (z = 0; z < FunctGroupArray[k].numCohortsXnumGenes; z++)
+  475: 							for (ij = 0; ij < 7; ij++)
+  476: 								fprintf(ofp, "biolVERT[%d][%d][%d][%d]: %e\n", ij, k, z, b, biolVERTinfo[ij][k][z][b]);
 ```
 
 **Suggested fix (from review):** use `cohort`
@@ -247,7 +252,8 @@ Zone variable `z` is reused as a cohort loop index.
 ## DAT-6
 
 **wrong condition** · Conf M / Sev L  
-**Listed lines:** 550
+**Lines (current code):** 550  
+**Lines at review (Oct 2026):** 550
 
 **Why it's thought to be a bug**
 

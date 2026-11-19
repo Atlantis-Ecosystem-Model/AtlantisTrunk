@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **18 findings** (severity H: 11; confidence H and severity H: 10; on the priority list: 10).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [MNGIO-08](#mngio-08) ⭐ | 40-66, 452 | H/H | uninitialised state / NULL dereference | Nothing in the repo calls `Initialise_PGMSY()` (grep finds only its definition). `ASSESS_PROJECTION` (global, … |  | [ ] |
 | [MNGIO-09](#mngio-09) ⭐ | 55-56, 127, 131, 338, 341 | H/H | wrong extent / off-by-one | `SSB` and `Depleted` are allocated with length `maxage` but indexed by projection year `iYr` (up to ProjYr-1),… |  | [ ] |
@@ -34,11 +34,12 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## MNGIO-08
 
 **uninitialised state / NULL dereference** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 40-66, 452
+**Lines (current code):** 40-66, 452  
+**Lines at review (Oct 2026):** 40-66, 452
 
 **Why it's thought to be a bug**
 
-Nothing in the repo calls `Initialise_PGMSY()` (grep finds only its definition). `ASSESS_PROJECTION` (global, atlantismain.c:215) and the static `PGMSYfp` are therefore NULL when `Do_Atlantis_PGMSY()` runs (from `Call_PGMSY()` when `UseAtlantisPGMSY` is set), giving a crash in `RunPGMSYProjection`/`WritePGMSYStep`. `Free_PGMSY()` is never called either, and PGMSYfp is never closed.
+Nothing in the repo calls `Initialise_PGMSY()` (grep finds only its definition). `ASSESS_PROJECTION` (global, atlantismain.c:225) and the static `PGMSYfp` are therefore NULL when `Do_Atlantis_PGMSY()` runs (from `Call_PGMSY()` when `UseAtlantisPGMSY` is set), giving a crash in `RunPGMSYProjection`/`WritePGMSYStep`. `Free_PGMSY()` is never called either, and PGMSYfp is never closed.
 
 **Current code** (`atmanage/atPGMSY.c` lines 38–68)
 
@@ -96,7 +97,8 @@ Nothing in the repo calls `Initialise_PGMSY()` (grep finds only its definition).
 ## MNGIO-09
 
 **wrong extent / off-by-one** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 55-56, 127, 131, 338, 341
+**Lines (current code):** 55-56, 127, 131, 338, 341  
+**Lines at review (Oct 2026):** 55-56, 127, 131, 338, 341
 
 **Why it's thought to be a bug**
 
@@ -133,7 +135,8 @@ Nothing in the repo calls `Initialise_PGMSY()` (grep finds only its definition).
 ## MNGIO-10
 
 **accumulator not reset / div by zero** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 146-153
+**Lines (current code):** 146-153  
+**Lines at review (Oct 2026):** 146-153
 
 **Function:** `GetMultipliers()`
 
@@ -178,7 +181,8 @@ Nothing in the repo calls `Initialise_PGMSY()` (grep finds only its definition).
 ## MNGIO-11
 
 **mixed index spaces** · Conf M / Sev M  
-**Listed lines:** 146, 131, 283
+**Lines (current code):** 146, 131, 283  
+**Lines at review (Oct 2026):** 146, 131, 283
 
 **Function:** `GetMultipliers()`
 
@@ -216,7 +220,8 @@ GetMultipliers reads `Fmatrix[nf][this_year]` with nf = fishery and stores `F_ac
 ## MNGIO-12
 
 **incomplete initialisation** · Conf M / Sev H  
-**Listed lines:** 264-270
+**Lines (current code):** 264-270  
+**Lines at review (Oct 2026):** 264-270
 
 **Function:** `RunPGMSYProjection()`
 
@@ -260,7 +265,8 @@ The starting population sets only `age = ageclasssize*cohort`, the first age of 
 ## MNGIO-13
 
 **wrong year index** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 319-320
+**Lines (current code):** 319-320  
+**Lines at review (Oct 2026):** 319-320
 
 **Function:** `RunPGMSYProjection()`
 
@@ -299,7 +305,8 @@ The starting population sets only `age = ageclasssize*cohort`, the first age of 
 ## MNGIO-14
 
 **accumulator in wrong loop** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 290, 321, 330
+**Lines (current code):** 290, 321, 330  
+**Lines at review (Oct 2026):** 290, 321, 330
 
 **Function:** `RunPGMSYProjection()`
 
@@ -372,7 +379,8 @@ The starting population sets only `age = ageclasssize*cohort`, the first age of 
 ## MNGIO-15
 
 **wrong logic / stale value** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 329-334, 338-340
+**Lines (current code):** 329-334, 338-340  
+**Lines at review (Oct 2026):** 329-334, 338-340
 
 **Function:** `RunPGMSYProjection()`
 
@@ -380,9 +388,13 @@ The starting population sets only `age = ageclasssize*cohort`, the first age of 
 
 SSB is accumulated only in the `age == 0` branch and uses `DEN[0][iYr]`, which is not set until line 340, after SSB has been used. Mature ages never add to SSB, so recruitment and depletion are wrong. Function: `RunPGMSYProjection()`.
 
-**Current code** (`atmanage/atPGMSY.c` lines 331–346) — code appears to have moved +4 lines since the review
+**Current code** (`atmanage/atPGMSY.c` lines 327–342)
 
 ```c
+  327:         
+  328:                 // Final numbers
+  329:                 if (age > 0) {
+  330:                     ASSESS_PROJECTION[species].DEN[age][iYr] = ASSESS_PROJECTION[species].DEN[age-1][iYr-1] * exp(-1.0 * (nat_mort + totF));
   331:                 } else {
   332:                     // Get info for recruiment
   333:                     SSB += FunctGroupArray[species].scaled_FSPB[cohort] * ASSESS_PROJECTION[species].DEN[age][iYr];
@@ -395,10 +407,6 @@ SSB is accumulated only in the `age == 0` branch and uses `DEN[0][iYr]`, which i
   340:         ASSESS_PROJECTION[species].DEN[0][iYr] = recruitNum;
   341:         ASSESS_PROJECTION[species].Depleted[iYr] = SSB / bm->estBo[species];
   342:         
-  343:         // Update F
-  344:         for (nf = 0; nf < Nfleets; nf++) {
-  345:             ASSESS_PROJECTION[species].Fout[nf][iYr] = ASSESS_PROJECTION[species].Catch[nf][iYr] / ASSESS_PROJECTION[species].totavailB[nf];
-  346:         }
 ```
 
 **Suggested fix (from review):** Add `scaled_FSPB*DEN[age][iYr]*WEIGHT` for all ages after updating DEN, then compute the recruitment.
@@ -421,7 +429,8 @@ SSB is accumulated only in the `age == 0` branch and uses `DEN[0][iYr]`, which i
 ## MNGIO-16
 
 **logic** · Conf M / Sev M  
-**Listed lines:** 323-325
+**Lines (current code):** 323-325  
+**Lines at review (Oct 2026):** 323-325
 
 **Function:** `RunPGMSYProjection()`
 
@@ -461,7 +470,8 @@ The catch is capped at the fleet's total RBC per age (`if (catch > RBC[nf]) catc
 ## MNGIO-17
 
 **index-space mixing / div by zero** · Conf M / Sev M  
-**Listed lines:** 350-367, 278, 532, 675
+**Lines (current code):** 350-367, 278, 532, 675  
+**Lines at review (Oct 2026):** 350-367, 278, 532, 675
 
 **Function:** `RunPGMSYProjection()`
 
@@ -516,11 +526,12 @@ The catch is capped at the fleet's total RBC per age (`if (catch > RBC[nf]) catc
 ## MNGIO-18
 
 **swapped indices** · Conf H / Sev H ✔ re-checked ⭐ priority  
-**Listed lines:** 284, 402, 420, 429, 538-545
+**Lines (current code):** 284, 402, 420, 429, 538-545  
+**Lines at review (Oct 2026):** 284, 402, 420, 429, 538-545
 
 **Why it's thought to be a bug**
 
-`AvgCatFleet = Util_Alloc_Init_2D_Double(nYears, K_num_fisheries)` gives `[nf][nYears]` (atAssessTierSetup.c:303), but every use is `AvgCatFleet[this_year][nf]` or `[iYr][nf]`. This overflows once the year reaches K_num_fisheries. Functions: `Do_Atlantis_PGMSY()`, `RunPGMSYProjection()`, `RunTier4Projection()`.
+`AvgCatFleet = Util_Alloc_Init_2D_Double(nYears, K_num_fisheries)` gives `[nf][nYears]` (atAssessTierSetup.c:307), but every use is `AvgCatFleet[this_year][nf]` or `[iYr][nf]`. This overflows once the year reaches K_num_fisheries. Functions: `Do_Atlantis_PGMSY()`, `RunPGMSYProjection()`, `RunTier4Projection()`.
 
 **Current code** (`atmanage/atPGMSY.c` lines 282–286)
 
@@ -552,7 +563,8 @@ The catch is capped at the fleet's total RBC per age (`if (catch > RBC[nf]) catc
 ## MNGIO-19
 
 **wrong year index / unpopulated data** · Conf M / Sev M  
-**Listed lines:** 399-405, 420, 429
+**Lines (current code):** 399-405, 420, 429  
+**Lines at review (Oct 2026):** 399-405, 420, 429
 
 **Function:** `RunTier4Projection()`
 
@@ -620,7 +632,8 @@ The catch is capped at the fleet's total RBC per age (`if (catch > RBC[nf]) catc
 ## MNGIO-20
 
 **stale loop variable / OOB** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 605
+**Lines (current code):** 605  
+**Lines at review (Oct 2026):** 605
 
 **Function:** `Do_Atlantis_PGMSY()`
 
@@ -658,7 +671,8 @@ The catch is capped at the fleet's total RBC per age (`if (catch > RBC[nf]) catc
 ## MNGIO-21
 
 **wrong index** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 605-607
+**Lines (current code):** 605-607  
+**Lines at review (Oct 2026):** 605-607
 
 **Function:** `Do_Atlantis_PGMSY()`
 
@@ -698,7 +712,8 @@ The catch is capped at the fleet's total RBC per age (`if (catch > RBC[nf]) catc
 ## MNGIO-22
 
 **stale loop variable / OOB** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 652-659
+**Lines (current code):** 652-659  
+**Lines at review (Oct 2026):** 652-659
 
 **Function:** `Do_Atlantis_PGMSY()`
 
@@ -743,7 +758,8 @@ The F-rescaling block sits after the `for (sp...)` loop, so `sp == K_num_tot_sp`
 ## MNGIO-23
 
 **logic (bisection)** · Conf M / Sev M  
-**Listed lines:** 652-659, 363
+**Lines (current code):** 652-659, 363  
+**Lines at review (Oct 2026):** 652-659, 363
 
 **Function:** `Do_Atlantis_PGMSY()`
 
@@ -788,7 +804,8 @@ The F-rescaling block sits after the `for (sp...)` loop, so `sp == K_num_tot_sp`
 ## MNGIO-24
 
 **negative index** · Conf M / Sev M  
-**Listed lines:** 463, 540-542
+**Lines (current code):** 463, 540-542  
+**Lines at review (Oct 2026):** 463, 540-542
 
 **Function:** `Do_Atlantis_PGMSY()`
 
@@ -826,18 +843,16 @@ The F-rescaling block sits after the `for (sp...)` loop, so `sp == K_num_tot_sp`
 ## MNGIO-25
 
 **header/format mismatch** · Conf H / Sev L  
-**Listed lines:** 114, 131
+**Lines (current code):** 114, 131  
+**Lines at review (Oct 2026):** 114, 131
 
 **Why it's thought to be a bug**
 
 The header has 11 column names, but each row prints 12 values (CatchStore is printed with no header column). Functions: `Init_PGMSY_File()`, `WritePGMSYStep()`.
 
-**Current code** (`atmanage/atPGMSY.c` lines 109–130) — code appears to have moved -3 lines since the review
+**Current code** (`atmanage/atPGMSY.c` lines 112–133)
 
 ```c
-  109:     /** Create file **/
-  110:     if ((fid = Util_fopen(bm, fname, "w")) == NULL)
-  111:         quit("Init_PGMSY_File: Can't open %s\n", fname);
   112: 
   113:     /** Column definitions **/
   114:     fprintf(fid,"Time Species Iteration Fleet AssessF Factual Fupdate FratioFleet RBCupdate Depletion ProjectedDepletion\n");
@@ -857,6 +872,9 @@ The header has 11 column names, but each row prints 12 values (CatchStore is pri
   128:     
   129:     for (nf = 0; nf < bm->K_num_fisheries; nf++) {
   130:         f = (int)bm->SP_FISHERYprms[sp][nf][assess_nf_id];
+  131:         fprintf(fid,"%d %s %d %s %d %e %e %e %e %e %e %e\n", this_year, FunctGroupArray[sp].groupCode, iteration, FisheryArray[nf].fisheryCode, f, bm->RBCestimation.F_actFleet[sp][f], Fmatrix[f][this_year], bm->RBCestimation.FratioFleet[sp][f], bm->RBCestimation.RBCspeciesArray[sp].RBCupdated[nf][this_year], bm->RBCestimation.RBCspeciesArray[sp].CatchStore[f][this_year], ASSESS_PROJECTION[sp].Depleted[1], ASSESS_PROJECTION[sp].Depleted[iYr]);
+  132:     }
+  133: }
 ```
 
 **Suggested fix (from review):** Add a "Catch" column to the header.

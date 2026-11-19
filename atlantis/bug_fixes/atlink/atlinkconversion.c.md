@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **6 findings** (severity H: 3; confidence H and severity H: 3; on the priority list: 3), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [LINK-27](#link-27) ⭐ | 41 | H/H | wrong variable / NULL deref | `Util_Init_2D_Double(..., eweLinkModule->convertPRMS.io_nrow, ...)` uses the global `eweLinkModule` (declared … |  | [ ] |
 | [LINK-28](#link-28) ⭐ | 212, 223, 229, 247 | H/H | wrong variable | `nid = *PhysioChemArray[fgIndex].tracerIndex;` is computed but the nutrient and physchem blocks read `tr[k][bi… |  | [ ] |
@@ -22,7 +22,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-27
 
 **wrong variable / NULL deref** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 41
+**Lines (current code):** 41  
+**Lines at review (Oct 2026):** 41
 
 **Function:** `LinkToModel()`
 
@@ -60,7 +61,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-28
 
 **wrong variable** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 212, 223, 229, 247
+**Lines (current code):** 212, 223, 229, 247  
+**Lines at review (Oct 2026):** 212, 223, 229, 247
 
 **Function:** `WeightedAvg()`
 
@@ -115,7 +117,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-29
 
 **wrong variable** · Conf H / Sev M  
-**Listed lines:** 185
+**Lines (current code):** 185  
+**Lines at review (Oct 2026):** 185
 
 **Function:** `WeightedAvg()`
 
@@ -153,7 +156,8 @@ Sediment P/B: `bm->boxes[b].sm.tr[k][pid] / (bm->boxes[b].tr[k][bid] + small_num
 ## LINK-30
 
 **div-by-zero** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 266
+**Lines (current code):** 266  
+**Lines at review (Oct 2026):** 266
 
 **Function:** `WeightedAvg()`
 
@@ -191,7 +195,8 @@ Sediment P/B: `bm->boxes[b].sm.tr[k][pid] / (bm->boxes[b].tr[k][bid] + small_num
 ## LINK-31
 
 **unit / placeholder** · Conf M / Sev M  
-**Listed lines:** 223, 229
+**Lines (current code):** 223, 229  
+**Lines at review (Oct 2026):** 223, 229
 
 **Function:** `WeightedAvg()`
 
@@ -235,7 +240,8 @@ Nutrients are multiplied by `dz` = 1.0 ("//REMOVE") instead of `bm->boxes[b].dz[
 ## LINK-32
 
 **wrong extent** · Conf M / Sev M  
-**Listed lines:** 40, 263
+**Lines (current code):** 40, 263  
+**Lines at review (Oct 2026):** 40, 263
 
 **Why it's thought to be a bug**
 

@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [ECON-28](#econ-28) | 51, 156-163 | H/L | off-by-one (1-based NR port) | `istack = i_alloc1d(NSTACK)` gives indices 0..49, but this follows Numerical Recipes' 1-based stack: `jstack +… |  | [ ] |
 | [ECON-29](#econ-29) | 161 | H/L | typo vs reference algorithm | `if (ir - 1 + i >= j - l)`: NR has `ir - i + 1`. The wrong test picks the wrong subarray to push, so the stack… |  | [ ] |
@@ -18,7 +18,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-28
 
 **off-by-one (1-based NR port)** · Conf H / Sev L  
-**Listed lines:** 51, 156-163
+**Lines (current code):** 51, 156-163  
+**Lines at review (Oct 2026):** 51, 156-163
 
 **Function:** `Quicksort_Dir()`
 
@@ -56,7 +57,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-29
 
 **typo vs reference algorithm** · Conf H / Sev L  
-**Listed lines:** 161
+**Lines (current code):** 161  
+**Lines at review (Oct 2026):** 161
 
 **Function:** `Quicksort_Dir()`
 
@@ -64,7 +66,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `if (ir - 1 + i >= j - l)`: NR has `ir - i + 1`. The wrong test picks the wrong subarray to push, so the stack can grow linearly and hit the NSTACK quit or ECON-28. The sort order itself is still correct. Function: `Quicksort_Dir()`.
 
-**Current code** (`ateconomic/ateconhelp.c` lines 159–163) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Quicksort_Dir()` now starts at line 42
+**Current code** (`ateconomic/ateconhelp.c` lines 159–163)
 
 ```c
   159: 			if (jstack > NSTACK)

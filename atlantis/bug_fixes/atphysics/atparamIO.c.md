@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [PHY3-01](#phy3-01) ⭐ | 105 | H/H | buffer size / wrong sizeof | `snprintf(convertedXMLFileName, sizeof(convertedXMLFileName), "%s", biologyfile)`: `convertedXMLFileName` is a… |  | [ ] |
 | [PHY3-02](#phy3-02) | 87-98 | H/M | buffer overrun / NULL deref | `char biologyfile[120]; strcpy(biologyfile, bm->runprmIfname)`, but `runprmIfname` is `char[BMSLEN]` (512, atl… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-01
 
 **buffer size / wrong sizeof** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 105
+**Lines (current code):** 105  
+**Lines at review (Oct 2026):** 105
 
 **Function:** `Util_Read_Run_XML()`
 
@@ -58,13 +59,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-02
 
 **buffer overrun / NULL deref** · Conf H / Sev M  
-**Listed lines:** 87-98
+**Lines (current code):** 87-98  
+**Lines at review (Oct 2026):** 87-98
 
 **Function:** `Util_Read_Run_XML()`
 
 **Why it's thought to be a bug**
 
-`char biologyfile[120]; strcpy(biologyfile, bm->runprmIfname)`, but `runprmIfname` is `char[BMSLEN]` (512, atlantisboxmodel.h:4382), so a long path overruns the stack buffer. Line 97 `*(strstr(convertedXMLFileName, ".prm")) = '\0'` dereferences NULL if the name has neither ".xml" nor ".prm". `fileSize` comes from `fileName` while the copied string is `runprmIfname` (only equal because of how the caller calls it, atlantismain.c:1083). Function: `Util_Read_Run_XML()`.
+`char biologyfile[120]; strcpy(biologyfile, bm->runprmIfname)`, but `runprmIfname` is `char[BMSLEN]` (512, atlantisboxmodel.h:4384), so a long path overruns the stack buffer. Line 97 `*(strstr(convertedXMLFileName, ".prm")) = '\0'` dereferences NULL if the name has neither ".xml" nor ".prm". `fileSize` comes from `fileName` while the copied string is `runprmIfname` (only equal because of how the caller calls it, atlantismain.c:1225). Function: `Util_Read_Run_XML()`.
 
 **Current code** (`atphysics/atparamIO.c` lines 85–100)
 
@@ -107,7 +109,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-03
 
 **uninitialised / missing read** · Conf M / Sev M  
-**Listed lines:** 234-236
+**Lines (current code):** 234-236  
+**Lines at review (Oct 2026):** 234-236
 
 **Function:** `Read_Run_Parameters()`
 
@@ -147,7 +150,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-04
 
 **memory leak** · Conf H / Sev L  
-**Listed lines:** 253-279
+**Lines (current code):** 253-279  
+**Lines at review (Oct 2026):** 253-279
 
 **Function:** `Read_Run_Parameters()`
 

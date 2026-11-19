@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **1 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [HRV2-11](#hrv2-11) | 154-157 vs 82-88 | L/L | inconsistency | Discard species-id matching has no `break`, so the last matching column wins, while catch matching takes the f… |  | [ ] |
 
@@ -21,7 +21,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-11
 
 **inconsistency** · Conf L / Sev L  
-**Listed lines:** 154-157 vs 82-88
+**Lines (current code):** 154-157 vs 82-88  
+**Lines at review (Oct 2026):** 154-157 vs 82-88
 
 **Function:** `Load_Imposed_Discards()`
 
@@ -29,7 +30,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Discard species-id matching has no `break`, so the last matching column wins, while catch matching takes the first match. This only matters if a ts file has duplicate column names. Function: `Load_Imposed_Discards()`.
 
-**Current code** (`atharvest/atHarvestImposedCatch.c` lines 152–159) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Load_Imposed_Discards()` now starts at line 129
+**Current code** (`atharvest/atHarvestImposedCatch.c` lines 152–159)
 
 ```c
   152: 				if (FunctGroupArray[sp].isFished == TRUE) {

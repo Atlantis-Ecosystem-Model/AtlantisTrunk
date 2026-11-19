@@ -2,15 +2,15 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **24 findings** (severity H: 8; confidence H and severity H: 7; on the priority list: 8).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [CLS-01](#cls-01) ⭐ | 213-219, 441-447 | H/H | off-by-one / algorithm | Starting simplex has only Ndim rows; row 0 is unscaled and the last parameter (Ndim-1) is never perturbed, so … |  | [ ] |
+| [CLS-01](#cls-01) ⭐ | ≈213-219, ≈441-447 | H/H | off-by-one / algorithm | Starting simplex has only Ndim rows; row 0 is unscaled and the last parameter (Ndim-1) is never perturbed, so … |  | [ ] |
 | [CLS-02](#cls-02) | 166-169, 207-209 | H/M | uninitialised | With Pella-Tomlinson, Ndim=4 but only X[0..2] are reset; X[3] is stale from the previous fit. |  | [ ] |
 | [CLS-03](#cls-03) | 274, 498 | H/M | off-by-one | `ipnt = floor(icnt*U + 1.0)` gives 1..icnt, so BootResu[0] is never used and BootResu[icnt] is stale. |  | [ ] |
 | [CLS-04](#cls-04) | 294-297, 524-527 | H/M | off-by-one | Failure test reads `[nbs+1]` = `[bootstrap+1]` (never written). The sort takes slots 0..bootstrap-1, which inc… |  | [ ] |
@@ -44,13 +44,14 @@ Lower-confidence notes: `va95` is treated as a cohort at line 860 but as years a
 ## CLS-01
 
 **off-by-one / algorithm** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 213-219, 441-447
+**Lines (current code):** ≈213-219, ≈441-447  
+**Lines at review (Oct 2026):** 213-219, 441-447
 
 **Why it's thought to be a bug**
 
 Starting simplex has only Ndim rows; row 0 is unscaled and the last parameter (Ndim-1) is never perturbed, so Amoeba can't move it. See SOL-2.
 
-**Current code** (`atassess/atclassical.c` lines 211–221)
+**Current code** (`atassess/atclassical.c` lines 211–221) — ≈ the code here has changed since the review; lines are approximate
 
 ```c
   211: 		/** Fit the model using Amoeba **/
@@ -86,7 +87,8 @@ Starting simplex has only Ndim rows; row 0 is unscaled and the last parameter (N
 ## CLS-02
 
 **uninitialised** · Conf H / Sev M  
-**Listed lines:** 166-169, 207-209
+**Lines (current code):** 166-169, 207-209  
+**Lines at review (Oct 2026):** 166-169, 207-209
 
 **Why it's thought to be a bug**
 
@@ -157,7 +159,8 @@ With Pella-Tomlinson, Ndim=4 but only X[0..2] are reset; X[3] is stale from the 
 ## CLS-03
 
 **off-by-one** · Conf H / Sev M  
-**Listed lines:** 274, 498
+**Lines (current code):** 274, 498  
+**Lines at review (Oct 2026):** 274, 498
 
 **Why it's thought to be a bug**
 
@@ -193,7 +196,8 @@ With Pella-Tomlinson, Ndim=4 but only X[0..2] are reset; X[3] is stale from the 
 ## CLS-04
 
 **off-by-one** · Conf H / Sev M  
-**Listed lines:** 294-297, 524-527
+**Lines (current code):** 294-297, 524-527  
+**Lines at review (Oct 2026):** 294-297, 524-527
 
 **Why it's thought to be a bug**
 
@@ -232,7 +236,8 @@ Failure test reads `[nbs+1]` = `[bootstrap+1]` (never written). The sort takes s
 ## CLS-05
 
 **see SOL-1** · Conf M / Sev H ⭐ priority  
-**Listed lines:** 228-233, 461
+**Lines (current code):** 228-233, 461  
+**Lines at review (Oct 2026):** 228-233, 461
 
 **Why it's thought to be a bug**
 
@@ -273,7 +278,8 @@ Takes `P[Ilow]` which, because of the Amoeba swap bug, is not the best vertex.
 ## CLS-06
 
 **off-by-one** · Conf M / Sev L  
-**Listed lines:** 231, 459
+**Lines (current code):** 231, 459  
+**Lines at review (Oct 2026):** 231, 459
 
 **Why it's thought to be a bug**
 
@@ -309,16 +315,16 @@ Takes `P[Ilow]` which, because of the Amoeba swap bug, is not the best vertex.
 ## CLS-07
 
 **misplaced block** · Conf H / Sev M  
-**Listed lines:** 521-574
+**Lines (current code):** 521-574  
+**Lines at review (Oct 2026):** 521-574
 
 **Why it's thought to be a bug**
 
 `if (!assess_failed)` save sits inside the cohort loop, so partial sums are stored if a later cohort fails.
 
-**Current code** (`atassess/atclassical.c` lines 518–557 (truncated))
+**Current code** (`atassess/atclassical.c` lines 519–558 (truncated))
 
 ```c
-  518: 		bot_biom = 0;
   519: 		med_biom = 0;
   520: 		assess_failed = 0;
   521: 		for (i = 0; i < FunctGroupArray[sp].numCohortsXnumGenes; i++) {
@@ -358,6 +364,7 @@ Takes `P[Ilow]` which, because of the Amoeba swap bug, is not the best vertex.
   555: 				med_biom += ResultSorted[med_p];
   556: 				bot_biom += ResultSorted[low_p];
   557: 			} else
+  558: 				assess_failed = 1;
 ```
 
 **Suggested fix (from review):** move after the loop
@@ -380,7 +387,8 @@ Takes `P[Ilow]` which, because of the Amoeba swap bug, is not the best vertex.
 ## CLS-08
 
 **off-by-one** · Conf H / Sev H ✔ re-checked ⭐ priority  
-**Listed lines:** 668-680
+**Lines (current code):** 668-680  
+**Lines at review (Oct 2026):** 668-680
 
 **Why it's thought to be a bug**
 
@@ -428,13 +436,14 @@ Takes `P[Ilow]` which, because of the Amoeba swap bug, is not the best vertex.
 ## CLS-09
 
 **wrong variable** · Conf M / Sev M  
-**Listed lines:** 723, 738-741, 793
+**Lines (current code):** 723, 738-741, 793  
+**Lines at review (Oct 2026):** 723, 738-741, 793
 
 **Why it's thought to be a bug**
 
 `numCohorts` used where tracer arrays need `numCohortsXnumGenes`.
 
-**Current code** (`atassess/atclassical.c` lines 721–725)
+**Current code** (`atassess/atclassical.c` lines 721–743)
 
 ```c
   721: 	int b, nc, k, sn, rn, den;
@@ -442,6 +451,24 @@ Takes `P[Ilow]` which, because of the Amoeba swap bug, is not the best vertex.
   723:     int Ncohorts = FunctGroupArray[sp].numCohorts;
   724:     int maxstock = FunctGroupArray[sp].numStocks;
   725:     
+  726: 	/** Initialise estimates **/
+  727: 	med_recruit = 0;
+  728: 	bot_recruit = 0;
+  729: 	top_recruit = 0;
+  730: 	med_biom = 0;
+  731: 	bot_biom = 0;
+  732: 	top_biom = 0;
+  733: 	biom_yoy = 0;
+  734:     
+  735: 	/** Find new recruitment and biomass estimates **/
+  736: 	for (b = 0; b < bm->nbox; b++) {
+  737:         if (bm->boxes[b].type != BOUNDARY) {
+  738:             for (nc = 0; nc < Ncohorts; nc++) {
+  739:                 sn = FunctGroupArray[sp].structNTracers[nc];
+  740:                 rn = FunctGroupArray[sp].resNTracers[nc];
+  741:                 den = FunctGroupArray[sp].NumsTracers[nc];
+  742:                 for (k=0; k < bm->boxes[b].nz; k++) {
+  743:                     med_biom += (bm->boxes[b].tr[k][sn] + bm->boxes[b].tr[k][rn]) * bm->boxes[b].tr[k][den] * FunctGroupArray[sp].habitatCoeffs[WC] * bm->X_CN * mg_2_kg;
 ```
 
 **Suggested fix (from review):** use XnumGenes
@@ -464,7 +491,8 @@ Takes `P[Ilow]` which, because of the Amoeba swap bug, is not the best vertex.
 ## CLS-10
 
 **unit mismatch** · Conf M / Sev M  
-**Listed lines:** 855, 878, 895, 980, 992, 1045
+**Lines (current code):** 855, 878, 895, 980, 992, 1045  
+**Lines at review (Oct 2026):** 855, 878, 895, 980, 992, 1045
 
 **Why it's thought to be a bug**
 
@@ -535,7 +563,8 @@ After line 855, `nagemat` is in years but is compared with cohort indices.
 ## CLS-11
 
 **wrong var / OOB** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 1042, 1050-1051, 1079-1080
+**Lines (current code):** 1042, 1050-1051, 1079-1080  
+**Lines at review (Oct 2026):** 1042, 1050-1051, 1079-1080
 
 **Why it's thought to be a bug**
 
@@ -606,32 +635,16 @@ After line 855, `nagemat` is in years but is compared with cohort indices.
 ## CLS-12
 
 **accumulator reset** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 972, 1002
+**Lines (current code):** 972, 1002  
+**Lines at review (Oct 2026):** 972, 1002
 
 **Why it's thought to be a bug**
 
 `catch_N = 0` inside the zone loop, while start_N/end_N sum across all zones.
 
-**Current code** (`atassess/atclassical.c` lines 953–987) — code appears to have moved -17 lines since the review
+**Current code** (`atassess/atclassical.c` lines 970–1004)
 
 ```c
-  953:         
-  954:         fprintf(bm->logFile, "Time %e %s calcZ: %e calcM: %e calcF: %e start_N: %e catch_N: %e totDead_N: %e yrs_included: %e\n",
-  955:                 bm->dayt, FunctGroupArray[sp].groupCode, calcZ, calcM, calcF, start_N, catch_N, totDead_N, yrs_included);
-  956:         
-  957: 	} else {
-  958: 		/* More complex case - redo with smallest and largest ageclasses */
-  959: 		oldest_age = maxnc * sp_AgeClassSize + max_remain;
-  960: 		youngest_age = minnc * sp_AgeClassSize + min_remain;
-  961: 
-  962: 		if (oldest_age > youngest_age) {
-  963: 			if (oldest_age >= va95)
-  964: 				testai = va95;
-  965: 			else if (oldest_age >= va50)
-  966: 				testai = va50;
-  967: 			else
-  968: 				testai = 0;
-  969: 
   970: 			start_N = 0;
   971: 			end_N = 0;
   972: 			for (z = 0; z < bm->nfzones; z++) {
@@ -650,6 +663,23 @@ After line 855, `nagemat` is in years but is compared with cohort indices.
   985: 				popratio = zoneVERTpopratio[sp][maxnc][max_remain][z];
   986: 
   987: 				wgt = biolVERTinfo[bstruct_id][sp][maxnc][b] + biolVERTinfo[bres_id][sp][maxnc][b];
+  988: 				lngth = Get_Length(bm, wgt, sp);
+  989: 				Sort_Length_Weight(bm, 0, 1, sizestocknums_id, z, sp, nc_fishery, lngth, 0, wgt, cmaxsize, sample_id, &chrt_size, ofp);
+  990: 				start_N += individVERTinfo[istocknums_id][sp][chrt_size][z][sample_id] * stockinfo[sstocknums_id][sp][z][sample_id] * popratio;
+  991: 
+  992: 				if (minnc < nagemat)
+  993: 					stage = 0;
+  994: 				else
+  995: 					stage = 1;
+  996: 				b = bm->rep_box_of_zone[sp][z][stage];
+  997: 				popratio = zoneVERTpopratio[sp][minnc][min_remain][z];
+  998: 				wgt = biolVERTinfo[bstruct_id][sp][minnc][b] + biolVERTinfo[bres_id][sp][minnc][b];
+  999: 				lngth = Get_Length(bm, wgt, sp);
+ 1000: 				Sort_Length_Weight(bm, 0, 1, sizestocknums_id, z, sp, nc_fishery, lngth, 0, wgt, cmaxsize, sample_id, &chrt_size, ofp);
+ 1001: 				end_N += individVERTinfo[istocknums_id][sp][chrt_size][z][sample_id] * stockinfo[sstocknums_id][sp][z][sample_id] * popratio;
+ 1002: 				catch_N = 0;
+ 1003: 				all_done = 0;
+ 1004: 				for (chrt = 0; chrt < FunctGroupArray[sp].numCohortsXnumGenes; chrt++) {
 ```
 
 **Suggested fix (from review):** move the reset before the zone loop
@@ -672,7 +702,8 @@ After line 855, `nagemat` is in years but is compared with cohort indices.
 ## CLS-13
 
 **loop condition** · Conf H / Sev M  
-**Listed lines:** 893
+**Lines (current code):** 893  
+**Lines at review (Oct 2026):** 893
 
 **Why it's thought to be a bug**
 
@@ -708,7 +739,8 @@ After line 855, `nagemat` is in years but is compared with cohort indices.
 ## CLS-14
 
 **formula** · Conf M / Sev M  
-**Listed lines:** 949-951, 1025-1027
+**Lines (current code):** 949-951, 1025-1027  
+**Lines at review (Oct 2026):** 949-951, 1025-1027
 
 **Why it's thought to be a bug**
 
@@ -746,7 +778,8 @@ After line 855, `nagemat` is in years but is compared with cohort indices.
 ## CLS-15
 
 **wrong variable** · Conf M / Sev M  
-**Listed lines:** 918-925, 1068, 1076-1079
+**Lines (current code):** 918-925, 1068, 1076-1079  
+**Lines at review (Oct 2026):** 918-925, 1068, 1076-1079
 
 **Why it's thought to be a bug**
 
@@ -789,55 +822,21 @@ After line 855, `nagemat` is in years but is compared with cohort indices.
 ## CLS-16
 
 **wrong var / OOB** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 1145, 1186-1187
+**Lines (current code):** 1145, 1186-1187  
+**Lines at review (Oct 2026):** 1145, 1186-1187
 
 **Why it's thought to be a bug**
 
 `NumsTracers[na]` with na up to numCohorts×ageClassSize-1.
 
-**Current code** (`atassess/atclassical.c` lines 1152–1191 (truncated)) — code appears to have moved +9 lines since the review
+**Current code** (`atassess/atclassical.c` lines 1143–1147) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
- 1152: 	double KWSR_sp = FunctGroupArray[sp].speciesParams[KWSR_id];
- 1153: 	double KWRR_sp = FunctGroupArray[sp].speciesParams[KWRR_id];
- 1154:     double nasize = (double)(FunctGroupArray[sp].ageClassSize);
- 1155:     
- 1156:     if (bm->debug && (bm->debug == debug_assess))
- 1157: 		do_debug = 1;
- 1158: 	else
- 1159: 		do_debug = 0;
- 1160:     
- 1161: 	not_done = 1;
- 1162: 	tempF = bm->NAssess[sp][est_Fcurr_id];
- 1163: 	tempF2 = bm->NAssess[sp][est_Fcurr_id];
- 1164:     if (bm->estBo[sp] > 0) {
- 1165:         BrefA = bm->targ_refA * bm->estBo[sp];
- 1166:         BrefC = bm->targ_refC * bm->estBo[sp];
- 1167:     } else {
- 1168:         BrefA = bm->targ_refA * bm->estinitpop[sp];
- 1169:         BrefC = bm->targ_refC * bm->estinitpop[sp];
- 1170:     }
- 1171:     M = bm->NAssess[sp][est_M_id];
- 1172:     Fcurr = bm->NAssess[sp][est_Fcurr_id];
- 1173:     
- 1174: 	counter = 0;
- 1175: 	while (not_done) {
- 1176: 		/* Run model forward to see what biomass is reached with current F and M values and then scale F until
- 1177: 		 end up with desired Fref points */
- 1178: 
- 1179:         if(!typecall) {
- 1180:             for (na = 0; na < nageclass; na++) {
- 1181:             	nc = (int) (floor(na / nasize));
- 1182:                 num_nyr[na][est1_id] = initVERTinfo[sp][nc][DEN_id] / nasize;
- 1183:                 num_nyr[na][est2_id] = initVERTinfo[sp][nc][DEN_id] / nasize;
- 1184:             }
- 1185: 		} else {
- 1186:             for (na = 0; na < nageclass; na++) {
- 1187:                 den = FunctGroupArray[sp].NumsTracers[na];
- 1188:                 this_num = 0;
- 1189:                 
- 1190:                 for (b = 0; b < bm->nbox; b++) {
- 1191:                     if (bm->boxes[b].type != BOUNDARY) {
+ 1143:     int va50 = (int) (FunctGroupArray[sp].speciesParams[Age50pcntV_id]);
+ 1144: 	int va95 = (int) (FunctGroupArray[sp].speciesParams[Age95pcntV_id]);
+ 1145: 	int nageclass = (int) (FunctGroupArray[sp].numCohorts * FunctGroupArray[sp].ageClassSize);
+ 1146: 	int nagemat = (int) (FunctGroupArray[sp].speciesParams[age_mat_id]);
+ 1147:     
 ```
 
 **Suggested fix (from review):** `nc = floor(na/nasize)`
@@ -860,7 +859,8 @@ After line 855, `nagemat` is in years but is compared with cohort indices.
 ## CLS-17
 
 **swapped args** · Conf H / Sev H ✔ re-checked ⭐ priority  
-**Listed lines:** 1218-1219, 1555-1556
+**Lines (current code):** 1218-1219, 1555-1556  
+**Lines at review (Oct 2026):** 1218-1219, 1555-1556
 
 **Why it's thought to be a bug**
 
@@ -897,7 +897,8 @@ Signature is `Ecology_Spawn(..., X_RS, FSPB, log)` (atvertprocesses.c:342), but 
 ## CLS-18
 
 **logic** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 1242-1279, 1596-1660
+**Lines (current code):** 1242-1279, 1596-1660  
+**Lines at review (Oct 2026):** 1242-1279, 1596-1660
 
 **Why it's thought to be a bug**
 
@@ -968,7 +969,8 @@ BrefC branch sets `not_done = 0` and overrides BrefA's `not_done = 1`.
 ## CLS-19
 
 **numerical** · Conf M / Sev M  
-**Listed lines:** 1250-1251, 1273-1274, 1285-1293
+**Lines (current code):** 1250-1251, 1273-1274, 1285-1293  
+**Lines at review (Oct 2026):** 1250-1251, 1273-1274, 1285-1293
 
 **Why it's thought to be a bug**
 
@@ -1039,7 +1041,8 @@ BrefC branch sets `not_done = 0` and overrides BrefA's `not_done = 1`.
 ## CLS-20
 
 **inconsistency** · Conf L / Sev M  
-**Listed lines:** 1224-1225 vs 1116
+**Lines (current code):** 1224-1225 vs 1116  
+**Lines at review (Oct 2026):** 1224-1225 vs 1116
 
 **Why it's thought to be a bug**
 
@@ -1076,7 +1079,8 @@ Beverton-Holt denominator uses `tbiom1` here but `spawn_biom1` at line 1116; coh
 ## CLS-21
 
 **sort algorithm** · Conf H / Sev M  
-**Listed lines:** 1374-1386; 287-289, 510-512
+**Lines (current code):** 1374-1386; 287-289, 510-512  
+**Lines at review (Oct 2026):** 1374-1386; 287-289, 510-512
 
 **Why it's thought to be a bug**
 
@@ -1124,7 +1128,8 @@ Rank sort gives ties the same slot, leaving stale entries; percentile index can 
 ## CLS-22
 
 **log domain** · Conf M / Sev M  
-**Listed lines:** 1465-1479
+**Lines (current code):** 1465-1479  
+**Lines at review (Oct 2026):** 1465-1479
 
 **Why it's thought to be a bug**
 
@@ -1174,7 +1179,8 @@ After the sanity resets, Z = log(start/small_num) is huge, or log of a negative.
 ## CLS-23
 
 **other** · Conf L / Sev L  
-**Listed lines:** 1493-1509
+**Lines (current code):** 1493-1509  
+**Lines at review (Oct 2026):** 1493-1509
 
 **Why it's thought to be a bug**
 
@@ -1226,20 +1232,21 @@ Rescaled M is not written back to `NAssess[est_M_id]`.
 ## CLS-24
 
 **log text** · Conf H / Sev L  
-**Listed lines:** 1476, 1535-1536, 1565-1566
+**Lines (current code):** 1476, 1535-1536, 1565-1566  
+**Lines at review (Oct 2026):** 1476, 1535-1536, 1565-1566
 
 **Why it's thought to be a bug**
 
 Message says 1.2 (code uses 1.25); `ageClassSize` is labelled nageclass; tempF is printed for est2.
 
-**Current code** (`atassess/atclassical.c` lines 1534–1538) — code appears to have moved +60 lines since the review
+**Current code** (`atassess/atclassical.c` lines 1474–1478) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
- 1534: 				if (do_debug) {
- 1535: 					fprintf(ofp, "Time: %e %s-%d (nc: %d, nageclass: %d) initDEN: %e\n", bm->dayt, FunctGroupArray[sp].groupCode, na, nc,
- 1536: 							FunctGroupArray[sp].ageClassSize, num_nyr[na][est2_id]);
- 1537: 				}
- 1538: 
+ 1474: 	if (start_N < natDead_N) {
+ 1475: 		start_N = 1.25 * natDead_N;
+ 1476: 		fprintf(ofp, "Time: %e had to reset start_N to 1.2 * natDead_N (so now %e)\n", bm->dayt, start_N);
+ 1477: 	}
+ 1478: 
 ```
 
 **Suggested fix (from review):** fix text

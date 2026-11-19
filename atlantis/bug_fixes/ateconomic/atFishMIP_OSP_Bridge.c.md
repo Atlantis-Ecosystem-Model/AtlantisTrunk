@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **10 findings** (severity H: 6; confidence H and severity H: 5; on the priority list: 5), plus 2 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [ECIO-13](#ecio-13) ⭐ | 513-520 (and 542, 673, 730) | H/H | index packing / overlap | `catchBySpFishery[k * nfishery + nf]` uses a different `nfishery` for each species. Rows for different k overl… |  | [ ] |
 | [ECIO-14](#ecio-14) ⭐ | 538-544 | H/H | stale variable | In Step 3, `totalCatch += catchBySpFishery[k * nfishery + nf]` uses `nfishery` left over from the last species… |  | [ ] |
@@ -30,7 +30,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-13
 
 **index packing / overlap** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 513-520 (and 542, 673, 730)
+**Lines (current code):** 513-520 (and 542, 673, 730)  
+**Lines at review (Oct 2026):** 513-520 (and 542, 673, 730)
 
 **Function:** `FishMIP_OSP_Bridge_Annual()`
 
@@ -38,7 +39,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `catchBySpFishery[k * nfishery + nf]` uses a different `nfishery` for each species. Rows for different k overlap: for example, species k=0 with nfishery=3 uses slots 0-2, and species k=2 with nfishery=1 writes slot 2, overwriting k=0's third fishery. The buffer is allocated `K_num_fisheries*K_num_tot_sp` (l.90). Function: `FishMIP_OSP_Bridge_Annual()`.
 
-**Current code** (`ateconomic/atFishMIP_OSP_Bridge.c` lines 511–522)
+**Current code** (`ateconomic/atFishMIP_OSP_Bridge.c` lines 511–544)
 
 ```c
   511:      * already computed and recorded the actual catch taken this year, so
@@ -53,6 +54,28 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   520:     }
   521: 
   522:     /* ---- Step 3 (modes A & B & C): price via FishMIP_Adapter_CalcPrice ----
+  523:      * (TOY lines 190-201: PIM_calculate_prices_consumptions, itself built on
+  524:      * plugin_model_1_calc_price -- called here directly rather than via the
+  525:      * country/EEZ-level wrapper, since Atlantis has no EEZ/country axis;
+  526:      * "market" here is one Atlantis species. Each fished species is given
+  527:      * its own local market: the simplest valid instantiation of
+  528:      * plugin_model_1_calc_price's four-level market hierarchy. See notes
+  529:      * doc "Making markets cross-species" for how to widen this to e.g. one
+  530:      * shared national or global market across several species.) */
+  531:     if (mode == OSP_MODE_A_EFFORT_ECONOMICS || mode == OSP_MODE_B_MARKET_VALUE ||
+  532:         mode == OSP_MODE_C_NATIVE_WITH_DRIVERS) {
+  533:         
+  534:         Util_Init_1D_Double(OSP_PARAMS->prod, bm->K_num_tot_sp, 0.0);
+  535:         Util_Init_1D_Double(OSP_PARAMS->X, bm->K_num_tot_sp, 0.0);
+  536:         Util_Init_1D_Double(OSP_PARAMS->W, bm->K_num_tot_sp, 0.0);
+  537: 
+  538:         for (k = 0; k < OSP_PARAMS->fished_nsp; ++k) {
+  539:             totalCatch = 0.0;
+  540:             sp = OSP_PARAMS->fishedSp[k];
+  541:             for (nf = 0; nf < g_catch_n_effort_History[sp].nfishery; ++nf) {
+  542:                 totalCatch += OSP_PARAMS->catchBySpFishery[k * nfishery + nf];
+  543:             }
+  544:             OSP_PARAMS->prod[k] = totalCatch;
 ```
 
 **Suggested fix (from review):** Index as `k * bm->K_num_fisheries + nf` everywhere (or `+ this_nf`).
@@ -75,7 +98,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-14
 
 **stale variable** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 538-544
+**Lines (current code):** 538-544  
+**Lines at review (Oct 2026):** 538-544
 
 **Function:** `FishMIP_OSP_Bridge_Annual()`
 
@@ -119,7 +143,8 @@ In Step 3, `totalCatch += catchBySpFishery[k * nfishery + nf]` uses `nfishery` l
 ## ECIO-15
 
 **stale variable / accumulator not reset / wrong index** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 669-691
+**Lines (current code):** 669-691  
+**Lines at review (Oct 2026):** 669-691
 
 **Function:** `FishMIP_OSP_Bridge_Annual()`
 
@@ -179,7 +204,8 @@ The Step 4 per-fishery loop has three faults. (a) `sp` is stale (the last specie
 ## ECIO-16
 
 **stale variable** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 728-736
+**Lines (current code):** 728-736  
+**Lines at review (Oct 2026):** 728-736
 
 **Function:** `FishMIP_OSP_Bridge_Annual()`
 
@@ -225,7 +251,8 @@ In Mode C, `c = catchBySpFishery[k * nfishery + nf]` again uses the stale `nfish
 ## ECIO-17
 
 **type truncation** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 480, 576-578
+**Lines (current code):** 480, 576-578  
+**Lines at review (Oct 2026):** 480, 576-578
 
 **Function:** `FishMIP_OSP_Bridge_Annual()`
 
@@ -233,14 +260,14 @@ In Mode C, `c = catchBySpFishery[k * nfishery + nf]` again uses the stale `nfish
 
 `gp` is declared `int` (l.480), but `FishMIP_Adapter_GetGlobalPriceForYear()` returns `double` (adapter .h:112). External prices are truncated to whole units, and any price below 1.0 becomes 0, which still passes `gp >= 0.0` and is written as the species price. Function: `FishMIP_OSP_Bridge_Annual()`.
 
-**Current code** (`ateconomic/atFishMIP_OSP_Bridge.c` lines 574–578) — code appears to have moved +96 lines since the review
+**Current code** (`ateconomic/atFishMIP_OSP_Bridge.c` lines 478–482) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  574:             overridden = 0;
-  575:             for (k = 0; k < OSP_PARAMS->fished_nsp; ++k) {
-  576:                 gp = FishMIP_Adapter_GetGlobalPriceForYear(FunctGroupArray[OSP_PARAMS->fishedSp[k]].groupCode, calendarYear);
-  577:                 if (gp >= 0.0) {
-  578:                     OSP_PARAMS->price_by_sp[k] = gp;
+  478:  * ========================================================================== */
+  479: void FishMIP_OSP_Bridge_Annual(MSEBoxModel *bm, FILE *llogfp, int mode, int ftargetSource, int priceSource) {
+  480:     int nsp, k, nf, this_nf, sp, nmarket, gp, calendarYear, overridden, nfishery;
+  481:     double weightedOrigSum = 0.0, weightSum = 0.0, origprice, ratio, c, M_placeholder;
+  482:     double FMSY, MSY, ft, totalCatch = 0.0, revenue = 0.0, ftargetWeighted = 0.0;
 ```
 
 **Suggested fix (from review):** Declare `double gp;`.
@@ -263,7 +290,8 @@ In Mode C, `c = catchBySpFishery[k * nfishery + nf]` again uses the stale `nfish
 ## ECIO-18
 
 **uninitialised variable** · Conf H / Sev M  
-**Listed lines:** 134-142, 387
+**Lines (current code):** 134-142, 387  
+**Lines at review (Oct 2026):** 134-142, 387
 
 **Why it's thought to be a bug**
 
@@ -307,7 +335,8 @@ In Mode C, `c = catchBySpFishery[k * nfishery + nf]` again uses the stale `nfish
 ## ECIO-19
 
 **unit mismatch** · Conf M / Sev H  
-**Listed lines:** 400, 410, 435-448, 518, 602
+**Lines (current code):** 400, 410, 435-448, 518, 602  
+**Lines at review (Oct 2026):** 400, 410, 435-448, 518, 602
 
 **Why it's thought to be a bug**
 
@@ -378,7 +407,8 @@ Catch comes from `Harvest_Get_TotCumCatch()` (TotCumCatch, in mg N: ateconindica
 ## ECIO-20
 
 **defaults overwritten with 0** · Conf M / Sev M  
-**Listed lines:** 321-331
+**Lines (current code):** 321-331  
+**Lines at review (Oct 2026):** 321-331
 
 **Function:** `ApplyLoadedDrivers()`
 
@@ -386,9 +416,17 @@ Catch comes from `Harvest_Get_TotCumCatch()` (TotCumCatch, in mg N: ateconindica
 
 `ApplyLoadedDrivers()` guards catchability with `> 0.0` but copies `compliance`, `invest_driver_U` and `invest_driver_V` unconditionally. For a reference country with no EEZ, the adapter returns `ok=1` with these fields left at 0 (adapter .cpp:158-165). Compliance then becomes 0 and investment drivers 0 for every fishery. Function: `ApplyLoadedDrivers()`.
 
-**Current code** (`ateconomic/atFishMIP_OSP_Bridge.c` lines 327–341) — code appears to have moved +8 lines since the review
+**Current code** (`ateconomic/atFishMIP_OSP_Bridge.c` lines 319–333)
 
 ```c
+  319:     // TODO: Need to map the params based on mapping of PIM fleet to Atlantis fleet
+  320:     
+  321:     for (nf = 0; nf < bm->K_num_fisheries; ++nf) {
+  322:         FishMIP_Adapter_GetDriverValuesForYear(calendarYear, OSP_PARAMS->fisheryFleetType[nf], &v);
+  323:         if (!v.ok) { // Check information returned from cpp Plug-In-Model
+  324:             continue;
+  325:         }
+  326:         if (v.catchability_EEZ > 0.0) {
   327:             OSP_PARAMS->catchability[nf] = v.catchability_EEZ;
   328:         }
   329:         OSP_PARAMS->compliance[nf] = v.compliance;
@@ -396,14 +434,6 @@ Catch comes from `Harvest_Get_TotCumCatch()` (TotCumCatch, in mg N: ateconindica
   331:         OSP_PARAMS->invest_driver_V[nf] = v.invest_driver_V;
   332:         /* All Atlantis fisheries share one M slot -- see "Fleet-dimension
   333:          * mapping" in Step 4's comment below; the last fishery processed
-  334:          * here wins if fisheries mix fleet types, same as the original
-  335:          * bridge. */
-  336:         OSP_PARAMS->vessel_attrition_M[nf] = v.vessel_attrition_M;
-  337:     }
-  338: }
-  339: 
-  340: /* ==========================================================================
-  341:  * One-time driver / external-price loaders (thin pass-throughs to the
 ```
 
 **Suggested fix (from review):** Only overwrite when the driver set has EEZ data (expose hasEezPos) or the value is > 0.
@@ -426,7 +456,8 @@ Catch comes from `Harvest_Get_TotCumCatch()` (TotCumCatch, in mg N: ateconindica
 ## ECIO-21
 
 **empty-dimension call** · Conf M / Sev L  
-**Listed lines:** 370-416, 651-656
+**Lines (current code):** 370-416, 651-656  
+**Lines at review (Oct 2026):** 370-416, 651-656
 
 **Function:** `RunPIMAssessment()`
 
@@ -499,7 +530,8 @@ Catch comes from `Harvest_Get_TotCumCatch()` (TotCumCatch, in mg N: ateconindica
 ## ECIO-22
 
 **memory leak / dead code** · Conf L / Sev L  
-**Listed lines:** 148-187
+**Lines (current code):** 148-187  
+**Lines at review (Oct 2026):** 148-187
 
 **Function:** `FreeOSPStruct()`
 

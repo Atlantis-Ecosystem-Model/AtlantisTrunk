@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **5 findings** (severity H: 2; confidence H and severity H: 2; on the priority list: 2), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [MNGIO-35](#mngio-35) ⭐ | 180, 202-207 | H/H | uninitialised variable / accumulator not reset | `rawwgt` is never initialised and never reset per cohort/box before `if (this_wgt > rawwgt) rawwgt = this_wgt;… |  | [ ] |
 | [MNGIO-36](#mngio-36) ⭐ | 213 | H/H | out-of-bounds layer | `rawn = bm->boxes[b].tr[k][den];` runs after the `for (k...)` loop, so k == nz, one layer past the last water … |  | [ ] |
@@ -21,7 +21,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## MNGIO-35
 
 **uninitialised variable / accumulator not reset** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 180, 202-207
+**Lines (current code):** 180, 202-207  
+**Lines at review (Oct 2026):** 180, 202-207
 
 **Function:** `RAssessSurvey()`
 
@@ -86,7 +87,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## MNGIO-36
 
 **out-of-bounds layer** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 213
+**Lines (current code):** 213  
+**Lines at review (Oct 2026):** 213
 
 **Function:** `RAssessSurvey()`
 
@@ -124,7 +126,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## MNGIO-37
 
 **PROTECT imbalance** · Conf H / Sev M  
-**Listed lines:** 326-352
+**Lines (current code):** 326-352  
+**Lines at review (Oct 2026):** 326-352
 
 **Function:** `Run_RAssess()`
 
@@ -132,40 +135,40 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Four objects are PROTECTed (infile, outfile, outdir, r_call), but only `UNPROTECT(3)` is called, so R's protect stack leaks on every call and eventually overflows. Function: `Run_RAssess()`.
 
-**Current code** (`atmanage/atRlinkRAssess.c` lines 350–380) — code appears to have moved +26 lines since the review
+**Current code** (`atmanage/atRlinkRAssess.c` lines 324–354)
 
 ```c
+  324:         snprintf(outScriptName, sizeof(outScriptName), "%s_%s", FunctGroupArray[species].groupCode, bm->RAssessRoutName);
+  325:         
+  326:         SEXP infile = PROTECT(allocVector(STRSXP, 1));
+  327:         SET_STRING_ELT(infile, 0, mkChar(inScriptName));
+  328: 
+  329:         SEXP outfile = PROTECT(allocVector(STRSXP, 1));
+  330:         SET_STRING_ELT(outfile, 0, mkChar(outScriptName));
+  331:         
+  332:         SEXP outdir = PROTECT(allocVector(STRSXP, 1));
+  333:         SET_STRING_ELT(outdir, 0, mkChar(bm->destFolder));
+  334: 
+  335:         // Setup a call to the R RAssess function, will need other function calls embedded in that?
+  336:         SEXP r_call;
+  337:         PROTECT(r_call = lang4(install("doRAssess"), infile, outfile, outdir));
+  338: 
+  339:         // Execute the function
+  340:         SEXP ret = R_tryEval(r_call, R_GlobalEnv, &errorOccurred);
+  341: 
+  342:         if (!errorOccurred) {
+  343:             printf("RRAssess: R returned TAC value of: ");
+  344:             Rret = REAL(ret)[0];
+  345:             printf("%0.5f, ", Rret);
+  346:             printf("\n");
+  347:         } else {
+  348:             printf("Error occurred calling R\n");
+  349:             Rret = -1;
   350:         }
   351: 
   352:         UNPROTECT(3);
   353: 
   354:         // Check interrupts
-  355:         R_CheckUserInterrupt();
-  356: 
-  357:         // Assign the TAC value
-  358:         if(Rret > -1) {
-  359:             bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = Rret;
-  360:             fprintf(bm->logFile, "%s RAssessTAC set to %e\n", FunctGroupArray[species].groupCode, bm->RBCestimation.RBCspeciesParam[species][RBCest_id]);
-  361:         } else {
-  362:             fprintf(bm->logFile, "%s RAssessTAC not set as had R error\n", FunctGroupArray[species].groupCode);
-  363:         }
-  364:         fflush(bm->logFile);
-  365: 
-  366:     }
-  367:     
-  368: 
-  369:     return;
-  370: }
-  371: 
-  372: /**
-  373:  * Initialize R environment and associated arrays
-  374:  */
-  375: 
-  376: void RRAssess_Linkage_Start(MSEBoxModel *bm) {
-  377:     int i;
-  378:     int num_files_needed = 0;
-  379:     int r_argc = 2;
-  380:     char *r_argv[] = { "R", "--silent" };
 ```
 
 **Suggested fix (from review):** `UNPROTECT(4)`.
@@ -188,7 +191,8 @@ Four objects are PROTECTed (infile, outfile, outdir, r_call), but only `UNPROTEC
 ## MNGIO-38
 
 **cohort vs age** · Conf M / Sev M  
-**Listed lines:** 118-119
+**Lines (current code):** 118-119  
+**Lines at review (Oct 2026):** 118-119
 
 **Function:** `Populate_RAssessFile()`
 
@@ -227,7 +231,8 @@ Four objects are PROTECTed (infile, outfile, outdir, r_call), but only `UNPROTEC
 ## MNGIO-39
 
 **string compare / NULL** · Conf M / Sev L  
-**Listed lines:** 282-287
+**Lines (current code):** 282-287  
+**Lines at review (Oct 2026):** 282-287
 
 **Function:** `Read_RAssess_output()`
 

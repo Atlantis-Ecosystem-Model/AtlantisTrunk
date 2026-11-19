@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **5 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [CONT-20](#cont-20) | 726, 734 | H/M | cohort vs cohort×genotype | `preychrt = bpreychrt / numGeneTypes; ... bm->FCcaughttemp[prey][fleet][preychrt]` — FCcaughttemp is indexed b… |  | [ ] |
 | [CONT-21](#cont-21) | 1617 | H/L | printf format mismatch | Format string contains `"... or %d (incfemental fixed % drops)"`; `% d` is parsed as a conversion (space flag … |  | [ ] |
@@ -21,13 +21,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CONT-20
 
 **cohort vs cohort×genotype** · Conf H / Sev M  
-**Listed lines:** 726, 734
+**Lines (current code):** 726, 734  
+**Lines at review (Oct 2026):** 726, 734
 
 **Function:** `Avail_Catch()`
 
 **Why it's thought to be a bug**
 
-`preychrt = bpreychrt / numGeneTypes; ... bm->FCcaughttemp[prey][fleet][preychrt]` — FCcaughttemp is indexed by cohort×genotype everywhere else (atprocess.c:797, 1094, 2005; atecology.c:1122; reset loop atecology.c:3990). With numGeneTypes>1 the wrong cohort's catch is used. Function: `Avail_Catch()`.
+`preychrt = bpreychrt / numGeneTypes; ... bm->FCcaughttemp[prey][fleet][preychrt]` — FCcaughttemp is indexed by cohort×genotype everywhere else (atprocess.c:910, 1217, 2168; atecology.c:1122; reset loop atecology.c:3990). With numGeneTypes>1 the wrong cohort's catch is used. Function: `Avail_Catch()`.
 
 **Current code** (`atecology/atvertprocesses.c` lines 724–736)
 
@@ -67,7 +68,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CONT-21
 
 **printf format mismatch** · Conf H / Sev L  
-**Listed lines:** 1617
+**Lines (current code):** 1617  
+**Lines at review (Oct 2026):** 1617
 
 **Function:** `Check_for_Starvation()`
 
@@ -75,14 +77,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Format string contains `"... or %d (incfemental fixed % drops)"`; `% d` is parsed as a conversion (space flag + `d`) with no matching argument — UB. Function: `Check_for_Starvation()`.
 
-**Current code** (`atecology/atvertprocesses.c` lines 1603–1607) — code appears to have moved -12 lines since the review
+**Current code** (`atecology/atvertprocesses.c` lines 1615–1619) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
- 1603:                 break;
- 1604:             default:
- 1605:                 quit("No such shrinkage case - you set size_shrinking_type to %d but it needs to be %d (no shrinking) or %d (reset based on RN) or %d (incfemental fixed % drops)\n", bm->size_shrinking_type, no_shrink, XRS_shrink, incremental_shrink);
- 1606:                 break;
- 1607:         }
+ 1615: 
+ 1616: static void Print_Diagnostic_Grazing(MSEBoxModel *bm, FILE *llogfp, int guildcase, double ***spGRAZEinfo) {
+ 1617:     int habitat, i, kij;
+ 1618:     
+ 1619:     for (habitat = WC; habitat < bm->num_active_habitats; habitat++) {
 ```
 
 **Suggested fix (from review):** Escape as `%%`
@@ -105,7 +107,8 @@ Format string contains `"... or %d (incfemental fixed % drops)"`; `% d` is parse
 ## CONT-22
 
 **wrong formula** · Conf M / Sev M  
-**Listed lines:** 1594-1597, 1610-1613
+**Lines (current code):** 1594-1597, 1610-1613  
+**Lines at review (Oct 2026):** 1594-1597, 1610-1613
 
 **Function:** `Check_for_Starvation()`
 
@@ -162,7 +165,8 @@ Non-dynamic branch uses `opt_SN = RN / (1.0 + X_RS)` and `opt_RN = (1.0 + X_RS) 
 ## CONT-23
 
 **accumulator not reset** · Conf L / Sev M  
-**Listed lines:** 437-439, 383
+**Lines (current code):** 437-439, 383  
+**Lines at review (Oct 2026):** 437-439, 383
 
 **Function:** `Vertebrate_Assess_Enviro()`
 
@@ -170,49 +174,16 @@ Non-dynamic branch uses `opt_SN = RN / (1.0 + X_RS)` and `opt_RN = (1.0 + X_RS) 
 
 `like_coral` is set inside the `stage` loop but never reset per stage, so a coral-liking juvenile stage forces the rugosity model for the adult stage too. Function: `Vertebrate_Assess_Enviro()`.
 
-**Current code** (`atecology/atvertprocesses.c` lines 381–420 (truncated))
+**Current code** (`atecology/atvertprocesses.c` lines 435–441)
 
 ```c
-  381: 	int habitat_dependent, stage, kij;
-  382: 	int sp;
-  383: 	int like_coral = 0;
-  384: 	double sp_like, step1;
-  385:     
-  386:     /*
-  387:     if(verbose > 1){
-  388:     	printf("Vertebrate_Assess_Enviro for %s\n", FunctGroupArray[guildcase].groupCode);
-  389:     }
-  390:     */
-  391: 
-  392: 	Box_Rugosity(bm, &bm->boxes[boxin], rugosity_check_done, llogfp);
-  393: 
-  394: 	habitat_dependent = FunctGroupArray[guildcase].isHabDepend;
-  395: 	Kcov_juv = FunctGroupArray[guildcase].speciesParams[Kcov_juv_id];
-  396: 	Bcov_juv = FunctGroupArray[guildcase].speciesParams[Bcov_juv_id];
-  397: 	Acov_juv = FunctGroupArray[guildcase].speciesParams[Acov_juv_id];
-  398: 	Kcov_ad = FunctGroupArray[guildcase].speciesParams[Kcov_ad_id];
-  399: 	Bcov_ad = FunctGroupArray[guildcase].speciesParams[Bcov_ad_id];
-  400: 	Acov_ad = FunctGroupArray[guildcase].speciesParams[Acov_ad_id];
-  401: 	Rscalar = FunctGroupArray[guildcase].speciesParams[RugCover_scalar_id];
-  402: 	sp_num_biogen_hab_ad = FunctGroupArray[guildcase].speciesParams[K_num_biogen_habad_id];
-  403: 	sp_num_biogen_hab_juv = FunctGroupArray[guildcase].speciesParams[K_num_biogen_habjuv_id];
-  404: 
-  405: 	if (bm->flaghabdepend && habitat_dependent) {
-  406: 
-  407: 		/* Determine coastal habitat degradation effects */
-  408: 		for (kij = 0; kij < bm->K_num_bed_types; kij++) {
-  409: 			if (Box_degradedi[boxin] && (cdepth < -250) && bm->flagdegrade) {
-  410: 				BED_scale[kij] = Util_Get_Accumulative_Change_Scale(bm, BEDchange_max_num, BEDchange[kij]);
-  411: 			} else {
-  412: 				BED_scale[kij] = 1.0;
-  413: 			}
-  414: 		}
-  415: 
-  416: 		for (stage = 0; stage < FunctGroupArray[guildcase].numStages; stage++) {
-  417: 			if(stage)
-  418: 				sp_num_biogen_hab = sp_num_biogen_hab_ad;
-  419: 			else
-  420: 				sp_num_biogen_hab = sp_num_biogen_hab_juv;
+  435: 						}
+  436: 
+  437: 						if(((FunctGroupArray[sp].groupType == CORAL) || (FunctGroupArray[sp].groupType == SPONGE)) && (sp_like > 0)) {
+  438: 							like_coral = 1;
+  439: 						}
+  440: 					//}
+  441: 				}
 ```
 
 **Suggested fix (from review):** Reset `like_coral = 0` at top of the stage loop
@@ -235,7 +206,8 @@ Non-dynamic branch uses `opt_SN = RN / (1.0 + X_RS)` and `opt_RN = (1.0 + X_RS) 
 ## CONT-24
 
 **division by zero** · Conf M / Sev M  
-**Listed lines:** 830
+**Lines (current code):** 830  
+**Lines at review (Oct 2026):** 830
 
 **Function:** `Partition_Weight_Dynamic()`
 

@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 1; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [LINK-45](#link-45) | 73-74 | M/H | missing bounds check | Polygon `id`s from the XML are stored in `polygonList` and later used directly as box indices `b` in Link_GetB… |  | [ ] |
 | [LINK-46](#link-46) | 55 | M/L | unchecked malloc | `bm->linkageInterface = malloc(...)` is not checked; numPolygons and other fields are uninitialised until set.… |  | [ ] |
@@ -19,7 +19,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-45
 
 **missing bounds check** · Conf M / Sev H  
-**Listed lines:** 73-74
+**Lines (current code):** 73-74  
+**Lines at review (Oct 2026):** 73-74
 
 **Function:** `Linkage_Read_XML()`
 
@@ -58,7 +59,8 @@ Polygon `id`s from the XML are stored in `polygonList` and later used directly a
 ## LINK-46
 
 **unchecked malloc** · Conf M / Sev L  
-**Listed lines:** 55
+**Lines (current code):** 55  
+**Lines at review (Oct 2026):** 55
 
 **Function:** `Linkage_Read_XML()`
 
@@ -96,7 +98,8 @@ Polygon `id`s from the XML are stored in `polygonList` and later used directly a
 ## LINK-47
 
 **infinite loop / protocol** · Conf M / Sev M  
-**Listed lines:** 93-98
+**Lines (current code):** 93-98  
+**Lines at review (Oct 2026):** 93-98
 
 **Function:** `Linkage_Start()`
 

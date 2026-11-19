@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [UTL2-11](#utl2-11) | 157-161 | H/M | off-by-one / buffer overrun | `istack = i_alloc1d(NSTACK)` gives valid indices 0..49. The check `if (jstack > NSTACK) quit` allows jstack ==… |  | [ ] |
 | [UTL2-12](#utl2-12) | 162-170 | H/M | copy error from NR | `if (ir - 1 + i >= j - 1)` should be NR's `if (ir - i + 1 >= j - l)` (letter l, not 1). As written it is alway… |  | [ ] |
@@ -18,7 +18,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## UTL2-11
 
 **off-by-one / buffer overrun** · Conf H / Sev M  
-**Listed lines:** 157-161
+**Lines (current code):** 157-161  
+**Lines at review (Oct 2026):** 157-161
 
 **Function:** `Quicksort_Dir()`
 
@@ -60,7 +61,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## UTL2-12
 
 **copy error from NR** · Conf H / Sev M  
-**Listed lines:** 162-170
+**Lines (current code):** 162-170  
+**Lines at review (Oct 2026):** 162-170
 
 **Function:** `Quicksort_Dir()`
 

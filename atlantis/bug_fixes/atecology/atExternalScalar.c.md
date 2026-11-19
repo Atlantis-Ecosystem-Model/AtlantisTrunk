@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **7 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [EMISC-12](#emisc-12) | 231-235 | H/M | logic | `for (i = length-1; i >= 0; i--) if (isdigit(str[i])) index = i;` has no `break` on a non-digit, so it returns… |  | [ ] |
 | [EMISC-13](#emisc-13) | 63, 271-277, 285-290 | H/M | buffer overrun | `Species_Cohort_Lookup[group][cohort][..] = variableIndex` checks only `cohort == -1`. The array is `[K_num_to… |  | [ ] |
@@ -23,7 +23,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EMISC-12
 
 **logic** · Conf H / Sev M  
-**Listed lines:** 231-235
+**Lines (current code):** 231-235  
+**Lines at review (Oct 2026):** 231-235
 
 **Function:** `Get_Group_Cohort_Value()`
 
@@ -65,7 +66,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EMISC-13
 
 **buffer overrun** · Conf H / Sev M  
-**Listed lines:** 63, 271-277, 285-290
+**Lines (current code):** 63, 271-277, 285-290  
+**Lines at review (Oct 2026):** 63, 271-277, 285-290
 
 **Function:** `Match_Scalar_To_Groups()`
 
@@ -103,7 +105,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EMISC-14
 
 **off-by-one** · Conf M / Sev L  
-**Listed lines:** 380, 403-406
+**Lines (current code):** 380, 403-406  
+**Lines at review (Oct 2026):** 380, 403-406
 
 **Function:** `Get_Scalar_Property()`
 
@@ -167,7 +170,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EMISC-15
 
 **stale index** · Conf H / Sev M  
-**Listed lines:** 428-468
+**Lines (current code):** 428-468  
+**Lines at review (Oct 2026):** 428-468
 
 **Function:** `Calc_Scalar_Values()`
 
@@ -240,7 +244,8 @@ After `Get_Scalar_Property()` reloads the buffer (line 431/440), `currentTimeInd
 ## EMISC-16
 
 **logic** · Conf M / Sev M  
-**Listed lines:** 430-446
+**Lines (current code):** 430-446  
+**Lines at review (Oct 2026):** 430-446
 
 **Function:** `Calc_Scalar_Values()`
 
@@ -294,7 +299,8 @@ The rewind time offset (`+ nstep*rewindCount*dt`) is applied only to the chunk l
 ## EMISC-17
 
 **format / uninitialised** · Conf H / Sev L  
-**Listed lines:** 156
+**Lines (current code):** 156  
+**Lines at review (Oct 2026):** 156
 
 **Function:** `Open_Scalar_Prop()`
 
@@ -332,13 +338,14 @@ The `quit("... %s dt must have positive value", propInput->variableName)` messag
 ## EMISC-18
 
 **cohort vs cohort x genotype** · Conf M / Sev M  
-**Listed lines:** 63
+**Lines (current code):** 63  
+**Lines at review (Oct 2026):** 63
 
 **Function:** `Init_External_Scalars()`
 
 **Why it's thought to be a bug**
 
-The lookup is sized `K_num_max_cohort`, but atq10.c:491-496 calls `Ecology_Get_Growth_Scalar(bm, sp, cohort)` for `cohort < numCohortsXnumGenes`, which reads `Species_Cohort_Lookup[sp][cohort]` out of bounds when the genetics option makes numCohortsXnumGenes > K_num_max_cohort. Function: `Init_External_Scalars()` / `Ecology_Get_Growth_Scalar()`.
+The lookup is sized `K_num_max_cohort`, but atq10.c:493-498 calls `Ecology_Get_Growth_Scalar(bm, sp, cohort)` for `cohort < numCohortsXnumGenes`, which reads `Species_Cohort_Lookup[sp][cohort]` out of bounds when the genetics option makes numCohortsXnumGenes > K_num_max_cohort. Function: `Init_External_Scalars()` / `Ecology_Get_Growth_Scalar()`.
 
 **Current code** (`atecology/atExternalScalar.c` lines 61–65)
 

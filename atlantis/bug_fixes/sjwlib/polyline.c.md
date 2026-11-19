@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW2-05](#sjw2-05) | 481, 536-541 | H/L | memory leak | `ydd = alloc1d(pl->np)` is never freed (only x1, y1, d, x2 and y2 are). Function: `smoothpolyline()`. |  | [ ] |
 | [SJW2-06](#sjw2-06) | 705-711, 714-720 | H/L | memory leak | `new = reverseline(...)` then `clearpolyline(new)` frees the points but not the `polyline` struct from `create… |  | [ ] |
@@ -19,7 +19,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-05
 
 **memory leak** · Conf H / Sev L  
-**Listed lines:** 481, 536-541
+**Lines (current code):** 481, 536-541  
+**Lines at review (Oct 2026):** 481, 536-541
 
 **Function:** `smoothpolyline()`
 
@@ -27,7 +28,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `ydd = alloc1d(pl->np)` is never freed (only x1, y1, d, x2 and y2 are). Function: `smoothpolyline()`.
 
-**Current code** (`sjwlib/polyline.c` lines 479–518 (truncated))
+**Current code** (`sjwlib/polyline.c` lines 479–483)
 
 ```c
   479:     y1 = alloc1d(pl->np);
@@ -35,41 +36,6 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   481:     ydd = alloc1d(pl->np);
   482:     x2 = alloc1d(ns);
   483:     y2 = alloc1d(ns);
-  484: 
-  485:     /* load x1, y1, d */
-  486:     i = 0;
-  487:     prevx = pl->start->p.x;
-  488:     prevy = pl->start->p.y;
-  489:     for(ptr=pl->start; ptr != NULL; ptr = ptr->next ) {
-  490: 	x = ptr->p.x;
-  491: 	y = ptr->p.y;
-  492: 	x1[i] = x;
-  493: 	y1[i] = y;
-  494: 	if( i > 0 )
-  495:             d[i] = d[i-1] + sqrt((x-prevx)*(x-prevx)+(y-prevy)*(y-prevy));
-  496: 	else
-  497:             d[i] = 0.0;
-  498: 	prevx = x;
-  499: 	prevy = y;
-  500: 	i++;
-  501:     }
-  502:     np = i;
-  503: 
-  504:     /* check if closed */
-  505:     if( samepoint(pl->start->p, pl->end->p, 0.001) ) {
-  506: 	/* calculate periodic boundary condition */
-  507: 	/* NOT IMPLEMENTED YET */
-  508: 	;
-  509:     }
-  510: 
-  511:     /* fit spline to x */
-  512:     dspline(d,x1,np,0,1e31,1e31,ydd);
-  513:     /* loop to evaluate interpolated x values */
-  514:     for(i=0; i<ns; i++) {
-  515: 	/* calculate distance, evaluate spline */
-  516: 	if( i< ns-1 ) dist = (double)i*d[pl->np -1] / (double)(ns-1);
-  517: 	else dist = d[pl->np -1];
-  518: 	dsplint(d,x1,ydd,np,dist,&x2[i]);
 ```
 
 **Suggested fix (from review):** Add `free1d(ydd);`
@@ -92,7 +58,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-06
 
 **memory leak** · Conf H / Sev L  
-**Listed lines:** 705-711, 714-720
+**Lines (current code):** 705-711, 714-720  
+**Lines at review (Oct 2026):** 705-711, 714-720
 
 **Function:** `joinsegments()`
 
@@ -145,7 +112,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-07
 
 **algorithm assumption / leak** · Conf M / Sev L  
-**Listed lines:** 962-972
+**Lines (current code):** 962-972  
+**Lines at review (Oct 2026):** 962-972
 
 **Function:** `wa_test()`
 

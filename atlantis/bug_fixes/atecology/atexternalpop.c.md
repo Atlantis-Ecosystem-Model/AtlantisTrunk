@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [CONT-25](#cont-25) | 91, 104, 108, 192 | M/M | cohort vs cohort×genotype | `age = ageclasssize * cohort ...` and `if (cohort < age_mat)` use the cohort×genotype loop index (line 71 loop… |  | [ ] |
 | [CONT-26](#cont-26) | 147-153 | M/M | unit mismatch | `Fish_Respiration()` returns a per-second rate (`/86400.0`, atvertprocesses.c:1532) while `Growth_increment` i… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CONT-25
 
 **cohort vs cohort×genotype** · Conf M / Sev M  
-**Listed lines:** 91, 104, 108, 192
+**Lines (current code):** 91, 104, 108, 192  
+**Lines at review (Oct 2026):** 91, 104, 108, 192
 
 **Function:** `External_Box_Ecology()`
 
@@ -75,13 +76,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CONT-26
 
 **unit mismatch** · Conf M / Sev M  
-**Listed lines:** 147-153
+**Lines (current code):** 147-153  
+**Lines at review (Oct 2026):** 147-153
 
 **Function:** `External_Box_Ecology()`
 
 **Why it's thought to be a bug**
 
-`Fish_Respiration()` returns a per-second rate (`/86400.0`, atvertprocesses.c:1532) while `Growth_increment` is a per-step (per-dt or per-day) mass increment; `avail_intake = Growth_increment - Resp` mixes units, feeding `Partition_Weight_Dynamic()`. Function: `External_Box_Ecology()`.
+`Fish_Respiration()` returns a per-second rate (`/86400.0`, atvertprocesses.c:1533) while `Growth_increment` is a per-step (per-dt or per-day) mass increment; `avail_intake = Growth_increment - Resp` mixes units, feeding `Partition_Weight_Dynamic()`. Function: `External_Box_Ecology()`.
 
 **Current code** (`atecology/atexternalpop.c` lines 145–155)
 
@@ -119,7 +121,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CONT-27
 
 **unit mismatch** · Conf M / Sev M  
-**Listed lines:** 97-100, 180-181
+**Lines (current code):** 97-100, 180-181  
+**Lines at review (Oct 2026):** 97-100, 180-181
 
 **Function:** `External_Box_Ecology()`
 
@@ -160,7 +163,8 @@ Marie's option computes a *daily* increment (`lengthgrowth = Kbert*(linf-Length)
 ## CONT-28
 
 **missing floor** · Conf L / Sev M  
-**Listed lines:** 199-201
+**Lines (current code):** 199-201  
+**Lines at review (Oct 2026):** 199-201
 
 **Function:** `External_Box_Ecology()`
 

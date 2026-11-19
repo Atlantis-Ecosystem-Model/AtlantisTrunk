@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **5 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [CNV2-10](#cnv2-10) | 47-54 | H/M | parsing / wrong index | `Fishery_Last_XMLFunction()` takes the text after the last `_` as the fishery code. Real models have fishery c… |  | [ ] |
 | [CNV2-11](#cnv2-11) | 330 | H/L | copy-paste | The lookup for option 4 ("Conditional on catch of other species") is created with value `"2"`, which duplicate… |  | [ ] |
@@ -21,7 +21,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV2-10
 
 **parsing / wrong index** · Conf H / Sev M  
-**Listed lines:** 47-54
+**Lines (current code):** 47-54  
+**Lines at review (Oct 2026):** 47-54
 
 **Function:** `Fishery_Last_XMLFunction()`
 
@@ -29,21 +30,21 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `Fishery_Last_XMLFunction()` takes the text after the last `_` as the fishery code. Real models have fishery codes with underscores (`EffortChange_start_Astoria_Generic`, `..._Com_boat` in /Users/ful083/runs), which resolve to `Generic`/`boat`. `Util_Get_Fishery_Index()` then quits or picks the wrong fishery. This affects every caller: mEff_, habitat_, SELchange_*, EffortChange_*, Effort_mult_, among others. Function: `Fishery_Last_XMLFunction()`.
 
-**Current code** (`ConvertAtlantis/atHarvesttoXML.c` lines 51–62) — code appears to have moved +6 lines since the review
+**Current code** (`ConvertAtlantis/atHarvesttoXML.c` lines 45–56)
 
 ```c
+   45: 	int fisheryIndex;
+   46: 
+   47: 	fisheryStr = strchr(str, '_');
+   48: 	fisheryStr++;
+   49: 	while (strchr(fisheryStr, '_') != NULL) {
+   50: 		fisheryStr = strchr(fisheryStr, '_');
    51: 		fisheryStr++;
    52: 	}
    53: 	fisheryIndex = Util_Get_Fishery_Index(bm, fisheryStr);
    54: 	Util_XML_Set_Node_Value(ATLANTIS_FISHERY_ATTRIBUTE, parent, FisheryArray[fisheryIndex].fisheryCode, valueStr);
    55: }
    56: 
-   57: /**
-   58:  * \brief Create a node for each fishery.
-   59:  */
-   60: void Create_Fishery_XMLNodes(MSEBoxModel *bm,  xmlNodePtr parent) {
-   61: 	int index;
-   62: 
 ```
 
 **Suggested fix (from review):** Strip the known parameter prefix (pass it in) instead of using the last `_`
@@ -66,7 +67,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV2-11
 
 **copy-paste** · Conf H / Sev L  
-**Listed lines:** 330
+**Lines (current code):** 330  
+**Lines at review (Oct 2026):** 330
 
 **Function:** `FisheryFlagXML()`
 
@@ -74,7 +76,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The lookup for option 4 ("Conditional on catch of other species") is created with value `"2"`, which duplicates the "Size based" entry. Function: `FisheryFlagXML()`.
 
-**Current code** (`ConvertAtlantis/atHarvesttoXML.c` lines 328–332) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `FisheryFlagXML()` now starts at line 250
+**Current code** (`ConvertAtlantis/atHarvesttoXML.c` lines 328–332)
 
 ```c
   328: 	Util_XML_Create_Lookup_Value_Node(lookupNode, "2", "Size based");
@@ -104,7 +106,8 @@ The lookup for option 4 ("Conditional on catch of other species") is created wit
 ## CNV2-12
 
 **wrong type metadata** · Conf H / Sev L  
-**Listed lines:** 312, 469
+**Lines (current code):** 312, 469  
+**Lines at review (Oct 2026):** 312, 469
 
 **Why it's thought to be a bug**
 
@@ -140,7 +143,8 @@ The lookup for option 4 ("Conditional on catch of other species") is created wit
 ## CNV2-13
 
 **logic / dead code** · Conf M / Sev L  
-**Listed lines:** 167-185
+**Lines (current code):** 167-185  
+**Lines at review (Oct 2026):** 167-185
 
 **Why it's thought to be a bug**
 
@@ -194,7 +198,8 @@ The lookup for option 4 ("Conditional on catch of other species") is created wit
 ## CNV2-14
 
 **inconsistent length** · Conf M / Sev L  
-**Listed lines:** 483, 653
+**Lines (current code):** 483, 653  
+**Lines at review (Oct 2026):** 483, 653
 
 **Function:** `FisheryScenarioFlags()`
 

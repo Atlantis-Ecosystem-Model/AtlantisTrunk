@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1), plus 2 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [PHY2-07](#phy2-07) ⭐ | 201-225 | H/H | duplicated logic / double application | In the no-water branch, `nut_scale = Get_PSS_Scalar(bm, s, variableIndex);` is followed by a copy of Get_PSS_S… |  | [ ] |
 | [PHY2-08](#phy2-08) | 209, 508 | M/M | wrong index | `strcasecmp(pss->ts.varname[variableIndex], "Si")` uses `variableIndex`, which counts only valid non-time, non… |  | [ ] |
@@ -19,7 +19,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY2-07
 
 **duplicated logic / double application** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 201-225
+**Lines (current code):** 201-225  
+**Lines at review (Oct 2026):** 201-225
 
 **Function:** `sourceSink()`
 
@@ -81,7 +82,8 @@ In the no-water branch, `nut_scale = Get_PSS_Scalar(bm, s, variableIndex);` is f
 ## PHY2-08
 
 **wrong index** · Conf M / Sev M  
-**Listed lines:** 209, 508
+**Lines (current code):** 209, 508  
+**Lines at review (Oct 2026):** 209, 508
 
 **Function:** `sourceSink()`
 
@@ -119,7 +121,8 @@ In the no-water branch, `nut_scale = Get_PSS_Scalar(bm, s, variableIndex);` is f
 ## PHY2-09
 
 **format specifier** · Conf H / Sev L  
-**Listed lines:** 706
+**Lines (current code):** 706  
+**Lines at review (Oct 2026):** 706
 
 **Function:** `read_bm_ts_rewind()`
 

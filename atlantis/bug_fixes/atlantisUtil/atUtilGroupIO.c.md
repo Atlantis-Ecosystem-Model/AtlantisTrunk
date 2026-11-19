@@ -2,46 +2,47 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **8 findings** (severity H: 2; confidence H and severity H: 2; on the priority list: 2).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [UTIL-17](#util-17) ⭐ | 910-912 | H/H | cohort vs cohort x genotype | `contaminantTracers` and `contamPropTracers` are `Util_Alloc_Init_2D_Int(num_contaminants, numCohorts)`, which… |  | [ ] |
-| [UTIL-18](#util-18) ⭐ | 894-905 | H/H | wrong dimension (habitat) and cohort vs cohort x genotype | The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCxG, 3)` gives `[3][nCxG][..]`, … |  | [ ] |
-| [UTIL-19](#util-19) | 1429-1435, 1440, 1502 | H/M | index beyond logical array size | `habitatCoeffs` is allocated with `bm->num_active_habitats` entries (3 = EPIFAUNA+1 without ice, 5 = ICE_BASED… |  | [ ] |
+| [UTIL-17](#util-17) ⭐ | 909-911 | H/H | cohort vs cohort x genotype | `contaminantTracers` and `contamPropTracers` are `Util_Alloc_Init_2D_Int(num_contaminants, numCohorts)`, which… |  | [ ] |
+| [UTIL-18](#util-18) ⭐ | 893-904 | H/H | wrong dimension (habitat) and cohort vs cohort x genotype | The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCxG, 3)` gives `[3][nCxG][..]`, … |  | [ ] |
+| [UTIL-19](#util-19) | 1428-1434, 1439, 1501 | H/M | index beyond logical array size | `habitatCoeffs` is allocated with `bm->num_active_habitats` entries (3 = EPIFAUNA+1 without ice, 5 = ICE_BASED… |  | [ ] |
 | [UTIL-20](#util-20) | 397-399 | H/M | contradictory check / uninitialised member | `isAssessed` is read with `binary_check` (line 394), so a value >1 quits and `if(isAssessed > 1) isCloseKin = … |  | [ ] |
 | [UTIL-21](#util-21) | 421-423 | H/M | uninitialised member | `isCollisionRisk` is only set when `bm->flagindustry_on`. Otherwise it's uninitialised malloc memory, read at … |  | [ ] |
 | [UTIL-22](#util-22) | 545-547 | H/M | unreachable condition | `if(groupType == TURF) bm->containsTurf = TRUE;` sits inside the `isVertebrate == TRUE` branch, but TURF is ne… |  | [ ] |
 | [UTIL-23](#util-23) | 244-252, 489-533 | M/L | NULL dereference | If `groupList` is NULL or empty, `FunctGroupArray` is never allocated and the count check is skipped. `Set_Gro… |  | [ ] |
-| [UTIL-24](#util-24) | 1083-1085 | H/L | wrong loop variable | `TLorder2[eatIndex++] = i;` should be `guild`, since `i` is stale. This is inside `#ifdef ORIGINAL_GROUP_ORDER… |  | [ ] |
+| [UTIL-24](#util-24) | 1082-1084 | H/L | wrong loop variable | `TLorder2[eatIndex++] = i;` should be `guild`, since `i` is stale. This is inside `#ifdef ORIGINAL_GROUP_ORDER… |  | [ ] |
 
 ---
 
 ## UTIL-17
 
 **cohort vs cohort x genotype** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 910-912
+**Lines (current code):** 909-911  
+**Lines at review (Oct 2026):** 910-912
 
 **Function:** `Util_Read_Functional_Group_XML()`
 
 **Why it's thought to be a bug**
 
-`contaminantTracers` and `contamPropTracers` are `Util_Alloc_Init_2D_Int(num_contaminants, numCohorts)`, which gives `[numCohorts][ncontam]`. `contaminantSpMort` is 1D with `numCohorts` entries. They are indexed with `cohort < numCohortsXnumGenes` in atecology/atContaminants.c:592-607 (`contaminantSpMort[cohort]`, `contaminantTracers[cohort][cIndex]`) and atmanage/atManage.c:2069-2070. That's an out-of-bounds read/write whenever `numGeneTypes > 1` with contaminants on. Function: `Util_Read_Functional_Group_XML()`.
+`contaminantTracers` and `contamPropTracers` are `Util_Alloc_Init_2D_Int(num_contaminants, numCohorts)`, which gives `[numCohorts][ncontam]`. `contaminantSpMort` is 1D with `numCohorts` entries. They are indexed with `cohort < numCohortsXnumGenes` in atecology/atContaminants.c:598-613 (`contaminantSpMort[cohort]`, `contaminantTracers[cohort][cIndex]`) and atmanage/atManage.c:2084-2085. That's an out-of-bounds read/write whenever `numGeneTypes > 1` with contaminants on. Function: `Util_Read_Functional_Group_XML()`.
 
-**Current code** (`atlantisUtil/atUtilGroupIO.c` lines 908–914)
+**Current code** (`atlantisUtil/atUtilGroupIO.c` lines 907–913)
 
 ```c
+  907: 
   908: 		if(bm->track_contaminants){
   909: 			FunctGroupArray[i].contaminantTracers = Util_Alloc_Init_2D_Int(bm->num_contaminants, FunctGroupArray[i].numCohorts, 0);
   910:             FunctGroupArray[i].contamPropTracers = Util_Alloc_Init_2D_Int(bm->num_contaminants, FunctGroupArray[i].numCohorts, 0);
   911: 			FunctGroupArray[i].contaminantSpMort = Util_Alloc_Init_1D_Double(FunctGroupArray[i].numCohorts, 0.0);
   912: 			FunctGroupArray[i].calcCLinearMort = Util_Alloc_Init_2D_Double(3, FunctGroupArray[i].numCohortsXnumGenes, 0.0);
   913:             FunctGroupArray[i].agingContam = Util_Alloc_Init_4D_Double((bm->wcnz+bm->sednz), bm->nbox, bm->num_contaminants, FunctGroupArray[i].numCohorts, 0);
-  914: 		}
 ```
 
 **Suggested fix (from review):** Allocate with `numCohortsXnumGenes` (or bound the loops by `numCohorts`, depending on design).
@@ -64,17 +65,19 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## UTIL-18
 
 **wrong dimension (habitat) and cohort vs cohort x genotype** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 894-905
+**Lines (current code):** 893-904  
+**Lines at review (Oct 2026):** 894-905
 
 **Function:** `Util_Read_Functional_Group_XML()`
 
 **Why it's thought to be a bug**
 
-The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCxG, 3)` gives `[3][nCxG][..]`, and `ratioLostGlobal = 4D(..., 3, 3)` gives `[3][3][nCxG][..]`. atecology/atecology.c:3899-3909 and 4036-4052 loop `hab < bm->num_active_habitats`, which is 5 when ice is on (attracerIO.c:239), so they write past the first dimension. `ratioLostPred`, `ratioLostPredGlobal`, `ratioGained` and `ratioGainedGlobal` are also sized `numCohorts` but looped with `cohort < numCohortsXnumGenes` in the same code, so they overflow when `numGeneTypes > 1`. Function: `Util_Read_Functional_Group_XML()`.
+The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCxG, 3)` gives `[3][nCxG][..]`, and `ratioLostGlobal = 4D(..., 3, 3)` gives `[3][3][nCxG][..]`. atecology/atecology.c:3904-3914 and 4036-4052 loop `hab < bm->num_active_habitats`, which is 5 when ice is on (attracerIO.c:239), so they write past the first dimension. `ratioLostPred`, `ratioLostPredGlobal`, `ratioGained` and `ratioGainedGlobal` are also sized `numCohorts` but looped with `cohort < numCohortsXnumGenes` in the same code, so they overflow when `numGeneTypes > 1`. Function: `Util_Read_Functional_Group_XML()`.
 
-**Current code** (`atlantisUtil/atUtilGroupIO.c` lines 892–907)
+**Current code** (`atlantisUtil/atUtilGroupIO.c` lines 891–906)
 
 ```c
+  891: 			FunctGroupArray[i].addRatioFluxes = Util_Alloc_Init_2D_Double(num_atomic_id + 1, FunctGroupArray[i].numCohortsXnumGenes, 0.0);
   892: 
   893: 			FunctGroupArray[i].ratioLost = Util_Alloc_Init_3D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohortsXnumGenes, 3, 0.0);
   894: 			FunctGroupArray[i].ratioLostGlobal = Util_Alloc_Init_4D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohortsXnumGenes, 3, 3, 0.0);
@@ -90,7 +93,6 @@ The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCx
   904: 			FunctGroupArray[i].ratioGainedGlobal = Util_Alloc_Init_4D_Long_Double(num_atomic_id, FunctGroupArray[i].numCohorts, 3, 3, 0.0);
   905: 
   906: 		}
-  907: 
 ```
 
 **Suggested fix (from review):** Use `bm->num_active_habitats` in place of 3 and `numCohortsXnumGenes` in place of `numCohorts` (fix the matching Init/free calls too).
@@ -113,7 +115,8 @@ The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCx
 ## UTIL-19
 
 **index beyond logical array size** · Conf H / Sev M  
-**Listed lines:** 1429-1435, 1440, 1502
+**Lines (current code):** 1428-1434, 1439, 1501  
+**Lines at review (Oct 2026):** 1429-1435, 1440, 1502
 
 **Function:** `Set_Group_Habitats()`
 
@@ -121,9 +124,10 @@ The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCx
 
 `habitatCoeffs` is allocated with `bm->num_active_habitats` entries (3 = EPIFAUNA+1 without ice, 5 = ICE_BASED+1 with ice). The code then writes `[ICE_BASED]`(4), `[LAND_BASED]`(3) and `[MIXED]`(5). There's no heap corruption only because `Util_Alloc_Init_1D_Int` allocates double-sized storage. But the land flag (with terrestrial on and ice off) and the MIXED flag for ice groups fall outside every `hab < num_active_habitats` loop, so they're silently ignored. Function: `Set_Group_Habitats()`.
 
-**Current code** (`atlantisUtil/atUtilGroupIO.c` lines 1427–1437)
+**Current code** (`atlantisUtil/atUtilGroupIO.c` lines 1426–1441)
 
 ```c
+ 1426: 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
  1427: 
  1428: 		FunctGroupArray[guild].habitatCoeffs = Util_Alloc_Init_1D_Int(bm->num_active_habitats, 0);
  1429: 
@@ -135,6 +139,10 @@ The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCx
  1435: 
  1436: 
  1437: 		if(bm->terrestrial_on){
+ 1438: 			if(FunctGroupArray[guild].isLandActive > 0)
+ 1439: 				FunctGroupArray[guild].habitatCoeffs[LAND_BASED]  = 1;
+ 1440: 		}
+ 1441: 
 ```
 
 **Suggested fix (from review):** Allocate `nTotHabTypes` entries, or make `num_active_habitats` cover LAND_BASED/MIXED when those features are on.
@@ -157,7 +165,8 @@ The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCx
 ## UTIL-20
 
 **contradictory check / uninitialised member** · Conf H / Sev M  
-**Listed lines:** 397-399
+**Lines (current code):** 397-399  
+**Lines at review (Oct 2026):** 397-399
 
 **Function:** `Util_Read_Functional_Group_XML()`
 
@@ -197,7 +206,8 @@ The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCx
 ## UTIL-21
 
 **uninitialised member** · Conf H / Sev M  
-**Listed lines:** 421-423
+**Lines (current code):** 421-423  
+**Lines at review (Oct 2026):** 421-423
 
 **Function:** `Util_Read_Functional_Group_XML()`
 
@@ -237,13 +247,14 @@ The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCx
 ## UTIL-22
 
 **unreachable condition** · Conf H / Sev M  
-**Listed lines:** 545-547
+**Lines (current code):** 545-547  
+**Lines at review (Oct 2026):** 545-547
 
 **Function:** `Util_Read_Functional_Group_XML()`
 
 **Why it's thought to be a bug**
 
-`if(groupType == TURF) bm->containsTurf = TRUE;` sits inside the `isVertebrate == TRUE` branch, but TURF is never a vertebrate, so `containsTurf` is always FALSE. atecology/atcoral.c:907/932 then forces `facilitate_space = 1.0` and skips the turf facilitation logic. Function: `Util_Read_Functional_Group_XML()`.
+`if(groupType == TURF) bm->containsTurf = TRUE;` sits inside the `isVertebrate == TRUE` branch, but TURF is never a vertebrate, so `containsTurf` is always FALSE. atecology/atcoral.c:908/932 then forces `facilitate_space = 1.0` and skips the turf facilitation logic. Function: `Util_Read_Functional_Group_XML()`.
 
 **Current code** (`atlantisUtil/atUtilGroupIO.c` lines 543–549)
 
@@ -277,7 +288,8 @@ The atomic-ratio arrays hard-code 3 habitats: `ratioLost = 3D(num_atomic_id, nCx
 ## UTIL-23
 
 **NULL dereference** · Conf M / Sev L  
-**Listed lines:** 244-252, 489-533
+**Lines (current code):** 244-252, 489-533  
+**Lines at review (Oct 2026):** 244-252, 489-533
 
 **Function:** `Util_Read_Functional_Group_XML()`
 
@@ -323,7 +335,8 @@ If `groupList` is NULL or empty, `FunctGroupArray` is never allocated and the co
 ## UTIL-24
 
 **wrong loop variable** · Conf H / Sev L  
-**Listed lines:** 1083-1085
+**Lines (current code):** 1082-1084  
+**Lines at review (Oct 2026):** 1083-1085
 
 **Function:** `Util_Read_Functional_Group_XML()`
 
@@ -331,16 +344,16 @@ If `groupList` is NULL or empty, `FunctGroupArray` is never allocated and the co
 
 `TLorder2[eatIndex++] = i;` should be `guild`, since `i` is stale. This is inside `#ifdef ORIGINAL_GROUP_ORDER`, which is legacy code and not normally compiled. Function: `Util_Read_Functional_Group_XML()`.
 
-**Current code** (`atlantisUtil/atUtilGroupIO.c` lines 1081–1087)
+**Current code** (`atlantisUtil/atUtilGroupIO.c` lines 1080–1086)
 
 ```c
+ 1080: 
  1081: 	//for (i = 0; i < bm->K_num_vert_sp; i++) {
  1082:     for (guild = 0; guild < bm->K_num_tot_sp; guild++){
  1083:         if (FunctGroupArray[guild].groupAgeType == AGE_STRUCTURED)
  1084:             TLorder2[eatIndex++] = i;
  1085: 	}
  1086: 	TLorder2[eatIndex++] = DLguild_id;
- 1087: 	TLorder2[eatIndex++] = DRguild_id;
 ```
 
 **Suggested fix (from review):** Use `guild`.

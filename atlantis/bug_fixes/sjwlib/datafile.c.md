@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **9 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1), plus 2 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW1-05](#sjw1-05) | 171-174 | H/M | wrong operator | `if ((varid < 0) && (varid >= df->nv))` can never be true, so an invalid `varid` is never caught. `rv = &df->v… |  | [ ] |
 | [SJW1-06](#sjw1-06) ⭐ | 317-321 | H/H | wrong formula (recycling) | When rewinding is on and `r` is past the last record: `leftover = floor(r / lengthdf); *newt = r - leftover * … |  | [ ] |
@@ -25,7 +25,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW1-05
 
 **wrong operator** · Conf H / Sev M  
-**Listed lines:** 171-174
+**Lines (current code):** 171-174  
+**Lines at review (Oct 2026):** 171-174
 
 **Function:** `dfSetRecord()`
 
@@ -66,13 +67,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW1-06
 
 **wrong formula (recycling)** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 317-321
+**Lines (current code):** 317-321  
+**Lines at review (Oct 2026):** 317-321
 
 **Function:** `dfFindTime()`
 
 **Why it's thought to be a bug**
 
-When rewinding is on and `r` is past the last record: `leftover = floor(r / lengthdf); *newt = r - leftover * df->records[ilow];`. The code multiplies by the first record time instead of the period length `lengthdf`, and the floor ignores the record origin. If the series starts at t=0 (`records[0]==0`), `newt == r`, so nothing is recycled and `dfEval` clamps to the last record for the rest of the run. For any other start time the result is an arbitrary time. This is used for the rewound thermal and rate index series (`tsEvalR(..., bm->tindex_rewindid)` in atecology/atdemography.c:1503-1504 and atannualbiology.c:1241-1242) and in `tsEvalXYR`/`tsEvalXYZR`. Function: `dfFindTime()`.
+When rewinding is on and `r` is past the last record: `leftover = floor(r / lengthdf); *newt = r - leftover * df->records[ilow];`. The code multiplies by the first record time instead of the period length `lengthdf`, and the floor ignores the record origin. If the series starts at t=0 (`records[0]==0`), `newt == r`, so nothing is recycled and `dfEval` clamps to the last record for the rest of the run. For any other start time the result is an arbitrary time. This is used for the rewound thermal and rate index series (`tsEvalR(..., bm->tindex_rewindid)` in atecology/atdemography.c:1510-1511 and atannualbiology.c:1246-1247) and in `tsEvalXYR`/`tsEvalXYZR`. Function: `dfFindTime()`.
 
 **Current code** (`sjwlib/datafile.c` lines 315–323)
 
@@ -108,7 +110,8 @@ When rewinding is on and `r` is past the last record: `leftover = floor(r / leng
 ## SJW1-07
 
 **out-of-bounds read** · Conf M / Sev M  
-**Listed lines:** 214-231 (with 1013-1015)
+**Lines (current code):** 214-231 (with 1013-1015)  
+**Lines at review (Oct 2026):** 214-231 (with 1013-1015)
 
 **Function:** `dfSetRecord()`
 
@@ -163,7 +166,8 @@ When rewinding is on and `r` is past the last record: `leftover = floor(r / leng
 ## SJW1-08
 
 **type mismatch / memory overwrite** · Conf H / Sev L  
-**Listed lines:** 1320
+**Lines (current code):** 1320  
+**Lines at review (Oct 2026):** 1320
 
 **Function:** `df_netcdf_read_attrib()`
 
@@ -201,7 +205,8 @@ When rewinding is on and `r` is past the last record: `leftover = floor(r / leng
 ## SJW1-09
 
 **wrong bound check** · Conf M / Sev M  
-**Listed lines:** 1507-1510 (with 371-385)
+**Lines (current code):** 1507-1510 (with 371-385)  
+**Lines at review (Oct 2026):** 1507-1510 (with 371-385)
 
 **Function:** `df_read_data()`
 
@@ -242,29 +247,30 @@ When rewinding is on and `r` is past the last record: `leftover = floor(r / leng
 ## SJW1-10
 
 **free of non-pointer** · Conf M / Sev M  
-**Listed lines:** 1237-1246, 1447-1458 (via 508-509)
+**Lines (current code):** 1237-1246, 1447-1458 (via 508-509)  
+**Lines at review (Oct 2026):** 1237-1246, 1447-1458 (via 508-509)
 
 **Why it's thought to be a bug**
 
 ASCII columns are stored as a flat `double[n]` with `nd = 1`, `nrecords = 1`, `dim_as_record = 0`. They only become `nd = 0` if `dfSetRecord` runs (i.e. a `t`/`time` column exists, timeseries.c:108-114). Without such a column, `dfFree` → `df_free_data_records` → `df_free_data_record` case 1 runs `free1d(VAR_1D(v)[0])`, which treats the bit pattern of the first data value as a pointer and frees it. That crashes at shutdown unless the value happens to be 0.0. Functions: `df_ascii_read()`, `df_free_data_record()`.
 
-**Current code** (`sjwlib/datafile.c` lines 1454–1467) — code appears to have moved +219 lines since the review
+**Current code** (`sjwlib/datafile.c` lines 1235–1248)
 
 ```c
- 1454: 		case 1:
- 1455: 			if (VAR_1D(v)[r] != NULL)
- 1456: 				free1d(VAR_1D(v)[r]);
- 1457: 			VAR_1D(v)[r] = NULL;
- 1458: 			break;
- 1459: 
- 1460: 		case 2:
- 1461: 			if (VAR_2D(v)[r] != NULL)
- 1462: 				free2d(VAR_2D(v)[r]);
- 1463: 			VAR_2D(v)[r] = NULL;
- 1464: 			break;
- 1465: 
- 1466: 		case 3:
- 1467: 			if (VAR_3D(v)[r] != NULL)
+ 1235: 
+ 1236: 	/* Allocate data memory and store pointer to record value (if applic) */
+ 1237: 	for (i = 0; i < df->nv; ++i) {
+ 1238: 		df->variables[i].nd = 1;
+ 1239: 		df->variables[i].dimids = malloc(sizeof(int) * (size_t)df->variables[i].nd);
+ 1240: 		df->variables[i].dimids[0] = 0;
+ 1241: 		df->variables[i].start_record = 0;
+ 1242: 		df->variables[i].nrecords = 1;
+ 1243: 		df->variables[i].dim_as_record = 0;
+ 1244: 		df->variables[i].data = (double*) malloc(df->dimensions[0].size
+ 1245: 				* sizeof(double));
+ 1246: 	}
+ 1247: 
+ 1248: 	/* Read data */
 ```
 
 **Suggested fix (from review):** In `df_free_data_records` (or `dfFree`), just `free(v->data)` when `df->type == DFT_ASCII`.
@@ -287,7 +293,8 @@ ASCII columns are stored as a flat `double[n]` with `nd = 1`, `nrecords = 1`, `d
 ## SJW1-11
 
 **off-by-one / sign error** · Conf M / Sev L  
-**Listed lines:** 1655-1661
+**Lines (current code):** 1655-1661  
+**Lines at review (Oct 2026):** 1655-1661
 
 **Function:** `df_shift_data()`
 
@@ -331,7 +338,8 @@ When clamping at the upper end: `nrecs -= ((int)df->nrecords - (nstart + v->nrec
 ## SJW1-12
 
 **buffer underflow** · Conf M / Sev L  
-**Listed lines:** 1116, 1132-1136
+**Lines (current code):** 1116, 1132-1136  
+**Lines at review (Oct 2026):** 1116, 1132-1136
 
 **Function:** `trim()`
 
@@ -339,7 +347,7 @@ When clamping at the upper end: `nrecs -= ((int)df->nrecords - (nstart + v->nrec
 
 The leading-trim loop skips `' '`, `'\t'` and `'\n'` but not `'\r'`, while the trailing loop also strips `'\r'`. A string of only `"\r"` characters (e.g. a CRLF `.ts` header line with an empty value) is not emptied by the first pass, so the trailing loop decrements `i` below 0 and reads `s[-1]`. Function: `trim()`.
 
-**Current code** (`sjwlib/datafile.c` lines 1114–1138) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `trim()` now starts at line 1106
+**Current code** (`sjwlib/datafile.c` lines 1114–1138)
 
 ```c
  1114: 		return;
@@ -389,7 +397,8 @@ The leading-trim loop skips `' '`, `'\t'` and `'\n'` but not `'\r'`, while the t
 ## SJW1-13
 
 **type mismatch (latent config)** · Conf M / Sev L  
-**Listed lines:** 1379-1402, 1454-1475
+**Lines (current code):** 1379-1402, 1454-1475  
+**Lines at review (Oct 2026):** 1379-1402, 1454-1475
 
 **Why it's thought to be a bug**
 

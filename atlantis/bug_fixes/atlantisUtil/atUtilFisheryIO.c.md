@@ -2,23 +2,24 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 2 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [UTL2-13](#utl2-13) | 106 | L/L | NULL dereference | `FisheryArray = malloc(...)` is never checked for NULL before use. Function: `Util_Read_Fisheries_XML()`. |  | [ ] |
-| [UTL2-14](#utl2-14) | 92, 124-125 | L/M | logic | `bm->K_max_num_subfleet = 5; // -1;` sets a floor of 5 on the max subfleet count, so arrays sized by it are la… |  | [ ] |
+| [UTL2-14](#utl2-14) | 92, 126-127 | L/M | logic | `bm->K_max_num_subfleet = 5; // -1;` sets a floor of 5 on the max subfleet count, so arrays sized by it are la… |  | [ ] |
 
 ---
 
 ## UTL2-13
 
 **NULL dereference** · Conf L / Sev L  
-**Listed lines:** 106
+**Lines (current code):** 106  
+**Lines at review (Oct 2026):** 106
 
 **Function:** `Util_Read_Fisheries_XML()`
 
@@ -56,7 +57,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## UTL2-14
 
 **logic** · Conf L / Sev M  
-**Listed lines:** 92, 124-125
+**Lines (current code):** 92, 126-127  
+**Lines at review (Oct 2026):** 92, 124-125
 
 **Function:** `Util_Read_Fisheries_XML()`
 
@@ -64,7 +66,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `bm->K_max_num_subfleet = 5; // -1;` sets a floor of 5 on the max subfleet count, so arrays sized by it are larger than needed. It is probably deliberate (the -1 is commented out), but any loop over 0..K_max_num_subfleet will visit subfleets that don't exist for fisheries with fewer. Function: `Util_Read_Fisheries_XML()`.
 
-**Current code** (`atlantisUtil/atUtilFisheryIO.c` lines 90–127)
+**Current code** (`atlantisUtil/atUtilFisheryIO.c` lines 90–129)
 
 ```c
    90: 
@@ -105,6 +107,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   125: 				bm->K_max_num_subfleet = (int)bm->FISHERYprms[fisheryIndex][nsubfleets_id];
   126: 		}
   127: 		xmlXPathFreeObject(fisheryList);
+  128: 	}else{
+  129: 		quit("ERROR: Error in the fishery XML input file %s\n", fileName);
 ```
 
 **Suggested fix (from review):** Confirm intent. Otherwise initialise to 0 (or -1).
@@ -130,7 +134,7 @@ These came from section B.3 of the list. They were not raised as findings. Tick 
 
 ### LC-1
 
-atUtilFisheryIO.c:60: `strstr(convertedXMLFileName, ".csv")` matches the first ".csv" anywhere in the path, not the extension. The overlong-string strcpy into `fisheryCode[20]` (Util_XML_Get_Value_String, atUtilXML.c:1310) is unbounded.
+atUtilFisheryIO.c:60: `strstr(convertedXMLFileName, ".csv")` matches the first ".csv" anywhere in the path, not the extension. The overlong-string strcpy into `fisheryCode[20]` (Util_XML_Get_Value_String, atUtilXML.c:1363) is unbounded.
 
 - [ ] Investigate   - [ ] Ignore
 
@@ -140,7 +144,7 @@ atUtilFisheryIO.c:60: `strstr(convertedXMLFileName, ".csv")` matches the first "
 
 ### LC-2
 
-`xmlCleanupParser()` at atUtilFisheryIO.c:134 is called mid-run, and libxml2 documents it as unsafe if the library is used afterwards. This is a common pattern in the codebase.
+`xmlCleanupParser()` at atUtilFisheryIO.c:136 is called mid-run, and libxml2 documents it as unsafe if the library is used afterwards. This is a common pattern in the codebase.
 
 - [ ] Investigate   - [ ] Ignore
 

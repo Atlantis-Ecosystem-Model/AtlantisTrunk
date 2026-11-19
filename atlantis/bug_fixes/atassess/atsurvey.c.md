@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **18 findings** (severity H: 6; confidence H and severity H: 4; on the priority list: 5).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SRV-01](#srv-01) ⭐ | 290-325 (inside bb loop 185-359) | H/H | misplaced block | Per-zone arrays are divided by numsteps once per box, so they are divided N times and results depend on box or… |  | [ ] |
 | [SRV-02](#srv-02) | 192-203, 295-296 (+ atsample.c:238) | L/M | scaling | samplephys may be divided by numsteps twice. |  | [ ] |
@@ -38,13 +38,14 @@ Lower-confidence notes: the survey never fills `oldbaby[..][sample_id]`, so the 
 ## SRV-01
 
 **misplaced block** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 290-325 (inside bb loop 185-359)
+**Lines (current code):** 290-325 (inside bb loop 185-359)  
+**Lines at review (Oct 2026):** 290-325 (inside bb loop 185-359)
 
 **Why it's thought to be a bug**
 
 Per-zone arrays are divided by numsteps once per box, so they are divided N times and results depend on box order.
 
-**Current code** (`atassess/atsurvey.c` lines 288–327)
+**Current code** (`atassess/atsurvey.c` lines 288–327 (truncated))
 
 ```c
   288: 		}
@@ -109,7 +110,8 @@ Per-zone arrays are divided by numsteps once per box, so they are divided N time
 ## SRV-02
 
 **scaling** · Conf L / Sev M  
-**Listed lines:** 192-203, 295-296 (+ atsample.c:238)
+**Lines (current code):** 192-203, 295-296 (+ atsample.c:238)  
+**Lines at review (Oct 2026):** 192-203, 295-296 (+ atsample.c:238)
 
 **Why it's thought to be a bug**
 
@@ -156,7 +158,8 @@ samplephys may be divided by numsteps twice.
 ## SRV-03
 
 **reused temp** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 620, 646, 668, 688
+**Lines (current code):** 620, 646, 668, 688  
+**Lines at review (Oct 2026):** 620, 646, 668, 688
 
 **Why it's thought to be a bug**
 
@@ -227,7 +230,8 @@ samplephys may be divided by numsteps twice.
 ## SRV-04
 
 **off-by-one** · Conf H / Sev M  
-**Listed lines:** 635, 667, 687, 983, 1010, 1253
+**Lines (current code):** 635, 667, 687, 983, 1010, 1253  
+**Lines at review (Oct 2026):** 635, 667, 687, 983, 1010, 1253
 
 **Why it's thought to be a bug**
 
@@ -298,13 +302,14 @@ samplephys may be divided by numsteps twice.
 ## SRV-05
 
 **misplaced brace** · Conf M / Sev H  
-**Listed lines:** 420-546, 1467-1473
+**Lines (current code):** 420-546, 1467-1473  
+**Lines at review (Oct 2026):** 420-546, 1467-1473
 
 **Why it's thought to be a bug**
 
 All bird sampling is inside `if (annual_sample == 1)` (meant only for the bin init), yet the result is still divided by numsteps.
 
-**Current code** (`atassess/atsurvey.c` lines 418–452 (range truncated))
+**Current code** (`atassess/atsurvey.c` lines 418–457 (truncated))
 
 ```c
   418: 
@@ -342,6 +347,11 @@ All bird sampling is inside `if (annual_sample == 1)` (meant only for the bin in
   450: 						if(FunctGroupArray[sp].groupType == BIRD){
   451: 							for (chrt = 0; chrt < FunctGroupArray[sp].numCohortsXnumGenes; chrt++) {
   452: 
+  453: 								/* Get information for nestlings, newly fledged and adult seabirds */
+  454: 								switch (chrt) {
+  455: 								case 0: /* Nestlings */
+  456: 								case 1: /* Fledglings */
+  457: 									lbin = chrt;
 ```
 
 **Suggested fix (from review):** close the block after line 437
@@ -364,7 +374,8 @@ All bird sampling is inside `if (annual_sample == 1)` (meant only for the bin in
 ## SRV-06
 
 **loop bound** · Conf M / Sev M  
-**Listed lines:** 503-517
+**Lines (current code):** 503-517  
+**Lines at review (Oct 2026):** 503-517
 
 **Why it's thought to be a bug**
 
@@ -414,7 +425,8 @@ Birds fill bins 0-2 but the sum loops to `numCohortsXnumGenes` (can exceed K_num
 ## SRV-07
 
 **wrong variable** · Conf M / Sev M  
-**Listed lines:** 454-461, 640, 1260
+**Lines (current code):** 454-461, 640, 1260  
+**Lines at review (Oct 2026):** 454-461, 640, 1260
 
 **Why it's thought to be a bug**
 
@@ -457,7 +469,8 @@ Age and stage computed from `chrt` (cohort×gene) rather than the base cohort.
 ## SRV-08
 
 **off-by-one** · Conf M / Sev M  
-**Listed lines:** 640, 1260
+**Lines (current code):** 640, 1260  
+**Lines at review (Oct 2026):** 640, 1260
 
 **Why it's thought to be a bug**
 
@@ -493,7 +506,8 @@ Age and stage computed from `chrt` (cohort×gene) rather than the base cohort.
 ## SRV-09
 
 **denominator** · Conf M / Sev M  
-**Listed lines:** 737-738
+**Lines (current code):** 737-738  
+**Lines at review (Oct 2026):** 737-738
 
 **Why it's thought to be a bug**
 
@@ -530,7 +544,8 @@ Per-bin mean weight divided by total numbers over all bins.
 ## SRV-10
 
 **reused temp** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 969, 990, 1011
+**Lines (current code):** 969, 990, 1011  
+**Lines at review (Oct 2026):** 969, 990, 1011
 
 **Why it's thought to be a bug**
 
@@ -601,7 +616,8 @@ Same as SRV-03, for fish discards.
 ## SRV-11
 
 **double count** · Conf M / Sev M  
-**Listed lines:** 1072-1080 (+511)
+**Lines (current code):** 1072-1080 (+511)  
+**Lines at review (Oct 2026):** 1072-1080 (+511)
 
 **Why it's thought to be a bug**
 
@@ -645,13 +661,14 @@ Bird catch numbers are added twice.
 ## SRV-12
 
 **condition** · Conf L / Sev M  
-**Listed lines:** 794-797 vs 819-829, 876
+**Lines (current code):** 794-797 vs 819-829, 876  
+**Lines at review (Oct 2026):** 794-797 vs 819-829, 876
 
 **Why it's thought to be a bug**
 
 Reset is gated on isImpacted, accumulation on isFished.
 
-**Current code** (`atassess/atsurvey.c` lines 792–799)
+**Current code** (`atassess/atsurvey.c` lines 792–831)
 
 ```c
   792: 		for (b = 0; b < bm->nbox; b++) {
@@ -662,6 +679,38 @@ Reset is gated on isImpacted, accumulation on isFished.
   797: 							fishery[k][nf][sp][b][sample_id] = 0.0;
   798: 					}
   799: 				}
+  800: 			}
+  801: 		}
+  802: 	}
+  803: 
+  804: 	/* Assuming the following data structure
+  805: 	 fishery[0][group][b] = catch of XX
+  806: 	 fishery[1][group][b] = effort on XX
+  807: 	 fishery[2][group][b] = discards of XX
+  808: 
+  809: 	 Get totals since last sample period (e.g. sum over the year).
+  810: 	 Note: Do NOT * bm->boxes[b].area here as already done in original operating model.
+  811: 
+  812: 	 Collect annual fisheries data
+  813: 	 */
+  814: 	if (bm->annual_sample == numsteps) {
+  815: 		for (b = 0; b < bm->nbox; b++) {
+  816: 			if (bm->boxes[b].type != BOUNDARY) {
+  817: 				/* Collect data for target groups */
+  818: 				for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  819: 					if (FunctGroupArray[sp].isFished == TRUE) {
+  820: 						for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+  821: 							/* Assign values */
+  822: 							flagspeffortmodel = (int) (bm->FISHERYprms[nf][flageffortmodel_id]);
+  823: 							if ((flagspeffortmodel != rec_effort) && (flagspeffortmodel != rec_econ_model)) {
+  824: 								/* Only collect states for commercial fisheries */
+  825: 
+  826: 								for (ij = 0; ij < bm->boxes[b].nz; ij++)
+  827: 									fishery[fcatch_id][nf][sp][b][sample_id] += bm->CumCatch[sp][nf][b][ij];
+  828: 								fishery[feffort_id][nf][sp][b][sample_id] += bm->CumEffort[nf][b];
+  829: 								fishery[fdiscards_id][nf][sp][b][sample_id] += bm->CumDiscards[sp][nf][b];
+  830: 							}
+  831: 						}
 ```
 
 **Suggested fix (from review):** unify conditions
@@ -684,7 +733,8 @@ Reset is gated on isImpacted, accumulation on isFished.
 ## SRV-13
 
 **off-by-one** · Conf H / Sev H ✔ re-checked ⭐ priority  
-**Listed lines:** 1123-1124
+**Lines (current code):** 1123-1124  
+**Lines at review (Oct 2026):** 1123-1124
 
 **Why it's thought to be a bug**
 
@@ -721,7 +771,8 @@ Reset is gated on isImpacted, accumulation on isFished.
 ## SRV-14
 
 **loop bound** · Conf M / Sev M  
-**Listed lines:** 1210, 1220, 1223
+**Lines (current code):** 1210, 1220, 1223  
+**Lines at review (Oct 2026):** 1210, 1220, 1223
 
 **Why it's thought to be a bug**
 
@@ -770,40 +821,16 @@ Uses global max cohorts, so additive noise creates phantom fish.
 ## SRV-15
 
 **unguarded logging** · Conf H / Sev L  
-**Listed lines:** 1311, 1320-1323, 1360-1361, 1372-1374
+**Lines (current code):** 1311, 1320-1323, 1360-1361, 1372-1374  
+**Lines at review (Oct 2026):** 1311, 1320-1323, 1360-1361, 1372-1374
 
 **Why it's thought to be a bug**
 
 Debug fprintf calls are not behind `verbose`, so log files bloat.
 
-**Current code** (`atassess/atsurvey.c` lines 1284–1323 (truncated)) — code appears to have moved -25 lines since the review
+**Current code** (`atassess/atsurvey.c` lines 1309–1348 (truncated)) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
- 1284: 	}
- 1285: 
- 1286: 	if (verbose)
- 1287: 		fprintf(stderr, "Update fish stock and individ arrays\n");
- 1288: 
- 1289: 	/* Scaling size structure per zone so it sums to one - only do this annually (i.e. once sampling complete) */
- 1290: 	if (bm->annual_sample == numsteps) {
- 1291: 		for (z = 0; z < bm->nfzones; z++) {
- 1292: 			for (b = 0; b < bm->K_num_tot_sp; b++) {
- 1293: 				if (FunctGroupArray[b].isVertebrate == TRUE) {
- 1294: 					if ((FunctGroupArray[b].groupType != BIRD) && (FunctGroupArray[b].groupType != MAMMAL)) {
- 1295: 						totnums[totstocknums_id][b][z] = 0.0;
- 1296: 						for (i = 0; i < bm->K_num_size; i++) {
- 1297: 							totnums[totstocknums_id][b][z] += sizebins[sizestocknums_id][b][z][i][0][sample_id];
- 1298: 						}
- 1299: 					}
- 1300: 				}
- 1301: 			}
- 1302: 			/* Assign final values */
- 1303: 			for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
- 1304: 				if (FunctGroupArray[sp].isVertebrate == TRUE) {
- 1305: 					if ((FunctGroupArray[sp].groupType != BIRD) && (FunctGroupArray[sp].groupType != MAMMAL)) {
- 1306: 						/* Stock biomass */
- 1307: 						stockinfo[sbiomass_id][sp][z][sample_id] = biom[sp][z][sample_id] / 2.0;
- 1308: 
  1309: 						for (i = 0; i < bm->K_num_size; i++) {
  1310: 
  1311: 							fprintf(bm->logFile, "nsq[sp][z][i][sample_id] = %d\n", nsq[sp][z][i][sample_id]);
@@ -819,6 +846,31 @@ Debug fprintf calls are not behind `verbose`, so log files bloat.
  1321: 									FunctGroupArray[sp].groupCode, i, z, individVERTinfo[istocknums_id][sp][i][z][sample_id],
  1322: 									sizebins[sizestocknums_id][sp][z][i][0][sample_id], totnums[totstocknums_id][sp][z],
  1323: 									individVERTinfo[iq_id][sp][i][z][sample_id]);
+ 1324: 
+ 1325: 							/* Average weight of individual in that size bin */
+ 1326: 							step1 = sizebins[sizeweight_id][sp][z][i][0][sample_id] / (sizebins[sizestocknums_id][sp][z][i][0][sample_id] + TINY);
+ 1327: 							if (step1 > 0)
+ 1328: 								individVERTinfo[iweight_id][sp][i][z][sample_id] = step1;
+ 1329: 
+ 1330: 							/* Numbers in the catch */
+ 1331: 							stockinfo[scatchnums_id][sp][z][sample_id] += stockinfo[stotcatch_id][sp][z][sample_id]
+ 1332: 									* individVERTinfo[icatchnums_id][sp][i][z][sample_id] / (individVERTinfo[iweight_id][sp][i][z][sample_id] + TINY);
+ 1333: 
+ 1334: 							/* Numbers in the discards */
+ 1335: 							stockinfo[sdiscardnums_id][sp][z][sample_id] += stockinfo[sdiscards_id][sp][z][sample_id]
+ 1336: 									* individVERTinfo[idiscards_id][sp][i][z][sample_id] / (individVERTinfo[iweight_id][sp][i][z][sample_id] + TINY);
+ 1337: 
+ 1338: 							/* Age-length keys */
+ 1339: 							sum = 0.0;
+ 1340: 							for (j = 0; j < bm->K_max_agekey; j++) {
+ 1341: 								agelengthkey[i][j][sp][z][sample_id] = agebins[sp][z][j][i][sample_id];
+ 1342: 								/* Normalise so each length bin adds up to one across the ages */
+ 1343: 								sum += agelengthkey[i][j][sp][z][sample_id];
+ 1344: 							}
+ 1345: 							for (j = 0; j < bm->K_max_agekey; j++)
+ 1346: 								agelengthkey[i][j][sp][z][sample_id] /= (sum + TINY);
+ 1347: 						}
+ 1348: 
 ```
 
 **Suggested fix (from review):** wrap in `verbose`
@@ -841,7 +893,8 @@ Debug fprintf calls are not behind `verbose`, so log files bloat.
 ## SRV-16
 
 **units** · Conf L / Sev L  
-**Listed lines:** 1393-1397
+**Lines (current code):** 1393-1397  
+**Lines at review (Oct 2026):** 1393-1397
 
 **Why it's thought to be a bug**
 
@@ -881,7 +934,8 @@ matage (years) is capped at numCohorts.
 ## SRV-17
 
 **random range** · Conf M / Sev H ⭐ priority  
-**Listed lines:** 1559-1568, 1574
+**Lines (current code):** 1559-1568, 1574  
+**Lines at review (Oct 2026):** 1559-1568, 1574
 
 **Why it's thought to be a bug**
 
@@ -932,7 +986,8 @@ Upper bound is clamped but not lower, so a negative `samplec` writes out of boun
 ## SRV-18
 
 **log(0)** · Conf L / Sev L  
-**Listed lines:** 1680-1689
+**Lines (current code):** 1680-1689  
+**Lines at review (Oct 2026):** 1680-1689
 
 **Why it's thought to be a bug**
 

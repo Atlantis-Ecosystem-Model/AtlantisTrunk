@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [EMISC-06](#emisc-06) ⭐ | 492-529 | H/H | logic / wrong variable | For groups with `numMoveEntries == 4`, `index = floor(TofY/91.25)` is compared with `orig_index`, but line 527… |  | [ ] |
 | [EMISC-07](#emisc-07) | 125-128, 192-209 | M/L | off-by-one | `PointInYear` can be 365 (rounding up a remainder of 364.5 or more). That gives `DayInQuarter = 93 > DaysInQ =… |  | [ ] |
@@ -19,7 +19,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EMISC-06
 
 **logic / wrong variable** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 492-529
+**Lines (current code):** 492-529  
+**Lines at review (Oct 2026):** 492-529
 
 **Function:** `Calculate_Move_Date_Index()`
 
@@ -92,7 +93,8 @@ For groups with `numMoveEntries == 4`, `index = floor(TofY/91.25)` is compared w
 ## EMISC-07
 
 **off-by-one** · Conf M / Sev L  
-**Listed lines:** 125-128, 192-209
+**Lines (current code):** 125-128, 192-209  
+**Lines at review (Oct 2026):** 125-128, 192-209
 
 **Function:** `Time_OYr()`
 
@@ -133,7 +135,8 @@ For groups with `numMoveEntries == 4`, `index = floor(TofY/91.25)` is compared w
 ## EMISC-08
 
 **stale value** · Conf M / Sev L  
-**Listed lines:** 152-161
+**Lines (current code):** 152-161  
+**Lines at review (Oct 2026):** 152-161
 
 **Function:** `Time_OYr()`
 

@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW3-11](#sjw3-11) | 50-58 | H/M | wrong logic / unsigned underflow | `if (n > (int) min(strlen(s1),strlen(s2)) ) return(-1); for (i=0;i<=(n-1);i++)` — (a) returns "not equal" when… |  | [ ] |
 | [SJW3-12](#sjw3-12) | 32-42 | M/L | non-standard return | `strcasecmp` returns -1 for any mismatch (never >0), so it is unusable for ordering (e.g. qsort/bsearch compar… |  | [ ] |
@@ -22,7 +22,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW3-11
 
 **wrong logic / unsigned underflow** · Conf H / Sev M  
-**Listed lines:** 50-58
+**Lines (current code):** 50-58  
+**Lines at review (Oct 2026):** 50-58
 
 **Function:** `strncasecmp()`
 
@@ -68,7 +69,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW3-12
 
 **non-standard return** · Conf M / Sev L  
-**Listed lines:** 32-42
+**Lines (current code):** 32-42  
+**Lines at review (Oct 2026):** 32-42
 
 **Function:** `strcasecmp()`
 
@@ -76,9 +78,12 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `strcasecmp` returns -1 for any mismatch (never >0), so it is unusable for ordering (e.g. qsort/bsearch comparators) on Windows; equality tests are fine. Function: `strcasecmp()`.
 
-**Current code** (`sjwlib/win32.c` lines 33–47) — code appears to have moved +3 lines since the review
+**Current code** (`sjwlib/win32.c` lines 30–44)
 
 ```c
+   30: 	n2 = (int)strlen(s2);
+   31: 
+   32: 	if (n1 != n2) return(-1);
    33: 
    34: 	for (i=0;(s1[i] != '\0');i++) {
    35: 		if (tolower(s1[i]) == tolower(s2[i])) {
@@ -91,9 +96,6 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
    42: 	return(0);
    43: }
    44: 
-   45: int strncasecmp(const char *s1, const char *s2, size_t n) {
-   46: 
-   47: 	unsigned int i;
 ```
 
 **Suggested fix (from review):** Return `tolower(s1[i]) - tolower(s2[i])`.

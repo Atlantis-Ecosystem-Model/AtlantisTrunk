@@ -2,19 +2,19 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **5 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [MAIN-09](#main-09) | 408-414 | H/L | copy-paste / wrong guard | `#ifndef min` / `#define min` is followed by `#if !defined(min)` / `#define max`. Because min was just defined… |  | [ ] |
 | [MAIN-10](#main-10) | 333-340, 153 | M/L | preprocessor logic | `#ifndef SMALL_LOG_FILE_SIZE ... #elif BETH_LOG_FILE_SIZE ... #else`: the BETH option is only checked when SMA… |  | [ ] |
 | [MAIN-11](#main-11) | 389-402 | L/M | conflicting enum/define values | `nlevel_id` and `growth_id` both equal `ICE_BASED+1` (5), which is also `MIXED`. `death_id` (6) equals `nTotHa… |  | [ ] |
-| [BMH-01](#bmh-01) | 6110, 6129, 6131, 6155, 6173, 6174, 6175, 6237 | H/L | dead declarations | Eight prototypes have no definition anywhere in the source tree (externalLibs/netcdf excluded) and no call sit… |  | [ ] |
-| [BMH-02](#bmh-02) | 6280-6281 (defs atmanage/atRlink.c:298, 359; atmanage/atRlinkRedus.c:269, 323) | H/L | duplicate definition (latent) | `freeRedus()` and `REDUS_management()` are each defined twice, in atRlink.c and in atRlinkRedus.c. Both copies… |  | [ ] |
+| [BMH-01](#bmh-01) | 6302, 6321, 6323, 6347, 6365, 6366, 6367, 6237? | H/L | dead declarations | Eight prototypes have no definition anywhere in the source tree (externalLibs/netcdf excluded) and no call sit… |  | [ ] |
+| [BMH-02](#bmh-02) | 6280-6281? (defs atmanage/atRlink.c:298, 359; atmanage/atRlinkRedus.c:269, 323) | H/L | duplicate definition (latent) | `freeRedus()` and `REDUS_management()` are each defined twice, in atRlink.c and in atRlinkRedus.c. Both copies… |  | [ ] |
 
 ## Reviewer notes for this file
 
@@ -36,7 +36,8 @@ No `K_num_*`, `num_*` or `tot_*` count is smaller than or equal to an id in its 
 ## MAIN-09
 
 **copy-paste / wrong guard** · Conf H / Sev L  
-**Listed lines:** 408-414
+**Lines (current code):** 408-414  
+**Lines at review (Oct 2026):** 408-414
 
 **Why it's thought to be a bug**
 
@@ -78,7 +79,8 @@ No `K_num_*`, `num_*` or `tot_*` count is smaller than or equal to an id in its 
 ## MAIN-10
 
 **preprocessor logic** · Conf M / Sev L  
-**Listed lines:** 333-340, 153
+**Lines (current code):** 333-340, 153  
+**Lines at review (Oct 2026):** 333-340, 153
 
 **Why it's thought to be a bug**
 
@@ -104,7 +106,8 @@ No `K_num_*`, `num_*` or `tot_*` count is smaller than or equal to an id in its 
 ## MAIN-11
 
 **conflicting enum/define values** · Conf L / Sev M  
-**Listed lines:** 389-402
+**Lines (current code):** 389-402  
+**Lines at review (Oct 2026):** 389-402
 
 **Why it's thought to be a bug**
 
@@ -153,7 +156,8 @@ No `K_num_*`, `num_*` or `tot_*` count is smaller than or equal to an id in its 
 ## BMH-01
 
 **dead declarations** · Conf H / Sev L  
-**Listed lines:** 6110, 6129, 6131, 6155, 6173, 6174, 6175, 6237
+**Lines (current code):** 6302, 6321, 6323, 6347, 6365, 6366, 6367, 6237?  
+**Lines at review (Oct 2026):** 6110, 6129, 6131, 6155, 6173, 6174, 6175, 6237
 
 **Why it's thought to be a bug**
 
@@ -185,16 +189,21 @@ Eight prototypes have no definition anywhere in the source tree (externalLibs/ne
 ## BMH-02
 
 **duplicate definition (latent)** · Conf H / Sev L  
-**Listed lines:** 6280-6281 (defs atmanage/atRlink.c:298, 359; atmanage/atRlinkRedus.c:269, 323)
+**Lines (current code):** 6280-6281? (defs atmanage/atRlink.c:298, 359; atmanage/atRlinkRedus.c:269, 323)  
+**Lines at review (Oct 2026):** 6280-6281 (defs atmanage/atRlink.c:298, 359; atmanage/atRlinkRedus.c:269, 323)
 
 **Why it's thought to be a bug**
 
-`freeRedus()` and `REDUS_management()` are each defined twice, in atRlink.c and in atRlinkRedus.c. Both copies have identical signatures and both sit under `#ifdef RASSESS_LINK_ENABLED`. atRlink.c is not listed in atmanage/Makefile.am (line 11 lists only atRlinkRedus.c, atRlinkRBC.c and atRlinkRAssess.c) or in any other build file, so it is a stale copy that does not link today. If it is ever added back to the sources, the build gets duplicate-symbol link errors, and in the meantime the two copies can drift apart. Callers (atlantismain.c:751, atmanage/atManageAnnual.c:2176) bind to the atRlinkRedus.c versions. Functions: `freeRedus()`, `REDUS_management()`.
+`freeRedus()` and `REDUS_management()` are each defined twice, in atRlink.c and in atRlinkRedus.c. Both copies have identical signatures and both sit under `#ifdef RASSESS_LINK_ENABLED`. atRlink.c is not listed in atmanage/Makefile.am (line 11 lists only atRlinkRedus.c, atRlinkRBC.c and atRlinkRAssess.c) or in any other build file, so it is a stale copy that does not link today. If it is ever added back to the sources, the build gets duplicate-symbol link errors, and in the meantime the two copies can drift apart. Callers (atlantismain.c:880, atmanage/atManageAnnual.c:2176) bind to the atRlinkRedus.c versions. Functions: `freeRedus()`, `REDUS_management()`.
 
-**Current code** (`atmanage/atRlink.c` lines 6278–442) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code
+**Current code** (`atmanage/atRlink.c` lines 296–300)
 
 ```c
-
+  296: }
+  297: 
+  298: int freeRedus()
+  299: {
+  300:  /*
 ```
 
 **Suggested fix (from review):** Delete atmanage/atRlink.c, or move it to an archive folder

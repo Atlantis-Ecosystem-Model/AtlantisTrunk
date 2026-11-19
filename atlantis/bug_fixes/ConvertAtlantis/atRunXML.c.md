@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [CNV2-20](#cnv2-20) ⭐ | 49-73 | H/H | missing parameter | The reader requires `K_num_vessel_sizes` in `SubModelSetup` when `flagindustry_on == simple_industry_model (1)… |  | [ ] |
 | [CNV2-21](#cnv2-21) | 126-129 (with atparamIO.c:234) | H/M | state only set by converter | `bm->track_contaminants` is set only as a side effect of conversion (line 127). In `Read_Run_Parameters()` the… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV2-20
 
 **missing parameter** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 49-73
+**Lines (current code):** 49-73  
+**Lines at review (Oct 2026):** 49-73
 
 **Function:** `Convert_Run_To_XML()`
 
@@ -82,7 +83,8 @@ The reader requires `K_num_vessel_sizes` in `SubModelSetup` when `flagindustry_o
 ## CNV2-21
 
 **state only set by converter** · Conf H / Sev M  
-**Listed lines:** 126-129 (with atparamIO.c:234)
+**Lines (current code):** 126-129 (with atparamIO.c:234)  
+**Lines at review (Oct 2026):** 126-129 (with atparamIO.c:234)
 
 **Function:** `Convert_Run_To_XML()`
 
@@ -123,7 +125,8 @@ The reader requires `K_num_vessel_sizes` in `SubModelSetup` when `flagindustry_o
 ## CNV2-22
 
 **metadata clobber** · Conf M / Sev L  
-**Listed lines:** 133-139
+**Lines (current code):** 133-139  
+**Lines at review (Oct 2026):** 133-139
 
 **Function:** `Convert_Run_To_XML()`
 
@@ -167,7 +170,8 @@ The reader requires `K_num_vessel_sizes` in `SubModelSetup` when `flagindustry_o
 ## CNV2-23
 
 **wrong type metadata** · Conf H / Sev L  
-**Listed lines:** 126-127, 199
+**Lines (current code):** 126-127, 199  
+**Lines at review (Oct 2026):** 126-127, 199
 
 **Function:** `Convert_Run_To_XML()`
 

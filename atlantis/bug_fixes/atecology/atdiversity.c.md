@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **9 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [NUTR-08](#nutr-08) ⭐ | 959-1023, 884-957 | H/H | missing switch case → crash | `TRAIT_INDICES` includes `rsmid_trait_id` and `rsprop_trait_id` (atlantisboxmodel.h:2030-2031), which are used… |  | [ ] |
 | [NUTR-09](#nutr-09) | 306-307 | H/M | wrong id constant | `MIGRATION[species].SN[cohort][expect_id]`, `.RN[...][expect_id]` and `.DEN[cohort][expect_id]` use `expect_id… |  | [ ] |
@@ -25,13 +25,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## NUTR-08
 
 **missing switch case → crash** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 959-1023, 884-957
+**Lines (current code):** 959-1023, 884-957  
+**Lines at review (Oct 2026):** 959-1023, 884-957
 
 **Why it's thought to be a bug**
 
-`TRAIT_INDICES` includes `rsmid_trait_id` and `rsprop_trait_id` (atlantisboxmodel.h:2030-2031), which are used elsewhere (atprocess.c:2516, atdemography.c:914, and Get_Orig_Trait_value 1102-1107). `Get_Trait_value()` and `Apply_Evol_Scalar()` have no cases for them and fall to `quit(" No such trait as yet")`. Find_Evolution_Stats (151, 184, 199), Find_Evolution_Shift (326), Do_Evolution (702-714) and Do_Aging_Update_Trait (846-867) call these for every active trait, so activating either trait aborts the run. Functions: `Get_Trait_value()`, `Apply_Evol_Scalar()`.
+`TRAIT_INDICES` includes `rsmid_trait_id` and `rsprop_trait_id` (atlantisboxmodel.h:2061-2062), which are used elsewhere (atprocess.c:2516?, atdemography.c:915, and Get_Orig_Trait_value 1102-1107). `Get_Trait_value()` and `Apply_Evol_Scalar()` have no cases for them and fall to `quit(" No such trait as yet")`. Find_Evolution_Stats (151, 184, 199), Find_Evolution_Shift (326), Do_Evolution (702-714) and Do_Aging_Update_Trait (846-867) call these for every active trait, so activating either trait aborts the run. Functions: `Get_Trait_value()`, `Apply_Evol_Scalar()`.
 
-**Current code** (`atecology/atdiversity.c` lines 957–991 (range truncated))
+**Current code** (`atecology/atdiversity.c` lines 957–996 (truncated))
 
 ```c
   957: }
@@ -69,6 +70,11 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   989: 		} else {
   990: 			param_value = FunctGroupArray[species].scaled_FSPB[cohort];
   991: 		}
+  992: 		break;
+  993: 	case reproduce_trait_id:  	/* Reproductive investment - TODO: Will need to make this have a genetic component */
+  994: 		param_value = FunctGroupArray[species].speciesParams[FSP_id];
+  995: 		break;
+  996: 	case temp_trait_id:  		/* Temperature tolerance - will need to cover range and effect */
 ```
 
 **Suggested fix (from review):** Add cases reading and scaling `bm->evolTraitValues[species][cohort][rsmid/rsprop_trait_id]`.
@@ -91,7 +97,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## NUTR-09
 
 **wrong id constant** · Conf H / Sev M  
-**Listed lines:** 306-307
+**Lines (current code):** 306-307  
+**Lines at review (Oct 2026):** 306-307
 
 **Function:** `Find_Evolution_Shift()`
 
@@ -130,7 +137,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## NUTR-10
 
 **index unit confusion** · Conf H / Sev M  
-**Listed lines:** 1025-1039, 1116-1130 (called at 62)
+**Lines (current code):** 1025-1039, 1116-1130 (called at 62)  
+**Lines at review (Oct 2026):** 1025-1039, 1116-1130 (called at 62)
 
 **Why it's thought to be a bug**
 
@@ -180,7 +188,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## NUTR-11
 
 **loop nesting / overcount** · Conf H / Sev M  
-**Listed lines:** 113-122, 253-260
+**Lines (current code):** 113-122, 253-260  
+**Lines at review (Oct 2026):** 113-122, 253-260
 
 **Why it's thought to be a bug**
 
@@ -225,7 +234,8 @@ For BIOMASS/AGE_STRUCTURED_BIOMASS EPIFAUNA groups, `bm->boxes[b].epi[den] * are
 ## NUTR-12
 
 **overwritten initialisation** · Conf H / Sev M  
-**Listed lines:** 61-68
+**Lines (current code):** 61-68  
+**Lines at review (Oct 2026):** 61-68
 
 **Function:** `Find_Evolution_Stats()`
 
@@ -270,7 +280,8 @@ Line 63 sets `trait_shift[ntrait][cohort][0][evol_birth_var_id]` to initial vari
 ## NUTR-13
 
 **accumulator not reset** · Conf M / Sev M  
-**Listed lines:** 61-62, 153, 172
+**Lines (current code):** 61-62, 153, 172  
+**Lines at review (Oct 2026):** 61-62, 153, 172
 
 **Function:** `Find_Evolution_Stats()`
 
@@ -309,7 +320,8 @@ At dayt==0, `evol_theoretmean_id` is first set to `Get_Mean_Orig_Value(...)` (62
 ## NUTR-14
 
 **logic error** · Conf M / Sev M  
-**Listed lines:** 635-648
+**Lines (current code):** 635-648  
+**Lines at review (Oct 2026):** 635-648
 
 **Function:** `Do_Phenotyic_Expression()`
 
@@ -360,7 +372,8 @@ When variable expression is on, the last genotype (`ngene == numGeneTypes-1`) ge
 ## NUTR-15
 
 **division by zero** · Conf M / Sev L  
-**Listed lines:** 171
+**Lines (current code):** 171  
+**Lines at review (Oct 2026):** 171
 
 **Function:** `Find_Evolution_Stats()`
 
@@ -398,7 +411,8 @@ When variable expression is on, the last genotype (`ngene == numGeneTypes-1`) ge
 ## NUTR-16
 
 **division by zero** · Conf M / Sev M  
-**Listed lines:** 756, 758
+**Lines (current code):** 756, 758  
+**Lines at review (Oct 2026):** 756, 758
 
 **Function:** `Do_Evolution()`
 

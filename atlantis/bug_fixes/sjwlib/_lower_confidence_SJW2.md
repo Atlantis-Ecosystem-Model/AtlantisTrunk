@@ -14,7 +14,7 @@ These came from section B.3 of the list. They were not raised as findings. Tick 
 
 ### LC-1
 
-Outside the assigned files but found while checking callers: atmanage/atManageSetup.c:1552 computes the "top" skipper CDF with `speciesParams[cpue_cdf_poor_p_id]` instead of `cpue_cdf_top_p_id`, which is read in atManageParamIO.c:682 but never used. This looks like a high-confidence copy-paste bug.
+Outside the assigned files but found while checking callers: atmanage/atManageSetup.c:1551 computes the "top" skipper CDF with `speciesParams[cpue_cdf_poor_p_id]` instead of `cpue_cdf_top_p_id`, which is read in atManageParamIO.c:682 but never used. This looks like a high-confidence copy-paste bug.
 
 - [ ] Investigate   - [ ] Ignore
 

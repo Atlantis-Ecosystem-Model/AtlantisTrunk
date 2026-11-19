@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [HRV2-12](#hrv2-12) | 246 | M/M | wrong operator | The expanding branch is documented as "use original distribution", but it does `CatchTS_agedistrib[...][ij] +=… |  | [ ] |
 | [HRV2-13](#hrv2-13) | 195-206 | L/M | logic | In the flagkeepZeroCatchTS branch, when `CatchTS_agedistribOrig==0` the class is set to 0 and `cumtot` is rese… |  | [ ] |
@@ -19,7 +19,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-12
 
 **wrong operator** · Conf M / Sev M  
-**Listed lines:** 246
+**Lines (current code):** 246  
+**Lines at review (Oct 2026):** 246
 
 **Function:** `Harvest_Recalc_Time_Series_Distrib()`
 
@@ -57,7 +58,8 @@ The expanding branch is documented as "use original distribution", but it does `
 ## HRV2-13
 
 **logic** · Conf L / Sev M  
-**Listed lines:** 195-206
+**Lines (current code):** 195-206  
+**Lines at review (Oct 2026):** 195-206
 
 **Function:** `Harvest_Recalc_Time_Series_Distrib()`
 
@@ -106,7 +108,8 @@ In the flagkeepZeroCatchTS branch, when `CatchTS_agedistribOrig==0` the class is
 ## HRV2-14
 
 **logging** · Conf H / Sev L  
-**Listed lines:** 272
+**Lines (current code):** 272  
+**Lines at review (Oct 2026):** 272
 
 **Function:** `Harvest_Recalc_Time_Series_Distrib()`
 

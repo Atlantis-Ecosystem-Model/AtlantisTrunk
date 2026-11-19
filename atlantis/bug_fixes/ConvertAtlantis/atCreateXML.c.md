@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **7 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [CNV1-18](#cnv1-18) | 33-45 | H/M | infinite loop | `while(1){ if(fgets(...) != NULL){...} }` has no else branch. At EOF fgets keeps returning NULL and the loop n… |  | [ ] |
 | [CNV1-19](#cnv1-19) | 1836-1839 | M/M | inconsistent parsing / unchecked read | The value line is read with a raw `fgets(buf, buflen, inputFP)` (return value unchecked). Comment and blank li… |  | [ ] |
@@ -23,7 +23,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV1-18
 
 **infinite loop** · Conf H / Sev M  
-**Listed lines:** 33-45
+**Lines (current code):** 33-45  
+**Lines at review (Oct 2026):** 33-45
 
 **Function:** `Get_Next_Line()`
 
@@ -73,7 +74,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV1-19
 
 **inconsistent parsing / unchecked read** · Conf M / Sev M  
-**Listed lines:** 1836-1839
+**Lines (current code):** 1836-1839  
+**Lines at review (Oct 2026):** 1836-1839
 
 **Function:** `Create_Harvest_Fishery_Group_ParamXML()`
 
@@ -81,17 +83,17 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The value line is read with a raw `fgets(buf, buflen, inputFP)` (return value unchecked). Comment and blank lines between key and values are not skipped, the trailing `\n` is not trimmed, there is no numeric check, and the declared length is not checked. Every other array reader in this file uses `Get_Next_Line` + `trim` + `CheckIsDigits`. A comment line under a `sel_XXX`/`q_XXX` key is silently stored as the parameter value. Function: `Create_Harvest_Fishery_Group_ParamXML()`.
 
-**Current code** (`ConvertAtlantis/atCreateXML.c` lines 1837–1844) — code appears to have moved +3 lines since the review
+**Current code** (`ConvertAtlantis/atCreateXML.c` lines 1834–1841)
 
 ```c
+ 1834: 				guild = Util_Get_FG_Index(bm, speciesStr);
+ 1835: 				if (guild != -1) {
+ 1836: 
  1837: 					guildCheck[guild] = TRUE;
  1838: 					// Get the next line.
  1839: 					fgets(buf, buflen, inputFP);
  1840: 					/* Set the group attribute - if the node does not already exist it will be created */
  1841: 					Util_XML_Set_Node_Value(ATLANTIS_GROUP_ATTRIBUTE, newNode, FunctGroupArray[guild].groupCode, buf);
- 1842: 				} else {
- 1843: 					quit("Create_Harvest_Fishery_Group_ParamXML: SpeciesString not recognised '%s'.\n varStr = %s, bm->SP_FISHERYprmsName[%d] = %s\n", speciesStr,
- 1844: 							varStr, paramID, bm->SP_FISHERYprmsName[paramID]);
 ```
 
 **Suggested fix (from review):** Use `Get_Next_Line(bm,inputFP,buf); trim(buf);` + `CheckIsDigits`, and validate the token count against K_num_fisheries.
@@ -114,21 +116,22 @@ The value line is read with a raw `fgets(buf, buflen, inputFP)` (return value un
 ## CNV1-20
 
 **NULL deref** · Conf H / Sev L  
-**Listed lines:** 1477-1478, 1629-1630
+**Lines (current code):** 1477-1478, 1629-1630  
+**Lines at review (Oct 2026):** 1477-1478, 1629-1630
 
 **Why it's thought to be a bug**
 
 `lengthString = strtok(NULL, seps); lengthValue = atoi(lengthString);` has no NULL check. A multi-stage key line with no length token crashes. `Parse_File` (179-181) checks the same case. Also, a length mismatch only produces a warning, and all stages are then marked present anyway (1483-1485 / 1635-1637). Functions: `Create_Species_Cohort_ParamXML()`, `Create_Species_Spawn_ParamXML()`.
 
-**Current code** (`ConvertAtlantis/atCreateXML.c` lines 1478–1483) — code appears to have moved +3 lines since the review
+**Current code** (`ConvertAtlantis/atCreateXML.c` lines 1475–1480)
 
 ```c
+ 1475: 
+ 1476: 				/* Put the values in */
+ 1477: 				if(size > 1){
  1478: 					/* Check the length */
  1479: 					lengthString = strtok(NULL, seps);
  1480: 					lengthValue = atoi(lengthString);
- 1481: 					if(lengthValue != size){
- 1482: 						warn("Create_Species_Cohort_ParamXML - Length of attribute %s in file %s is not the required length %d in file %s\n", varStr, fileName, size, fileName);
- 1483: 					}
 ```
 
 **Suggested fix (from review):** Add `if(lengthString==NULL) quit(...)`.
@@ -151,7 +154,8 @@ The value line is read with a raw `fgets(buf, buflen, inputFP)` (return value un
 ## CNV1-21
 
 **NULL deref** · Conf M / Sev L  
-**Listed lines:** 297-303
+**Lines (current code):** 297-303  
+**Lines at review (Oct 2026):** 297-303
 
 **Function:** `Parse_File_Single_Line()`
 
@@ -195,7 +199,8 @@ The value line is read with a raw `fgets(buf, buflen, inputFP)` (return value un
 ## CNV1-22
 
 **buffer overrun (latent)** · Conf M / Sev M  
-**Listed lines:** 903/1165-1283, 1729/1809-1823, 1899/1950-2034
+**Lines (current code):** 903/1165-1283, 1729/1809-1823, 1899/1950-2034  
+**Lines at review (Oct 2026):** 903/1165-1283, 1729/1809-1823, 1899/1950-2034
 
 **Why it's thought to be a bug**
 
@@ -231,7 +236,8 @@ The value line is read with a raw `fgets(buf, buflen, inputFP)` (return value un
 ## CNV1-23
 
 **OOB read (error path)** · Conf L / Sev L  
-**Listed lines:** 731-732
+**Lines (current code):** 731-732  
+**Lines at review (Oct 2026):** 731-732
 
 **Function:** `Print_Species_Cohort_Param_Error()`
 
@@ -270,20 +276,21 @@ The value line is read with a raw `fgets(buf, buflen, inputFP)` (return value un
 ## CNV1-24
 
 **format/arg mismatch** · Conf L / Sev L  
-**Listed lines:** 1320, 2376
+**Lines (current code):** 1320, 2376  
+**Lines at review (Oct 2026):** 1320, 2376
 
 **Why it's thought to be a bug**
 
 `quit("...paramID not found = %d (%s) in switch statement. \n", paramID, tag, fileName)`: `fileName` is passed but has no `%s`, so the file is never reported (extra arg, harmless). Functions: `Create_Species_ParamXML()`, `Create_RBC_Species_ParamXML()`.
 
-**Current code** (`ConvertAtlantis/atCreateXML.c` lines 1320–1324)
+**Current code** (`ConvertAtlantis/atCreateXML.c` lines 1318–1322)
 
 ```c
+ 1318:                     (*strstr(speciesStr, "MultiyrMigrate")) = '\0';
+ 1319:                     break;
  1320:                  */
  1321: 				default:
  1322: 					quit("Create_Species_ParamXML: paramID not found = %d (%s) in switch statement. \n", paramID, speciesParamStructArray[index].tag, fileName);
- 1323: 					break;
- 1324: 				}
 ```
 
 **Suggested fix (from review):** Add `in file %s` to the format.

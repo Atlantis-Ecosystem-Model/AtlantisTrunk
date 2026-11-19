@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **15 findings** (severity H: 7; confidence H and severity H: 6; on the priority list: 6).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SS3-26](#ss3-26) ✔ ⭐ | 77-100 (uses 122-487) | H/H | swapped dims (alloc convention) | All local arrays are allocated with dims in *index* order instead of reversed. `nsamps_sya = Alloc_3D(Nsexes,n… |  | [ ] |
 | [SS3-27](#ss3-27) | 77, 121-122, 165-177 | M/M | OOB | `nsamps_y` and `nsamps_sya` are sized `nsampy = last_sy-first_sy+1` but indexed with absolute `y` up to `last_… |  | [ ] |
@@ -31,15 +31,16 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SS3-26
 
 **swapped dims (alloc convention)** · Conf H / Sev H ✔ re-checked ⭐ priority  
-**Listed lines:** 77-100 (uses 122-487)
+**Lines (current code):** 77-100 (uses 122-487)  
+**Lines at review (Oct 2026):** 77-100 (uses 122-487)
 
 **Function:** `CKsimulator()`
 
 **Why it's thought to be a bug**
 
-All local arrays are allocated with dims in *index* order instead of reversed. `nsamps_sya = Alloc_3D(Nsexes,nsampy,MaxAge)` gives `[MaxAge][nsampy][Nsexes]` but is used `[s][y][a]`. `inv_totfec_sy` gives `[last_dy][Nsexes]` and is used `[s][y]`. `n_sya`, `psurv_syay`, `Pr_PO/HS_syaya`, `ncomps_PO_syaya`, `Ekin_*`, `sim_nkin_*` (giving `[MaxAge][last_sy][MaxAge][last_sy][Nsexes]`) and `Pr_GG/HS_yaya` and `ncomps_HS_yaya` (giving `[MaxAge][last_sy][MaxAge][last_sy]`) are all indexed the other way round. Any index past a dimension's size goes out of bounds whenever Nsexes, last_sy and MaxAge differ. The TODO at line 76 flags this. The same pattern is at atAssessTierSetup.c:536-549. Function: `CKsimulator()`.
+All local arrays are allocated with dims in *index* order instead of reversed. `nsamps_sya = Alloc_3D(Nsexes,nsampy,MaxAge)` gives `[MaxAge][nsampy][Nsexes]` but is used `[s][y][a]`. `inv_totfec_sy` gives `[last_dy][Nsexes]` and is used `[s][y]`. `n_sya`, `psurv_syay`, `Pr_PO/HS_syaya`, `ncomps_PO_syaya`, `Ekin_*`, `sim_nkin_*` (giving `[MaxAge][last_sy][MaxAge][last_sy][Nsexes]`) and `Pr_GG/HS_yaya` and `ncomps_HS_yaya` (giving `[MaxAge][last_sy][MaxAge][last_sy]`) are all indexed the other way round. Any index past a dimension's size goes out of bounds whenever Nsexes, last_sy and MaxAge differ. The TODO at line 76 flags this. The same pattern is at atAssessTierSetup.c:541-554. Function: `CKsimulator()`.
 
-**Current code** (`atSS3Link/atCloseKin.c` lines 75–102)
+**Current code** (`atSS3Link/atCloseKin.c` lines 75–114 (truncated))
 
 ```c
    75:     /* Leave here for now */
@@ -70,6 +71,18 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
   100:     double *****sim_nkin_HS = Util_Alloc_Init_5D_Double(bm->RBCestimation.RBCspeciesParam[sp][Nsexes_id], bm->CloseKinEst[sp].last_sy, bm->RBCestimation.RBCspeciesParam[sp][MaxAge_id], bm->CloseKinEst[sp].last_sy, bm->RBCestimation.RBCspeciesParam[sp][MaxAge_id], 0.0);
   101: 
   102:     
+  103:     Util_Init_1D_Double(bm->CloseKinEst[sp].fec_expo_s, bm->RBCestimation.RBCspeciesParam[sp][Nsexes_id], 1.0);
+  104:     Util_Init_2D_Double(bm->CloseKinEst[sp].fec_sa, bm->RBCestimation.RBCspeciesParam[sp][Nsexes_id], bm->RBCestimation.RBCspeciesParam[sp][MaxAge_id],  0.0);
+  105:     Util_Init_1D_Double(bm->CloseKinEst[sp].mature, bm->RBCestimation.RBCspeciesParam[sp][Nlen_id], 0.0);
+  106:     Util_Init_1D_Double(bm->CloseKinEst[sp].lengths, bm->RBCestimation.RBCspeciesParam[sp][Nlen_id], 0.0);
+  107: 
+  108:     /**
+  109:     for (y = bm->CloseKinEst[sp].first_sy; y < bm->CloseKinEst[sp].last_sy; y++) {
+  110:         nsamps_y[y] = int(bm->CloseKinEst.nTotSamps / nsampy);
+  111:         fprintf(bm->logFile, "Time: %e %s CKsimulator: nsamps_y[%d] : %d\n", bm->dayt, FunctGroupArray[sp].groupCode, y, nsamps_y[y]);
+  112:     }
+  113:      **/
+  114:     
 ```
 
 **Suggested fix (from review):** Reverse every dimension list, e.g. `Alloc_3D(MaxAge, nsampy, Nsexes)`
@@ -92,7 +105,8 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
 ## SS3-27
 
 **OOB** · Conf M / Sev M  
-**Listed lines:** 77, 121-122, 165-177
+**Lines (current code):** 77, 121-122, 165-177  
+**Lines at review (Oct 2026):** 77, 121-122, 165-177
 
 **Function:** `CKsimulator()`
 
@@ -130,7 +144,8 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
 ## SS3-28
 
 **year value as index** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 72, 140
+**Lines (current code):** 72, 140  
+**Lines at review (Oct 2026):** 72, 140
 
 **Function:** `CKsimulator()`
 
@@ -168,7 +183,8 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
 ## SS3-29
 
 **overwritten per stock** · Conf M / Sev L  
-**Listed lines:** 130-144
+**Lines (current code):** 130-144  
+**Lines at review (Oct 2026):** 130-144
 
 **Function:** `CKsimulator()`
 
@@ -176,9 +192,12 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
 
 `mature[l]` and `fec_sa[s][a]` are recomputed (=0 then +=) for each stock `j`, so only the last stock's fecundity survives. Function: `CKsimulator()`.
 
-**Current code** (`atSS3Link/atCloseKin.c` lines 131–149) — code appears to have moved +3 lines since the review
+**Current code** (`atSS3Link/atCloseKin.c` lines 128–146)
 
 ```c
+  128:     }
+  129: 
+  130:     for (j = 0; j < FunctGroupArray[sp].numStocks; j++){
   131:     // Maturity as a function of length
   132:         for (l = 0 ; l < bm->RBCestimation.RBCspeciesParam[sp][Nlen_id]; l++) {
   133:             bm->CloseKinEst[sp].mature[l] = 1.0 / (1.0 + exp(bm->RBCestimation.RBCspeciesArray[sp].SlopeMat[j] * (bm->CloseKinEst[sp].lengths[l] - bm->RBCestimation.RBCspeciesArray[sp].Mat50[j])));
@@ -195,9 +214,6 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
   144:     }
   145: 
   146:     int amat = 0;
-  147:     for (a = 0; a < bm->RBCestimation.RBCspeciesParam[sp][MaxAge_id]; a++) {
-  148:         if (bm->CloseKinEst[sp].fec_sa[FEMALE_ID][a] < bm->RBCestimation.RBCspeciesParam[sp][thresh_mat_id]) {
-  149:             amat = a;
 ```
 
 **Suggested fix (from review):** Accumulate across stocks (weighted) or add a stock dimension
@@ -220,7 +236,8 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
 ## SS3-30
 
 **use after close** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 154-163, 490-498
+**Lines (current code):** 154-163, 490-498  
+**Lines at review (Oct 2026):** 154-163, 490-498
 
 **Function:** `CKsimulator()`
 
@@ -267,7 +284,8 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
 ## SS3-31
 
 **off-by-one OOB** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 241, 270-273, 343-353
+**Lines (current code):** 241, 270-273, 343-353  
+**Lines at review (Oct 2026):** 241, 270-273, 343-353
 
 **Function:** `CKsimulator()`
 
@@ -275,7 +293,7 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
 
 `psurv_syay[s][y-1][this_maxage][y]` with `this_maxage = MaxAge`, `curr_a` allowed to reach MaxAge (`if (curr_a < MaxAge) curr_a++`), and `ap_b2 = MaxAge` (then `fec_sa[s][ap_b2]`) all index one past the age extent MaxAge (fec_sa: atAssessTierSetup.c:271). Function: `CKsimulator()`.
 
-**Current code** (`atSS3Link/atCloseKin.c` lines 239–243)
+**Current code** (`atSS3Link/atCloseKin.c` lines 239–275)
 
 ```c
   239:             }
@@ -283,6 +301,38 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
   241:             psurv_syay[s][y-1][this_maxage][y] = n_sya[s][y][this_maxage] / n_sya[s][y- 1][this_maxage-1];
   242: 
   243:             /*
+  244:             for (a = 1;a < bm->RBCestimation.RBCspeciesParam[sp][MaxAge_id]; a++) {
+  245:                 fprintf(bm->logFile, "surv_syay[s][y-1][a-1][y] ", s, y-1, a-1, y, surv_syay[s][y-1][a-1][y]);
+  246:             }
+  247:             fprintf(bm->logFile, "\n");
+  248:             */
+  249:         }
+  250:     }
+  251: 
+  252:     //multi-year surv probs have already done one year ahead, so just multiply psurv_syay
+  253:     //fprintf(bm->logFile, "Time: %e %s CKsimulator: ", bm->dayt, FunctGroupArray[sp].groupCode);
+  254:     for (s = 0; s < bm->RBCestimation.RBCspeciesParam[sp][Nsexes_id]; s++){
+  255:         //fprintf(bm->logFile, "s %d  ", s);
+  256:         for (y = bm->CloseKinEst[sp].first_dy; y < last_dy - 1; y++) {
+  257:             /*
+  258:             fprintf(bm->logFile, "y %d ", y);
+  259:             for (y2 = y; y2 < last_dy; y2++) {
+  260:                 fprintf(bm->logFile, "y2 %d", y2);
+  261:             }
+  262:             fprintf(bm->logFile, "\n");
+  263:             */
+  264:             
+  265:             for (a = 0; a < bm->RBCestimation.RBCspeciesParam[sp][MaxAge_id]; a++){
+  266:                 psurv_syay[s][y][a][y] = 1; //diagonal
+  267:                 cumul_psurv = 1;
+  268:                 curr_a = a;
+  269:                 for (y2 = y+1; y2 < last_dy; y2++) {
+  270:                     cumul_psurv *= psurv_syay[s][y2-1][curr_a][y2];
+  271:                     psurv_syay[s][y][curr_a][y2] = cumul_psurv;
+  272:                     if (curr_a < bm->RBCestimation.RBCspeciesParam[sp][MaxAge_id]) {
+  273:                         curr_a++; // ROBIN what does curr_a do?
+  274:                     }
+  275:                 }
 ```
 
 **Suggested fix (from review):** Use the plus group `MaxAge-1`, or allocate MaxAge+1
@@ -305,7 +355,8 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
 ## SS3-32
 
 **accumulator not reset** · Conf H / Sev M  
-**Listed lines:** 288-299
+**Lines (current code):** 288-299  
+**Lines at review (Oct 2026):** 288-299
 
 **Function:** `CKsimulator()`
 
@@ -313,9 +364,12 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
 
 `stocktot` is never reset inside the s/y loops, so `inv_totfec_sy` becomes 1/(cumulative total over all earlier years and sexes). Function: `CKsimulator()`.
 
-**Current code** (`atSS3Link/atCloseKin.c` lines 289–304) — code appears to have moved +3 lines since the review
+**Current code** (`atSS3Link/atCloseKin.c` lines 286–301)
 
 ```c
+  286:     }
+  287: 
+  288:     for (s = 0; s < bm->RBCestimation.RBCspeciesParam[sp][Nsexes_id]; s++){
   289:         for (y = bm->CloseKinEst[sp].first_dy + 1; y < last_dy; y++){
   290:             for (a = 0; a < bm->RBCestimation.RBCspeciesParam[sp][MaxAge_id]; a++){
   291:                 stocktot += n_sya[s][y][a] * bm->CloseKinEst[sp].fec_sa[s][a];
@@ -329,9 +383,6 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
   299:         }
   300:     }
   301: 
-  302:     /*** PO **/
-  303:     for (s = 0; s < bm->RBCestimation.RBCspeciesParam[sp][Nsexes_id]; s++){
-  304:         for (y = bm->CloseKinEst[sp].first_sy; y < bm->CloseKinEst[sp].last_sy; y++){
 ```
 
 **Suggested fix (from review):** Set `stocktot = 0` at the top of the y loop
@@ -354,7 +405,8 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
 ## SS3-33
 
 **off-by-one loop start** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 382
+**Lines (current code):** 382  
+**Lines at review (Oct 2026):** 382
 
 **Function:** `CKsimulator()`
 
@@ -392,7 +444,8 @@ All local arrays are allocated with dims in *index* order instead of reversed. `
 ## SS3-34
 
 **swapped arguments** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 496 vs 630
+**Lines (current code):** 496 vs 630  
+**Lines at review (Oct 2026):** 496 vs 630
 
 **Function:** `CKsimulator()`
 
@@ -430,7 +483,8 @@ The call `writeCloseKinNcompsfiles(bm, sp, year, ...)` does not match the signat
 ## SS3-35
 
 **uninitialised per-species params** · Conf M / Sev H  
-**Listed lines:** 54-55, 109-121, 171, 590-591
+**Lines (current code):** 54-55, 109-121, 171, 590-591  
+**Lines at review (Oct 2026):** 54-55, 109-121, 171, 590-591
 
 **Function:** `CKsimulator()`
 
@@ -469,7 +523,8 @@ The code reads `CloseKinEst[sp].first_sy/last_sy/first_dy/samp_power/a_ck_thresh
 ## SS3-36
 
 **division by zero** · Conf M / Sev M  
-**Listed lines:** 238
+**Lines (current code):** 238  
+**Lines at review (Oct 2026):** 238
 
 **Function:** `CKsimulator()`
 
@@ -507,7 +562,8 @@ The code reads `CloseKinEst[sp].first_sy/last_sy/first_dy/samp_power/a_ck_thresh
 ## SS3-37
 
 **brace placement** · Conf M / Sev L  
-**Listed lines:** 337-358
+**Lines (current code):** 337-358  
+**Lines at review (Oct 2026):** 337-358
 
 **Function:** `CKsimulator()`
 
@@ -566,7 +622,8 @@ The `} // for ap_b1` brace actually closes the `if`, so `Pr_HS_syaya = demog_Pr_
 ## SS3-38
 
 **wrong index / compounding** · Conf M / Sev M  
-**Listed lines:** 589-591
+**Lines (current code):** 589-591  
+**Lines at review (Oct 2026):** 589-591
 
 **Function:** `writeCloseKinSampFile()`
 
@@ -606,7 +663,8 @@ The `} // for ap_b1` brace actually closes the `if`, so `Pr_HS_syaya = demog_Pr_
 ## SS3-39
 
 **copy-paste** · Conf M / Sev L  
-**Listed lines:** 645, 647
+**Lines (current code):** 645, 647  
+**Lines at review (Oct 2026):** 645, 647
 
 **Function:** `writeCloseKinNcompsfiles()`
 
@@ -646,7 +704,8 @@ The HS output prints `(int)sim_nkin_HS[s][y][a][y2][a2]` twice. The TODO at 649 
 ## SS3-40
 
 **logic** · Conf L / Sev M  
-**Listed lines:** 146-151
+**Lines (current code):** 146-151  
+**Lines at review (Oct 2026):** 146-151
 
 **Function:** `CKsimulator()`
 

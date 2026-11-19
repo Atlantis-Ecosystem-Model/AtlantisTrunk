@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **9 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW1-14](#sjw1-14) | 765-771 | H/L | missing braces / uninitialised | `if (cm->transform != NULL) cm->transform->inverse(..., tcoords, ttcoords); for (j...) tcoords[j] = ttcoords[j… |  | [ ] |
 | [SJW1-15](#sjw1-15) | 1223-1227 | H/L | off-by-one OOB read | `if ((i < 0) \|\| (i > ihigh)) return 0; coords[0] = (indices[0]-i)*(data[i+1]-data[i]) + data[i];`. When `i == … |  | [ ] |
@@ -25,7 +25,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW1-14
 
 **missing braces / uninitialised** · Conf H / Sev L  
-**Listed lines:** 765-771
+**Lines (current code):** 765-771  
+**Lines at review (Oct 2026):** 765-771
 
 **Function:** `dfIndicesToCoords()`
 
@@ -69,7 +70,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW1-15
 
 **off-by-one OOB read** · Conf H / Sev L  
-**Listed lines:** 1223-1227
+**Lines (current code):** 1223-1227  
+**Lines at review (Oct 2026):** 1223-1227
 
 **Function:** `cm_1d_itoc()`
 
@@ -111,7 +113,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW1-16
 
 **always-true condition** · Conf H / Sev L  
-**Listed lines:** 1285-1287
+**Lines (current code):** 1285-1287  
+**Lines at review (Oct 2026):** 1285-1287
 
 **Function:** `cm_1d_multi_itoc()`
 
@@ -151,7 +154,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW1-17
 
 **copy-paste (wrong buffer)** · Conf H / Sev L  
-**Listed lines:** 1460-1471
+**Lines (current code):** 1460-1471  
+**Lines at review (Oct 2026):** 1460-1471
 
 **Function:** `df_create_geo_transform()`
 
@@ -200,7 +204,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW1-18
 
 **ignored return value** · Conf M / Sev L  
-**Listed lines:** 533, 548
+**Lines (current code):** 533, 548  
+**Lines at review (Oct 2026):** 533, 548
 
 **Function:** `dfInferAndSetCoordSystem()`
 
@@ -253,7 +258,8 @@ The return value of `dfSetCoordSystem(df, v, ncm, cmaps)` is ignored. It can fai
 ## SJW1-19
 
 **memory leak** · Conf H / Sev L  
-**Listed lines:** 945-971, 1546-1549
+**Lines (current code):** 945-971, 1546-1549  
+**Lines at review (Oct 2026):** 945-971, 1546-1549
 
 **Why it's thought to be a bug**
 
@@ -315,7 +321,8 @@ The return value of `dfSetCoordSystem(df, v, ncm, cmaps)` is ignored. It can fai
 ## SJW1-20
 
 **memory leak** · Conf H / Sev L  
-**Listed lines:** 123-124, 136-171, 181, 199-202
+**Lines (current code):** 123-124, 136-171, 181, 199-202  
+**Lines at review (Oct 2026):** 123-124, 136-171, 181, 199-202
 
 **Function:** `dfSetCoordSystem()`
 
@@ -388,7 +395,8 @@ Each early `return 0` after line 124 leaks `coordids`/`coordtypes`, and the dupl
 ## SJW1-21
 
 **buffer overrun** · Conf M / Sev L  
-**Listed lines:** 815; 374, 403-405
+**Lines (current code):** 815; 374, 403-405  
+**Lines at review (Oct 2026):** 815; 374, 403-405
 
 **Why it's thought to be a bug**
 
@@ -424,7 +432,8 @@ Each early `return 0` after line 124 leaks `coordids`/`coordtypes`, and the dupl
 ## SJW1-22
 
 **memory leak** · Conf H / Sev L  
-**Listed lines:** 1324-1345, 1348-1370
+**Lines (current code):** 1324-1345, 1348-1370  
+**Lines at review (Oct 2026):** 1324-1345, 1348-1370
 
 **Function:** `df_set_2d_coords()`
 

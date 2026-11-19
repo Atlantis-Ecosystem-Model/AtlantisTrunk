@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [HRV2-07](#hrv2-07) | 644-651 | M/M | cohort×genotype confusion | The comparison uses the age class (`basechrt < age50`, and `age50 = basechrt`), but the stored value is the ge… |  | [ ] |
 | [HRV2-08](#hrv2-08) | 78 | M/L | NULL dereference | `*(strstr(convertedXMLFileName, ".prm")) = '\0';` crashes if the fisheries prm filename has no ".prm" extensio… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-07
 
 **cohort×genotype confusion** · Conf M / Sev M  
-**Listed lines:** 644-651
+**Lines (current code):** 644-651  
+**Lines at review (Oct 2026):** 644-651
 
 **Function:** `Calculate_Age_Vulnerability()`
 
@@ -65,7 +66,8 @@ The comparison uses the age class (`basechrt < age50`, and `age50 = basechrt`), 
 ## HRV2-08
 
 **NULL dereference** · Conf M / Sev L  
-**Listed lines:** 78
+**Lines (current code):** 78  
+**Lines at review (Oct 2026):** 78
 
 **Function:** `Harvest_Init()`
 
@@ -103,7 +105,8 @@ The comparison uses the age class (`basechrt < age50`, and `age50 = basechrt`), 
 ## HRV2-09
 
 **copy-paste / metadata** · Conf H / Sev L  
-**Listed lines:** 393-412
+**Lines (current code):** 393-412  
+**Lines at review (Oct 2026):** 393-412
 
 **Function:** `Build_Fishery_Tracers()`
 
@@ -111,7 +114,7 @@ The comparison uses the age class (`basechrt < age50`, and `age50 = basechrt`), 
 
 Average catch size tracers get the long name "Total effort of (recreational) fishery ...", copied from the effort tracer block. Line 408 even says "This should be different but is not!". Units "mg N" are questionable too. Function: `Build_Fishery_Tracers()`.
 
-**Current code** (`atharvest/atHarvestSetup.c` lines 391–414) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Build_Fishery_Tracers()` now starts at line 261
+**Current code** (`atharvest/atHarvestSetup.c` lines 391–414)
 
 ```c
   391: 		Ecology_Add_FStat_Tracer(bm, diagIndex++, name, longName, "Days", 0, 1, &FisheryArray[nf].totalEffortTracer, 0, 2, 0);
@@ -160,7 +163,8 @@ Average catch size tracers get the long name "Total effort of (recreational) fis
 ## HRV2-10
 
 **memory leak** · Conf H / Sev L  
-**Listed lines:** 172-205
+**Lines (current code):** 172-205  
+**Lines at review (Oct 2026):** 172-205
 
 **Function:** `Harvest_Free()`
 

@@ -2,19 +2,19 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **9 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 2 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [BIOL-16](#biol-16) | 603, 619 | H/M | off-by-one | `layerk = k + diffdeep - 1;` / `layerk = j + diffdeep - 1;` — this is the same vertical rescaling as `Get_Vert… |  | [ ] |
-| [BIOL-17](#biol-17) | 1157-1159 | M/M | wrong box index | `boxkey_id = bm->BoxKeyMap[bm->current_box][rects_key_id];` — `Get_Init_Embryos()` is called from inside the b… |  | [ ] |
-| [BIOL-18](#biol-18) | 1098-1181 vs 1238 | M/M | missing switch case | The SR switch handles `case ice_wimd_based`, but the first (larvae) switch has no such case, so the run reache… |  | [ ] |
+| [BIOL-17](#biol-17) | 1162-1164 | M/M | wrong box index | `boxkey_id = bm->BoxKeyMap[bm->current_box][rects_key_id];` — `Get_Init_Embryos()` is called from inside the b… |  | [ ] |
+| [BIOL-18](#biol-18) | 1103-1186 vs 1243 | M/M | missing switch case | The SR switch handles `case ice_wimd_based`, but the first (larvae) switch has no such case, so the run reache… |  | [ ] |
 | [BIOL-19](#biol-19) | 471, 593-669 | M/M | accumulator / loop nesting | The larval-queue-extension block (recruit setup for k < larval_queue_extension) sits inside the `for nspawn < … |  | [ ] |
-| [BIOL-20](#biol-20) | 1106-1108 | H/L | debug output left live | `if(species == 9) { fprintf(bm->logFile,"Init for %s qid: ..."); }` — a hard-coded species index debug print i… |  | [ ] |
+| [BIOL-20](#biol-20) | 1111-1113 | H/L | debug output left live | `if(species == 9) { fprintf(bm->logFile,"Init for %s qid: ..."); }` — a hard-coded species index debug print i… |  | [ ] |
 | [BIOL-21](#biol-21) | 924-934 | M/L | debug output left live | The `do_debug` guard is commented out, so `PrintDates()` writes a line for every species × queue slot × cohort… |  | [ ] |
 | [BIOL-22](#biol-22) | 493-494 vs 518 | L/L | inconsistent constant | Countback uses `temp_val -= 364` (and l.526-527 for recruits), but insertion subtracts `365 * i` (l.518, 560-5… |  | [ ] |
 | [BIOL-23](#biol-23) | 752-755 | L/L | unit mismatch in check | `next_spawn_any_age > ((365.0 * bm->tstop) / 86400.0)` — `tstop/86400` is already days, and multiplying by 365… |  | [ ] |
@@ -25,13 +25,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## BIOL-16
 
 **off-by-one** · Conf H / Sev M  
-**Listed lines:** 603, 619
+**Lines (current code):** 603, 619  
+**Lines at review (Oct 2026):** 603, 619
 
 **Function:** `Init_Spawning()`
 
 **Why it's thought to be a bug**
 
-`layerk = k + diffdeep - 1;` / `layerk = j + diffdeep - 1;` — this is the same vertical rescaling as `Get_Vertical_Recruit_Position()` (atdemography.c:2025-2042), which uses `k + diffdeep` (also atmovement.c:4221, atManageSetup.c:1156). With `-1`, shallow boxes map onto layers shifted down by one and never use the top layer `nlayers-1`, so the initial pre-model recruits get the wrong vertical distribution. Function: `Init_Spawning()`.
+`layerk = k + diffdeep - 1;` / `layerk = j + diffdeep - 1;` — this is the same vertical rescaling as `Get_Vertical_Recruit_Position()` (atdemography.c:2029-2046), which uses `k + diffdeep` (also atmovement.c:4224, atManageSetup.c:1155). With `-1`, shallow boxes map onto layers shifted down by one and never use the top layer `nlayers-1`, so the initial pre-model recruits get the wrong vertical distribution. Function: `Init_Spawning()`.
 
 **Current code** (`atecology/atannualbiology.c` lines 601–621)
 
@@ -79,7 +80,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## BIOL-17
 
 **wrong box index** · Conf M / Sev M  
-**Listed lines:** 1157-1159
+**Lines (current code):** 1162-1164  
+**Lines at review (Oct 2026):** 1157-1159
 
 **Function:** `Get_Init_Embryos()`
 
@@ -87,7 +89,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `boxkey_id = bm->BoxKeyMap[bm->current_box][rects_key_id];` — `Get_Init_Embryos()` is called from inside the box loop `i` of `Init_Spawning()`, but it has no box argument, so it uses the stale `bm->current_box` (whatever was last processed) for every box. Function: `Get_Init_Embryos()`.
 
-**Current code** (`atecology/atannualbiology.c` lines 1160–1166) — code appears to have moved +5 lines since the review
+**Current code** (`atecology/atannualbiology.c` lines 1160–1166)
 
 ```c
  1160:             break;
@@ -119,7 +121,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## BIOL-18
 
 **missing switch case** · Conf M / Sev M  
-**Listed lines:** 1098-1181 vs 1238
+**Lines (current code):** 1103-1186 vs 1243  
+**Lines at review (Oct 2026):** 1098-1181 vs 1238
 
 **Function:** `Get_Init_Embryos()`
 
@@ -127,9 +130,10 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The SR switch handles `case ice_wimd_based`, but the first (larvae) switch has no such case, so the run reaches `default: quit("No such flagrecruit defined...")` whenever `flag_old_embryo_init` is off and a larval-queue extension exists. The same omission appears in atdemography.c's first switch. Function: `Get_Init_Embryos()`.
 
-**Current code** (`atecology/atannualbiology.c` lines 1102–1136 (range truncated)) — code appears to have moved +6 lines since the review
+**Current code** (`atecology/atannualbiology.c` lines 1101–1140 (truncated))
 
 ```c
+ 1101:     /* First get larvae */
  1102:     switch (recruit_sp) {
  1103:         case no_recruit:
  1104:             quit("No such flagrecruit defined (i.e. value must be > 0)\n");
@@ -165,6 +169,10 @@ The SR switch handles `case ice_wimd_based`, but the first (larvae) switch has n
  1134:         case linear_recruit:/* Pupping or calving linearly dependent on maternal condition */
  1135:             
  1136:             // Evolution only works for these spawning cases for now - TODO: Generalise so evolution works in all cases
+ 1137:             EMBRYO[species].Larvae[stock_id][ngene][qid] += EMBRYO[species].TotSpawn[ngene];
+ 1138:             
+ 1139:             /**
+ 1140:             //if (do_debug && (bm->which_check == species)) {
 ```
 
 **Suggested fix (from review):** Add `case ice_wimd_based:` alongside the BevHolt/Ricker cases (Larvae += TotSpawn)
@@ -187,7 +195,8 @@ The SR switch handles `case ice_wimd_based`, but the first (larvae) switch has n
 ## BIOL-19
 
 **accumulator / loop nesting** · Conf M / Sev M  
-**Listed lines:** 471, 593-669
+**Lines (current code):** 471, 593-669  
+**Lines at review (Oct 2026):** 471, 593-669
 
 **Function:** `Init_Spawning()`
 
@@ -225,7 +234,8 @@ The larval-queue-extension block (recruit setup for k < larval_queue_extension) 
 ## BIOL-20
 
 **debug output left live** · Conf H / Sev L  
-**Listed lines:** 1106-1108
+**Lines (current code):** 1111-1113  
+**Lines at review (Oct 2026):** 1106-1108
 
 **Function:** `Get_Init_Embryos()`
 
@@ -233,16 +243,16 @@ The larval-queue-extension block (recruit setup for k < larval_queue_extension) 
 
 `if(species == 9) { fprintf(bm->logFile,"Init for %s qid: ..."); }` — a hard-coded species index debug print in live code. Function: `Get_Init_Embryos()`.
 
-**Current code** (`atecology/atannualbiology.c` lines 1104–1110)
+**Current code** (`atecology/atannualbiology.c` lines 1109–1115)
 
 ```c
- 1104:             quit("No such flagrecruit defined (i.e. value must be > 0)\n");
- 1105:             break;
- 1106:         case const_recruit: /* Fixed set of constants */
- 1107:             if (EMBRYO[species].readytospawn[stock_id] == 1)
- 1108:                 EMBRYO[species].Larvae[stock_id][ngene][qid] = KDENR_sp / ng;
  1109:             
  1110:             if(species == 9) {
+ 1111:                 fprintf(bm->logFile,"Init for %s qid: %d ngene: %d Larvae: %e KDENR_sp: %e ng: %e\n", FunctGroupArray[species].groupCode, qid, ngene,  EMBRYO[species].Larvae[stock_id][ngene][qid], KDENR_sp, ng);
+ 1112:             }
+ 1113:             
+ 1114:             break;
+ 1115:         case chl_recruit: /* Proportional to primary productivity */
 ```
 
 **Suggested fix (from review):** Delete it
@@ -265,7 +275,8 @@ The larval-queue-extension block (recruit setup for k < larval_queue_extension) 
 ## BIOL-21
 
 **debug output left live** · Conf M / Sev L  
-**Listed lines:** 924-934
+**Lines (current code):** 924-934  
+**Lines at review (Oct 2026):** 924-934
 
 **Function:** `PrintDates()`
 
@@ -313,7 +324,8 @@ The `do_debug` guard is commented out, so `PrintDates()` writes a line for every
 ## BIOL-22
 
 **inconsistent constant** · Conf L / Sev L  
-**Listed lines:** 493-494 vs 518
+**Lines (current code):** 493-494 vs 518  
+**Lines at review (Oct 2026):** 493-494 vs 518
 
 **Function:** `Init_Spawning()`
 
@@ -321,7 +333,7 @@ The `do_debug` guard is commented out, so `PrintDates()` writes a line for every
 
 Countback uses `temp_val -= 364` (and l.526-527 for recruits), but insertion subtracts `365 * i` (l.518, 560-561). For dates of about 729-730 days, countback gives 2 years while the insertion assumes 365-day years. Function: `Init_Spawning()`.
 
-**Current code** (`atecology/atannualbiology.c` lines 491–496)
+**Current code** (`atecology/atannualbiology.c` lines 491–520)
 
 ```c
   491:                 }
@@ -330,6 +342,30 @@ Countback uses `temp_val -= 364` (and l.526-527 for recruits), but insertion sub
   494:                     temp_val -= 364;
   495:                     countback_spawn++;
   496:                 }
+  497:             
+  498:                 // Create the inserted countback cases
+  499:                 if (countback_spawn) {
+  500:                     temp_val_start = EMBRYO[sp].Spawn_Now[cohort][qid];
+  501:                     start_i = 0;
+  502:                     // Start by finding the insertion point
+  503:                     for(i = 0; i < FunctGroupArray[sp].numSpawns; i++){
+  504:                         if(temp_val_start > EMBRYO[sp].Spawn_Now[cohort][i]) {
+  505:                             start_i = i;
+  506:                             break;
+  507:                         }
+  508:                     }
+  509:                 
+  510:                     // Shuffle entries out of the way - including qid as will need that to lead into next year
+  511:                     for(i=EMBRYO[sp].num_in_spawn_queue - countback_spawn - 1; i >= start_i; i--){
+  512:                         EMBRYO[sp].Spawn_Now[cohort][i + countback_spawn] = EMBRYO[sp].Spawn_Now[cohort][i];
+  513:                     }
+  514:                 
+  515:                     // Now insert the new values after countback
+  516:                     j = 0;
+  517:                     for(i = countback_spawn; i >= 1; i--){
+  518:                         EMBRYO[sp].Spawn_Now[cohort][start_i + j] = temp_val_start - 365 * i;
+  519:                         j++;
+  520:                     }
 ```
 
 **Suggested fix (from review):** Use 365 consistently
@@ -352,7 +388,8 @@ Countback uses `temp_val -= 364` (and l.526-527 for recruits), but insertion sub
 ## BIOL-23
 
 **unit mismatch in check** · Conf L / Sev L  
-**Listed lines:** 752-755
+**Lines (current code):** 752-755  
+**Lines at review (Oct 2026):** 752-755
 
 **Function:** `Init_Spawning()`
 
@@ -393,13 +430,14 @@ Countback uses `temp_val -= 364` (and l.526-527 for recruits), but insertion sub
 ## BIOL-24
 
 **wrong formula (latent)** · Conf L / Sev L  
-**Listed lines:** 703-710
+**Lines (current code):** 703-710  
+**Lines at review (Oct 2026):** 703-710
 
 **Function:** `Init_Spawning()`
 
 **Why it's thought to be a bug**
 
-`num_steps = ceil(364.0 / AgeClassSize_sp)` should be `ceil(1.0 / AgeClassSize_sp)` (steps per year). As written, `stid` reaches far beyond the `Age_Now` queue (`[cohort][max_num]`, atbiolsetup.c:3804). This is currently unreachable because `ageClassSize` is an `int` (atFunctGroup.h:90), so it is always ≥1. Function: `Init_Spawning()`.
+`num_steps = ceil(364.0 / AgeClassSize_sp)` should be `ceil(1.0 / AgeClassSize_sp)` (steps per year). As written, `stid` reaches far beyond the `Age_Now` queue (`[cohort][max_num]`, atbiolsetup.c:4032). This is currently unreachable because `ageClassSize` is an `int` (atFunctGroup.h:90), so it is always ≥1. Function: `Init_Spawning()`.
 
 **Current code** (`atecology/atannualbiology.c` lines 701–712)
 

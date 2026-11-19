@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **8 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [LINK-50](#link-50) | 57-153 | M/M | missing default / leak | The `switch (request->type)` has no `default`: an unrecognised type leaks the unpacked request (never `request… |  | [ ] |
 | [LINK-51](#link-51) | 256-261, 280-293, 316-321, 339-351, 373-378, 396-408, 164-167 | H/M | NULL dereference | Every sub-message NULL check only prints, then dereferences anyway (`biomassRequest->groupid`, `request->n_val… |  | [ ] |
@@ -24,7 +24,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-50
 
 **missing default / leak** · Conf M / Sev M  
-**Listed lines:** 57-153
+**Lines (current code):** 57-153  
+**Lines at review (Oct 2026):** 57-153
 
 **Function:** `Deserialise_Message()`
 
@@ -32,7 +33,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The `switch (request->type)` has no `default`: an unrecognised type leaks the unpacked request (never `requests__request__free_unpacked`) and returns NULL, which causes the protocol failure in LINK-47. Function: `Deserialise_Message()`.
 
-**Current code** (`atbrokerlink/Deserialiser.c` lines 55–89 (range truncated))
+**Current code** (`atbrokerlink/Deserialiser.c` lines 55–94 (truncated))
 
 ```c
    55: 	}
@@ -70,6 +71,11 @@ The `switch (request->type)` has no `default`: an unrecognised type leaks the un
    87: 		response = Serialise_Boolean_Response(TRUE);
    88: 		break;
    89: 	case REQUESTS__REQUEST__TYPE__GETBIOMASS:
+   90: 		Deserialiser_GetBiomass(interface, request);
+   91: 
+   92: 		/* Get the response*/
+   93: 		data = Util_Alloc_Init_1D_Double(interface->numPolygons, 0.0);
+   94: 		Link_GetBiomass(bm, interface->groupName, interface->numPolygons, interface->polygonList, data);
 ```
 
 **Suggested fix (from review):** Add a default that frees the request and returns a FALSE boolean response.
@@ -92,13 +98,14 @@ The `switch (request->type)` has no `default`: an unrecognised type leaks the un
 ## LINK-51
 
 **NULL dereference** · Conf H / Sev M  
-**Listed lines:** 256-261, 280-293, 316-321, 339-351, 373-378, 396-408, 164-167
+**Lines (current code):** 256-261, 280-293, 316-321, 339-351, 373-378, 396-408, 164-167  
+**Lines at review (Oct 2026):** 256-261, 280-293, 316-321, 339-351, 373-378, 396-408, 164-167
 
 **Why it's thought to be a bug**
 
 Every sub-message NULL check only prints, then dereferences anyway (`biomassRequest->groupid`, `request->n_values`, `requestInit->timestep`). `groupid` and `timestep` (char*) can also be NULL in protobuf-c. A malformed broker message crashes Atlantis. Functions: `Deserialiser_Init()`, `Deserialiser_GetBiomass()`, `Deserialiser_SetBiomass()`, `Deserialiser_GetMortality()`, `Deserialiser_SetMortality()`, `Deserialiser_GetDetritus()`, `Deserialiser_SetDetritus()`.
 
-**Current code** (`atbrokerlink/Deserialiser.c` lines 254–263)
+**Current code** (`atbrokerlink/Deserialiser.c` lines 254–293 (truncated))
 
 ```c
   254: 	char *group;
@@ -111,6 +118,36 @@ Every sub-message NULL check only prints, then dereferences anyway (`biomassRequ
   261: 	strcpy(interface->groupName, group);
   262: 	if (interface->verbose) {
   263: 		printf("Deserialiser_GetBiomass. Group %s\n", interface->groupName);
+  264: 	}
+  265: 
+  266: 	/* Free the unpacked message */
+  267: 	requests__request__free_unpacked(request, NULL);
+  268: }
+  269: 
+  270: /**
+  271:  * Unpack the setbiomass request..
+  272:  */
+  273: int Deserialiser_SetBiomass(LinkageInterface *interface, Requests__Request *baseRequest) {
+  274: 
+  275: 	Requests__SetBiomass *request;
+  276: 
+  277: 	size_t length;
+  278: 	unsigned int i;
+  279: 
+  280: 	request = baseRequest->setbiomass;
+  281: 	if (request == NULL) {
+  282: 		fprintf(stderr, "Deserialiser_SetBiomass: setbiomass message is null.\n");
+  283: 	}
+  284: 
+  285: 	/* Check the length specified is what we expect */
+  286: 	length = request->n_values;
+  287: 	if (length != interface->numPolygons) {
+  288: 		fprintf(stderr, "Deserialiser_SetBiomass. Number of values sent from Broker %ld does not match number of expected polygon values %d\n", length,
+  289: 				interface->numPolygons);
+  290: 		exit(-1);
+  291: 	}
+  292: 	/* Copy the groupName and valueList data across */
+  293: 	strcpy(interface->groupName, request->groupid);
 ```
 
 **Suggested fix (from review):** Return or exit after the error message, and check groupid/timestep for NULL.
@@ -133,7 +170,8 @@ Every sub-message NULL check only prints, then dereferences anyway (`biomassRequ
 ## LINK-52
 
 **buffer overrun (network input)** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 261, 293, 321, 351, 378, 408
+**Lines (current code):** 261, 293, 321, 351, 378, 408  
+**Lines at review (Oct 2026):** 261, 293, 321, 351, 378, 408
 
 **Why it's thought to be a bug**
 
@@ -204,7 +242,8 @@ Every sub-message NULL check only prints, then dereferences anyway (`biomassRequ
 ## LINK-53
 
 **copy-paste** · Conf M / Sev M  
-**Listed lines:** 115-121
+**Lines (current code):** 115-121  
+**Lines at review (Oct 2026):** 115-121
 
 **Function:** `Deserialise_Message()`
 
@@ -212,11 +251,9 @@ Every sub-message NULL check only prints, then dereferences anyway (`biomassRequ
 
 The GETDETRITUS response calls `Link_GetBiomass(...)` rather than `Link_GetDetritus` (which happens to wrap GetBiomass now). GETMORTALITY returns dummy `data[i] = i` (lines 109-111). The broker gets fake mortality data with a TRUE response. Function: `Deserialise_Message()`.
 
-**Current code** (`atbrokerlink/Deserialiser.c` lines 111–121)
+**Current code** (`atbrokerlink/Deserialiser.c` lines 113–123)
 
 ```c
-  111: 		}
-  112: 		response = Serialise_Data_Response(data, interface->numPolygons);
   113: 		free(data);
   114: 		break;
   115: 	case REQUESTS__REQUEST__TYPE__GETDETRITUS:
@@ -226,6 +263,8 @@ The GETDETRITUS response calls `Link_GetBiomass(...)` rather than `Link_GetDetri
   119: 
   120: 		data = Util_Alloc_Init_1D_Double(interface->numPolygons, 0.0);
   121: 		Link_GetBiomass(bm, interface->groupName, interface->numPolygons, interface->polygonList, data);
+  122: 
+  123: 		for (i = 0; i < interface->numPolygons; i++) {
 ```
 
 **Suggested fix (from review):** Call Link_GetDetritus, and implement mortality or return a failure response.
@@ -248,7 +287,8 @@ The GETDETRITUS response calls `Link_GetBiomass(...)` rather than `Link_GetDetri
 ## LINK-54
 
 **missing call** · Conf M / Sev M  
-**Listed lines:** 139-152
+**Lines (current code):** 139-152  
+**Lines at review (Oct 2026):** 139-152
 
 **Function:** `Deserialise_Message()`
 
@@ -299,7 +339,8 @@ SETMORTALITY and SETDETRITUS unpack values into `interface->valueList` but never
 ## LINK-55
 
 **ignored return** · Conf L / Sev M  
-**Listed lines:** 74-78
+**Lines (current code):** 74-78  
+**Lines at review (Oct 2026):** 74-78
 
 **Function:** `Deserialise_Message()`
 
@@ -341,7 +382,8 @@ SETMORTALITY and SETDETRITUS unpack values into `interface->valueList` but never
 ## LINK-56
 
 **format specifier** · Conf M / Sev L  
-**Listed lines:** 288
+**Lines (current code):** 288  
+**Lines at review (Oct 2026):** 288
 
 **Function:** `Deserialiser_SetBiomass()`
 
@@ -379,7 +421,8 @@ SETMORTALITY and SETDETRITUS unpack values into `interface->valueList` but never
 ## LINK-57
 
 **unchecked malloc** · Conf M / Sev L  
-**Listed lines:** 180-189, 199-211
+**Lines (current code):** 180-189, 199-211  
+**Lines at review (Oct 2026):** 180-189, 199-211
 
 **Why it's thought to be a bug**
 

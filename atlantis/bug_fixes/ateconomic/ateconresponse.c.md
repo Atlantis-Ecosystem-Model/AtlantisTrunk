@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **11 findings** (severity H: 2; confidence H and severity H: 2; on the priority list: 2), plus 3 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [ECON-07](#econ-07) ⭐ | 488, 609-619 | H/H | accumulator never reset | `boats_new[nf][ns] += num_new;` is never zeroed: grep finds no reset anywhere, and the initialise block at 222… |  | [ ] |
 | [ECON-08](#econ-08) | 530-549 | H/M | accumulator / stale variable | In the `flagsupp_allowed > 1` branch, `boats_switching` is overwritten for each destination subfleet and each … |  | [ ] |
@@ -27,7 +27,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-07
 
 **accumulator never reset** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 488, 609-619
+**Lines (current code):** 488, 609-619  
+**Lines at review (Oct 2026):** 488, 609-619
 
 **Function:** `Update_Vessel_Numbers()`
 
@@ -65,7 +66,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-08
 
 **accumulator / stale variable** · Conf H / Sev M  
-**Listed lines:** 530-549
+**Lines (current code):** 530-549  
+**Lines at review (Oct 2026):** 530-549
 
 **Function:** `Update_Vessel_Numbers()`
 
@@ -73,9 +75,12 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 In the `flagsupp_allowed > 1` branch, `boats_switching` is overwritten for each destination subfleet and each value is added to that destination's `nboat_id`. Only the last value is then subtracted from `boats_free` (546), and the inflated remainder is added back to the origin (549), so boats are created. `boats_switching` is also never reset per (nf,ns), so a stale value is subtracted when no destination qualifies. Function: `Update_Vessel_Numbers()`.
 
-**Current code** (`ateconomic/ateconresponse.c` lines 531–554) — code appears to have moved +3 lines since the review
+**Current code** (`ateconomic/ateconresponse.c` lines 528–551)
 
 ```c
+  528: 								/* Only allowed to swap with other dynamic fisheries */
+  529: 								if (bm->FISHERYprms[fishery_id][flageffortmodel_id] > rec_econ_model) {
+  530: 									rent_ratio = tot_marg_rent[fishery_id][subf_id] / (tot_marg_rent[nf][ns] - supp_cost + small_num);
   531: 									if (rent_ratio > 1.0) {
   532: 										p_flexgear = ((1.0 - 1.0 / (rent_ratio + small_num)) / (maxp_flexgear + small_num));
   533: 										boats_switching = floor(p_flexgear * boats_free[nf][ns] + 0.5); // 0.5 so rounding to nearest
@@ -97,9 +102,6 @@ In the `flagsupp_allowed > 1` branch, `boats_switching` is overwritten for each 
   549: 					bm->SUBFLEET_ECONprms[nf][ns][nboat_id] += boats_free[nf][ns];
   550: 				} else {
   551: 					this_fishery = -1;
-  552: 					this_subfleet = -1;
-  553: 
-  554: 					/* First find best compatible subfleet in another fishery (based on vessel size) */
 ```
 
 **Suggested fix (from review):** Accumulate into a per-origin total (reset to 0 for each ns) and subtract that total
@@ -122,7 +124,8 @@ In the `flagsupp_allowed > 1` branch, `boats_switching` is overwritten for each 
 ## ECON-09
 
 **stale variable (wrong subfleet)** · Conf M / Sev M  
-**Listed lines:** 530, 532
+**Lines (current code):** 530, 532  
+**Lines at review (Oct 2026):** 530, 532
 
 **Function:** `Update_Vessel_Numbers()`
 
@@ -162,7 +165,8 @@ In the `flagsupp_allowed > 1` branch, `boats_switching` is overwritten for each 
 ## ECON-10
 
 **logic** · Conf M / Sev M  
-**Listed lines:** 370, 379, 445-473
+**Lines (current code):** 370, 379, 445-473  
+**Lines at review (Oct 2026):** 370, 379, 445-473
 
 **Function:** `Update_Vessel_Numbers()`
 
@@ -170,7 +174,7 @@ In the `flagsupp_allowed > 1` branch, `boats_switching` is overwritten for each 
 
 `boats_free[nf][ns] += num_moving` is recorded before `num_moving` is reduced by the fleet_thresh, boat-bound and `hist_only` checks (445-470). Those boats are still moved to other subfleets (534/574) but are not removed from the origin, which creates boats (e.g. with `hist_only` set, num_moving goes to 0 but boats_free stays at 1). Function: `Update_Vessel_Numbers()`.
 
-**Current code** (`ateconomic/ateconresponse.c` lines 368–372)
+**Current code** (`ateconomic/ateconresponse.c` lines 368–381)
 
 ```c
   368: 					rndnum2 = drandom(0.0, bm->prop_supp) * bm->SUBFLEET_ECONprms[nf][ns][nboat_id];
@@ -178,6 +182,15 @@ In the `flagsupp_allowed > 1` branch, `boats_switching` is overwritten for each 
   370: 					boats_free[nf][ns] += num_moving;
   371: 
   372: 					fprintf(llogfp, "Time: %e %d boats supplementing from %s-%d (num_moving; %d, boats_free: %d)\n", bm->dayt, num_moving,
+  373: 							FisheryArray[nf].fisheryCode, ns, num_moving, boats_free[nf][ns]);
+  374: 
+  375: 				} else if (rndnum < p_switch) {
+  376: 					/* Simply switching fleets */
+  377: 					rndnum2 = drandom(0.0, bm->prop_switch) * bm->SUBFLEET_ECONprms[nf][ns][nboat_id];
+  378: 					num_moving = (int) (min(1.0, floor(rndnum2)));
+  379: 					boats_free[nf][ns] += num_moving;
+  380: 
+  381: 					fprintf(llogfp, "Time: %e %d boats switching from %s-%d (num_moving; %d, boats_free: %d)\n", bm->dayt, num_moving,
 ```
 
 **Suggested fix (from review):** Cap `boats_free[nf][ns]` at the final num_moving after line 470
@@ -200,7 +213,8 @@ In the `flagsupp_allowed > 1` branch, `boats_switching` is overwritten for each 
 ## ECON-11
 
 **always-false logic** · Conf H / Sev M  
-**Listed lines:** 801-805
+**Lines (current code):** 801-805  
+**Lines at review (Oct 2026):** 801-805
 
 **Function:** `Annual_Quota_Allocation()`
 
@@ -242,13 +256,14 @@ Inside `if ((owned_quota + tradeable_quota[sp]) > totTACnew)`, `tradeable_quota[
 ## ECON-12
 
 **wrong index** · Conf H / Sev M  
-**Listed lines:** 963
+**Lines (current code):** 963  
+**Lines at review (Oct 2026):** 963
 
 **Function:** `Allocate_Catch()`
 
 **Why it's thought to be a bug**
 
-`nreg = bm->regID[ij];` uses the layer index `ij`, but `bm->regID` is per box ("ID for each box", atlantisboxmodel.h:5297). RegCatch then books catch to the wrong region when there is more than one region. Function: `Allocate_Catch()`.
+`nreg = bm->regID[ij];` uses the layer index `ij`, but `bm->regID` is per box ("ID for each box", atlantisboxmodel.h:5489). RegCatch then books catch to the wrong region when there is more than one region. Function: `Allocate_Catch()`.
 
 **Current code** (`ateconomic/ateconresponse.c` lines 961–965)
 
@@ -280,7 +295,8 @@ Inside `if ((owned_quota + tradeable_quota[sp]) > totTACnew)`, `tradeable_quota[
 ## ECON-13
 
 **accumulator not reset** · Conf H / Sev M  
-**Listed lines:** 919, 983, 1050-1053
+**Lines (current code):** 919, 983, 1050-1053  
+**Lines at review (Oct 2026):** 919, 983, 1050-1053
 
 **Function:** `Allocate_Catch()`
 
@@ -318,7 +334,8 @@ Inside `if ((owned_quota + tradeable_quota[sp]) > totTACnew)`, `tradeable_quota[
 ## ECON-14
 
 **accumulator not reset** · Conf H / Sev M  
-**Listed lines:** 935, 995, 1046
+**Lines (current code):** 935, 995, 1046  
+**Lines at review (Oct 2026):** 935, 995, 1046
 
 **Function:** `Allocate_Catch()`
 
@@ -356,7 +373,8 @@ Inside `if ((owned_quota + tradeable_quota[sp]) > totTACnew)`, `tradeable_quota[
 ## ECON-15
 
 **wrong id constant / slot collision** · Conf H / Sev M  
-**Listed lines:** 1078
+**Lines (current code):** 1078  
+**Lines at review (Oct 2026):** 1078
 
 **Function:** `Allocate_Catch()`
 
@@ -394,7 +412,8 @@ Inside `if ((owned_quota + tradeable_quota[sp]) > totTACnew)`, `tradeable_quota[
 ## ECON-16
 
 **division by zero** · Conf M / Sev M  
-**Listed lines:** 1142
+**Lines (current code):** 1142  
+**Lines at review (Oct 2026):** 1142
 
 **Function:** `Allocate_Catch()`
 
@@ -432,7 +451,8 @@ Inside `if ((owned_quota + tradeable_quota[sp]) > totTACnew)`, `tradeable_quota[
 ## ECON-17
 
 **unit conversion wrong direction** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 1259
+**Lines (current code):** 1259  
+**Lines at review (Oct 2026):** 1259
 
 **Function:** `Consolidate_Allowed_Catches()`
 

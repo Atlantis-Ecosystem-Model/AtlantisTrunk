@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **7 findings** (severity H: 3; confidence H and severity H: 3; on the priority list: 3).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [LINK-33](#link-33) ⭐ | 38-55, 91-103 | H/H | uninitialised use | `initialiseLinkModule()` mallocs `eweLinkModule` and immediately uses `convertPRMS.ingroup`, `outgroup`, `io_n… |  | [ ] |
 | [LINK-34](#link-34) ⭐ | 139-140 | H/H | copy-paste | `numrows = nr; numrows = nc;` — the second line should set `numcols`. `numcols` stays uninitialised, and all e… |  | [ ] |
@@ -23,13 +23,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-33
 
 **uninitialised use** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 38-55, 91-103
+**Lines (current code):** 38-55, 91-103  
+**Lines at review (Oct 2026):** 38-55, 91-103
 
 **Why it's thought to be a bug**
 
 `initialiseLinkModule()` mallocs `eweLinkModule` and immediately uses `convertPRMS.ingroup`, `outgroup`, `io_ncol` and `io_nrow` (uninitialised) as allocation sizes. LoadCoversionParameters only sets these after calling it (lines 91 vs 100-103). Functions: `initialiseLinkModule()`, `LoadCoversionParameters()`.
 
-**Current code** (`atlink/atlinkexport.c` lines 36–57)
+**Current code** (`atlink/atlinkexport.c` lines 36–75 (truncated))
 
 ```c
    36: {
@@ -54,6 +55,24 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
    55: 	}
    56: }
    57: 
+   58: /**
+   59:  * \brief Free the Link Module
+   60:  *
+   61:  */
+   62: void freeLinkModule(MSEBoxModel *bm)
+   63: {
+   64: 	int group;
+   65: 
+   66: 	for(group=0; group<bm->eweLinkModule->convertPRMS.ingroup; group++){
+   67: 		free(bm->eweLinkModule->ImportArray[group].values);
+   68: 		free(bm->eweLinkModule->ExportArray[group].values);
+   69: 
+   70: 		free(bm->eweLinkModule->ImportArray[group].area);
+   71: 		free(bm->eweLinkModule->ExportArray[group].area);
+   72: 
+   73: 	}
+   74: 	free(bm->eweLinkModule->ImportArray);
+   75: 	free(bm->eweLinkModule->ExportArray);
 ```
 
 **Suggested fix (from review):** Set the convertPRMS values before allocating the arrays.
@@ -76,7 +95,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-34
 
 **copy-paste** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 139-140
+**Lines (current code):** 139-140  
+**Lines at review (Oct 2026):** 139-140
 
 **Function:** `LoadCoversionParameters()`
 
@@ -115,7 +135,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-35
 
 **wrong index / OOB** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 134, 152-154
+**Lines (current code):** 134, 152-154  
+**Lines at review (Oct 2026):** 134, 152-154
 
 **Function:** `LoadCoversionParameters()`
 
@@ -173,7 +194,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-36
 
 **swapped size** · Conf M / Sev M  
-**Listed lines:** 46-55
+**Lines (current code):** 46-55  
+**Lines at review (Oct 2026):** 46-55
 
 **Function:** `initialiseLinkModule()`
 
@@ -220,7 +242,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-37
 
 **wrong free / wrong variable** · Conf H / Sev M  
-**Listed lines:** 66-77
+**Lines (current code):** 66-77  
+**Lines at review (Oct 2026):** 66-77
 
 **Function:** `freeLinkModule()`
 
@@ -269,7 +292,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-38
 
 **swapped args** · Conf H / Sev M  
-**Listed lines:** 208-225
+**Lines (current code):** 208-225  
+**Lines at review (Oct 2026):** 208-225
 
 **Function:** `SendArrays()`
 
@@ -324,7 +348,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-39
 
 **uninitialised / copy-paste** · Conf M / Sev M  
-**Listed lines:** 165, 208, 229
+**Lines (current code):** 165, 208, 229  
+**Lines at review (Oct 2026):** 165, 208, 229
 
 **Function:** `SendArrays()`
 

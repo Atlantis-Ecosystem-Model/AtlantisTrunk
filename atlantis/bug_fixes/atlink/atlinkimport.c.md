@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [LINK-40](#link-40) | 62, 71, 81 | M/M | wrong index / array | `area / ExportArray[layer].area[nr][nc]` indexes the EwE-grid area array with the box-local overlap indices `n… |  | [ ] |
 | [LINK-41](#link-41) | 62, 71 | M/M | logic | Each overlapping EwE cell overwrites (`=`) the box value instead of accumulating its area-weighted contributio… |  | [ ] |
@@ -19,7 +19,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-40
 
 **wrong index / array** · Conf M / Sev M  
-**Listed lines:** 62, 71, 81
+**Lines (current code):** 62, 71, 81  
+**Lines at review (Oct 2026):** 62, 71, 81
 
 **Function:** `UnpackArrays()`
 
@@ -76,7 +77,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-41
 
 **logic** · Conf M / Sev M  
-**Listed lines:** 62, 71
+**Lines (current code):** 62, 71  
+**Lines at review (Oct 2026):** 62, 71
 
 **Function:** `UnpackArrays()`
 
@@ -84,7 +86,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 Each overlapping EwE cell overwrites (`=`) the box value instead of accumulating its area-weighted contribution, so only the last cell counts. Function: `UnpackArrays()`.
 
-**Current code** (`atlink/atlinkimport.c` lines 60–73) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `UnpackArrays()` now starts at line 35
+**Current code** (`atlink/atlinkimport.c` lines 60–73)
 
 ```c
    60: 												area = bm->boxes[b].export->bcellarea[nr][nc];  // area of box that contributes to cell [nr][nc] - calculated on startup
@@ -123,7 +125,8 @@ Each overlapping EwE cell overwrites (`=`) the box value instead of accumulating
 ## LINK-42
 
 **div-by-zero** · Conf M / Sev M  
-**Listed lines:** 71, 81
+**Lines (current code):** 71, 81  
+**Lines at review (Oct 2026):** 71, 81
 
 **Function:** `UnpackArrays()`
 

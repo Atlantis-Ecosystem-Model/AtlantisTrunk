@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [PHY2-12](#phy2-12) ⭐ | 465-522 | H/H | loop nesting / stale buffer | `ncvarput(fid, vid, start, count, val)` (whole-nbox record) is called inside `for b` → `for nf`, after only `v… |  | [ ] |
 | [PHY2-13](#phy2-13) | 109 & 341 vs 193 & 433 | H/L | loop bound mismatch | The Info routines define `numCohortsXnumGenes * numStocks * numAges` variables, but the Data routines loop onl… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY2-12
 
 **loop nesting / stale buffer** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 465-522
+**Lines (current code):** 465-522  
+**Lines at review (Oct 2026):** 465-522
 
 **Function:** `writeBMAnnAgeCatData()`
 
@@ -93,7 +94,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY2-13
 
 **loop bound mismatch** · Conf H / Sev L  
-**Listed lines:** 109 & 341 vs 193 & 433
+**Lines (current code):** 109 & 341 vs 193 & 433  
+**Lines at review (Oct 2026):** 109 & 341 vs 193 & 433
 
 **Function:** `writeBMAnnAgeBioInfo()`
 
@@ -131,7 +133,8 @@ The Info routines define `numCohortsXnumGenes * numStocks * numAges` variables, 
 ## PHY2-14
 
 **wrong weighting** · Conf M / Sev M  
-**Listed lines:** 227-234
+**Lines (current code):** 227-234  
+**Lines at review (Oct 2026):** 227-234
 
 **Function:** `writeBMAnnAgeBioData()`
 
@@ -176,7 +179,8 @@ Weight at age is `sum_k N*w*boxPopRatio / sum_k N`. The numerator is weighted by
 ## PHY2-15
 
 **inconsistent check** · Conf M / Sev L  
-**Listed lines:** 476, 504
+**Lines (current code):** 476, 504  
+**Lines at review (Oct 2026):** 476, 504
 
 **Function:** `writeBMAnnAgeCatData()`
 
@@ -184,9 +188,16 @@ Weight at age is `sum_k N*w*boxPopRatio / sum_k N`. The numerator is weighted by
 
 In `writeBMAnnAgeCatData` the species filter lacks the `isFished || isImpacted` test used in `writeBMAnnAgeCatInfo` (335). If `FisherySpeciesCatchFlags[sp][nf]` is TRUE for a species with neither flag set, `ncvarid` hits an undefined variable and is fatal under NC_FATAL. Function: `writeBMAnnAgeCatData()`.
 
-**Current code** (`atphysics/atagetracerIO.c` lines 481–513) — code appears to have moved +7 lines since the review
+**Current code** (`atphysics/atagetracerIO.c` lines 474–506)
 
 ```c
+  474:                                             tid = FunctGroupArray[sp].DiscardedByFisheryTracers[nf];
+  475:                                         }
+  476:                                         tot += rel_access * bm->fishstat[b][tid];
+  477:                                     }
+  478:                                 }
+  479:                                 if (!tot)
+  480:                                     tot = small_num;
   481:                                 
   482:                                 for (nf = 0; nf < bm->K_num_fisheries; nf++) {
   483:                                     if (FisherySpeciesCatchFlags[sp][nf] == TRUE) {
@@ -213,13 +224,6 @@ In `writeBMAnnAgeCatData` the species filter lacks the `isFished || isImpacted` 
   504:                                         val[b] = (doubleINPUT)(avgpopratio[b] * bm->fishstat[b][id] * (rel_access * bm->fishstat[b][tid] / tot));
   505:                                         
   506:                                         /** dummy = val[b] * (avgsze[b] * bm->X_CN * mg_2_tonne);
-  507: 
-  508:                                         if(sp == 2)
-  509:                                             fprintf(bm->logFile,"Time: %e printing out fishstats %s-%d (%d) fishery: %d box%d val: %e avgpopratio: %e rel_access: %e fishstatDEN: %e fishstatTIDratio: %e (equivalent to %e t as avgsze: %e X_CN: %e mg_2_tonne: %e)\n", bm->dayt, FunctGroupArray[sp].groupCode, cohort, ai, nf, b, val[b], avgpopratio[b], rel_access, bm->fishstat[b][id], bm->fishstat[b][tid] / tot, dummy, avgsze[b], bm->X_CN, mg_2_tonne);
-  510:                                        **/
-  511:                                     
-  512:                                         /* Get netCDF variable id */
-  513:                                         vid = ncvarid(fid, strname);
 ```
 
 **Suggested fix (from review):** Apply the same species filter in both routines

@@ -1,5 +1,7 @@
 # Cross-references, duplicates and fix-together groups
 
+File:line references were re-mapped to the current code on 2026-11-19 (≈ approximate, ? untraced).
+
 Copied from `to-do-fixt-list.md` (Part A §3 and Part B §B.4). Check here before fixing a bug, because some must be fixed together across files.
 
 ## Part A notes (atassess)
@@ -54,7 +56,7 @@ Copied from `to-do-fixt-list.md` (Part A §3 and Part B §B.4). Check here befor
 
 **Same bug reported twice. Fix once and tick both entries:**
 - **EMISC-26 = CLS-17 (Part A):** `Ecology_Spawn` gets X_RS and FSPB in swapped order in atclassical.c.
-- **UTIL-17 ↔ CONT-01:** contaminant arrays are allocated per `numCohorts` (atUtilGroupIO.c:910-914) but looped to `numCohortsXnumGenes` (atContaminants.c). Fix either the allocation or the loops.
+- **UTIL-17 ↔ CONT-01:** contaminant arrays are allocated per `numCohorts` (atUtilGroupIO.c:909-913) but looped to `numCohortsXnumGenes` (atContaminants.c). Fix either the allocation or the loops.
 - **API-06 (Part A) ↔ CNV2-06:** `Num_Sexes` is read and written as a binary flag, in both the reader and the converter.
 - **SJW1-06:** the `dfFindTime` rewind formula. The SJW3 reviewer found the same bug independently.
 - **BIOL-02 ↔ PHY3-12:** `totDiet` is sized by `K_num_max_cohort`, but both of these loop to `numCohortsXnumGenes*numStocks`.
@@ -62,7 +64,7 @@ Copied from `to-do-fixt-list.md` (Part A §3 and Part B §B.4). Check here befor
 - **SRV-08 / ATT-08 (Part A) ↔ SJW3-15:** the `round()` macro in sjwlib.h evaluates its argument three times. Where that argument contains `drandom()`, three different random numbers feed one age assignment, which makes the double-`+0.5` age bug worse.
 
 **Bugs reviewers noticed in files outside their own assignment.** Check these against the owning file's entries:
-- `atmanage/atManageSetup.c:1552`: `cpue_cdf_poor_p_id` is used where `cpue_cdf_top_p_id` is meant. Found by the SJW2 reviewer.
+- `atmanage/atManageSetup.c:1551`: `cpue_cdf_poor_p_id` is used where `cpue_cdf_top_p_id` is meant. Found by the SJW2 reviewer.
 - `atmanage/atManageParamIO.c:662`: `CPUEshotavgdis` is read from the key `"CPUEshotfdis"`. Found by the CNV2 reviewer.
 - **MOVE-04:** the fix also needs `int HowFar` changed to `double` in `atlantisUtil/include/atFunctGroup.h:94`.
 - `atlink/Makefile.am` lists `atlinkconversion.o` instead of `.c`. Found by the LINK reviewer.
@@ -75,5 +77,5 @@ Copied from `to-do-fixt-list.md` (Part A §3 and Part B §B.4). Check here befor
 
 **Fix together:**
 - **TIER-35, TIER-41, SS3-34:** several calls pass (year, species) in swapped order. Check every caller of `DoCPUE`, `DoPrager`, `Call_Tier3`, `TierFiveSAFE` and `writeCloseKinNcompsfiles`.
-- **SS3-26 ✔:** every local close-kin array in atCloseKin.c is allocated in index order. The code's own TODO asks for this check, and the reviewer notes the same pattern at atAssessTierSetup.c:536-549.
+- **SS3-26 ✔:** every local close-kin array in atCloseKin.c is allocated in index order. The code's own TODO asks for this check, and the reviewer notes the same pattern at atAssessTierSetup.c:541-554.
 - **SS3IO-14, SS3IO-16, SS3IO-17, SS3IO-20, SS3IO-21, SS3IO-25, SS3IO-28, SS3IO-31:** all corrupt the generated SS3 input files. Fix them as one pass, then check the result against an SS3.30 example file.

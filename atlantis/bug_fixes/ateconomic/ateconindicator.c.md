@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 2 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [ECIO-05](#ecio-05) | 625 vs 284 | M/M | unit mismatch | `Expected_Indicators()` computes `fuel_cost = (...) * fuel_cost_scalar;`. The same formula in `Dynamic_Econ_In… |  | [ ] |
 | [ECIO-06](#ecio-06) | 553-555 | L/L | side effect on shared state | `if (CurrentCatch_id < 1.0) SUBFLEET_ECONprms[nf][ns][CurrentCatch_id] = 1.0;` writes a floor into the real st… |  | [ ] |
@@ -19,7 +19,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-05
 
 **unit mismatch** · Conf M / Sev M  
-**Listed lines:** 625 vs 284
+**Lines (current code):** 625 vs 284  
+**Lines at review (Oct 2026):** 625 vs 284
 
 **Function:** `Expected_Indicators()`
 
@@ -57,7 +58,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-06
 
 **side effect on shared state** · Conf L / Sev L  
-**Listed lines:** 553-555
+**Lines (current code):** 553-555  
+**Lines at review (Oct 2026):** 553-555
 
 **Function:** `Dynamic_Econ_Indicators()`
 
@@ -97,7 +99,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-07
 
 **mismatched accumulation period** · Conf L / Sev M  
-**Listed lines:** 764, 778, 789-792
+**Lines (current code):** 764, 778, 789-792  
+**Lines at review (Oct 2026):** 764, 778, 789-792
 
 **Function:** `Update_Econ_Indx()`
 

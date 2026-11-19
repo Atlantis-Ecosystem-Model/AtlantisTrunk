@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **7 findings** (severity H: 1; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SMP-01](#smp-01) | 233, 238 | H/M | off-by-one | `if (sample > num_sampled_phy_id)` should be `>=`; no lower bound (sample<2 gives a negative index). |  | [ ] |
 | [SMP-02](#smp-02) | 258 | H/M | off-by-one | `if (sample > 3)` should be `>= 3` (`sampleprocess` has 3 rows). |  | [ ] |
@@ -23,7 +23,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SMP-01
 
 **off-by-one** · Conf H / Sev M  
-**Listed lines:** 233, 238
+**Lines (current code):** 233, 238  
+**Lines at review (Oct 2026):** 233, 238
 
 **Why it's thought to be a bug**
 
@@ -64,7 +65,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SMP-02
 
 **off-by-one** · Conf H / Sev M  
-**Listed lines:** 258
+**Lines (current code):** 258  
+**Lines at review (Oct 2026):** 258
 
 **Why it's thought to be a bug**
 
@@ -100,7 +102,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SMP-03
 
 **schedule** · Conf M / Sev M  
-**Listed lines:** 117, 134, 143, 173
+**Lines (current code):** 117, 134, 143, 173  
+**Lines at review (Oct 2026):** 117, 134, 143, 173
 
 **Why it's thought to be a bug**
 
@@ -162,7 +165,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SMP-04
 
 **always true** · Conf M / Sev M  
-**Listed lines:** 186
+**Lines (current code):** 186  
+**Lines at review (Oct 2026):** 186
 
 **Why it's thought to be a bug**
 
@@ -198,7 +202,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SMP-05
 
 **buffer overflow** · Conf M / Sev H  
-**Listed lines:** 202-213
+**Lines (current code):** 202-213  
+**Lines at review (Oct 2026):** 202-213
 
 **Why it's thought to be a bug**
 
@@ -245,7 +250,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SMP-06
 
 **normalisation** · Conf M / Sev M  
-**Listed lines:** 238, 265, 279
+**Lines (current code):** 238, 265, 279  
+**Lines at review (Oct 2026):** 238, 265, 279
 
 **Why it's thought to be a bug**
 
@@ -316,7 +322,8 @@ Getters divide inconsistently by `annual_sample` (can be 0, giving inf).
 ## SMP-07
 
 **off-by-one / copy-paste** · Conf H / Sev L  
-**Listed lines:** 273-274
+**Lines (current code):** 273-274  
+**Lines at review (Oct 2026):** 273-274
 
 **Why it's thought to be a bug**
 

@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **7 findings** (severity H: 2; confidence H and severity H: 1; on the priority list: 1), plus 2 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [MNGIO-01](#mngio-01) ⭐ | 1069-1081, 517-524 | H/H | always-true condition / buffer overrun | `POP_changes = 1; ... if (POP_changes > 0) bm->flagchangepop = 0;` is always true, so the flagchangepop settin… |  | [ ] |
 | [MNGIO-02](#mngio-02) | 1019-1023, 343-351, 1037-1042 | H/M | buffer overrun (config dependent) | `EFFORTchange` is allocated `[nf][Effort_max_num_changes][4]`, with max = 1 when `flagchangeeffort == 0`. `rea… |  | [ ] |
@@ -23,7 +23,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## MNGIO-01
 
 **always-true condition / buffer overrun** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 1069-1081, 517-524
+**Lines (current code):** 1069-1081, 517-524  
+**Lines at review (Oct 2026):** 1069-1081, 517-524
 
 **Why it's thought to be a bug**
 
@@ -71,13 +72,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## MNGIO-02
 
 **buffer overrun (config dependent)** · Conf H / Sev M  
-**Listed lines:** 1019-1023, 343-351, 1037-1042
+**Lines (current code):** 1019-1023, 343-351, 1037-1042  
+**Lines at review (Oct 2026):** 1019-1023, 343-351, 1037-1042
 
 **Why it's thought to be a bug**
 
 `EFFORTchange` is allocated `[nf][Effort_max_num_changes][4]`, with max = 1 when `flagchangeeffort == 0`. `readEffortChangeXML()` still reads `numChanges = FISHERYprms[nf][EFF_num_changes_id]` values into `EFFORTchange[nf][b]` for b<numChanges, regardless of the flag, so it overflows if any fishery has >1 changes while the flag is off. `CAPchange` has the same problem with `flagchangecap` through `Util_XML_Read_Change_Values()` (atUtilFisheryXML.c:463-472). Functions: `readEffortChangedXML()`, `readEffortChangeXML()`.
 
-**Current code** (`atmanage/atManageParamIO.c` lines 1017–1025)
+**Current code** (`atmanage/atManageParamIO.c` lines 1017–1044)
 
 ```c
  1017: 	Util_XML_Read_Fishery_Param(bm, fileName, groupingNode, EFF_num_changes_id);
@@ -89,6 +91,25 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
  1023: 	EFFORTchange = Util_Alloc_Init_3D_Double(4, Effort_max_num_changes, bm->K_num_fisheries, 0.0);
  1024: 
  1025: 	readEffortChangeXML(bm, fileName, groupingNode, "StartChangeDay", start_id);
+ 1026: 	readEffortChangeXML(bm, fileName, groupingNode, "StartChangePeriod", period_id);
+ 1027: 	readEffortChangeXML(bm, fileName, groupingNode, "EffortChangeProportion", mult_id);
+ 1028: 	readEffortChangeXML(bm, fileName, groupingNode, "EffortChangePulseFlag", pulse_id);
+ 1029: 
+ 1030: 	childGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Effort_CAP");
+ 1031: 	if (childGroupingNode == NULL)
+ 1032: 		quit("Effort_CAP: Effort_CAP attribute group not found in input file %s.\n", fileName);
+ 1033: 
+ 1034: 	Util_XML_Read_Fishery_Param(bm, fileName, childGroupingNode, CAP_num_changes_id);
+ 1035: 
+ 1036: 	/* Get the maximum number of CAP changes so we can allocate the array and load the values */
+ 1037: 	CAP_max_num_changes = 1;
+ 1038: 	if (bm->flagchangecap)
+ 1039: 		CAP_max_num_changes = Manage_Get_Max_Fishery_Param(bm, CAP_num_changes_id) + 1;
+ 1040: 	CAPchange = Util_Alloc_Init_3D_Double(4, CAP_max_num_changes, bm->K_num_fisheries, 0.0);
+ 1041: 
+ 1042: 	Util_XML_Read_Change_Values(bm, fileName, childGroupingNode, "CAPchange", CAP_num_changes_id, CAPchange);
+ 1043: 
+ 1044: }
 ```
 
 **Suggested fix (from review):** Always size from `Manage_Get_Max_Fishery_Param()`, or clamp the number of reads to the allocated size.
@@ -111,13 +132,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## MNGIO-03
 
 **copy-paste / wrong param key** · Conf H / Sev M  
-**Listed lines:** 662
+**Lines (current code):** 662  
+**Lines at review (Oct 2026):** 662
 
 **Function:** `readManamentFlagTimeXML()`
 
 **Why it's thought to be a bug**
 
-`bm->CPUEshotavgdis = Util_XML_Read_Value(..., "CPUEshotfdis");` reads the integer error-case flag instead of the bias parameter. ConvertAtlantis/atManagetoXML.c:550 creates `"CPUEshotavgdis"`, and atManage.c:2847 uses it as the bias. Function: `readManamentFlagTimeXML()`.
+`bm->CPUEshotavgdis = Util_XML_Read_Value(..., "CPUEshotfdis");` reads the integer error-case flag instead of the bias parameter. ConvertAtlantis/atManagetoXML.c:550 creates `"CPUEshotavgdis"`, and atManage.c:2862 uses it as the bias. Function: `readManamentFlagTimeXML()`.
 
 **Current code** (`atmanage/atManageParamIO.c` lines 660–664)
 
@@ -149,7 +171,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## MNGIO-04
 
 **buffer overrun / index collision** · Conf M / Sev H  
-**Listed lines:** 144-153
+**Lines (current code):** 144-153  
+**Lines at review (Oct 2026):** 144-153
 
 **Function:** `readBiMonthlyXML()`
 
@@ -198,7 +221,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## MNGIO-05
 
 **buffer overrun (unchecked bound)** · Conf M / Sev M  
-**Listed lines:** 294-306
+**Lines (current code):** 294-306  
+**Lines at review (Oct 2026):** 294-306
 
 **Function:** `Read_Fishery_Companion_Catch_XML()`
 
@@ -248,7 +272,8 @@ The loop `co_sp < FunctGroupArray[guild].speciesParams[max_co_sp_id]` writes `co
 ## MNGIO-06
 
 **NULL dereference** · Conf H / Sev L  
-**Listed lines:** 768-770
+**Lines (current code):** 768-770  
+**Lines at review (Oct 2026):** 768-770
 
 **Function:** `readPortIndexXML()`
 
@@ -288,7 +313,8 @@ The loop `co_sp < FunctGroupArray[guild].speciesParams[max_co_sp_id]` writes `co
 ## MNGIO-07
 
 **error-message text** · Conf H / Sev L  
-**Listed lines:** 335, 748
+**Lines (current code):** 335, 748  
+**Lines at review (Oct 2026):** 335, 748
 
 **Why it's thought to be a bug**
 

@@ -2,19 +2,19 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **13 findings** (severity H: 1; confidence H and severity H: 0; on the priority list: 0), plus 5 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [BXML-01](#bxml-01) | 2959-2971 | H/M | wrong node / wrong check type | `bm->shrink_tol = Util_XML_Read_Value(..., attributeGroupNode, integer_check, "shrink_tol")`: (a) the value is… |  | [ ] |
 | [BXML-02](#bxml-02) | 3825-3826 | H/M | wrong check type | `dissolv_coefft = Util_XML_Read_Value(..., integer_check, "<contam>_dissolv_coefft")`: this is a continuous co… |  | [ ] |
 | [BXML-03](#bxml-03) | 3631-3642 | M/M | index mismatch | `InvaderStartNums` is read into slots `[0 .. n-1]` with `n = maxInvaderAge - minInvaderAge`, but the only cons… |  | [ ] |
 | [BXML-04](#bxml-04) | 4229-4242 | M/H | wrong parameter key / NULL dereference | The reader looks up `"KMIG_INVERT%d"` (KMIG_INVERT0, KMIG_INVERT1, ...) via `parameterNameMigNum`, but the con… |  | [ ] |
-| [BXML-05](#bxml-05) | 1486, 1576, 1622, 1773, 1876, 2022, 2048, 2111, 2117, 2425, 4103 | M/M | buffer overrun (latent) | These loops run `cohort < numStages` and index `cohortString[cohort]` (a 2-element array, line 95). Several al… |  | [ ] |
+| [BXML-05](#bxml-05) | 1506, 1596, 1642, 1793, 1896, 2042, 2068, 2131, 2137, 2446, 4147 | M/M | buffer overrun (latent) | These loops run `cohort < numStages` and index `cohortString[cohort]` (a 2-element array, line 95). Several al… |  | [ ] |
 | [BXML-06](#bxml-06) | 2033-2036 | M/L | always-false condition | `pSPEat[cohort][prey][SED] = values[b]; if ((pSPEat[cohort][prey][SED] == 0) && values[b] > 0) pSPEat[0][prey]… |  | [ ] |
 | [BXML-07](#bxml-07) | 2121 | H/L | format/argument mismatch | `quit("Error: Unable to find parameter '%s/%s/%s' in input file %s\n", errorString, cohortString[preyCohort], … |  | [ ] |
 | [BXML-08](#bxml-08) | 977-989, 1007-1019, 1037-1049 | H/L | always-true check | The "incomplete set of entries" checks can never fire. For T: `counter = base = Tchange_max_num*wcnz`, so `dif… |  | [ ] |
@@ -29,13 +29,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## BXML-01
 
 **wrong node / wrong check type** · Conf H / Sev M  
-**Listed lines:** 2959-2971
+**Lines (current code):** 2959-2971  
+**Lines at review (Oct 2026):** 2959-2971
 
 **Function:** `Read_Diet_Information_Values()`
 
 **Why it's thought to be a bug**
 
-`bm->shrink_tol = Util_XML_Read_Value(..., attributeGroupNode, integer_check, "shrink_tol")`: (a) the value is looked up under `attributeGroupNode` (the "Diet" group), but the converter writes it inside the "Shrinking related" sub-group (ConvertAtlantis/atBioltoXML.c:3025-3030). `Util_XML_Get_Node` only searches direct children (`parent/Attribute[@name=..]`, atUtilXML.c:951-958), so with `isRequired=1` every run with `size_shrinking_type > 0` stops with "Cannot find atlantis parameter 'shrink_tol'". (b) `shrink_tol` is a double proportion ("Tolerated proportion of a month", atlantisboxmodel.h:5110, XML_TYPE_FLOAT), so `integer_check` rejects any fractional value. The species params on the next lines correctly use `attributeGroup`. Function: `Read_Diet_Information_Values()`.
+`bm->shrink_tol = Util_XML_Read_Value(..., attributeGroupNode, integer_check, "shrink_tol")`: (a) the value is looked up under `attributeGroupNode` (the "Diet" group), but the converter writes it inside the "Shrinking related" sub-group (ConvertAtlantis/atBioltoXML.c:3025-3030). `Util_XML_Get_Node` only searches direct children (`parent/Attribute[@name=..]`, atUtilXML.c:1004-1011), so with `isRequired=1` every run with `size_shrinking_type > 0` stops with "Cannot find atlantis parameter 'shrink_tol'". (b) `shrink_tol` is a double proportion ("Tolerated proportion of a month", atlantisboxmodel.h:5302, XML_TYPE_FLOAT), so `integer_check` rejects any fractional value. The species params on the next lines correctly use `attributeGroup`. Function: `Read_Diet_Information_Values()`.
 
 **Current code** (`atecology/atBiologyXMLParamIO.c` lines 2957–2973)
 
@@ -79,13 +80,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## BXML-02
 
 **wrong check type** · Conf H / Sev M  
-**Listed lines:** 3825-3826
+**Lines (current code):** 3825-3826  
+**Lines at review (Oct 2026):** 3825-3826
 
 **Function:** `Read_Contaminant_Values()`
 
 **Why it's thought to be a bug**
 
-`dissolv_coefft = Util_XML_Read_Value(..., integer_check, "<contam>_dissolv_coefft")`: this is a continuous coefficient (converter declares XML_TYPE_FLOAT, atBioltoXML.c:3729-3731; used as a multiplier in atContaminants.c:709). `Check_Value` with `integer_check` quits on any non-integer (atUtilIO.c:181-186), so realistic values such as 0.1 are rejected. Function: `Read_Contaminant_Values()`.
+`dissolv_coefft = Util_XML_Read_Value(..., integer_check, "<contam>_dissolv_coefft")`: this is a continuous coefficient (converter declares XML_TYPE_FLOAT, atBioltoXML.c:3731-3733; used as a multiplier in atContaminants.c:715). `Check_Value` with `integer_check` quits on any non-integer (atUtilIO.c:181-186), so realistic values such as 0.1 are rejected. Function: `Read_Contaminant_Values()`.
 
 **Current code** (`atecology/atBiologyXMLParamIO.c` lines 3823–3828)
 
@@ -118,17 +120,21 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## BXML-03
 
 **index mismatch** · Conf M / Sev M  
-**Listed lines:** 3631-3642
+**Lines (current code):** 3631-3642  
+**Lines at review (Oct 2026):** 3631-3642
 
 **Function:** `Read_Invading_Species_Values()`
 
 **Why it's thought to be a bug**
 
-`InvaderStartNums` is read into slots `[0 .. n-1]` with `n = maxInvaderAge - minInvaderAge`, but the only consumer reads `bm->InvaderStartNums[n]` for `n = minInvaderAge .. maxInvaderAge-1` (atmovement.c:3735-3738). When `minInvaderAge > 0` the wrong entries are used, and the top `minInvaderAge` cohorts get 0 (the array is zero-initialised with size K_num_max_cohort, atlantismain.c:2009). Function: `Read_Invading_Species_Values()`.
+`InvaderStartNums` is read into slots `[0 .. n-1]` with `n = maxInvaderAge - minInvaderAge`, but the only consumer reads `bm->InvaderStartNums[n]` for `n = minInvaderAge .. maxInvaderAge-1` (atmovement.c:3738-3741). When `minInvaderAge > 0` the wrong entries are used, and the top `minInvaderAge` cohorts get 0 (the array is zero-initialised with size K_num_max_cohort, atlantismain.c:2009). Function: `Read_Invading_Species_Values()`.
 
-**Current code** (`atecology/atBiologyXMLParamIO.c` lines 3632–3647) — code appears to have moved +3 lines since the review
+**Current code** (`atecology/atBiologyXMLParamIO.c` lines 3629–3644)
 
 ```c
+ 3629: 	bm->InvaderSpeed = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "InvaderSpeed") / numsechr;
+ 3630:     
+ 3631:     if (bm->InvadersEntering ) {
  3632:         bm->InvaderEntryLayer = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "InvaderEntryLayer");
  3633:         
  3634:         n = bm->maxInvaderAge - bm->minInvaderAge;
@@ -142,9 +148,6 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
  3642:     
  3643:         for (cohort = 0; cohort < n; cohort++) {
  3644:             bm->InvaderStartNums[cohort] = values[cohort];
- 3645:         }
- 3646:         free(values);
- 3647:     }
 ```
 
 **Suggested fix (from review):** Store `bm->InvaderStartNums[minInvaderAge + cohort] = values[cohort]` (or change the consumer to index `[n - minInvaderAge]`).
@@ -167,13 +170,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## BXML-04
 
 **wrong parameter key / NULL dereference** · Conf M / Sev H  
-**Listed lines:** 4229-4242
+**Lines (current code):** 4229-4242  
+**Lines at review (Oct 2026):** 4229-4242
 
 **Function:** `Read_KMIG_INVERT_XML()`
 
 **Why it's thought to be a bug**
 
-The reader looks up `"KMIG_INVERT%d"` (KMIG_INVERT0, KMIG_INVERT1, ...) via `parameterNameMigNum`, but the converter only creates one attribute called `"KMIG_INVERT"` (atBioltoXML.c:2807-2809, InitKMIGInvertXML at 1425-1444). The returned `attributeNode` is never NULL-checked, so it is passed as `parent` to `Util_XML_Read_Array_Double` -> `Util_XML_Get_Node`, which dereferences `parent->doc` (atUtilXML.c:1040). Any invertebrate with `sp_geo_move` and `num_migrate >= 1` would segfault. The existing comment ("This wasn't originally set - was that intentional?") suggests the change was unverified. Function: `Read_KMIG_INVERT_XML()`.
+The reader looks up `"KMIG_INVERT%d"` (KMIG_INVERT0, KMIG_INVERT1, ...) via `parameterNameMigNum`, but the converter only creates one attribute called `"KMIG_INVERT"` (atBioltoXML.c:2807-2809, InitKMIGInvertXML at 1425-1444). The returned `attributeNode` is never NULL-checked, so it is passed as `parent` to `Util_XML_Read_Array_Double` -> `Util_XML_Get_Node`, which dereferences `parent->doc` (atUtilXML.c:1093). Any invertebrate with `sp_geo_move` and `num_migrate >= 1` would segfault. The existing comment ("This wasn't originally set - was that intentional?") suggests the change was unverified. Function: `Read_KMIG_INVERT_XML()`.
 
 **Current code** (`atecology/atBiologyXMLParamIO.c` lines 4227–4244)
 
@@ -218,20 +222,21 @@ The reader looks up `"KMIG_INVERT%d"` (KMIG_INVERT0, KMIG_INVERT1, ...) via `par
 ## BXML-05
 
 **buffer overrun (latent)** · Conf M / Sev M  
-**Listed lines:** 1486, 1576, 1622, 1773, 1876, 2022, 2048, 2111, 2117, 2425, 4103
+**Lines (current code):** 1506, 1596, 1642, 1793, 1896, 2042, 2068, 2131, 2137, 2446, 4147  
+**Lines at review (Oct 2026):** 1486, 1576, 1622, 1773, 1876, 2022, 2048, 2111, 2117, 2425, 4103
 
 **Why it's thought to be a bug**
 
-These loops run `cohort < numStages` and index `cohortString[cohort]` (a 2-element array, line 95). Several also index arrays sized 2 in the stage dimension: `HABITATlike`/`ICE_HABITATlike*` (atlantismain.c:1926-1929, `[sp][2][..]`), `distrib_VERTICAL`/`distrib_OVERWINTER` (atUtilGroupIO.c:776-779), and `distrib` (atUtilGroupIO.c:918). `numStages` is only checked to be >= 1 (atUtilGroupIO.c:294), with no upper bound of 2, so a group with 3+ stages reads past `cohortString` (passing a garbage `char*` as the XML key) and writes out of bounds. Functions: `Read_Habitat_XML()`, `Read_Ice_Habitat_XML()`, `Read_VERT_Function()`, `Read_Sesonal_Dist_XML()`, `Read_Detritus_Sediment_Food_Avail()`, `Read_Vertebrate_Food_Avail()`, `Read_PStock_XML()`, `Read_MigrateIO_Box_XML()`.
+These loops run `cohort < numStages` and index `cohortString[cohort]` (a 2-element array, line 95). Several also index arrays sized 2 in the stage dimension: `HABITATlike`/`ICE_HABITATlike*` (atlantismain.c:2073-2076, `[sp][2][..]`), `distrib_VERTICAL`/`distrib_OVERWINTER` (atUtilGroupIO.c:775-778), and `distrib` (atUtilGroupIO.c:917). `numStages` is only checked to be >= 1 (atUtilGroupIO.c:294), with no upper bound of 2, so a group with 3+ stages reads past `cohortString` (passing a garbage `char*` as the XML key) and writes out of bounds. Functions: `Read_Habitat_XML()`, `Read_Ice_Habitat_XML()`, `Read_VERT_Function()`, `Read_Sesonal_Dist_XML()`, `Read_Detritus_Sediment_Food_Avail()`, `Read_Vertebrate_Food_Avail()`, `Read_PStock_XML()`, `Read_MigrateIO_Box_XML()`.
 
-**Current code** (`atecology/atBiologyXMLParamIO.c` lines 1520–1524) — code appears to have moved +36 lines since the review
+**Current code** (`atecology/atBiologyXMLParamIO.c` lines 1504–1508)
 
 ```c
- 1520:  *	\brief Read the data into the ice habitat use array from the input XML file.
- 1521:  */
- 1522: static void Read_Ice_Habitat_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
- 1523: 
- 1524: 	double *values = 0;
+ 1504: 					sum_hab -= bm->HABITATlike[guild][cohort][bm->CANYONcover_id];
+ 1505: 					if(cohort)
+ 1506: 						FunctGroupArray[guild].speciesParams[K_num_biogen_habad_id] = sum_hab;
+ 1507: 					else
+ 1508: 						FunctGroupArray[guild].speciesParams[K_num_biogen_habjuv_id] = sum_hab;
 ```
 
 **Suggested fix (from review):** Add a check at group load that `numStages <= 2`, or size these arrays and strings by `K_num_max_stages`.
@@ -254,7 +259,8 @@ These loops run `cohort < numStages` and index `cohortString[cohort]` (a 2-eleme
 ## BXML-06
 
 **always-false condition** · Conf M / Sev L  
-**Listed lines:** 2033-2036
+**Lines (current code):** 2033-2036  
+**Lines at review (Oct 2026):** 2033-2036
 
 **Function:** `Read_Detritus_Sediment_Food_Avail()`
 
@@ -295,7 +301,8 @@ These loops run `cohort < numStages` and index `cohortString[cohort]` (a 2-eleme
 ## BXML-07
 
 **format/argument mismatch** · Conf H / Sev L  
-**Listed lines:** 2121
+**Lines (current code):** 2121  
+**Lines at review (Oct 2026):** 2121
 
 **Function:** `Read_Vertebrate_Food_Avail()`
 
@@ -333,7 +340,8 @@ These loops run `cohort < numStages` and index `cohortString[cohort]` (a 2-eleme
 ## BXML-08
 
 **always-true check** · Conf H / Sev L  
-**Listed lines:** 977-989, 1007-1019, 1037-1049
+**Lines (current code):** 977-989, 1007-1019, 1037-1049  
+**Lines at review (Oct 2026):** 977-989, 1007-1019, 1037-1049
 
 **Function:** `Read_Physical_Chem_Values()`
 
@@ -341,7 +349,7 @@ These loops run `cohort < numStages` and index `cohortString[cohort]` (a 2-eleme
 
 The "incomplete set of entries" checks can never fire. For T: `counter = base = Tchange_max_num*wcnz`, so `diff` is always 0. For S and pH: `nset = counter / bm->wcnz` is integer division of `X*wcnz` by `wcnz`, so `floor(nset) == nset`. `Parse_Into_Array` already enforces the count, so these checks are dead code. Function: `Read_Physical_Chem_Values()`.
 
-**Current code** (`atecology/atBiologyXMLParamIO.c` lines 975–991)
+**Current code** (`atecology/atBiologyXMLParamIO.c` lines 975–1014 (truncated))
 
 ```c
   975:         
@@ -361,6 +369,29 @@ The "incomplete set of entries" checks can never fire. For T: `counter = base = 
   989: 			quit("Incomplete set of entries for vertTchange_mult (says there are %e entries instead of %e = %d * %d (Vchange_num * wcnz)\n", nset, base,
   990: 					Tchange_max_num, bm->wcnz);
   991: 		}
+  992: 	}else{
+  993: 		Tchange_max_num = 0;
+  994: 	}
+  995: 	Vchange_max_num = Tchange_max_num;
+  996: 
+  997: 	/* Salinity effects */
+  998: 	if(bm->flagsaltchange){
+  999: 		attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, attributeGroupNode, "Salinity_Effects");
+ 1000: 		if (attributeGroup == NULL)
+ 1001: 			quit("Salinity_Effects attribute group not found in input file %s.\n", fileName);
+ 1002: 
+ 1003: 		Schange_max_num = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, no_checking, "Schange_max_num");
+ 1004: 
+ 1005: 		if(Schange_max_num > 0)
+ 1006: 			Schange = (double **) alloc2d(3, Schange_max_num);
+ 1007: 		Read_Change_DataXML(bm, fileName, attributeGroup, "Schange", Schange, Schange_max_num, no_checking);
+ 1008: 
+ 1009: 		counter = Schange_max_num * bm->wcnz;
+ 1010: 
+ 1011: 		if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, "Salinity_Effects", attributeGroup, no_checking, "vertSchange_mult",
+ 1012: 				&vertSchange_multi, Schange_max_num * bm->wcnz) == FALSE) {
+ 1013: 			quit("Error: Unable to find parameter 'PhysicalChemical/Salinity_Effects/vertSchange_mult' in input file %s\n", fileName);
+ 1014: 		}
 ```
 
 **Suggested fix (from review):** Remove them, or check the real number of tokens parsed.
@@ -383,13 +414,14 @@ The "incomplete set of entries" checks can never fire. For T: `counter = base = 
 ## BXML-09
 
 **copy-paste error/log text** · Conf H / Sev L  
-**Listed lines:** 855, 964, 981, 1041, 1314, 1332, 1349, 1366, 1604, 3652
+**Lines (current code):** 855, 964, 981, 1041, 1314, 1332, 1349, 1366, 1604, 3652  
+**Lines at review (Oct 2026):** 855, 964, 981, 1041, 1314, 1332, 1349, 1366, 1604, 3652
 
 **Why it's thought to be a bug**
 
 Error messages name the wrong node. 855: "Chemical_Limitation" (node is PhysicalChemical). 964: "Physical_Change" (node is Temperature_Effects). 981 and 1041: "Salinity_Effects/vertTchange_mult" and ".../vertPHchange_mult" (should be Temperature_Effects and pH_Effects). 1314, 1332, 1349 and 1366: all say "Bleaching" (should be Calcification, ReefGrowth, ReefRecruit and RugosityModel). 1604: "Group_Ice_Preference" (should be Group_IceReprod_Preference). 3652: prints "Reading the Reproduction values" in `Read_Ice_Values()`. Functions: as listed.
 
-**Current code** (`atecology/atBiologyXMLParamIO.c` lines 853–857) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code
+**Current code** (`atecology/atBiologyXMLParamIO.c` lines 853–857) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
   853: 	/** Biophysical constants ************/
@@ -419,7 +451,8 @@ Error messages name the wrong node. 855: "Chemical_Limitation" (node is Physical
 ## BXML-10
 
 **format/argument mismatch** · Conf H / Sev L  
-**Listed lines:** 3637
+**Lines (current code):** 3637  
+**Lines at review (Oct 2026):** 3637
 
 **Function:** `Read_Invading_Species_Values()`
 
@@ -427,14 +460,14 @@ Error messages name the wrong node. 855: "Chemical_Limitation" (node is Physical
 
 `quit("...'Invading_Species/InvaderStartNums' in input file %s\n", "InvaderStartNums", fileName)`: there is one `%s` but the first argument is the literal "InvaderStartNums", so the message prints that instead of the file name. Function: `Read_Invading_Species_Values()`.
 
-**Current code** (`atecology/atBiologyXMLParamIO.c` lines 3637–3641)
+**Current code** (`atecology/atBiologyXMLParamIO.c` lines 3635–3639)
 
 ```c
+ 3635:         if (n <= 0)
+ 3636:             n = 1;
  3637:         
  3638:         /* Load number of invaders to add to the system - in first invasion pulse */
  3639:         if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, "InvaderStartNums", attributeGroupNode, integer_check, "InvaderStartNums", &values, n) == FALSE) {
- 3640:             quit("Error: Unable to find parameter 'Invading_Species/InvaderStartNums' in input file %s\n", "InvaderStartNums", fileName);
- 3641:         }
 ```
 
 **Suggested fix (from review):** Drop the extra `"InvaderStartNums"` argument.
@@ -457,7 +490,8 @@ Error messages name the wrong node. 855: "Chemical_Limitation" (node is Physical
 ## BXML-11
 
 **format specifier vs type** · Conf H / Sev L  
-**Listed lines:** 3398
+**Lines (current code):** 3398  
+**Lines at review (Oct 2026):** 3398
 
 **Function:** `Read_Popratio_Stock_XML()`
 
@@ -495,7 +529,8 @@ Error messages name the wrong node. 855: "Chemical_Limitation" (node is Physical
 ## BXML-12
 
 **NULL dereference** · Conf M / Sev L  
-**Listed lines:** 2807-2810
+**Lines (current code):** 2807-2810  
+**Lines at review (Oct 2026):** 2807-2810
 
 **Function:** `Read_Diet_Information_Values()`
 
@@ -536,7 +571,8 @@ Error messages name the wrong node. 855: "Chemical_Limitation" (node is Physical
 ## BXML-13
 
 **memory leak** · Conf H / Sev L  
-**Listed lines:** 3828-3837
+**Lines (current code):** 3828-3837  
+**Lines at review (Oct 2026):** 3828-3837
 
 **Function:** `Read_Contaminant_Values()`
 
@@ -544,9 +580,15 @@ Error messages name the wrong node. 855: "Chemical_Limitation" (node is Physical
 
 `values` from `Util_XML_Read_Array_Double(... "_contam_interaction" ...)` is never freed, so it leaks once per contaminant. Function: `Read_Contaminant_Values()`.
 
-**Current code** (`atecology/atBiologyXMLParamIO.c` lines 3832–3845) — code appears to have moved +6 lines since the review
+**Current code** (`atecology/atBiologyXMLParamIO.c` lines 3826–3839)
 
 ```c
+ 3826: 
+ 3827:         snprintf(varStr, sizeof(varStr), "%s_temp_depend", bm->contaminantStructure[cIndex]->contaminant_name);
+ 3828:         bm->contaminantStructure[cIndex]->contam_temp_depend = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, varStr);
+ 3829: 
+ 3830:         snprintf(varStr, sizeof(varStr), "%s_dissolv_coefft", bm->contaminantStructure[cIndex]->contaminant_name);
+ 3831:         bm->contaminantStructure[cIndex]->dissolv_coefft = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, varStr);
  3832:         
  3833:         if (bm->num_contaminants > 1) {
  3834:             snprintf(varStr, sizeof(varStr), "%s_contam_interaction", bm->contaminantStructure[cIndex]->contaminant_name);
@@ -555,12 +597,6 @@ Error messages name the wrong node. 855: "Chemical_Limitation" (node is Physical
  3837:             }
  3838:             
  3839:             for(contamIndex = 0; contamIndex < bm->num_contaminants; contamIndex++){
- 3840:                bm->contaminantStructure[cIndex]->interact_coefft[contamIndex] = values[contamIndex];
- 3841:             }
- 3842:         }
- 3843: 	}
- 3844: }
- 3845: 
 ```
 
 **Suggested fix (from review):** `free(values);` after the copy loop.
@@ -626,7 +662,7 @@ These came from section B.3 of the list. They were not raised as findings. Tick 
 
 ### LC-5
 
-`Read_Ice_Habitat_XML()` (1529-1538): the `!bm->ice_on` initialisation branch would dereference unallocated `ICE_HABITATlike` (only allocated when `ice_on`, atlantismain.c:1927). It is unreachable because the only caller (1699) is guarded by `ice_on`.
+`Read_Ice_Habitat_XML()` (1529-1538): the `!bm->ice_on` initialisation branch would dereference unallocated `ICE_HABITATlike` (only allocated when `ice_on`, atlantismain.c:2074). It is unreachable because the only caller (1699) is guarded by `ice_on`.
 
 - [ ] Investigate   - [ ] Ignore
 

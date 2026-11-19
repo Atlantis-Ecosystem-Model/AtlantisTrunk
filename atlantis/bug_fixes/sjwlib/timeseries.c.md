@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW2-14](#sjw2-14) | 337-361 | M/M | NULL dereference | `ATT_DOUBLE(x0,0)` etc. expand to `(a)->type` (datafile.h:126,131), but `dfGetGlobalAttribute` returns NULL wh… |  | [ ] |
 | [SJW2-15](#sjw2-15) | 601-614 | M/L | stale copy | After converting units, `ts->t_units`, `df->rec_units` and `df->variables[ri].units` are updated, but the sepa… |  | [ ] |
@@ -19,7 +19,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-14
 
 **NULL dereference** · Conf M / Sev M  
-**Listed lines:** 337-361
+**Lines (current code):** 337-361  
+**Lines at review (Oct 2026):** 337-361
 
 **Function:** `tsEvalXYR()`
 
@@ -81,7 +82,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-15
 
 **stale copy** · Conf M / Sev L  
-**Listed lines:** 601-614
+**Lines (current code):** 601-614  
+**Lines at review (Oct 2026):** 601-614
 
 **Function:** `tsNewTimeUnits()`
 
@@ -132,7 +134,8 @@ After converting units, `ts->t_units`, `df->rec_units` and `df->variables[ri].un
 ## SJW2-16
 
 **NULL dereference / uninitialised** · Conf L / Sev L  
-**Listed lines:** 108-114, 117-139, 515-516, 563
+**Lines (current code):** 108-114, 117-139, 515-516, 563  
+**Lines at review (Oct 2026):** 108-114, 117-139, 515-516, 563
 
 **Function:** `tsRead()`
 
@@ -140,9 +143,13 @@ After converting units, `ts->t_units`, `df->rec_units` and `df->variables[ri].un
 
 If the file has no record variable and no `t`/`time` variable, `ts->t` stays NULL, and `tsMultiCheck`/`tsMultiEvalXYZ` dereference `ts->t[0]`. For NetCDF with `nd > 3`, `ts->type` is left unset (`default: break`). Function: `tsRead()`.
 
-**Current code** (`sjwlib/timeseries.c` lines 110–120) — code appears to have moved +4 lines since the review
+**Current code** (`sjwlib/timeseries.c` lines 106–141)
 
 ```c
+  106: 
+  107: 	dfRead(folderName, name, df);
+  108: 	if (df->records == NULL) {
+  109: 		index = dfIndex(df, "t");
   110: 		if (index >= 0)
   111: 			dfSetRecord(df, index);
   112: 		else if ((index = dfIndex(df, "time")) >= 0)
@@ -154,6 +161,27 @@ If the file has no record variable and no `t`/`time` variable, `ts->t` stays NUL
   118: 		switch (df->nd) {
   119: 		case 0:
   120: 			ts->type = TS_NC0;
+  121: 			break;
+  122: 
+  123: 		case 1:
+  124: 			ts->type = TS_NC1;
+  125: 			break;
+  126: 
+  127: 		case 2:
+  128: 			ts->type = TS_NC2;
+  129: 			break;
+  130: 
+  131: 		case 3:
+  132: 			ts->type = TS_NC3;
+  133: 			break;
+  134: 
+  135: 		default:
+  136: 			break;
+  137: 		}
+  138: 	} else
+  139: 		ts->type = TS_ASCII;
+  140: 
+  141: 	ts->name = df->name;
 ```
 
 **Suggested fix (from review):** Quit if `ts->t == NULL`; set a type or quit in the default branch.

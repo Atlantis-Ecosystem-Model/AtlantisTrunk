@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **6 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [BMSG-12](#bmsg-12) | 67-70, 88-91, 100-102, 113-130, 146-148, 159-175, 195-198, 214-217, 228-247, 258-292 | H/L | wrong logic | Each test is `if (fabs(x) > maxflux)` but then stores `maxflux = x` (signed). After a large negative flux wins… |  | [ ] |
 | [BMSG-13](#bmsg-13) | 53, 295-296 | H/M | missing case | The switch handles only WC, SED and EPIFAUNA. atecology.c:3640 calls `Max_Flux_Check(bm, ICE_BASED, ...)` when… |  | [ ] |
@@ -22,7 +22,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## BMSG-12
 
 **wrong logic** · Conf H / Sev L  
-**Listed lines:** 67-70, 88-91, 100-102, 113-130, 146-148, 159-175, 195-198, 214-217, 228-247, 258-292
+**Lines (current code):** 67-70, 88-91, 100-102, 113-130, 146-148, 159-175, 195-198, 214-217, 228-247, 258-292  
+**Lines at review (Oct 2026):** 67-70, 88-91, 100-102, 113-130, 146-148, 159-175, 195-198, 214-217, 228-247, 258-292
 
 **Function:** `Max_Flux_Check()`
 
@@ -95,7 +96,8 @@ Each test is `if (fabs(x) > maxflux)` but then stores `maxflux = x` (signed). Af
 ## BMSG-13
 
 **missing case** · Conf H / Sev M  
-**Listed lines:** 53, 295-296
+**Lines (current code):** 53, 295-296  
+**Lines at review (Oct 2026):** 53, 295-296
 
 **Function:** `Max_Flux_Check()`
 
@@ -133,13 +135,14 @@ The switch handles only WC, SED and EPIFAUNA. atecology.c:3640 calls `Max_Flux_C
 ## BMSG-14
 
 **missing case** · Conf M / Sev L  
-**Listed lines:** 637-647, 663-684, 697-713, 725-735, 748-758, 771-781, 869-882
+**Lines (current code):** 637-647, 663-684, 697-713, 725-735, 748-758, 771-781, 869-882  
+**Lines at review (Oct 2026):** 637-647, 663-684, 697-713, 725-735, 748-758, 771-781, 869-882
 
 **Why it's thought to be a bug**
 
 `Print_Eat_Diagnostics()` passes `ICE_BASED`/`LAND_BASED` as `habitat` to the Print_* helpers, but every helper only switches on WC/SED/EPIFAUNA, so nothing is printed. It is called that way at atecology.c:3684. Functions: `Print_PreyInfo_Value()`, `Print_PreyEaten_Value()`, etc.
 
-**Current code** (`atecology/atfluxbreakdown.c` lines 635–649)
+**Current code** (`atecology/atfluxbreakdown.c` lines 635–674 (truncated))
 
 ```c
   635: 
@@ -157,6 +160,31 @@ The switch handles only WC, SED and EPIFAUNA. atecology.c:3640 calls `Max_Flux_C
   647: 		}
   648: 	}
   649: }
+  650: 
+  651: /**
+  652:  * Print the spEat values
+  653:  *
+  654:  *
+  655:  */
+  656: static void Print_SPEAT_Value(MSEBoxModel *bm, FILE *llogfp, int guild, int habitat, HABITAT_TYPES habitatType) {
+  657: 	int prey;
+  658: 	int cohort;
+  659: 	int stage;
+  660: 
+  661: 	for (cohort = 0; cohort < FunctGroupArray[guild].numCohorts * FunctGroupArray[guild].numGeneTypes; cohort++) {
+  662: 		stage = FunctGroupArray[guild].cohort_stage[cohort];
+  663: 		switch (habitat) {
+  664: 		case WC:
+  665: 			for (prey = 0; prey < bm->K_num_tot_sp; prey++)
+  666: 				if (strcmp(FunctGroupArray[prey].name, "") != 0)
+  667: 					if(FunctGroupArray[guild].pSPEat[stage][prey][WC] > 0)
+  668: 						fprintf(llogfp, "wc %s-%d, %s, spEat = %e\n", FunctGroupArray[guild].groupCode, cohort, FunctGroupArray[prey].groupCode, FunctGroupArray[guild].pSPEat[stage][prey][WC]);
+  669: 			break;
+  670: 		case SED:
+  671: 			for (prey = 0; prey < bm->K_num_tot_sp; prey++)
+  672: 				if (strcmp(FunctGroupArray[prey].name, "") != 0)
+  673: 					if(FunctGroupArray[guild].pSPEat[stage][prey][SED] > 0)
+  674: 						fprintf(llogfp, "sed %s-%d, %s, spEat = %e\n", FunctGroupArray[guild].groupCode, cohort, FunctGroupArray[prey].groupCode,  FunctGroupArray[guild].pSPEat[stage][prey][SED]);
 ```
 
 **Suggested fix (from review):** Add ICE_BASED/LAND_BASED cases to the helpers (the arrays are sized `num_active_habitats`).
@@ -179,7 +207,8 @@ The switch handles only WC, SED and EPIFAUNA. atecology.c:3640 calls `Max_Flux_C
 ## BMSG-15
 
 **wrong file / NULL deref** · Conf M / Sev L  
-**Listed lines:** 805-826
+**Lines (current code):** 805-826  
+**Lines at review (Oct 2026):** 805-826
 
 **Function:** `Print_Eat_Diagnostics()`
 
@@ -238,7 +267,8 @@ The header lines go to the global `logfp` but the values go to `llogfp`. Also `f
 ## BMSG-16
 
 **wrong label** · Conf L / Sev L  
-**Listed lines:** 322-327
+**Lines (current code):** 322-327  
+**Lines at review (Oct 2026):** 322-327
 
 **Function:** `Call_Diagnostics()`
 
@@ -281,7 +311,8 @@ Any `level_id` other than WC or SED is labelled "epi", so ICE_BASED calls (ateco
 ## BMSG-17
 
 **always-true condition** · Conf L / Sev L  
-**Listed lines:** 572-580
+**Lines (current code):** 572-580  
+**Lines at review (Oct 2026):** 572-580
 
 **Function:** `Print_Flux()`
 

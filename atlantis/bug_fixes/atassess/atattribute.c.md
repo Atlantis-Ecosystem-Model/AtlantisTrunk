@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **16 findings** (severity H: 2; confidence H and severity H: 0; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [ATT-01](#att-01) | 166, 188, 390, 1011-1013 | M/M | averaging | `oldbaby` is assigned with `=` each step but divided by numsteps; birds are double-added at line 390. |  | [ ] |
 | [ATT-02](#att-02) | 153, 220 | H/M | wrong variable | Time column `nt = dt/86400` (step length) instead of year (`dayt/365`, as in atsample.c:59). |  | [ ] |
@@ -32,13 +32,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ATT-01
 
 **averaging** · Conf M / Sev M  
-**Listed lines:** 166, 188, 390, 1011-1013
+**Lines (current code):** 166, 188, 390, 1011-1013  
+**Lines at review (Oct 2026):** 166, 188, 390, 1011-1013
 
 **Why it's thought to be a bug**
 
 `oldbaby` is assigned with `=` each step but divided by numsteps; birds are double-added at line 390.
 
-**Current code** (`atassess/atattribute.c` lines 164–168)
+**Current code** (`atassess/atattribute.c` lines 164–190)
 
 ```c
   164: 				if (FunctGroupArray[sp].groupType == BIRD) {
@@ -46,6 +47,28 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   166: 					oldbaby[sp][b][attrib_id] = stockinfo[sstocknums_id][sp][b][attrib_id] * individVERTinfo[istocknums_id][sp][0][b][attrib_id];
   167: 				}
   168: 				if (FunctGroupArray[sp].groupType == MAMMAL) {
+  169: 					/* Mammals */
+  170: 					step1 = minpool;
+  171: 					/* Note: Using year classes so use agemat * age classsize */
+  172: 					matage = (int) (FunctGroupArray[sp].speciesParams[age_mat_id] * FunctGroupArray[sp].ageClassSize);
+  173: 					if (matage > bm->K_max_agekey)
+  174: 						matage = bm->K_max_agekey;
+  175: 
+  176: 					if (matage > FunctGroupArray[sp].numCohorts)
+  177: 						matage = FunctGroupArray[sp].numCohorts;
+  178: 
+  179: 					for (jj = 0; jj < matage; jj++) {
+  180: 						scalarsum = 0;
+  181: 						for (k = 0; k < bm->K_num_size; k++) {
+  182: 							newnums = stockinfo[sstocknums_id][sp][b][attrib_id] * individVERTinfo[istocknums_id][sp][k][b][attrib_id]
+  183: 									* agelengthkey[k][jj][sp][b][attrib_id];
+  184: 							scalarsum += individVERTinfo[istocknums_id][sp][k][b][attrib_id] * agelengthkey[k][jj][sp][b][attrib_id];
+  185: 							step1 += newnums;
+  186: 						}
+  187: 					}
+  188: 					oldbaby[sp][b][attrib_id] = step1;
+  189: 				}
+  190: 			}
 ```
 
 **Suggested fix (from review):** no division / accumulate
@@ -68,20 +91,21 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ATT-02
 
 **wrong variable** · Conf H / Sev M  
-**Listed lines:** 153, 220
+**Lines (current code):** 153, 220  
+**Lines at review (Oct 2026):** 153, 220
 
 **Why it's thought to be a bug**
 
 Time column `nt = dt/86400` (step length) instead of year (`dayt/365`, as in atsample.c:59).
 
-**Current code** (`atassess/atattribute.c` lines 464–468) — code appears to have moved +313 lines since the review
+**Current code** (`atassess/atattribute.c` lines 151–155) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  464: 						double v = drandom(0.0, 1.0);
-  465: 						/* Assume animal uniformly distributed in age class - may not be right! */
-  466: 						//cage = (int) (floor((chrt + v) * FunctGroupArray[sp].ageClassSize + 0.5));
-  467: 
-  468: 						//TODO Check with beth about changing to a round instead of a floor.
+  151: 	double step1, newnums, scalarsum;
+  152: 
+  153: 	nt = (int) (bm->dt / 86400.0);
+  154: 
+  155: 	if (verbose)
 ```
 
 **Suggested fix (from review):** `floor(ROUNDGUARD + dayt/365)`
@@ -104,7 +128,8 @@ Time column `nt = dt/86400` (step length) instead of year (`dayt/365`, as in ats
 ## ATT-03
 
 **missing normalisation** · Conf M / Sev H  
-**Listed lines:** 245-289
+**Lines (current code):** 245-289  
+**Lines at review (Oct 2026):** 245-289
 
 **Why it's thought to be a bug**
 
@@ -175,7 +200,8 @@ Invertebrate true values are never divided by numsteps (survey divides them).
 ## ATT-04
 
 **range** · Conf M / Sev L  
-**Listed lines:** 246-249
+**Lines (current code):** 246-249  
+**Lines at review (Oct 2026):** 246-249
 
 **Why it's thought to be a bug**
 
@@ -214,7 +240,8 @@ Loop `light_wc_id..<don_wc_id` skips DON, DIN and Temp.
 ## ATT-05
 
 **wrong slot** · Conf M / Sev M  
-**Listed lines:** 268-270
+**Lines (current code):** 268-270  
+**Lines at review (Oct 2026):** 268-270
 
 **Why it's thought to be a bug**
 
@@ -252,21 +279,22 @@ Reads `biolbiom[..][WC]` only; sediment groups are stored in SED (see DAT-1).
 ## ATT-06
 
 **wrong index** · Conf M / Sev M  
-**Listed lines:** 394-395
+**Lines (current code):** 394-395  
+**Lines at review (Oct 2026):** 394-395
 
 **Why it's thought to be a bug**
 
 Bird catch numbers always go into bin 0, not `lbin`.
 
-**Current code** (`atassess/atattribute.c` lines 396–401) — code appears to have moved +4 lines since the review
+**Current code** (`atassess/atattribute.c` lines 392–397) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
+  392: 
+  393: 						/* Numbers in catch*/
+  394: 						raw = biolVERTinfo[bcatchnums_id][sp][chrt][b];
+  395: 						individVERTinfo[icatchnums_id][sp][0][z][attrib_id] += raw;
   396: 
   397: 						/* Biomass */
-  398: 						individVERTinfo[ibiomass_id][sp][lbin][z][attrib_id] += rawW * rawN / (bm->boxes[b].area + TINY);
-  399: 
-  400: 						/* Discards */
-  401: 						raw = biolVERTinfo[bdiscards_id][sp][chrt][b];
 ```
 
 **Suggested fix (from review):** `[lbin]`
@@ -289,7 +317,8 @@ Bird catch numbers always go into bin 0, not `lbin`.
 ## ATT-07
 
 **wrong variable** · Conf M / Sev M  
-**Listed lines:** 370-377, 469, 858
+**Lines (current code):** 370-377, 469, 858  
+**Lines at review (Oct 2026):** 370-377, 469, 858
 
 **Why it's thought to be a bug**
 
@@ -332,7 +361,8 @@ Stage switch and age use `chrt` (cohort×gene).
 ## ATT-08
 
 **off-by-one** · Conf H / Sev M  
-**Listed lines:** 469, 858
+**Lines (current code):** 469, 858  
+**Lines at review (Oct 2026):** 469, 858
 
 **Why it's thought to be a bug**
 
@@ -368,7 +398,8 @@ Stage switch and age use `chrt` (cohort×gene).
 ## ATT-09
 
 **off-by-one** · Conf L / Sev L  
-**Listed lines:** 460, 852
+**Lines (current code):** 460, 852  
+**Lines at review (Oct 2026):** 460, 852
 
 **Why it's thought to be a bug**
 
@@ -404,7 +435,8 @@ Stage switch and age use `chrt` (cohort×gene).
 ## ATT-10
 
 **accumulator mixing** · Conf M / Sev M  
-**Listed lines:** 383-402, 418-435
+**Lines (current code):** 383-402, 418-435  
+**Lines at review (Oct 2026):** 383-402, 418-435
 
 **Why it's thought to be a bug**
 
@@ -475,13 +507,14 @@ Bird raw counts are added onto already-normalised fractions in later rounds.
 ## ATT-11
 
 **formula** · Conf M / Sev M  
-**Listed lines:** 490, 505, 869 (+atsurvey 535/699)
+**Lines (current code):** 490, 505, 869 (+atsurvey 535/699)  
+**Lines at review (Oct 2026):** 490, 505, 869 (+atsurvey 535/699)
 
 **Why it's thought to be a bug**
 
 Production multiplied by stock numbers again (already included in atdatareading.c:536).
 
-**Current code** (`atassess/atattribute.c` lines 488–492)
+**Current code** (`atassess/atattribute.c` lines 488–507)
 
 ```c
   488: 						raw = biolVERTinfo[bprod_id][sp][chrt][b];
@@ -489,6 +522,21 @@ Production multiplied by stock numbers again (already included in atdatareading.
   490: 						stockinfo[sprod_id][sp][z][attrib_id] += raw * samplearea[bb] * ceil(biolVERTinfo[bstocknums_id][sp][chrt][b]) / (vol + TINY);
   491: 
   492: 						/* Mammal Consumption */
+  493: 						raw = biolVERTinfo[beat_id][sp][chrt][b];
+  494: 						stockinfo[seat_id][sp][z][attrib_id] += raw * samplearea[bb];
+  495: 					}
+  496: 				}
+  497: 			}
+  498: 		}
+  499: 
+  500: 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  501: 			if(FunctGroupArray[sp].groupType == BIRD){
+  502: 				for (chrt = 0; chrt < FunctGroupArray[sp].numCohortsXnumGenes; chrt++) {
+  503: 					/* Bird production */
+  504: 					raw = biolVERTinfo[bprod_id][sp][chrt][b];
+  505: 					stockinfo[sprod_id][sp][z][attrib_id] += raw * samplearea[bb] * ceil(biolVERTinfo[bstocknums_id][sp][chrt][b]) / (vol + TINY);
+  506: 
+  507: 					/* Bird consumption */
 ```
 
 **Suggested fix (from review):** drop the factor
@@ -511,32 +559,33 @@ Production multiplied by stock numbers again (already included in atdatareading.
 ## ATT-12
 
 **inconsistency** · Conf L / Sev M  
-**Listed lines:** 500-512 vs 485, 866
+**Lines (current code):** 500-512 vs 485, 866  
+**Lines at review (Oct 2026):** 500-512 vs 485, 866
 
 **Why it's thought to be a bug**
 
 Bird prod/eat are not gated by `sample_now`.
 
-**Current code** (`atassess/atattribute.c` lines 483–499) — code appears to have moved -15 lines since the review
+**Current code** (`atassess/atattribute.c` lines 498–514) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  483: 					Sort_Length_Weight(bm, 0, 1, sizediscardnums_id, z, indx, fishery_id, lngth, nraw, wgt, cmaxsize, attrib_id, &ltc, ofp);
-  484: 
-  485: 					if (bm->sample_now) {
-  486: 
-  487: 						/* Mammal Production */
-  488: 						raw = biolVERTinfo[bprod_id][sp][chrt][b];
-  489: 
-  490: 						stockinfo[sprod_id][sp][z][attrib_id] += raw * samplearea[bb] * ceil(biolVERTinfo[bstocknums_id][sp][chrt][b]) / (vol + TINY);
-  491: 
-  492: 						/* Mammal Consumption */
-  493: 						raw = biolVERTinfo[beat_id][sp][chrt][b];
-  494: 						stockinfo[seat_id][sp][z][attrib_id] += raw * samplearea[bb];
-  495: 					}
-  496: 				}
-  497: 			}
   498: 		}
   499: 
+  500: 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  501: 			if(FunctGroupArray[sp].groupType == BIRD){
+  502: 				for (chrt = 0; chrt < FunctGroupArray[sp].numCohortsXnumGenes; chrt++) {
+  503: 					/* Bird production */
+  504: 					raw = biolVERTinfo[bprod_id][sp][chrt][b];
+  505: 					stockinfo[sprod_id][sp][z][attrib_id] += raw * samplearea[bb] * ceil(biolVERTinfo[bstocknums_id][sp][chrt][b]) / (vol + TINY);
+  506: 
+  507: 					/* Bird consumption */
+  508: 					raw = biolVERTinfo[beat_id][sp][chrt][b];
+  509: 					stockinfo[seat_id][sp][z][attrib_id] += raw * samplearea[bb];
+  510: 				}
+  511: 			}
+  512: 		}
+  513: 	}
+  514: 
 ```
 
 **Suggested fix (from review):** gate
@@ -559,7 +608,8 @@ Bird prod/eat are not gated by `sample_now`.
 ## ATT-13
 
 **units** · Conf M / Sev H ⭐ priority  
-**Listed lines:** 705 (+atsurvey.c:600)
+**Lines (current code):** 705 (+atsurvey.c:600)  
+**Lines at review (Oct 2026):** 705 (+atsurvey.c:600)
 
 **Why it's thought to be a bug**
 
@@ -595,7 +645,8 @@ Bird prod/eat are not gated by `sample_now`.
 ## ATT-14
 
 **double count** · Conf M / Sev M  
-**Listed lines:** 756-765 (+429)
+**Lines (current code):** 756-765 (+429)  
+**Lines at review (Oct 2026):** 756-765 (+429)
 
 **Why it's thought to be a bug**
 
@@ -640,7 +691,8 @@ Bird catch numbers are added twice.
 ## ATT-15
 
 **condition** · Conf M / Sev L  
-**Listed lines:** 727, 756
+**Lines (current code):** 727, 756  
+**Lines at review (Oct 2026):** 727, 756
 
 **Why it's thought to be a bug**
 
@@ -705,21 +757,22 @@ Bird catch numbers are added twice.
 ## ATT-16
 
 **formula** · Conf M / Sev M  
-**Listed lines:** 934-935
+**Lines (current code):** 934-935  
+**Lines at review (Oct 2026):** 934-935
 
 **Why it's thought to be a bug**
 
 Biomass per bin = total biomass × individual weight (mass²).
 
-**Current code** (`atassess/atattribute.c` lines 927–932) — code appears to have moved -5 lines since the review
+**Current code** (`atassess/atattribute.c` lines 932–937) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  927: 					/* Rescale size distribution so it sums to one */
-  928: 					for (i = 0; i < bm->K_num_size; i++) {
-  929: 						individVERTinfo[istocknums_id][sp][i][z][attrib_id] = individVERTinfo[istocknums_id][sp][i][z][attrib_id]
-  930: 								/ (totnums[totstocknums_id][sp][z] + TINY);
-  931: 
   932: 						/* Do stuff that was dependent on rescaled size distribution */
+  933: 						/* Biomass per size bin - corrected for selectivity */
+  934: 						individVERTinfo[ibiomass_id][sp][i][z][attrib_id] = stockinfo[sbiomass_id][sp][z][attrib_id]
+  935: 								* individVERTinfo[iweight_id][sp][i][z][attrib_id];
+  936: 
+  937: 						/* Numbers in the stock */
 ```
 
 **Suggested fix (from review):** × `istocknums` fraction

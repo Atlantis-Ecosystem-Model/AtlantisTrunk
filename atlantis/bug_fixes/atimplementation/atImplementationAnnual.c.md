@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1), plus 2 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [HRV2-20](#hrv2-20) ⭐ | 81, 95-103, 164-168 | H/H | logic / wrong condition | `high_trigger_tripped` starts at 1 and is only cleared when a species falls between the low and high threshold… |  | [ ] |
 | [HRV2-21](#hrv2-21) | 197-237, 248-257 | H/M | misplaced else / wrong branch | In the endangered-species loop, the "Use assessment model output" `else` (221) belongs to `if (speciesParams[s… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-20
 
 **logic / wrong condition** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 81, 95-103, 164-168
+**Lines (current code):** 81, 95-103, 164-168  
+**Lines at review (Oct 2026):** 81, 95-103, 164-168
 
 **Function:** `Apply_Annual_Fisheries_Mgmt()`
 
@@ -28,7 +29,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `high_trigger_tripped` starts at 1 and is only cleared when a species falls between the low and high thresholds. (1) When the low trigger trips (95-100), the loop `break`s with high_trigger_tripped still 1, so the reduction computed at 143-147 is always overwritten by the "recovery" formula at 166-167. (2) The recovery block runs even when `flagADJUSTmanage==0` (it is outside that `if`). (3) `EFF_scale = 1.0 - step1*(1+FC_restrict)` with `step1=(dayt+1-target_day)/FC_period`. target_day is reset to 0 at line 159, so step1 ~ dayt/FC_period and EFF_scale goes strongly negative. This value is stored in `effort_scale[..][target_tac_id]` and used as TAC_scale (319) and mgmt_scale (atHarvestImposedCatch.c:317). The endangered block 264-268 has the same pattern. Function: `Apply_Annual_Fisheries_Mgmt()`.
 
-**Current code** (`atimplementation/atImplementationAnnual.c` lines 79–83)
+**Current code** (`atimplementation/atImplementationAnnual.c` lines 79–105)
 
 ```c
    79: 		FC_period2 = bm->FISHERYprms[fishery_id][FC_period2_id];
@@ -36,6 +37,28 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
    81: 		high_trigger_tripped = 1;
    82: 		if (flagADJUSTmanage > 0) {
    83: 			trigger_tripped = 0;
+   84: 			for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+   85: 				if (FunctGroupArray[sp].isFished == TRUE) {
+   86: 					FC_thresh = bm->SP_FISHERYprms[sp][fishery_id][FC_thresh_id];
+   87: 					FC_high_thresh = bm->SP_FISHERYprms[sp][fishery_id][FC_high_thresh_id];
+   88: 					startpop = bm->totinitpop[sp];
+   89: 					fishnowpop = bm->totfishpop[sp];
+   90: 
+   91: 					/* Using original simple adaptive management with perfect knowledge model
+   92: 					 (explicit TAC model handed in Make_Mgmt_Decisions())
+   93: 					 */
+   94: 					if (!bm->do_assessing) {
+   95: 						if (fishnowpop < FC_thresh * startpop) {
+   96: 							trigger_tripped = 1;
+   97: 							fprintf(llogfp, "Time: %e, species %s (targeted by fishery %s) is at critical population levels (%.2f)\n", bm->dayt,
+   98: 									FunctGroupArray[sp].groupCode, FisheryArray[fishery_id].fisheryCode, fishnowpop / startpop);
+   99: 
+  100: 							break;
+  101: 						} else if (fishnowpop < FC_high_thresh * startpop) {
+  102: 							high_trigger_tripped = 0;
+  103: 							break;
+  104: 						} else {
+  105: 							if (verbose > 1 && bm->debug < debug_biology_process)
 ```
 
 **Suggested fix (from review):** Run the recovery only when `!trigger_tripped && high_trigger_tripped && flagADJUSTmanage>0`, and use a bounded ramp, e.g. `FC_restrict + min(1,step1)*(1-FC_restrict)`
@@ -58,7 +81,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-21
 
 **misplaced else / wrong branch** · Conf H / Sev M  
-**Listed lines:** 197-237, 248-257
+**Lines (current code):** 197-237, 248-257  
+**Lines at review (Oct 2026):** 197-237, 248-257
 
 **Function:** `Apply_Annual_Fisheries_Mgmt()`
 
@@ -131,7 +155,8 @@ In the endangered-species loop, the "Use assessment model output" `else` (221) b
 ## HRV2-22
 
 **dead code / feature not applied** · Conf M / Sev M  
-**Listed lines:** 357-366
+**Lines (current code):** 357-366  
+**Lines at review (Oct 2026):** 357-366
 
 **Function:** `Apply_Annual_Fisheries_Mgmt()`
 
@@ -139,9 +164,14 @@ In the endangered-species loop, the "Use assessment model output" `else` (221) b
 
 In the "Disable TAC check" block, `TAC_scale` is computed via Util_Get_Change_Scale but never used. Nothing is assigned to TACamt, so disabling TACs has no effect. Function: `Apply_Annual_Fisheries_Mgmt()`.
 
-**Current code** (`atimplementation/atImplementationAnnual.c` lines 360–373) — code appears to have moved +5 lines since the review
+**Current code** (`atimplementation/atImplementationAnnual.c` lines 355–368)
 
 ```c
+  355:             
+  356:             /* Disable TAC check */
+  357:             if(bm->flagdisableTAC) {
+  358:                 for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  359:                     if (FunctGroupArray[sp].isTAC) {
   360:                         if (flagTACchange == disable_tac ) {
   361:                             TAC_num_changes = (int) (bm->SP_FISHERYprms[sp][fishery_id][TAC_num_changes_id]);
   362:                             TAC_scale = Util_Get_Change_Scale(bm, TAC_num_changes, TACchange[sp][fishery_id]);
@@ -151,11 +181,6 @@ In the "Disable TAC check" block, `TAC_scale` is computed via Util_Get_Change_Sc
   366:             }
   367: 		}
   368: 
-  369: 		/* Set regional TAC - can't have regional TACs or stocks for invertebrates as yet
-  370: 		 FIX - allow multiple stocks and regional TACs for all groups
-  371: 		 */
-  372:         if (!bm->flagecon_on || bm->MultiPlanEffort) {
-  373:             if (bm->manage_reg) {
 ```
 
 **Suggested fix (from review):** Apply the scale (e.g. set `TACamt[sp][fishery_id][now_id]`) or remove
@@ -178,7 +203,8 @@ In the "Disable TAC check" block, `TAC_scale` is computed via Util_Get_Change_Sc
 ## HRV2-23
 
 **accumulator not reset / loop placement** · Conf M / Sev M  
-**Listed lines:** 372-501, 491-498
+**Lines (current code):** 372-501, 491-498  
+**Lines at review (Oct 2026):** 372-501, 491-498
 
 **Function:** `Apply_Annual_Fisheries_Mgmt()`
 
@@ -186,9 +212,17 @@ In the "Disable TAC check" block, `TAC_scale` is computed via Util_Get_Change_Sc
 
 For non-vertebrate groups, `RegionalData[sp][nreg][reg_tac_id] += stock_struct_prop[..]/n` is never reset first. The whole regional block also sits inside the `fishery_id` loop, so the value grows by about 1 per managed fishery per year and stops being a proportion. The vertebrate branch also recomputes `initreg_prop` for every guild, for every sp and every fishery: wasteful, but the result is correct. Function: `Apply_Annual_Fisheries_Mgmt()`.
 
-**Current code** (`atimplementation/atImplementationAnnual.c` lines 378–412 (range truncated)) — code appears to have moved +8 lines since the review
+**Current code** (`atimplementation/atImplementationAnnual.c` lines 370–409 (truncated))
 
 ```c
+  370: 		 FIX - allow multiple stocks and regional TACs for all groups
+  371: 		 */
+  372:         if (!bm->flagecon_on || bm->MultiPlanEffort) {
+  373:             if (bm->manage_reg) {
+  374:                 for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  375:                     if (FunctGroupArray[sp].isVertebrate == TRUE) {
+  376: 						/* As not using stocks figure out relative biomass in each area so can put in relative proportion of TAC */
+  377: 						nstock = bm->K_num_active_reg;
   378: 
   379: 						for (nreg = 0; nreg < bm->K_num_active_reg; nreg++) {
   380: 							bm->lastreg_prop[sp][nreg] = bm->RegionalData[sp][nreg][reg_tac_id];
@@ -221,9 +255,6 @@ For non-vertebrate groups, `RegionalData[sp][nreg][reg_tac_id] += stock_struct_p
   407: 													pid = FunctGroupArray[guild].totNTracers[n];
   408: 													biomass = bm->boxes[ij].tr[k][pid] * bm->boxes[ij].dz[k] * bm->boxes[ij].area
   409: 															* FunctGroupArray[guild].habitatCoeffs[WC];
-  410: 
-  411: 													bm->initreg_prop[guild][nreg] += biomass;
-  412: 												}
 ```
 
 **Suggested fix (from review):** Set RegionalData to 0 before the += loop, and move the regional block outside the fishery loop

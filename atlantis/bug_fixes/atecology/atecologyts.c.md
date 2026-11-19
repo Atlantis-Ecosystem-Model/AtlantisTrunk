@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [EMISC-19](#emisc-19) | 351-352 | H/M | state not reset | `if (fabs(scalar - 1.0) > 1e-100) scaled_mum = mum*scalar;` When the time series returns to 1.0, `scaled_mum` … |  | [ ] |
 | [EMISC-20](#emisc-20) | 397-401 | H/M | state not reset / missing clamp | Same pattern for FSPB: when the addend returns to 0, `scaled_FSPB` stays at its old value. There is also no lo… |  | [ ] |
@@ -19,13 +19,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EMISC-19
 
 **state not reset** · Conf H / Sev M  
-**Listed lines:** 351-352
+**Lines (current code):** 351-352  
+**Lines at review (Oct 2026):** 351-352
 
 **Function:** `Scale_Growth_Rate()`
 
 **Why it's thought to be a bug**
 
-`if (fabs(scalar - 1.0) > 1e-100) scaled_mum = mum*scalar;` When the time series returns to 1.0, `scaled_mum` keeps the last scaled value. For non-temperature-sensitive vertebrates nothing else resets it: the atq10.c:557-561 else-branch resets only `scaled_C`. Function: `Scale_Growth_Rate()`.
+`if (fabs(scalar - 1.0) > 1e-100) scaled_mum = mum*scalar;` When the time series returns to 1.0, `scaled_mum` keeps the last scaled value. For non-temperature-sensitive vertebrates nothing else resets it: the atq10.c:559-563 else-branch resets only `scaled_C`. Function: `Scale_Growth_Rate()`.
 
 **Current code** (`atecology/atecologyts.c` lines 349–354)
 
@@ -58,7 +59,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EMISC-20
 
 **state not reset / missing clamp** · Conf H / Sev M  
-**Listed lines:** 397-401
+**Lines (current code):** 397-401  
+**Lines at review (Oct 2026):** 397-401
 
 **Function:** `Scale_FSPB_Rate()`
 
@@ -100,7 +102,8 @@ Same pattern for FSPB: when the addend returns to 0, `scaled_FSPB` stays at its 
 ## EMISC-21
 
 **global state** · Conf M / Sev L  
-**Listed lines:** 45, 91, 131, 460
+**Lines (current code):** 45, 91, 131, 460  
+**Lines at review (Oct 2026):** 45, 91, 131, 460
 
 **Why it's thought to be a bug**
 

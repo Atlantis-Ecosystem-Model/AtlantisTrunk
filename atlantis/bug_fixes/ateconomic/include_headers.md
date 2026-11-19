@@ -2,16 +2,16 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 1; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [ECIO-25](#ecio-25) | atFishMIP_OSP_Bridge.h:170 | M/H | definition in header | `int g_effortHistoryCount;` is a (tentative) definition, not an `extern` declaration, in a header that every a… |  | [ ] |
-| [ECIO-26](#ecio-26) | atEconomic.h:111; atlantisboxmodel.h:6255 | L/L | duplicate definition (latent) | `Quicksort_Dir` is defined in both ateconomic/ateconhelp.c:42 and atlantisUtil/atUtilhelp.c:43. ateconhelp.c i… |  | [ ] |
+| [ECIO-26](#ecio-26) | atEconomic.h:111; atlantisboxmodel.h:6255? | L/L | duplicate definition (latent) | `Quicksort_Dir` is defined in both ateconomic/ateconhelp.c:42 and atlantisUtil/atUtilhelp.c:43. ateconhelp.c i… |  | [ ] |
 | [ECIO-27](#ecio-27) | atEconomicLib.h; ateconomic.c:35; ateconio.c:1003 | L/L | missing prototypes | `Economic_Output_ExpectedCatchPerMonth()` is public but declared ad hoc in ateconomic.c:35 instead of in atEco… |  | [ ] |
 
 ---
@@ -19,11 +19,12 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-25
 
 **definition in header** · Conf M / Sev H  
-**Listed lines:** atFishMIP_OSP_Bridge.h:170
+**Lines (current code):** atFishMIP_OSP_Bridge.h:170  
+**Lines at review (Oct 2026):** atFishMIP_OSP_Bridge.h:170
 
 **Why it's thought to be a bug**
 
-`int g_effortHistoryCount;` is a (tentative) definition, not an `extern` declaration, in a header that every ateconomic TU includes via atEconomic.h:37, as does atlantismain.c:137. Under `-fno-common`, which is the default in GCC>=10 and Clang>=11 (no `-fcommon` in PreRules.am/configure.ac), this gives duplicate-symbol link errors. It is also never used.
+`int g_effortHistoryCount;` is a (tentative) definition, not an `extern` declaration, in a header that every ateconomic TU includes via atEconomic.h:38, as does atlantismain.c:139. Under `-fno-common`, which is the default in GCC>=10 and Clang>=11 (no `-fcommon` in PreRules.am/configure.ac), this gives duplicate-symbol link errors. It is also never used.
 
 **Current code** (`ateconomic/include/atFishMIP_OSP_Bridge.h` lines 168–172)
 
@@ -55,7 +56,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-26
 
 **duplicate definition (latent)** · Conf L / Sev L  
-**Listed lines:** atEconomic.h:111; atlantisboxmodel.h:6255
+**Lines (current code):** atEconomic.h:111; atlantisboxmodel.h:6255?  
+**Lines at review (Oct 2026):** atEconomic.h:111; atlantisboxmodel.h:6255
 
 **Why it's thought to be a bug**
 
@@ -101,7 +103,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-27
 
 **missing prototypes** · Conf L / Sev L  
-**Listed lines:** atEconomicLib.h; ateconomic.c:35; ateconio.c:1003
+**Lines (current code):** atEconomicLib.h; ateconomic.c:35; ateconio.c:1003  
+**Lines at review (Oct 2026):** atEconomicLib.h; ateconomic.c:35; ateconio.c:1003
 
 **Why it's thought to be a bug**
 

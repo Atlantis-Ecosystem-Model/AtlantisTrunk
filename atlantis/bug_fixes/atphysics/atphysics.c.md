@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **6 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [PHY1-20](#phy1-20) ⭐ | 700-702 | H/H | out of bounds (debug leftover) | `if (!_finite(newwctr[24][0][Salinity_i]))` hard-codes box 24 and runs every time step. `newwctr` has `nbox` r… |  | [ ] |
 | [PHY1-21](#phy1-21) | 573 | H/M | wrong variable | `if (lndreclaim[b] < bm->tstop)`: `lndreclaim` is the key string `"land_reclaim"`, so this compares a characte… |  | [ ] |
@@ -22,7 +22,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-20
 
 **out of bounds (debug leftover)** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 700-702
+**Lines (current code):** 700-702  
+**Lines at review (Oct 2026):** 700-702
 
 **Function:** `physics()`
 
@@ -62,7 +63,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-21
 
 **wrong variable** · Conf H / Sev M  
-**Listed lines:** 573
+**Lines (current code):** 573  
+**Lines at review (Oct 2026):** 573
 
 **Function:** `initPhysics()`
 
@@ -100,7 +102,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-22
 
 **truncation** · Conf M / Sev M  
-**Listed lines:** 547, 552, 561
+**Lines (current code):** 547, 552, 561  
+**Lines at review (Oct 2026):** 547, 552, 561
 
 **Function:** `initPhysics()`
 
@@ -152,7 +155,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-23
 
 **copy-paste duplicate** · Conf M / Sev L  
-**Listed lines:** 558-562
+**Lines (current code):** 558-562  
+**Lines at review (Oct 2026):** 558-562
 
 **Function:** `initPhysics()`
 
@@ -194,7 +198,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-24
 
 **index -1** · Conf M / Sev M  
-**Listed lines:** 610-611
+**Lines (current code):** 610-611  
+**Lines at review (Oct 2026):** 610-611
 
 **Function:** `initPhysics()`
 
@@ -233,7 +238,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-25
 
 **wrong operator** · Conf L / Sev L  
-**Listed lines:** 284
+**Lines (current code):** 284  
+**Lines at review (Oct 2026):** 284
 
 **Function:** `initPhysics()`
 

@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW1-01](#sjw1-01) | 46, 51, 86, 150, 232, 336, 456, 574, 579, 616, 680, 762, 865, 985, 1104, 1145, 1210, 1291, 1384, 1426, 1490, 1564, 1606, 1669, 1751, 1845, 1885, 1948, 2024, 2110, 2149, 2212, 2288 | H/L | format specifier | `quit("...size %d, %d\n", n1, n2)` where `n1..n6` are `long int`, and `quit("...size = %d\n", size)` where `si… |  | [ ] |
 | [SJW1-02](#sjw1-02) | 118, 191-193, 283-287, 395-401, 523-531, 648, 721-723, 813-817, 924-930, 1052-1060, 1178, 1250-1252, 1342-1346, 1458, 1531-1533, 1637, 1710-1712, 1802-1806, 1916, 1987-1989, 2073-2077, 2180, 2251-2253, 2337-2341 | M/M | zero-size / free mismatch | The allocators accept a dimension of 0 (they only reject `n<0`). If an outer dimension is 0 (e.g. `d_alloc2d(n… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW1-01
 
 **format specifier** · Conf H / Sev L  
-**Listed lines:** 46, 51, 86, 150, 232, 336, 456, 574, 579, 616, 680, 762, 865, 985, 1104, 1145, 1210, 1291, 1384, 1426, 1490, 1564, 1606, 1669, 1751, 1845, 1885, 1948, 2024, 2110, 2149, 2212, 2288
+**Lines (current code):** 46, 51, 86, 150, 232, 336, 456, 574, 579, 616, 680, 762, 865, 985, 1104, 1145, 1210, 1291, 1384, 1426, 1490, 1564, 1606, 1669, 1751, 1845, 1885, 1948, 2024, 2110, 2149, 2212, 2288  
+**Lines at review (Oct 2026):** 46, 51, 86, 150, 232, 336, 456, 574, 579, 616, 680, 762, 865, 985, 1104, 1145, 1210, 1291, 1384, 1426, 1490, 1564, 1606, 1669, 1751, 1845, 1885, 1948, 2024, 2110, 2149, 2212, 2288
 
 **Why it's thought to be a bug**
 
@@ -91,20 +92,21 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW1-02
 
 **zero-size / free mismatch** · Conf M / Sev M  
-**Listed lines:** 118, 191-193, 283-287, 395-401, 523-531, 648, 721-723, 813-817, 924-930, 1052-1060, 1178, 1250-1252, 1342-1346, 1458, 1531-1533, 1637, 1710-1712, 1802-1806, 1916, 1987-1989, 2073-2077, 2180, 2251-2253, 2337-2341
+**Lines (current code):** 118, 191-193, 283-287, 395-401, 523-531, 648, 721-723, 813-817, 924-930, 1052-1060, 1178, 1250-1252, 1342-1346, 1458, 1531-1533, 1637, 1710-1712, 1802-1806, 1916, 1987-1989, 2073-2077, 2180, 2251-2253, 2337-2341  
+**Lines at review (Oct 2026):** 118, 191-193, 283-287, 395-401, 523-531, 648, 721-723, 813-817, 924-930, 1052-1060, 1178, 1250-1252, 1342-1346, 1458, 1531-1533, 1637, 1710-1712, 1802-1806, 1916, 1987-1989, 2073-2077, 2180, 2251-2253, 2337-2341
 
 **Why it's thought to be a bug**
 
 The allocators accept a dimension of 0 (they only reject `n<0`). If an outer dimension is 0 (e.g. `d_alloc2d(n1,0)`, or `n2`/`n3` == 0 for 3d), the pointer block is `malloc(0)` and none of its entries are set. The matching free then reads `pp[0]` / `ppp[0][0]` / `pppp[0][0][0]` out of that zero-byte block and passes the garbage to `free()`: a heap over-read and an invalid free (crash at shutdown). On platforms where `malloc(0)` returns NULL the allocation instead quits with a false "Not enough memory". Functions: all `*_free2d..6d` paired with the `*_alloc2d..6d` routines.
 
-**Current code** (`sjwlib/memory.c` lines 607–611) — code appears to have moved +491 lines since the review
+**Current code** (`sjwlib/memory.c` lines 116–120) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  607:  */
-  608: double **
-  609: d_alloc2d(long int n1, long int n2) {
-  610: 	double *p;
-  611: 	double **pp;
+  116: 	}
+  117: 	/* extract pointer to main storage */
+  118: 	p = pp[0];
+  119: 	/* free row pointer space */
+  120: 	free((void *) pp);
 ```
 
 **Suggested fix (from review):** Either reject zero dims in the allocators, or store the base pointers so the frees don't dereference empty blocks (e.g. always allocate `max(n,1)` pointer slots and set them).
@@ -127,7 +129,8 @@ The allocators accept a dimension of 0 (they only reject `n<0`). If an outer dim
 ## SJW1-03
 
 **integer overflow** · Conf L / Sev L  
-**Listed lines:** 153-160, 235-250, 339-362, 459-490, 619, 683-690, 765-780, 868-891, 988-1019, 1148, 1213-1220, 1294-1309, 1429, 1493-1500, 1609, 1672-1679, 1754-1769, 1888, 1951-1958, 2027-2042, 2152, 2215-2222, 2291-2306
+**Lines (current code):** 153-160, 235-250, 339-362, 459-490, 619, 683-690, 765-780, 868-891, 988-1019, 1148, 1213-1220, 1294-1309, 1429, 1493-1500, 1609, 1672-1679, 1754-1769, 1888, 1951-1958, 2027-2042, 2152, 2215-2222, 2291-2306  
+**Lines at review (Oct 2026):** 153-160, 235-250, 339-362, 459-490, 619, 683-690, 765-780, 868-891, 988-1019, 1148, 1213-1220, 1294-1309, 1429, 1493-1500, 1609, 1672-1679, 1754-1769, 1888, 1951-1958, 2027-2042, 2152, 2215-2222, 2291-2306
 
 **Why it's thought to be a bug**
 
@@ -170,7 +173,8 @@ The allocators accept a dimension of 0 (they only reject `n<0`). If an outer dim
 ## SJW1-04
 
 **copy-paste (message)** · Conf H / Sev L  
-**Listed lines:** 308, 1827, 2093
+**Lines (current code):** 308, 1827, 2093  
+**Lines at review (Oct 2026):** 308, 1827, 2093
 
 **Why it's thought to be a bug**
 

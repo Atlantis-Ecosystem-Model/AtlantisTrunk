@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW3-05](#sjw3-05) | 57, 87 | H/L | type mismatch / stack corruption | `int n; ... nc_inq_dimlen(fid,p_did,(size_t *)&n);` writes an 8-byte `size_t` into a 4-byte `int` on 64-bit pl… |  | [ ] |
 | [SJW3-06](#sjw3-06) | 154-158 | H/L | wrong logic / buffer overrun / NULL deref | `if( t ) nc_get_vara_double(..., count(=1), b); for(n = 0; n < rec; n++){ t[n] = (double)b[n]; }` — only one t… |  | [ ] |
@@ -23,7 +23,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW3-05
 
 **type mismatch / stack corruption** · Conf H / Sev L  
-**Listed lines:** 57, 87
+**Lines (current code):** 57, 87  
+**Lines at review (Oct 2026):** 57, 87
 
 **Function:** `readparticles()`
 
@@ -31,10 +32,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `int n; ... nc_inq_dimlen(fid,p_did,(size_t *)&n);` writes an 8-byte `size_t` into a 4-byte `int` on 64-bit platforms, clobbering adjacent stack. Function: `readparticles()`.
 
-**Current code** (`sjwlib/ptrack.c` lines 54–88)
+**Current code** (`sjwlib/ptrack.c` lines 55–89)
 
 ```c
-   54:     size_t start[2];
    55:     size_t count[2];
    56:     //size_t n;
    57:     int n;
@@ -69,6 +69,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
    86:     /* Get number of particles */
    87:     nc_inq_dimlen(fid,p_did,(size_t *)&n);
    88: 
+   89:     /* Check that there is a variable called "t" */
 ```
 
 **Suggested fix (from review):** Use a `size_t` temporary and cast to int afterwards.
@@ -91,7 +92,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW3-06
 
 **wrong logic / buffer overrun / NULL deref** · Conf H / Sev L  
-**Listed lines:** 154-158
+**Lines (current code):** 154-158  
+**Lines at review (Oct 2026):** 154-158
 
 **Function:** `readparticles()`
 
@@ -133,7 +135,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW3-07
 
 **format specifier mismatch** · Conf M / Sev L  
-**Listed lines:** 100
+**Lines (current code):** 100  
+**Lines at review (Oct 2026):** 100
 
 **Function:** `readparticles()`
 

@@ -2,21 +2,21 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **8 findings** (severity H: 2; confidence H and severity H: 1; on the priority list: 1), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [NUTR-21](#nutr-21) ⭐ | 932-942 | H/H | wrong constant | When the model has no turf, `facilitate_space = 1.0`, then `ans = mum * (1 - compete_space) * (1.0 + facilitat… |  | [ ] |
-| [NUTR-22](#nutr-22) | 369, 398-437, 534-543 | H/M | variable only set in gated block | `time_since_last_shock` starts at 0 and is only updated inside `if (do_DHW_now)`. That block is disabled for `… |  | [ ] |
-| [NUTR-23](#nutr-23) | 446-457 | M/M | repeated application | The bleaching decrement `PropUnBleached -= prop_bleaching` and the extra mortality are applied on every call w… |  | [ ] |
+| [NUTR-21](#nutr-21) ⭐ | 933-943 | H/H | wrong constant | When the model has no turf, `facilitate_space = 1.0`, then `ans = mum * (1 - compete_space) * (1.0 + facilitat… |  | [ ] |
+| [NUTR-22](#nutr-22) | 370, 399-438, 535-544 | H/M | variable only set in gated block | `time_since_last_shock` starts at 0 and is only updated inside `if (do_DHW_now)`. That block is disabled for `… |  | [ ] |
+| [NUTR-23](#nutr-23) | 447-458 | M/M | repeated application | The bleaching decrement `PropUnBleached -= prop_bleaching` and the extra mortality are applied on every call w… |  | [ ] |
 | [NUTR-24](#nutr-24) | 104-110, 189-191 | M/M | mass balance | Polyp mortality N `M = SPmortNH_polyp` is split as NH `M(1-FDM)(1-H)`, symbiont recycling `M(1-FDM)H` (110) an… |  | [ ] |
-| [NUTR-25](#nutr-25) | 1338 (atGroupProcesses.c) vs 686-752, 684 | M/H | flux used as state | In the species-level path, mechanistic/blackwood/bioerosion return a rate of change ("returning a flux so that… |  | [ ] |
-| [NUTR-26](#nutr-26) | 45-47, 847 | M/M | index (cohort vs stage) | `cohortSpeciesParams` is allocated `[numStages][params]` (atUtilGroupIO.c:830/855/877), but here it is indexed… |  | [ ] |
-| [NUTR-27](#nutr-27) | 852 | H/L | log flooding | Unconditional `fprintf(llogfp, "Destroy_Rugosity: ...")` on every call (every fishery/box/cohort). Function: `… |  | [ ] |
+| [NUTR-25](#nutr-25) | 1338? (atGroupProcesses.c) vs 699-765, 697 | M/H | flux used as state | In the species-level path, mechanistic/blackwood/bioerosion return a rate of change ("returning a flux so that… |  | [ ] |
+| [NUTR-26](#nutr-26) | 45-47, 848 | M/M | index (cohort vs stage) | `cohortSpeciesParams` is allocated `[numStages][params]` (atUtilGroupIO.c:830/855/877), but here it is indexed… |  | [ ] |
+| [NUTR-27](#nutr-27) | 853 | H/L | log flooding | Unconditional `fprintf(llogfp, "Destroy_Rugosity: ...")` on every call (every fishery/box/cohort). Function: `… |  | [ ] |
 | [NUTR-28](#nutr-28) | 925 | M/L | log flooding | `fprintf(bm->logFile, "DANGER DANGER DANGER ...")` runs on every legitimate maturation-trait update path (when… |  | [ ] |
 
 ---
@@ -24,18 +24,18 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## NUTR-21
 
 **wrong constant** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 932-942
+**Lines (current code):** 933-943  
+**Lines at review (Oct 2026):** 932-942
 
 **Function:** `Coral_Space_Competition()`
 
 **Why it's thought to be a bug**
 
-When the model has no turf, `facilitate_space = 1.0`, then `ans = mum * (1 - compete_space) * (1.0 + facilitate_space)`, which doubles coral/sponge growth. It also discards any HABITATlike facilitation accumulated at 919-920. The returned scaled_mum is passed into Eat() as the heterotrophic mum (atGroupProcesses.c:1311), so heterotrophic growth doubles in every no-turf model. Function: `Coral_Space_Competition()`.
+When the model has no turf, `facilitate_space = 1.0`, then `ans = mum * (1 - compete_space) * (1.0 + facilitate_space)`, which doubles coral/sponge growth. It also discards any HABITATlike facilitation accumulated at 919-920. The returned scaled_mum is passed into Eat() as the heterotrophic mum (atGroupProcesses.c:1329), so heterotrophic growth doubles in every no-turf model. Function: `Coral_Space_Competition()`.
 
-**Current code** (`atecology/atcoral.c` lines 930–944)
+**Current code** (`atecology/atcoral.c` lines 931–945)
 
 ```c
-  930: 		}
   931: 	}
   932: 
   933: 	if(!bm->containsTurf) {
@@ -50,6 +50,7 @@ When the model has no turf, `facilitate_space = 1.0`, then `ans = mum * (1 - com
   942: 
   943: 	ans = mum * (1.0 - compete_space) * (1.0 + facilitate_space);
   944: 
+  945: 	if ((bm->which_check == guild) && (bm->current_box == bm->checkbox)) {
 ```
 
 **Suggested fix (from review):** Set `facilitate_space = 0.0` (neutral for the `1+f` form) or only reset it when no epiff facilitation applies.
@@ -72,15 +73,16 @@ When the model has no turf, `facilitate_space = 1.0`, then `ans = mum * (1 - com
 ## NUTR-22
 
 **variable only set in gated block** · Conf H / Sev M  
-**Listed lines:** 369, 398-437, 534-543
+**Lines (current code):** 370, 399-438, 535-544  
+**Lines at review (Oct 2026):** 369, 398-437, 534-543
 
 **Function:** `Do_Bleaching()`
 
 **Why it's thought to be a bug**
 
-`time_since_last_shock` starts at 0 and is only updated inside `if (do_DHW_now)`. That block is disabled for `cohort > 0` and for `it_count > 1` (398-402). Recovery needs `time_since_last_shock > 0` (534) or `> recovery_periodB` (537), so `PropUnBleached[cohort>0]` never recovers after bleaching. Cohort 0 recovers only on the first adaptive iteration. Function: `Do_Bleaching()`.
+`time_since_last_shock` starts at 0 and is only updated inside `if (do_DHW_now)`. That block is disabled for `cohort > 0` and for `it_count > 1` (399-403). Recovery needs `time_since_last_shock > 0` (535) or `> recovery_periodB` (538), so `PropUnBleached[cohort>0]` never recovers after bleaching. Cohort 0 recovers only on the first adaptive iteration. Function: `Do_Bleaching()`.
 
-**Current code** (`atecology/atcoral.c` lines 368–372)
+**Current code** (`atecology/atcoral.c` lines 368–407 (truncated))
 
 ```c
   368: void Do_Bleaching(MSEBoxModel *bm, FILE *llogfp, int guild, int cohort, double sp_biom){
@@ -88,6 +90,41 @@ When the model has no turf, `facilitate_space = 1.0`, then `ans = mum * (1 - com
   370:     int time_since_last_shock = 0;
   371:     int sp_id = (int) (FunctGroupArray[guild].speciesParams[coralID_id]);
   372:     int recovery_periodA = (int)(FunctGroupArray[guild].speciesParams[bleach_periodA_id]);
+  373: 	int recovery_periodB = (int)(FunctGroupArray[guild].speciesParams[bleach_periodB_id]);
+  374:     double timestep_correction = FunctGroupArray[guild].speciesParams[Mdt_id] / 86400;
+  375: 	double amt_recovering, period_effect, prop_bleaching, lost_biom, dead_biom;
+  376:     double bleach_mort_rate = FunctGroupArray[guild].speciesParams[mBleach_id];
+  377: 	double bleach_rate = FunctGroupArray[guild].speciesParams[bleaching_rate_id] * FunctGroupArray[guild].speciesParams[Mdt_id];
+  378: 	double recovery_rate = FunctGroupArray[guild].speciesParams[bleach_recovery_rate_id];
+  379: 	double temp_shift_rate = FunctGroupArray[guild].speciesParams[bleach_tempshift_id];
+  380: 	double grow_shift_rate = FunctGroupArray[guild].speciesParams[bleach_growshift_id];
+  381: 	double local_temp_thresh = FunctGroupArray[guild].speciesParams[bleach_temp_id] * CORALREEF[sp_id].TempShift[bm->current_box];
+  382: 	double zooxanth_biom = sp_biom * (FunctGroupArray[guild].speciesParams[prop_zooxanth_id] * CORALREEF[sp_id].PropUnBleached[cohort][bm->current_box]);
+  383: 	double polyp_biom = sp_biom - zooxanth_biom;
+  384:     double min_bleach_salt_sp = FunctGroupArray[guild].speciesParams[min_bleach_salt_id];
+  385:     double max_bleach_salt_sp = FunctGroupArray[guild].speciesParams[max_bleach_salt_id];
+  386:     //double min_bleach_temp_sp = FunctGroupArray[guild].speciesParams[min_bleach_temp_id];
+  387:     int do_DHW_now = 1;
+  388:     int sp_active = (int) (FunctGroupArray[guild].speciesParams[flagactive_id]);
+  389:     
+  390:     if (bm->dt < 86400) {  // Assumes 1 = day time, 0 = night time
+  391:         if (sp_active == 2) { /* No preference for night or day */
+  392:             if(!bm->flagday)
+  393:                 do_DHW_now = 0;   // Don't do it at night - want it in the day time if have night and day
+  394:         } else if (sp_active != bm->flagday) {  /* Base it on when active */
+  395:             do_DHW_now = 0;
+  396:         }
+  397:     }
+  398:     
+  399:     if (cohort || (it_count > 1)) {
+  400:         // Only want it for the youngest - as then know done for all - and in the first iteration of the adaptive
+  401:         // timestep as don't need to do it for every age group as the answer is identical for all
+  402:         do_DHW_now = 0;
+  403:     }
+  404:     
+  405: 	/* Look at past week of temperatures - if 1-2 deg C above threshold temperature then
+  406: 	 * flag as "degree heating week", if get a month of those (i.e. 4 continuous weeks)
+  407: 	 * then bleach with associated mortality and biomass (non-terminal) losses.
 ```
 
 **Suggested fix (from review):** Store time-since-shock per box in CORALREEF (computed when the queue updates) and read it for all cohorts and iterations.
@@ -110,7 +147,8 @@ When the model has no turf, `facilitate_space = 1.0`, then `ans = mum * (1 - com
 ## NUTR-23
 
 **repeated application** · Conf M / Sev M  
-**Listed lines:** 446-457
+**Lines (current code):** 447-458  
+**Lines at review (Oct 2026):** 446-457
 
 **Function:** `Do_Bleaching()`
 
@@ -118,10 +156,9 @@ When the model has no turf, `facilitate_space = 1.0`, then `ans = mum * (1 - com
 
 The bleaching decrement `PropUnBleached -= prop_bleaching` and the extra mortality are applied on every call while `DHWsum > thresh`, including every adaptive-step iteration (`it_count > 1`), not once per timestep. Effective bleaching scales with the number of iterations. Function: `Do_Bleaching()`.
 
-**Current code** (`atecology/atcoral.c` lines 444–459)
+**Current code** (`atecology/atcoral.c` lines 445–460)
 
 ```c
-  444:     */
   445:     
   446: 	/* See if potential bleaching event triggered */
   447: 	if(CORALREEF[sp_id].DHWsum[bm->current_box] > FunctGroupArray[guild].speciesParams[DHW_thresh_id]) {
@@ -137,6 +174,7 @@ The bleaching decrement `PropUnBleached -= prop_bleaching` and the extra mortali
   457:             CORALREEF[sp_id].PropUnBleached[cohort][bm->current_box] = 0.0;
   458:         
   459:        // Sanity check - could be much greater > 1.0 from calculations if super high temperature
+  460:         if (prop_bleaching > 1.0)
 ```
 
 **Suggested fix (from review):** Gate the PropUnBleached update with `it_count == 1` (mortality can stay as a rate).
@@ -159,7 +197,8 @@ The bleaching decrement `PropUnBleached -= prop_bleaching` and the extra mortali
 ## NUTR-24
 
 **mass balance** · Conf M / Sev M  
-**Listed lines:** 104-110, 189-191
+**Lines (current code):** 104-110, 189-191  
+**Lines at review (Oct 2026):** 104-110, 189-191
 
 **Function:** `Grow_Coral_Symbionts()`
 
@@ -203,13 +242,14 @@ Polyp mortality N `M = SPmortNH_polyp` is split as NH `M(1-FDM)(1-H)`, symbiont 
 ## NUTR-25
 
 **flux used as state** · Conf M / Sev H  
-**Listed lines:** 1338 (atGroupProcesses.c) vs 686-752, 684
+**Lines (current code):** 1338? (atGroupProcesses.c) vs 699-765, 697  
+**Lines at review (Oct 2026):** 1338 (atGroupProcesses.c) vs 686-752, 684
 
 **Function:** `Calculate_Rugosity()`
 
 **Why it's thought to be a bug**
 
-In the species-level path, mechanistic/blackwood/bioerosion return a rate of change ("returning a flux so that will be added to LocalRugosity", 751). The caller atGroupProcesses.c:1338 assigns it straight into the state `localWCTracers[Rugosity_i]`, and each coral/sponge guild/cohort overwrites the previous one. The bozec case returns a state. The georugosity floor (818-821) is applied to the flux value. Function: `Calculate_Rugosity()`.
+In the species-level path, mechanistic/blackwood/bioerosion return a rate of change ("returning a flux so that will be added to LocalRugosity", 751). The caller atGroupProcesses.c:1356 assigns it straight into the state `localWCTracers[Rugosity_i]`, and each coral/sponge guild/cohort overwrites the previous one. The bozec case returns a state. The georugosity floor (819-822) is applied to the flux value. Function: `Calculate_Rugosity()`.
 
 **Current code** (`atecology/atcoral.c` lines 1336–986) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Calculate_Rugosity()` now starts at line 572
 
@@ -237,11 +277,12 @@ In the species-level path, mechanistic/blackwood/bioerosion return a rate of cha
 ## NUTR-26
 
 **index (cohort vs stage)** · Conf M / Sev M  
-**Listed lines:** 45-47, 847
+**Lines (current code):** 45-47, 848  
+**Lines at review (Oct 2026):** 45-47, 847
 
 **Why it's thought to be a bug**
 
-`cohortSpeciesParams` is allocated `[numStages][params]` (atUtilGroupIO.c:830/855/877), but here it is indexed by `cohort` (up to numCohortsXnumGenes-1): `[cohort][mL_id]`, `[cohort][mQ_id]`, `[cohort][mE_id]`, `[cohort][rugosity_dec_id]`. Elsewhere in this file it is correctly `[stage]` (642, 687, 711). Coral groups with more cohorts or genotypes than stages read out of bounds. Functions: `Grow_Coral_Symbionts()`, `Destroy_Rugosity()`.
+`cohortSpeciesParams` is allocated `[numStages][params]` (atUtilGroupIO.c:829/855/877), but here it is indexed by `cohort` (up to numCohortsXnumGenes-1): `[cohort][mL_id]`, `[cohort][mQ_id]`, `[cohort][mE_id]`, `[cohort][rugosity_dec_id]`. Elsewhere in this file it is correctly `[stage]` (643, 688, 712). Coral groups with more cohorts or genotypes than stages read out of bounds. Functions: `Grow_Coral_Symbionts()`, `Destroy_Rugosity()`.
 
 **Current code** (`atecology/atcoral.c` lines 43–49)
 
@@ -275,7 +316,8 @@ In the species-level path, mechanistic/blackwood/bioerosion return a rate of cha
 ## NUTR-27
 
 **log flooding** · Conf H / Sev L  
-**Listed lines:** 852
+**Lines (current code):** 853  
+**Lines at review (Oct 2026):** 852
 
 **Function:** `Destroy_Rugosity()`
 
@@ -313,7 +355,8 @@ Unconditional `fprintf(llogfp, "Destroy_Rugosity: ...")` on every call (every fi
 ## NUTR-28
 
 **log flooding** · Conf M / Sev L  
-**Listed lines:** 925
+**Lines (current code):** 925  
+**Lines at review (Oct 2026):** 925
 
 **Function:** `Apply_Evol_Scalar()`
 
@@ -321,14 +364,14 @@ Unconditional `fprintf(llogfp, "Destroy_Rugosity: ...")` on every call (every fi
 
 `fprintf(bm->logFile, "DANGER DANGER DANGER ...")` runs on every legitimate maturation-trait update path (when `min_li_mat <= 0`). Function: `Apply_Evol_Scalar()` (atdiversity.c, listed here for completeness).
 
-**Current code** (`atecology/atcoral.c` lines 922–926)
+**Current code** (`atecology/atcoral.c` lines 923–927)
 
 ```c
-  922:                 
   923:                 /*
   924:                 fprintf(llogfp, "Time: %e box%d-%d %s-%d facilitate_space %e as %s cover: %e splike: %e\n",
   925:                         bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[guild].groupCode, cohort, facilitate_space, FunctGroupArray[sp].groupCode,
   926:                         boxLayerInfo->localEPITracers[FunctGroupArray[sp].CoverTracer], bm->HABITATlike[guild][stage][FunctGroupArray[sp].coverID]);
+  927:                 */
 ```
 
 **Suggested fix (from review):** Remove or guard.
@@ -354,7 +397,7 @@ These came from section B.3 of the list. They were not raised as findings. Tick 
 
 ### LC-1
 
-atcoral.c `Do_Bleaching()` (420-424): once all shocks have left the DHW queue, `time_since_last_shock` returns to 0, so slow recovery (`> recovery_periodB`) only happens if recovery_periodB < K_max_num_DHW.
+atcoral.c `Do_Bleaching()` (421-425): once all shocks have left the DHW queue, `time_since_last_shock` returns to 0, so slow recovery (`> recovery_periodB`) only happens if recovery_periodB < K_max_num_DHW.
 
 - [ ] Investigate   - [ ] Ignore
 

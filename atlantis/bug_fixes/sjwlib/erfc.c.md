@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **1 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW3-14](#sjw3-14) | 9-41 | M/L | precision / symbol override | File comment says it exists only because MSVC lacks erf/erfc, but it is compiled on all platforms (sjwlib/Make… |  | [ ] |
 
@@ -17,21 +17,16 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW3-14
 
 **precision / symbol override** · Conf M / Sev L  
-**Listed lines:** 9-41
+**Lines (current code):** 9-41  
+**Lines at review (Oct 2026):** 9-41
 
 **Why it's thought to be a bug**
 
 File comment says it exists only because MSVC lacks erf/erfc, but it is compiled on all platforms (sjwlib/Makefile.am c_sources). Because libsjwlib.a is linked before libm, any Atlantis reference to `erf`/`erfc` resolves to these approximations (A&S 7.1.26, abs. error ~1.5e-7; NR erfcc ~1.2e-7 rel.) rather than the full-precision libm versions, giving platform-dependent results. Functions: `erf()`, `erfc()`.
 
-**Current code** (`sjwlib/erfc.c` lines 1–36) — code appears to have moved -7 lines since the review
+**Current code** (`sjwlib/erfc.c` lines 7–42)
 
 ```c
-    1: /*
-    2:  * erf() and erfc() are not included into MSVC math library while they are part of GNU libm.
-    3:  * To compile STS using MSVC I had to add implementation of these functions below. Both
-    4:  * are taken from Numerical recipes in C.
-    5:  */
-    6: 
     7: #include <math.h>
     8: 
     9: double erf(double x) {
@@ -62,6 +57,12 @@ File comment says it exists only because MSVC lacks erf/erfc, but it is compiled
    34: 	t = 1.0 / (1.0 + 0.5 * z);
    35: 
    36: 	ans=t*exp(-z*z-1.26551223+t*(1.00002368+t*(0.37409196+t*(0.09678418+
+   37: 		t*(-0.18628806+t*(0.27886807+t*(-1.13520398+t*(1.48851587+
+   38: 		t*(-0.82215223+t*0.17087277)))))))));
+   39: 
+   40: 	return x >= 0.0 ? ans : 2.0-ans;
+   41: }
+   42: 
 ```
 
 **Suggested fix (from review):** Wrap the file in `#ifdef _MSC_VER` (and the nrcdflib.h prototypes likewise).

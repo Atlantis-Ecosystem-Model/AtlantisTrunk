@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **1 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [PHY3-12](#phy3-12) ⭐ | 117,197,208,212,219 | H/H | cohort×genotype overrun | The loop runs `cohort < numCohortsXnumGenes * numStocks` and indexes `bm->totDiet[b][k][sp][cohort][prey]`. to… |  | [ ] |
 
@@ -17,11 +17,12 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-12
 
 **cohort×genotype overrun** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 117,197,208,212,219
+**Lines (current code):** 117,197,208,212,219  
+**Lines at review (Oct 2026):** 117,197,208,212,219
 
 **Why it's thought to be a bug**
 
-The loop runs `cohort < numCohortsXnumGenes * numStocks` and indexes `bm->totDiet[b][k][sp][cohort][prey]`. totDiet is allocated `alloc5d(K_num_tot_sp, K_num_max_cohort, ...)` (atlantismain.c:1176), and `K_num_max_cohort` is the max of `numCohorts` only (atUtilGroupIO.c:302). Any group with numGeneTypes>1 or numStocks>1 overruns the cohort dimension. ReInitDietData (atbiology.c:1477) has the same overrun. Functions: `writeBMDietInfo()`, `writeBMDietData()`.
+The loop runs `cohort < numCohortsXnumGenes * numStocks` and indexes `bm->totDiet[b][k][sp][cohort][prey]`. totDiet is allocated `alloc5d(K_num_tot_sp, K_num_max_cohort, ...)` (atlantismain.c:1318), and `K_num_max_cohort` is the max of `numCohorts` only (atUtilGroupIO.c:302). Any group with numGeneTypes>1 or numStocks>1 overruns the cohort dimension. ReInitDietData (atbiology.c:1536) has the same overrun. Functions: `writeBMDietInfo()`, `writeBMDietData()`.
 
 **Current code** (`atphysics/atdietIO.c` lines 115–119)
 

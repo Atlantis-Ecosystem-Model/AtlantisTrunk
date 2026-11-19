@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [ECIO-01](#ecio-01) | 169-170 | H/L | copy-paste (message) | `quit("Init_Econ_Meas_File: Can't open %s\n",fname)` sits inside `Init_Econ_Ind_File()` (EconSubIndx.txt), so … |  | [ ] |
 | [ECIO-02](#ecio-02) | 313-341 | M/L | output ambiguity / copy-paste | `Write_Real_Effort_Schedule()` writes a block of `EffortSchedule[..][expect_id]` rows (a copy of `Write_Effort… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-01
 
 **copy-paste (message)** · Conf H / Sev L  
-**Listed lines:** 169-170
+**Lines (current code):** 169-170  
+**Lines at review (Oct 2026):** 169-170
 
 **Function:** `Init_Econ_Ind_File()`
 
@@ -59,7 +60,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-02
 
 **output ambiguity / copy-paste** · Conf M / Sev L  
-**Listed lines:** 313-341
+**Lines (current code):** 313-341  
+**Lines at review (Oct 2026):** 313-341
 
 **Function:** `Write_Real_Effort_Schedule()`
 
@@ -67,9 +69,18 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `Write_Real_Effort_Schedule()` writes a block of `EffortSchedule[..][expect_id]` rows (a copy of `Write_Effort_Schedule()`) and then a block of `[current_id]` rows. Both blocks have the same key columns (Time Fishery Subfleet) and the header (l.276) has no column saying which is which, so the expected and realised rows can't be told apart in RealEffortSchedIndx.txt. The expected values are already written to EffortSchedIndx.txt. Function: `Write_Real_Effort_Schedule()`.
 
-**Current code** (`ateconomic/ateconio.c` lines 320–352) — code appears to have moved +9 lines since the review
+**Current code** (`ateconomic/ateconio.c` lines 311–343)
 
 ```c
+  311:         printf( "Write realised gross effort schedule\n");
+  312: 
+  313: 	/* Write predicted effort schedule values */
+  314: 	for (nf = 0; nf < bm->K_num_fisheries; nf++) {
+  315: 		for (ns = 0; ns < max(1,bm->FISHERYprms[nf][nsubfleets_id]); ns++) {
+  316: 
+  317: 			/* Write time and port */
+  318: 			fprintf(fid, "%e %s %d", bm->dayt, FisheryArray[nf].fisheryCode, ns);
+  319: 
   320: 			/* Economic effort schedule */
   321: 			for (month = 0; month < 12; month++) {
   322: 				fprintf(fid, " %e", bm->EffortSchedule[nf][ns][month][expect_id]);
@@ -94,15 +105,6 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   341: 	}
   342: 	fflush(fid);
   343: 
-  344: 	return;
-  345: }
-  346: 
-  347: /**
-  348:  *
-  349:  *	\brief Quota trade reporting
-  350:  *
-  351:  */
-  352: void Economic_Output_Trades(MSEBoxModel *bm) {
 ```
 
 **Suggested fix (from review):** Drop the first (expect_id) block, or add a "Type" column.
@@ -125,7 +127,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-03
 
 **inconsistent loop bound** · Conf L / Sev L  
-**Listed lines:** 195, 615, 690, 952, 1011 vs 290, 315, 330
+**Lines (current code):** 195, 615, 690, 952, 1011 vs 290, 315, 330  
+**Lines at review (Oct 2026):** 195, 615, 690, 952, 1011 vs 290, 315, 330
 
 **Why it's thought to be a bug**
 
@@ -161,7 +164,8 @@ The effort-schedule writers loop `ns < max(1, nsubfleets)`, but the econ-index, 
 ## ECIO-04
 
 **dangling static pointer** · Conf L / Sev L  
-**Listed lines:** 119-132, 906-907, 1039-1040
+**Lines (current code):** 119-132, 906-907, 1039-1040  
+**Lines at review (Oct 2026):** 119-132, 906-907, 1039-1040
 
 **Why it's thought to be a bug**
 

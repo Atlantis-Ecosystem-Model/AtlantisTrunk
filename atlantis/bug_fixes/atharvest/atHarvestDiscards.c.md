@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **6 findings** (severity H: 2; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [HRV2-01](#hrv2-01) | 213, 332, 363 | H/M | cohort×genotype confusion | `Do_Dependent_Discards(..., basechrt, ...)` passes a cohort index that has already been divided by the genotyp… |  | [ ] |
 | [HRV2-02](#hrv2-02) | 339-340, 442, 449 | H/M | cohort×genotype confusion | `icohort = floor(bcohort / numGeneTypes)` (339) is already an age class. `Calc_Dependent_Discards_For_Other_Sp… |  | [ ] |
@@ -22,7 +22,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-01
 
 **cohort×genotype confusion** · Conf H / Sev M  
-**Listed lines:** 213, 332, 363
+**Lines (current code):** 213, 332, 363  
+**Lines at review (Oct 2026):** 213, 332, 363
 
 **Why it's thought to be a bug**
 
@@ -58,13 +59,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-02
 
 **cohort×genotype confusion** · Conf H / Sev M  
-**Listed lines:** 339-340, 442, 449
+**Lines (current code):** 339-340, 442, 449  
+**Lines at review (Oct 2026):** 339-340, 442, 449
 
 **Function:** `Calc_Dependent_Discards_For_Other_Species()`
 
 **Why it's thought to be a bug**
 
-`icohort = floor(bcohort / numGeneTypes)` (339) is already an age class. `Calc_Dependent_Discards_For_Other_Species()` divides it again: `ibasechrt = ichrt / numGeneTypes` (442). With genotypes it indexes the wrong age in `DiscardTS_agedistrib` (alloc [nf][sp][K_num_max_cohort], atlantismain.c:1999). Function: `Calc_Dependent_Discards_For_Other_Species()`.
+`icohort = floor(bcohort / numGeneTypes)` (339) is already an age class. `Calc_Dependent_Discards_For_Other_Species()` divides it again: `ibasechrt = ichrt / numGeneTypes` (442). With genotypes it indexes the wrong age in `DiscardTS_agedistrib` (alloc [nf][sp][K_num_max_cohort], atlantismain.c:2146). Function: `Calc_Dependent_Discards_For_Other_Species()`.
 
 **Current code** (`atharvest/atHarvestDiscards.c` lines 337–342)
 
@@ -97,7 +99,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-03
 
 **wrong operator / unit (inverted scale)** · Conf M / Sev H  
-**Listed lines:** 176-177, 380-381
+**Lines (current code):** 176-177, 380-381  
+**Lines at review (Oct 2026):** 176-177, 380-381
 
 **Why it's thought to be a bug**
 
@@ -134,7 +137,8 @@ When the fishery is always active (`fisheriesflagactive==2`), the discard code s
 ## HRV2-04
 
 **division by zero / NaN** · Conf M / Sev H  
-**Listed lines:** 191-192, 254
+**Lines (current code):** 191-192, 254  
+**Lines at review (Oct 2026):** 191-192, 254
 
 **Function:** `Get_Discards()`
 
@@ -173,7 +177,8 @@ When the fishery is always active (`fisheriesflagactive==2`), the discard code s
 ## HRV2-05
 
 **unit mismatch** · Conf H / Sev M  
-**Listed lines:** 654-655, 666-667, 747-748, 762
+**Lines (current code):** 654-655, 666-667, 747-748, 762  
+**Lines at review (Oct 2026):** 654-655, 666-667, 747-748, 762
 
 **Function:** `Get_Imposed_Discards()`
 
@@ -181,7 +186,7 @@ When the fishery is always active (`fisheriesflagactive==2`), the discard code s
 
 In the adjacent_impose catch-up, each box is reduced by `step1 * bm->cell_vol * FCtsCarryOver[box] / (biomCarryOver + small_num)`. `biomCarryOver` is already the summed carry-over divided by cell_vol (579-590), so this has an extra factor of cell_vol. The intended total removal, `step1*cell_vol`, is what the global record gets (651). Per-box carry-overs are effectively zeroed every time, so the per-box and global (nbox) records drift apart. The discard version (747, 762) has the same problem. Function: `Get_Imposed_Discards()`.
 
-**Current code** (`atharvest/atHarvestDiscards.c` lines 652–657)
+**Current code** (`atharvest/atHarvestDiscards.c` lines 652–669)
 
 ```c
   652: 
@@ -190,6 +195,18 @@ In the adjacent_impose catch-up, each box is reduced by `step1 * bm->cell_vol * 
   655: 							* bm->FCtsCarryOver[bm->current_box][tscocatch_id][guildcase] / (biomCarryOver + small_num);
   656: 					if (bm->FCtsCarryOver[bm->current_box][tscocatch_id][guildcase] < 0)
   657: 						bm->FCtsCarryOver[bm->current_box][tscocatch_id][guildcase] = 0;
+  658: 					/* Update adjacent cells */
+  659: 					for (adbox = 0; adbox < bm->boxes[bm->current_box].nconn; adbox++) {
+  660: 						chkbox = bm->boxes[bm->current_box].ibox[adbox];
+  661: 						checkedBox[chkbox] = 0;
+  662: 					}
+  663: 					for (adbox = 0; adbox < bm->boxes[bm->current_box].nconn; adbox++) {
+  664: 						chkbox = bm->boxes[bm->current_box].ibox[adbox];
+  665: 						if (!checkedBox[chkbox]) {
+  666: 							bm->FCtsCarryOver[chkbox][tscocatch_id][guildcase] -= step1 * bm->cell_vol * bm->FCtsCarryOver[chkbox][tscocatch_id][guildcase]
+  667: 									/ (biomCarryOver + small_num);
+  668: 							if (bm->FCtsCarryOver[chkbox][tscocatch_id][guildcase] < 0)
+  669: 								bm->FCtsCarryOver[chkbox][tscocatch_id][guildcase] = 0;
 ```
 
 **Suggested fix (from review):** Per box: `-= step1 * FCtsCarryOver[box] / (biomCarryOver + small_num)` (and the same with step3/disCarryOver)
@@ -212,20 +229,21 @@ In the adjacent_impose catch-up, each box is reduced by `step1 * bm->cell_vol * 
 ## HRV2-06
 
 **copy-paste / log text** · Conf H / Sev L  
-**Listed lines:** 227, 490, 597
+**Lines (current code):** 227, 490, 597  
+**Lines at review (Oct 2026):** 227, 490, 597
 
 **Why it's thought to be a bug**
 
-The quit text says "value must be between 0 and 2", but cases up to depend_discard exist. Line 597 says "reset to 0, 1 or 2", but cases 1-4 are valid (atlantisboxmodel.h:1262-1266). The debug line 490 prints the label "loadFC = %e" twice, and the second value is tsDetFC. Functions: `Get_Discards()`, `Get_Imposed_Discards()`.
+The quit text says "value must be between 0 and 2", but cases up to depend_discard exist. Line 597 says "reset to 0, 1 or 2", but cases 1-4 are valid (atlantisboxmodel.h:1268-1272). The debug line 490 prints the label "loadFC = %e" twice, and the second value is tsDetFC. Functions: `Get_Discards()`, `Get_Imposed_Discards()`.
 
-**Current code** (`atharvest/atHarvestDiscards.c` lines 263–267) — code appears to have moved +38 lines since the review
+**Current code** (`atharvest/atHarvestDiscards.c` lines 225–229) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  263: 	/* If loaded catch from time series calculate total initial catch (landed and discards) */
-  264: 	if (flagimposecatch) {
-  265: 		loadDetFC = Get_Imposed_Discards(bm, guildcase, basechrt, stage, nf, this_stock, do_debug, do_debug_dis, flagimposecatch, li, vert_scale, Biom, boxkey_id, loadFC, tsDetFC, loadDetFC, SPtoFC, mpa_losses, llogfp);
-  266: 	}
-  267: 
+  225: 
+  226: 	default:
+  227: 		quit("No such discard option defined (%d) - value must be between 0 and 2 currently\n", flagspdiscard);
+  228: 		break;
+  229: 	}
 ```
 
 **Suggested fix (from review):** Fix message text

@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **5 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [ECIO-08](#ecio-08) | 733-736 | M/M | missing subfleet fill | `bm->ECONexprice[fisheryIndex][0][sp][i][hist_id] = values[i];` fills subfleet 0 only. ateconomicsetup.c:392 t… |  | [ ] |
 | [ECIO-09](#ecio-09) | 678 | H/M | wrong cast | `bm->high_price = (int) Util_XML_Read_Value(..., no_checking, "high_price");`, but `high_price` is a `double` … |  | [ ] |
@@ -21,7 +21,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-08
 
 **missing subfleet fill** · Conf M / Sev M  
-**Listed lines:** 733-736
+**Lines (current code):** 733-736  
+**Lines at review (Oct 2026):** 733-736
 
 **Function:** `Read_Dan_Holland_XML()`
 
@@ -62,13 +63,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-09
 
 **wrong cast** · Conf H / Sev M  
-**Listed lines:** 678
+**Lines (current code):** 678  
+**Lines at review (Oct 2026):** 678
 
 **Function:** `Read_Dan_Holland_XML()`
 
 **Why it's thought to be a bug**
 
-`bm->high_price = (int) Util_XML_Read_Value(..., no_checking, "high_price");`, but `high_price` is a `double` (atlantisboxmodel.h:5870). The cast truncates the fraction, and a value above INT_MAX (plausible for an "arbitrarily high price") is undefined behaviour. Function: `Read_Dan_Holland_XML()`.
+`bm->high_price = (int) Util_XML_Read_Value(..., no_checking, "high_price");`, but `high_price` is a `double` (atlantisboxmodel.h:6062). The cast truncates the fraction, and a value above INT_MAX (plausible for an "arbitrarily high price") is undefined behaviour. Function: `Read_Dan_Holland_XML()`.
 
 **Current code** (`ateconomic/ateconParamIO.c` lines 676–680)
 
@@ -100,7 +102,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-10
 
 **duplicate read / validation bypass** · Conf M / Sev M  
-**Listed lines:** 158-161 vs 345
+**Lines (current code):** 158-161 vs 345  
+**Lines at review (Oct 2026):** 158-161 vs 345
 
 **Why it's thought to be a bug**
 
@@ -139,23 +142,16 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-11
 
 **copy-paste (messages)** · Conf H / Sev L  
-**Listed lines:** 234, 238, 262, 174, 180, 484, 599, 627, 675
+**Lines (current code):** 234, 238, 262, 174, 180, 484, 599, 627, 675  
+**Lines at review (Oct 2026):** 234, 238, 262, 174, 180, 484, 599, 627, 675
 
 **Why it's thought to be a bug**
 
 Error strings are copied from other blocks. `Read_Market_Value()` reports "Market_Intercept" for Market_Trend and Market_Autocoefft. `Read_Monthly_Market_Value()` reports path "Market_Intercept/…" for MonthlyMarket. Rescale messages say 'ReScale_Effort'/'ReScale_Catch' but the tags are ReScale_Eff/ReScale_Cat. FuelCosts path is given as "SubfleetEffort/" (it lives under SubfleetCosts). The SpatialEffort and SpatialCPUE checks both say "TemporalBlackBook". `Read_Dan_Holland_XML()` says "Read_Management_Costs_XML".
 
-**Current code** (`ateconomic/ateconParamIO.c` lines 224–256) — code appears to have moved -8 lines since the review
+**Current code** (`ateconomic/ateconParamIO.c` lines 232–264)
 
 ```c
-  224: }
-  225: 
-  226: static void Read_Market_Value(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *paramName, int paramIndex) {
-  227: 	double *values = 0;
-  228: 	int index, sp;
-  229: 	xmlNodePtr attributeNode;
-  230: 	char str[100];
-  231: 
   232: 	attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, paramName);
   233: 	if (attributeNode == NULL)
   234: 		quit("Market_Characteristics/Market_Intercept attribute group not found in input file %s.\n", fileName);
@@ -181,6 +177,14 @@ Error strings are copied from other blocks. `Read_Market_Value()` reports "Marke
   254: 
   255: 	groupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, parent, "MonthlyMarket");
   256: 	if (groupingNode == NULL)
+  257: 		quit("Read_Monthly_Market_Value: MonthlyMarket attribute group not found in input file %s.\n", fileName);
+  258: 
+  259: 	for (index = 0; index < bm->K_num_markets; index++) {
+  260: 		snprintf(str, sizeof(str), "MarketCoefft%d", index + 1);
+  261: 
+  262: 		snprintf(errorString, sizeof(errorString), "Market_Characteristics/Market_Intercept/%s", str);
+  263: 		attributeNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE, groupingNode, str);
+  264: 		if (attributeNode == NULL)
 ```
 
 **Suggested fix (from review):** Correct each message.
@@ -203,7 +207,8 @@ Error strings are copied from other blocks. `Read_Market_Value()` reports "Marke
 ## ECIO-12
 
 **NULL dereference** · Conf M / Sev L  
-**Listed lines:** 751-757
+**Lines (current code):** 751-757  
+**Lines at review (Oct 2026):** 751-757
 
 **Function:** `Read_Economic_Parameters()`
 

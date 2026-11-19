@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **12 findings** (severity H: 2; confidence H and severity H: 2; on the priority list: 2), plus 3 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [EINIT-01](#einit-01) ⭐ | 204-207 | H/H | wrong variable / copy-paste | `MIGRATION[sp].all_go[cohort][currentID] = MIGRATION[sp].all_go[cohort][migrationID];` copies `all_go` from it… |  | [ ] |
 | [EINIT-02](#einit-02) | 92-150 | H/M | logic / always-true condition | The pairwise check loops over all ordered pairs (migrationID, migID) and does not skip empty (0/0) slots. (a) … |  | [ ] |
@@ -28,7 +28,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EINIT-01
 
 **wrong variable / copy-paste** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 204-207
+**Lines (current code):** 204-207  
+**Lines at review (Oct 2026):** 204-207
 
 **Function:** `Init_Migration()`
 
@@ -69,7 +70,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EINIT-02
 
 **logic / always-true condition** · Conf H / Sev M  
-**Listed lines:** 92-150
+**Lines (current code):** 92-150  
+**Lines at review (Oct 2026):** 92-150
 
 **Function:** `Init_Migration()`
 
@@ -142,17 +144,41 @@ The pairwise check loops over all ordered pairs (migrationID, migID) and does no
 ## EINIT-03
 
 **buffer overrun (queue size)** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 158-421
+**Lines (current code):** 158-421  
+**Lines at review (Oct 2026):** 158-421
 
 **Function:** `Init_Migration()`
 
 **Why it's thought to be a bug**
 
-For multi-year migrators the year-0 "start with return" branch writes `this_currentID = currentID + counter*num_migrate` for `counter < MinYearsAway`, then `last_currentID` jumps to that value, so every (stage, migration) at yr 0 uses `(Y-1)*nm+1` slots. Total slots = `S*nm*((Y-1)*nm + nyears)`, but the arrays hold `maxnum = nyears*S*(nm+1)` (atBiologyXMLParamIO.c:4334). This overflows when `nm^2*(Y-1) > nyears`, e.g. nm=1, Y=5 on a run of 3 years or less, or nm=2, Y=3 on a run under 8 years. Nothing bounds `currentID`/`this_currentID` against `num_in_queue`, so Leave_Now, Return_Now, all_go, Box, Stagger, etc. are written past their allocation (heap corruption). Function: `Init_Migration()`.
+For multi-year migrators the year-0 "start with return" branch writes `this_currentID = currentID + counter*num_migrate` for `counter < MinYearsAway`, then `last_currentID` jumps to that value, so every (stage, migration) at yr 0 uses `(Y-1)*nm+1` slots. Total slots = `S*nm*((Y-1)*nm + nyears)`, but the arrays hold `maxnum = nyears*S*(nm+1)` (atBiologyXMLParamIO.c:4379). This overflows when `nm^2*(Y-1) > nyears`, e.g. nm=1, Y=5 on a run of 3 years or less, or nm=2, Y=3 on a run under 8 years. Nothing bounds `currentID`/`this_currentID` against `num_in_queue`, so Leave_Now, Return_Now, all_go, Box, Stagger, etc. are written past their allocation (heap corruption). Function: `Init_Migration()`.
 
-**Current code** (`atecology/atmigration.c` lines 179–213 (range truncated)) — code appears to have moved +23 lines since the review
+**Current code** (`atecology/atmigration.c` lines 156–195 (truncated))
 
 ```c
+  156:     currentID = -1;
+  157:     last_currentID = -1;
+  158:     for (yr = startyr; yr <= endyr; yr++) {
+  159:         for (stage = 0; stage < FunctGroupArray[sp].numStages; stage++) {
+  160:             sp_migrate = FALSE;
+  161:              MIGRATION[sp].ActualMigrator[stage] = 0;
+  162:             for(migrationID = 0; migrationID < FunctGroupArray[sp].num_migrate; migrationID++){
+  163:                 /* First check if even for real */
+  164:                 if(!MIGRATION[sp].StartDay_Prm[stage][migrationID] && !MIGRATION[sp].EndDay_Prm[stage][migrationID]){
+  165:                     break;
+  166:                 }
+  167: 
+  168:                 // If yes then we can continue
+  169:                 if(last_currentID < 0) {
+  170:                     currentID++;
+  171:                 } else {
+  172:                     currentID = last_currentID + 1;
+  173:                 }
+  174:                 
+  175:                 printf("Doing migration entry %d for %s\n", currentID, FunctGroupArray[sp].groupCode);
+  176:                 
+  177:                 // Set parameters
+  178:                 MIGRATION[sp].IsAnnualMigration[currentID] = MIGRATION[sp].IsAnnualMigration_Prm[stage][migrationID];
   179:                 MIGRATION[sp].Leave_Period[currentID] = MIGRATION[sp].Leave_Period_Prm[stage][migrationID];
   180:                 MIGRATION[sp].Return_Period[currentID] = MIGRATION[sp].Return_Period_Prm[stage][migrationID];
   181:                 MIGRATION[sp].MinYearsAway[currentID] = MIGRATION[sp].MinYearsAway_Prm[stage][migrationID];
@@ -170,24 +196,6 @@ For multi-year migrators the year-0 "start with return" branch writes `this_curr
   193:                     for(cohort = 0; cohort < nagemat; cohort++) {
   194:                         MIGRATION[sp].cohort_migrating[cohort][currentID] = 1; // Really only used in Leave_Now so ok if don't set to 1 for age classes might age into while away
   195:                         MIGRATION[sp].ReprodAllowed[cohort][currentID] = MIGRATION[sp].ReprodAllowedPrm[stage][migrationID];
-  196:                     }
-  197:                 } else {
-  198:                     MIGRATION[sp].start_cohort[currentID] = nagemat;
-  199:                     for(cohort = nagemat; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++) {
-  200:                         MIGRATION[sp].cohort_migrating[cohort][currentID] = 1;
-  201:                     }
-  202:                 }
-  203:                 
-  204:                 for(cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++){
-  205:                     MIGRATION[sp].all_go[cohort][currentID] = MIGRATION[sp].all_go[cohort][migrationID];
-  206:                     MIGRATION[sp].ReprodAllowed[cohort][currentID] = MIGRATION[sp].ReprodAllowedPrm[stage][migrationID];
-  207:                 }
-  208:                 
-  209:                 for(ij=0; ij<bm->nbox; ij++) {
-  210:                     MIGRATION[sp].Box[ij][currentID] = MIGRATION[sp].Box_Prm[ij][stage][migrationID];
-  211:                 }
-  212:                 
-  213:                 MIGRATION[sp].Stagger[currentID][stagger_years_id] = MIGRATION[sp].Stagger_Prm[stage][migrationID][stagger_years_id];
 ```
 
 **Suggested fix (from review):** Add `if (this_currentID >= MIGRATION[sp].num_in_queue) quit(...)`, and size maxnum (and the Check_Migration:550 num_in_queue) to include `S*nm*nm*(MaxYearsAway-1)`
@@ -210,7 +218,8 @@ For multi-year migrators the year-0 "start with return" branch writes `this_curr
 ## EINIT-04
 
 **cohort vs cohort×genotype** · Conf M / Sev M  
-**Listed lines:** 191-202
+**Lines (current code):** 191-202  
+**Lines at review (Oct 2026):** 191-202
 
 **Function:** `Init_Migration()`
 
@@ -259,7 +268,8 @@ For multi-year migrators the year-0 "start with return" branch writes `this_curr
 ## EINIT-05
 
 **logic (break vs continue)** · Conf L / Sev M  
-**Listed lines:** 164-166
+**Lines (current code):** 164-166  
+**Lines at review (Oct 2026):** 164-166
 
 **Function:** `Init_Migration()`
 
@@ -299,7 +309,8 @@ For multi-year migrators the year-0 "start with return" branch writes `this_curr
 ## EINIT-06
 
 **logic (max overwritten)** · Conf M / Sev M  
-**Listed lines:** 585-596
+**Lines (current code):** 585-596  
+**Lines at review (Oct 2026):** 585-596
 
 **Function:** `Check_Migration()`
 
@@ -348,7 +359,8 @@ In the loop computing the maximum years away, the `else` branch sets `max_years 
 ## EINIT-07
 
 **integer division / cohort vs genotype** · Conf M / Sev L  
-**Listed lines:** 600
+**Lines (current code):** 600  
+**Lines at review (Oct 2026):** 600
 
 **Function:** `Check_Migration()`
 
@@ -386,7 +398,8 @@ In the loop computing the maximum years away, the `else` branch sets `max_years 
 ## EINIT-08
 
 **unit / genotype split** · Conf H / Sev M  
-**Listed lines:** 630-631
+**Lines (current code):** 630-631  
+**Lines at review (Oct 2026):** 630-631
 
 **Function:** `Check_Migration()`
 
@@ -425,7 +438,8 @@ In the loop computing the maximum years away, the `else` branch sets `max_years 
 ## EINIT-09
 
 **wrong variable in message** · Conf H / Sev L  
-**Listed lines:** 692-694
+**Lines (current code):** 692-694  
+**Lines at review (Oct 2026):** 692-694
 
 **Function:** `Init_Migration_Age_Check()`
 
@@ -465,7 +479,8 @@ In the loop computing the maximum years away, the `else` branch sets `max_years 
 ## EINIT-10
 
 **loop logic / overwritten result** · Conf M / Sev M  
-**Listed lines:** 740-753
+**Lines (current code):** 740-753  
+**Lines at review (Oct 2026):** 740-753
 
 **Function:** `Init_Migration_Age_Check()`
 
@@ -516,7 +531,8 @@ In the loop computing the maximum years away, the `else` branch sets `max_years 
 ## EINIT-11
 
 **integer division** · Conf H / Sev M  
-**Listed lines:** 743
+**Lines (current code):** 743  
+**Lines at review (Oct 2026):** 743
 
 **Function:** `Init_Migration_Age_Check()`
 
@@ -556,7 +572,8 @@ In the loop computing the maximum years away, the `else` branch sets `max_years 
 ## EINIT-12
 
 **log noise** · Conf H / Sev L  
-**Listed lines:** 175, 304
+**Lines (current code):** 175, 304  
+**Lines at review (Oct 2026):** 175, 304
 
 **Function:** `Init_Migration()`
 

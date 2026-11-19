@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **6 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [ECON-01](#econ-01) ⭐ | 349-351 | H/H | wrong variable / out-of-bounds | `bm->SpatialDisPUE[nf][ns][mth][b] += bm->SpatialCPUE[nf][ns][mth][b] * avg_loadDetFC;` sits after the `sp` lo… |  | [ ] |
 | [ECON-02](#econ-02) | 789-790, 974 | H/L | swapped dims (alloc vs use) | `bm->EffortTrades = Util_Alloc_Init_3D_Int(bm->K_num_fisheries, 12, 2, 0)` gives `[2][12][K_num_fisheries]`, b… |  | [ ] |
@@ -22,7 +22,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-01
 
 **wrong variable / out-of-bounds** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 349-351
+**Lines (current code):** 349-351  
+**Lines at review (Oct 2026):** 349-351
 
 **Function:** `Economic_Init()`
 
@@ -62,7 +63,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-02
 
 **swapped dims (alloc vs use)** · Conf H / Sev L  
-**Listed lines:** 789-790, 974
+**Lines (current code):** 789-790, 974  
+**Lines at review (Oct 2026):** 789-790, 974
 
 **Function:** `Pre_Load_Array_Alloc()`
 
@@ -101,7 +103,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-03
 
 **buffer overrun (input-driven)** · Conf M / Sev M  
-**Listed lines:** 1231-1316
+**Lines (current code):** 1231-1316  
+**Lines at review (Oct 2026):** 1231-1316
 
 **Function:** `Read_FriendShip_Network()`
 
@@ -109,7 +112,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `columnIndexValues` is `[numExpectedTokens][2]` (1232), but `count++` writes `columnIndexValues[count]` in the header loop before the `count != numExpectedTokens` check at 1274. Each data row likewise reads `columnIndexValues[rowIndex]` before the 1315 check. A CSV with extra columns therefore overruns the heap. Also, only the last character is parsed as the subfleet index (1259/1288), so subfleet 10 or higher is misread, and `index` is never bounds-checked before `friendship_netwk[..][..][index][..]` (1310). Function: `Read_FriendShip_Network()`.
 
-**Current code** (`ateconomic/ateconomicsetup.c` lines 1229–1263 (range truncated))
+**Current code** (`ateconomic/ateconomicsetup.c` lines 1229–1268 (truncated))
 
 ```c
  1229: 	double value;
@@ -147,6 +150,11 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
  1261: 		index = atoi(indexStr);
  1262: 		*(indexStr) = '\0';
  1263: 
+ 1264: 		/* get the index of the fishery */
+ 1265: 		fisheryIndex = Util_Get_Fishery_Index(bm, varStr);
+ 1266: 		if(fisheryIndex == -1)
+ 1267: 			quit("ERROR: The friendship network input file %s contains an unrecognised fishery name %s\n\n", filePath, varStr);
+ 1268: 
 ```
 
 **Suggested fix (from review):** Check `count < numExpectedTokens` / `rowIndex < numExpectedTokens` inside the loops and bound-check `index < K_max_num_subfleet`
@@ -169,7 +177,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-04
 
 **copy-paste / truncation** · Conf M / Sev L  
-**Listed lines:** 1043, 1067, 1041
+**Lines (current code):** 1043, 1067, 1041  
+**Lines at review (Oct 2026):** 1043, 1067, 1041
 
 **Function:** `Init_Econ_Indicator_Names()`
 
@@ -177,11 +186,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `EconIndicatorInputNames[down_time_id]` is set twice ("DownTime" then "minDownTime"). "triplength(days)" (16 chars) is cut off by `paramLen = 15`. The array is never read (only freed), so this is cosmetic. Function: `Init_Econ_Indicator_Names()`.
 
-**Current code** (`ateconomic/ateconomicsetup.c` lines 1039–1069)
+**Current code** (`ateconomic/ateconomicsetup.c` lines 1041–1069)
 
 ```c
- 1039: 	snprintf(EconIndicatorInputNames[home_port_id], paramLen, "%s", "home_port");
- 1040: 	snprintf(EconIndicatorInputNames[FCwgtscale_id], paramLen, "%s", "FCwgtscale");
  1041: 	snprintf(EconIndicatorInputNames[max_trip_length_id], paramLen, "%s", "triplength(days)");
  1042: 	snprintf(EconIndicatorInputNames[FishableLength_id], paramLen, "%s", "FishableLength");
  1043: 	snprintf(EconIndicatorInputNames[down_time_id], paramLen, "%s", "DownTime");
@@ -233,15 +240,16 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-05
 
 **buffer truncation** · Conf H / Sev L  
-**Listed lines:** 1143
+**Lines (current code):** 1143  
+**Lines at review (Oct 2026):** 1143
 
 **Function:** `Init_Econ_Index_Names()`
 
 **Why it's thought to be a bug**
 
-"AnnualExpectedProfitInd" (23 chars) goes into a 20-byte name buffer (atlantismain.c:2101), so the output header is truncated. Function: `Init_Econ_Index_Names()`.
+"AnnualExpectedProfitInd" (23 chars) goes into a 20-byte name buffer (atlantismain.c:2248), so the output header is truncated. Function: `Init_Econ_Index_Names()`.
 
-**Current code** (`ateconomic/ateconomicsetup.c` lines 1141–1145) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Init_Econ_Index_Names()` now starts at line 1104
+**Current code** (`ateconomic/ateconomicsetup.c` lines 1141–1145)
 
 ```c
  1141: 	snprintf(bm->SUBFLEETeconindxNAME[tax_ind_id], paramLen, "%s", "TaxInd");
@@ -271,7 +279,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-06
 
 **NULL deref** · Conf M / Sev L  
-**Listed lines:** 137
+**Lines (current code):** 137  
+**Lines at review (Oct 2026):** 137
 
 **Function:** `Economic_Init()`
 

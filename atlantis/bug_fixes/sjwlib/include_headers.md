@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW3-15](#sjw3-15) | sjwlib.h:80-82 | H/M | macro multiple evaluation / wrong rounding | `#if !defined(round)` / `#define round(x) ((x-floor(x))>0.5 ? ceil(x) : floor(x))` — `round` in <math.h> is a … |  | [ ] |
 | [SJW3-16](#sjw3-16) | sjwlib.h:71-72 | L/L | macro multiple evaluation | `#define max(x,y) ((x)>(y) ? (x) : (y))` / `min` evaluate arguments twice; any caller passing a side-effecting… |  | [ ] |
@@ -22,7 +22,8 @@ No issues found in the remaining headers: struct/prototype declarations checked 
 ## SJW3-15
 
 **macro multiple evaluation / wrong rounding** · Conf H / Sev M  
-**Listed lines:** sjwlib.h:80-82
+**Lines (current code):** sjwlib.h:80-82  
+**Lines at review (Oct 2026):** sjwlib.h:80-82
 
 **Why it's thought to be a bug**
 
@@ -60,7 +61,8 @@ No issues found in the remaining headers: struct/prototype declarations checked 
 ## SJW3-16
 
 **macro multiple evaluation** · Conf L / Sev L  
-**Listed lines:** sjwlib.h:71-72
+**Lines (current code):** sjwlib.h:71-72  
+**Lines at review (Oct 2026):** sjwlib.h:71-72
 
 **Why it's thought to be a bug**
 

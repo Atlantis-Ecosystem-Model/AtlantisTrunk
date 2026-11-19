@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **22 findings** (severity H: 9; confidence H and severity H: 8; on the priority list: 8).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [IND-01](#ind-01) | 240, 287-288 | M/M | inconsistency | The denominator includes epi/infauna; methods 2/3 exclude them from the numerator. |  | [ ] |
 | [IND-02](#ind-02) ⭐ | 321-322, 1019-1020 | H/H | off-by-one | `if (j > K_max_agekey) j = K_max_agekey` lets the index equal the dimension size (`agelengthkey` age dimension… |  | [ ] |
@@ -38,13 +38,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## IND-01
 
 **inconsistency** · Conf M / Sev M  
-**Listed lines:** 240, 287-288
+**Lines (current code):** 240, 287-288  
+**Lines at review (Oct 2026):** 240, 287-288
 
 **Why it's thought to be a bug**
 
 The denominator includes epi/infauna; methods 2/3 exclude them from the numerator.
 
-**Current code** (`atassess/atindices.c` lines 238–277 (truncated))
+**Current code** (`atassess/atindices.c` lines 238–242)
 
 ```c
   238: 
@@ -52,41 +53,6 @@ The denominator includes epi/infauna; methods 2/3 exclude them from the numerato
   240: 		if (FunctGroupArray[i].isVertebrate == FALSE && FunctGroupArray[i].isFished == TRUE) {
   241: 			totcatch += invstockinfo[fcatch_id][i][z][id] / (zonearea[z] + TINY);
   242: 		}
-  243: 	}
-  244: 
-  245: 	maxlngth = 0;
-  246: 	for (i = 0; i < bm->K_num_tot_sp; i++){
-  247: 		if (FunctGroupArray[i].isVertebrate == TRUE){
-  248: 			maxlngth += (stockinfo[stotcatch_id][i][z][id] / (zonearea[z] + TINY)) * FunctGroupArray[i].speciesParams[max_length_id] / (totcatch + TINY);
-  249: 		}
-  250: 	}
-  251: 
-  252: 	for (i = 0; i < bm->K_num_tot_sp; i++) { // Targeted invertebrates only
-  253: 		if (FunctGroupArray[i].isVertebrate == FALSE && FunctGroupArray[i].isFished == TRUE) {
-  254: 			maxlngth += (invstockinfo[fcatch_id][i][z][id] / (zonearea[z] + TINY)) * FunctGroupArray[i].speciesParams[max_length_id] / (totcatch + TINY);
-  255: 		}
-  256: 	}
-  257: 
-  258: 	max_lngth[z][0] = maxlngth;
-  259: 
-  260: 	/* Method 2 and 3 */
-  261: 	maxlngth = 0;
-  262: 	maxlngth1 = 0;
-  263: 	maxlngth2 = 0;
-  264: 	for (i = 0; i < bm->K_num_tot_sp; i++) {
-  265: 		if (FunctGroupArray[i].isVertebrate == TRUE) {
-  266: 			if (FunctGroupArray[i].groupType == BIRD) {
-  267: 				/* Treat seabirds a little differently to the rest */
-  268: 				maxlngth += (stockinfo[stotcatch_id][i][z][id] / (zonearea[z] + TINY)) * FunctGroupArray[i].speciesParams[max_length_id] / (totcatch + TINY);
-  269: 			} else {
-  270: 				maxwgt = 1;
-  271: 				for (j = 0; j < bm->K_num_size; j++) {
-  272: 					prop = individVERTinfo[icatchnums_id][i][j][z][id];
-  273: 					wgt = individVERTinfo[iweight_id][i][j][z][id];
-  274: 
-  275: 					if (prop > 0)
-  276: 						maxwgt = wgt;
-  277: 					lmax = Get_Length(bm, wgt, i);
 ```
 
 **Suggested fix (from review):** same filter
@@ -109,7 +75,8 @@ The denominator includes epi/infauna; methods 2/3 exclude them from the numerato
 ## IND-02
 
 **off-by-one** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 321-322, 1019-1020
+**Lines (current code):** 321-322, 1019-1020  
+**Lines at review (Oct 2026):** 321-322, 1019-1020
 
 **Why it's thought to be a bug**
 
@@ -146,7 +113,8 @@ The denominator includes epi/infauna; methods 2/3 exclude them from the numerato
 ## IND-03
 
 **formula** · Conf M / Sev M  
-**Listed lines:** 347-353
+**Lines (current code):** 347-353  
+**Lines at review (Oct 2026):** 347-353
 
 **Why it's thought to be a bug**
 
@@ -188,7 +156,8 @@ Bird size-at-maturity sums 3 lengths instead of averaging them.
 ## IND-04
 
 **wrong variable** · Conf H / Sev M  
-**Listed lines:** 643-645
+**Lines (current code):** 643-645  
+**Lines at review (Oct 2026):** 643-645
 
 **Why it's thought to be a bug**
 
@@ -226,20 +195,36 @@ Clamp tests `startbinbig` instead of `bincount`.
 ## IND-05
 
 **index arithmetic** · Conf M / Sev M  
-**Listed lines:** 563/578, 649/653
+**Lines (current code):** 563/578, 649/653  
+**Lines at review (Oct 2026):** 563/578, 649/653
 
 **Why it's thought to be a bug**
 
 `+4` plankton offset added to an already-absolute bin; line 653 uses absolute `sizeclass`.
 
-**Current code** (`atassess/atindices.c` lines 547–551) — code appears to have moved -14 lines since the review
+**Current code** (`atassess/atindices.c` lines 561–580)
 
 ```c
-  547: 					}
-  548: 					pelbin[pelbinbird + bin][bioindex_id][z] += individVERTinfo[ibiomass_id][sp][sizeclass][z][id];
-  549: 					pelbin[pelbinbird + bin][abundindex_id][z] += individVERTinfo[istocknums_id][sp][sizeclass][z][id] * stockinfo[sstocknums_id][sp][z][id];
-  550: 				}
-  551: 			} else {
+  561: 						staysmall = 0;
+  562: 				} else {
+  563: 					startbin = (int) (floor((FunctGroupArray[sp].speciesParams[allometic_bin_start_id] - 200.0) / 50.0)) + pelbinbig;
+  564: 					numbin = FunctGroupArray[sp].speciesParams[allometic_bin_size_id] / 50.0;
+  565: 					staybig = 1;
+  566: 				}
+  567: 
+  568: 				if (numbin > 1)
+  569: 					prop_bin = 1.0 / numbin;
+  570: 				else {
+  571: 					prop_bin = 1.0;
+  572: 				}
+  573: 				nbin = (int) (numbin);
+  574: 
+  575: 				/* If all within either the 10cm or 50cm bins without overlapping the transition */
+  576: 				if (staysmall || staybig) {
+  577: 					for (sizeclass = 0; sizeclass < bm->K_num_size; sizeclass++) {
+  578: 						nextbin = (int) floor(ROUNDGUARD + (4 + startbin + sizeclass * numbin)); // 4 is the number of plankton bins
+  579: 						if (nextbin > pelbinbird - 1)
+  580: 							nextbin = pelbinbird - 1;
 ```
 
 **Suggested fix (from review):** drop `+4`; use `sizeclass - sizeclasstransit`
@@ -262,7 +247,8 @@ Clamp tests `startbinbig` instead of `bincount`.
 ## IND-06
 
 **stale accumulator** · Conf M / Sev M  
-**Listed lines:** 422-425, 625-649
+**Lines (current code):** 422-425, 625-649  
+**Lines at review (Oct 2026):** 422-425, 625-649
 
 **Why it's thought to be a bug**
 
@@ -301,31 +287,32 @@ Clamp tests `startbinbig` instead of `bincount`.
 ## IND-07
 
 **copy-paste** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 691, 699, 702 vs 713
+**Lines (current code):** 691, 699, 702 vs 713  
+**Lines at review (Oct 2026):** 691, 699, 702 vs 713
 
 **Why it's thought to be a bug**
 
 Vertebrates are excluded from ranking but are written, so all land in `endnums[0]`.
 
-**Current code** (`atassess/atindices.c` lines 711–726) — code appears to have moved +22 lines since the review
+**Current code** (`atassess/atindices.c` lines 689–704) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  711: 	/* Update final ranked values */
-  712: 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-  713: 		if (FunctGroupArray[sp].isVertebrate == TRUE || FunctGroupArray[sp].isMacroFauna == TRUE || FunctGroupArray[sp].isMicroFauna == TRUE) {
-  714: 			endnums[numsort[sp]][index][z] = nums[sp][index];
-  715: 		}
-  716: 	}
-  717: }
-  718: /**
-  719:  * \brief Sort the nums values - this function will not include the microfauna.
-  720:  *
-  721:  *
-  722:  */
-  723: static void sort_values_big(MSEBoxModel *bm, int index, int z) {
-  724: 	int sp, chrt;
-  725: 	int rank;
-  726: 	int counter = 0;
+  689: 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  690: 		numsort[sp] = 0;
+  691: 		if (FunctGroupArray[sp].isMacroFauna == TRUE || FunctGroupArray[sp].isMicroFauna == TRUE) {
+  692: 			counter++;
+  693: 		}
+  694: 	}
+  695: 
+  696: 	/* First for numbers */
+  697: 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  698: 		/* Skip det and sediment bacteria */
+  699: 		if (FunctGroupArray[sp].isMacroFauna == TRUE || FunctGroupArray[sp].isMicroFauna == TRUE) {
+  700: 			rank = 0;
+  701: 			for (chrt = 0; chrt < bm->K_num_tot_sp; chrt++) {
+  702: 				if (FunctGroupArray[chrt].isMacroFauna == TRUE || FunctGroupArray[chrt].isMicroFauna == TRUE) {
+  703: 					if (nums[sp][index] > nums[chrt][index])
+  704: 						rank++;
 ```
 
 **Suggested fix (from review):** add `isVertebrate`
@@ -348,7 +335,8 @@ Vertebrates are excluded from ranking but are written, so all land in `endnums[0
 ## IND-08
 
 **copy-paste** · Conf H / Sev H ✔ re-checked ⭐ priority  
-**Listed lines:** 814-819
+**Lines (current code):** 814-819  
+**Lines at review (Oct 2026):** 814-819
 
 **Why it's thought to be a bug**
 
@@ -389,15 +377,27 @@ Inner rank loop is unfiltered, so rank > counter-1 and `numsort` < 0, writing `e
 ## IND-09
 
 **ranking** · Conf M / Sev M  
-**Listed lines:** 703-707, 741-746, 777-782, 815-819
+**Lines (current code):** 703-707, 741-746, 777-782, 815-819  
+**Lines at review (Oct 2026):** 703-707, 741-746, 777-782, 815-819
 
 **Why it's thought to be a bug**
 
 Ties collide; `endnums` is never cleared, so stale slots remain.
 
-**Current code** (`atassess/atindices.c` lines 712–720) — code appears to have moved +11 lines since the review
+**Current code** (`atassess/atindices.c` lines 701–740 (truncated))
 
 ```c
+  701: 			for (chrt = 0; chrt < bm->K_num_tot_sp; chrt++) {
+  702: 				if (FunctGroupArray[chrt].isMacroFauna == TRUE || FunctGroupArray[chrt].isMicroFauna == TRUE) {
+  703: 					if (nums[sp][index] > nums[chrt][index])
+  704: 						rank++;
+  705: 				}
+  706: 			}
+  707: 			numsort[sp] = counter - 1 - rank;
+  708: 		}
+  709: 	}
+  710: 
+  711: 	/* Update final ranked values */
   712: 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
   713: 		if (FunctGroupArray[sp].isVertebrate == TRUE || FunctGroupArray[sp].isMacroFauna == TRUE || FunctGroupArray[sp].isMicroFauna == TRUE) {
   714: 			endnums[numsort[sp]][index][z] = nums[sp][index];
@@ -407,6 +407,26 @@ Ties collide; `endnums` is never cleared, so stale slots remain.
   718: /**
   719:  * \brief Sort the nums values - this function will not include the microfauna.
   720:  *
+  721:  *
+  722:  */
+  723: static void sort_values_big(MSEBoxModel *bm, int index, int z) {
+  724: 	int sp, chrt;
+  725: 	int rank;
+  726: 	int counter = 0;
+  727: 
+  728: 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  729: 		numsort[sp] = 0;
+  730: 		if (FunctGroupArray[sp].isMacroFauna == TRUE) {
+  731: 			counter++;
+  732: 		}
+  733: 	}
+  734: 	/* First for numbers */
+  735: 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  736: 		/* Skip det and sediment bacteria */
+  737: 		if (FunctGroupArray[sp].isMacroFauna == TRUE) {
+  738: 			rank = 0;
+  739: 			for (chrt = 0; chrt < bm->K_num_tot_sp; chrt++) {
+  740: 				if (FunctGroupArray[chrt].isMacroFauna == TRUE) {
 ```
 
 **Suggested fix (from review):** tie-break and clear
@@ -429,7 +449,8 @@ Ties collide; `endnums` is never cleared, so stale slots remain.
 ## IND-10
 
 **wrong variable** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 844-845, 869-870, 881-882, 900-901
+**Lines (current code):** 844-845, 869-870, 881-882, 900-901  
+**Lines at review (Oct 2026):** 844-845, 869-870, 881-882, 900-901
 
 **Why it's thought to be a bug**
 
@@ -500,15 +521,48 @@ Loops over the trait index (0=nums, 1=biom) with `numStages` bound, so single-st
 ## IND-11
 
 **mislabel** · Conf M / Sev L  
-**Listed lines:** 874-925
+**Lines (current code):** 874-925  
+**Lines at review (Oct 2026):** 874-925
 
 **Why it's thought to be a bug**
 
 `abundindex_id=1`/`bioindex_id=0`, but the stored data are 0=nums, 1=biomass.
 
-**Current code** (`atassess/atindices.c` lines 904–943 (truncated)) — code appears to have moved +32 lines since the review
+**Current code** (`atassess/atindices.c` lines 872–911 (truncated))
 
 ```c
+  872: 
+  873: 	/* First for numbers */
+  874: 	sort_values(bm, 0, z);
+  875: 
+  876: 	/* Now for biomass */
+  877: 	sort_values(bm, 1, z);
+  878: 
+  879: 	/* Repeat without microfauna */
+  880: 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  881:         for (chrt = 0; chrt < FunctGroupArray[sp].numStages; chrt++) {
+  882:             nums[sp][chrt] = 0;
+  883:         }
+  884: 	}
+  885: 
+  886: 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  887: 		/* Skip det and sediment bacteria */
+  888: 		if (FunctGroupArray[sp].isMacroFauna == TRUE) {
+  889: 			nums[sp][0] = samplebiom[sp][z][id] / (FunctGroupArray[sp].speciesParams[avg_inv_size_id] + TINY);
+  890: 			nums[sp][1] = samplebiom[sp][z][id];
+  891: 
+  892: 		}
+  893: 		if (FunctGroupArray[sp].isVertebrate == TRUE) {
+  894: 			nums[sp][0] = stockinfo[sstocknums_id][sp][z][id] / (zonearea[z] + TINY);
+  895: 			nums[sp][1] = stockinfo[sbiomass_id][sp][z][id] / (zonearea[z] + TINY);
+  896: 		}
+  897: 	}
+  898: 
+  899: 	for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  900: 		for (chrt = 0; chrt < FunctGroupArray[sp].numStages; chrt++) {
+  901: 			globalnums[sp][chrt][1] += nums[sp][chrt];
+  902: 		}
+  903: 	}
   904: 
   905: 	/* First for numbers */
   906: 	sort_values_big(bm, abundindex_id, z);
@@ -517,38 +571,6 @@ Loops over the trait index (0=nums, 1=biom) with `numStages` bound, so single-st
   909: 	sort_values_big(bm, bioindex_id, z);
   910: 
   911: 	/* For bay as a whole */
-  912: 	if (z == (bm->nfzones - 1)) {
-  913: 
-  914: 		/* First for numbers */
-  915: 		sort_global_values(bm, abundindex_id, bm->nfzones, 0);
-  916: 
-  917: 		/* Then biomass */
-  918: 		sort_global_values(bm, bioindex_id, bm->nfzones, 0);
-  919: 
-  920: 		/* Wihout microfauna sort into descending order */
-  921: 		/* First for numbers */
-  922: 		sort_global_values_big(bm, abundindex_id, bm->nfzones, 1);
-  923: 
-  924: 		/* Then biomass */
-  925: 		sort_global_values_big(bm, bioindex_id, bm->nfzones, 1);
-  926: 
-  927: 	}
-  928: 
-  929: 	/* FIX - add calculation of W statistic */
-  930: 
-  931: 	return;
-  932: }
-  933: 
-  934: /**
-  935:  * \brief This calculates the discards Habitat complexity
-  936:  * Using infauna / epifauna as index 1
-  937:  * Using total epifauna as index 2
-  938:  * Note: omitting bacteria and microphytobenthos from infauna
-  939:  */
-  940: void Calc_Hab_Complx(MSEBoxModel *bm, int z, int id) {
-  941: 	int sp = 0;
-  942: 	double step1, step2;
-  943: 
 ```
 
 **Suggested fix (from review):** align constants
@@ -571,7 +593,8 @@ Loops over the trait index (0=nums, 1=biom) with `numStages` bound, so single-st
 ## IND-12
 
 **swapped index** · Conf H / Sev H ✔ re-checked ⭐ priority  
-**Listed lines:** 1003-1004
+**Lines (current code):** 1003-1004  
+**Lines at review (Oct 2026):** 1003-1004
 
 **Why it's thought to be a bug**
 
@@ -608,7 +631,8 @@ Loops over the trait index (0=nums, 1=biom) with `numStages` bound, so single-st
 ## IND-13
 
 **truncation** · Conf L / Sev M  
-**Listed lines:** 1018
+**Lines (current code):** 1018  
+**Lines at review (Oct 2026):** 1018
 
 **Why it's thought to be a bug**
 
@@ -644,7 +668,8 @@ No ROUNDGUARD; can produce -1.
 ## IND-14
 
 **inverted ratio** · Conf M / Sev M  
-**Listed lines:** 1103-1130
+**Lines (current code):** 1103-1130  
+**Lines at review (Oct 2026):** 1103-1130
 
 **Why it's thought to be a bug**
 
@@ -707,7 +732,8 @@ PS:ZP computed as planktivore/piscivore, opposite of the doc; pd[0] includes bir
 ## IND-15
 
 **div-by-zero** · Conf M / Sev M  
-**Listed lines:** 1255-1257
+**Lines (current code):** 1255-1257  
+**Lines at review (Oct 2026):** 1255-1257
 
 **Why it's thought to be a bug**
 
@@ -745,7 +771,8 @@ No zero-count guard; sqrt of a slightly negative value gives NaN.
 ## IND-16
 
 **formula** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 1275-1277
+**Lines (current code):** 1275-1277  
+**Lines at review (Oct 2026):** 1275-1277
 
 **Why it's thought to be a bug**
 
@@ -783,7 +810,8 @@ Variance = (Σx² − **mean²**)/(n−1); should be `n·mean²`. Compare Calcul
 ## IND-17
 
 **off-by-one** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 1316-1318
+**Lines (current code):** 1316-1318  
+**Lines at review (Oct 2026):** 1316-1318
 
 **Why it's thought to be a bug**
 
@@ -821,13 +849,14 @@ Variance = (Σx² − **mean²**)/(n−1); should be `n·mean²`. Compare Calcul
 ## IND-18
 
 **wrong variable** · Conf M / Sev H  
-**Listed lines:** 1360-1455
+**Lines (current code):** 1360-1455  
+**Lines at review (Oct 2026):** 1360-1455
 
 **Why it's thought to be a bug**
 
 Whole-area columns are weighted by `samplearea` (sums to 1 per zone), giving ≈ nfzones × TL.
 
-**Current code** (`atassess/atindices.c` lines 1358–1392 (range truncated))
+**Current code** (`atassess/atindices.c` lines 1358–1397 (truncated))
 
 ```c
  1358: 		avgtl[4][z] += catches * samplearea[bb] / (totcatch + TINY);
@@ -865,6 +894,11 @@ Whole-area columns are weighted by `samplearea` (sums to 1 per zone), giving ≈
  1390: 		biomST = 0.0;
  1391: 		totbiom = 0.0;
  1392: 		biomA = 0.0;
+ 1393: 		biomAST = 0.0;
+ 1394: 
+ 1395: 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+ 1396: 			if (FunctGroupArray[sp].isVertebrate == TRUE) {
+ 1397: 				for (stage = 0; stage < K_num_invageclass; stage++) {
 ```
 
 **Suggested fix (from review):** use `totalarea[bb]`
@@ -887,13 +921,14 @@ Whole-area columns are weighted by `samplearea` (sums to 1 per zone), giving ≈
 ## IND-19
 
 **units** · Conf M / Sev M  
-**Listed lines:** 1346-1348 vs 1370-1376
+**Lines (current code):** 1346-1348 vs 1370-1376  
+**Lines at review (Oct 2026):** 1346-1348 vs 1370-1376
 
 **Why it's thought to be a bug**
 
 Vertebrate catch is divided by zonearea; invertebrate catch is not.
 
-**Current code** (`atassess/atindices.c` lines 1344–1350)
+**Current code** (`atassess/atindices.c` lines 1344–1378)
 
 ```c
  1344: 						sample = pop_fraction[1][sp][z];
@@ -903,6 +938,34 @@ Vertebrate catch is divided by zonearea; invertebrate catch is not.
  1348: 					totcatch += stockinfo[stotcatch_id][sp][z][id] * sample / (zonearea[z] + TINY);
  1349: 
  1350: 					/* Overall case */
+ 1351: 					totcatchA += stockinfo[stotcatch_id][sp][z][id] * sample * tl[2][sp][stage] / (zonearea[z] + TINY);
+ 1352: 					totcatchAST += stockinfo[stotcatch_id][sp][z][id] * sample * tl[5][sp][stage] / (zonearea[z] + TINY);
+ 1353: 
+ 1354: 				}
+ 1355: 			}
+ 1356: 		}
+ 1357: 
+ 1358: 		avgtl[4][z] += catches * samplearea[bb] / (totcatch + TINY);
+ 1359: 		avgtl[4][bm->nfzones] += catches * totalarea[bb] / (totcatch + TINY);
+ 1360: 		avgtl[4][bm->nfzones + 1] += totcatchA * samplearea[bb] / (totcatch + TINY);
+ 1361: 		avgtl[5][z] += catchesST * samplearea[bb] / (totcatch + TINY);
+ 1362: 		avgtl[5][bm->nfzones] += catchesST * totalarea[bb] / (totcatch + TINY);
+ 1363: 		avgtl[5][bm->nfzones + 1] += totcatchAST * samplearea[bb] / (totcatch + TINY);
+ 1364: 
+ 1365: 		/* Invertebrates */
+ 1366: 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+ 1367: 			if (FunctGroupArray[sp].isVertebrate == FALSE && (FunctGroupArray[sp].isFished == TRUE || FunctGroupArray[sp].isImpacted == TRUE)) {
+ 1368: 
+ 1369: 				/* Assume the the fished invertebrates don't include detritus */
+ 1370: 				catches += invstockinfo[fcatch_id][sp][z][id] * tl[a][sp][0];
+ 1371: 				catchesST += invstockinfo[fcatch_id][sp][z][id] * tl[a + 3][sp][0];
+ 1372: 				totcatch += invstockinfo[fcatch_id][sp][z][id];
+ 1373: 
+ 1374: 				/* Overall case */
+ 1375: 				totcatchA += invstockinfo[fcatch_id][sp][z][id] * tl[2][sp][0];
+ 1376: 				totcatchAST += invstockinfo[fcatch_id][sp][z][id] * tl[5][sp][0];
+ 1377: 			}
+ 1378: 		}
 ```
 
 **Suggested fix (from review):** divide inverts too
@@ -925,7 +988,8 @@ Vertebrate catch is divided by zonearea; invertebrate catch is not.
 ## IND-20
 
 **copy-paste** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 1504-1505
+**Lines (current code):** 1504-1505  
+**Lines at review (Oct 2026):** 1504-1505
 
 **Why it's thought to be a bug**
 
@@ -962,7 +1026,8 @@ Vertebrate catch is divided by zonearea; invertebrate catch is not.
 ## IND-21
 
 **missing weight** · Conf M / Sev M  
-**Listed lines:** 1501, 1512, 1543, 1552
+**Lines (current code):** 1501, 1512, 1543, 1552  
+**Lines at review (Oct 2026):** 1501, 1512, 1543, 1552
 
 **Why it's thought to be a bug**
 
@@ -1033,7 +1098,8 @@ Zone-level catch is added once per box.
 ## IND-22
 
 **logic** · Conf H / Sev M  
-**Listed lines:** 1638-1665
+**Lines (current code):** 1638-1665  
+**Lines at review (Oct 2026):** 1638-1665
 
 **Why it's thought to be a bug**
 

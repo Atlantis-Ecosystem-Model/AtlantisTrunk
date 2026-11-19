@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [UTL2-04](#utl2-04) | 272 | H/M | wrong operator | `if ((*p)[i] < 0.0 && (*p)[i] > 1.0)` in the `probability_check` case is always false, so out-of-range entries… |  | [ ] |
 | [UTL2-05](#utl2-05) | 189-191 | H/L | format mismatch | `quit("... current set to %d for %s ...", value, paramString);`: `value` is a double passed for `%d`, so the o… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## UTL2-04
 
 **wrong operator** · Conf H / Sev M  
-**Listed lines:** 272
+**Lines (current code):** 272  
+**Lines at review (Oct 2026):** 272
 
 **Function:** `readkeyprm_darray_checked()`
 
@@ -28,14 +29,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `if ((*p)[i] < 0.0 && (*p)[i] > 1.0)` in the `probability_check` case is always false, so out-of-range entries are never rejected (only the sum is checked). This is a separate instance from the already-logged line 178, and the `proportion_check` case at line 262 correctly uses `||`. Function: `readkeyprm_darray_checked()`.
 
-**Current code** (`atlantisUtil/atUtilIO.c` lines 264–268) — code appears to have moved -6 lines since the review
+**Current code** (`atlantisUtil/atUtilIO.c` lines 270–274) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  264: 		}
-  265: 		break;
-  266: 	case probability_check:
-  267: 		/* Values are between 0 and 1, and sum is 1.0 */
-  268: 		if (verbose > 2)
+  270: 		sum = 0.0;
+  271: 		for (i = 0; i < sized; i++) {
+  272: 			if ((*p)[i] < 0.0 && (*p)[i] > 1.0)
+  273: 				quit("Entries in %s are supposed to be proportions (i.e. between 0 and 1), but %d entry is %e\n", key, i, (*p)[i]);
+  274: 			else {
 ```
 
 **Suggested fix (from review):** Use `||`.
@@ -58,7 +59,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## UTL2-05
 
 **format mismatch** · Conf H / Sev L  
-**Listed lines:** 189-191
+**Lines (current code):** 189-191  
+**Lines at review (Oct 2026):** 189-191
 
 **Function:** `Check_Value()`
 
@@ -98,7 +100,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## UTL2-06
 
 **logic / unreachable** · Conf M / Sev L  
-**Listed lines:** 317-323
+**Lines (current code):** 317-323  
+**Lines at review (Oct 2026):** 317-323
 
 **Function:** `readkeyprm_iarray_checked()`
 
@@ -142,7 +145,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## UTL2-07
 
 **unchecked return / uninitialised** · Conf M / Sev L  
-**Listed lines:** 92-103
+**Lines (current code):** 92-103  
+**Lines at review (Oct 2026):** 92-103
 
 **Function:** `Util_XML_Get_Value_Time()`
 

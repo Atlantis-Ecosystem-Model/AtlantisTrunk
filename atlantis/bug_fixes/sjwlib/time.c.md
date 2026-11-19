@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW2-25](#sjw2-25) | 160-164 | H/M | off-by-one day | When rounding pushes the time to 24:00, the code computes `j = tojul(y,mo,d,0,0,0) + 1`. `tojul` returns `juld… |  | [ ] |
 | [SJW2-26](#sjw2-26) | 373-377 | M/L | silent data loss | If the date has `HH:MM` without seconds, `sscanf` returns 2. The fallback then zeroes `h` and `mi` too, silent… |  | [ ] |
@@ -18,7 +18,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-25
 
 **off-by-one day** · Conf H / Sev M  
-**Listed lines:** 160-164
+**Lines (current code):** 160-164  
+**Lines at review (Oct 2026):** 160-164
 
 **Function:** `todat()`
 
@@ -60,7 +61,8 @@ When rounding pushes the time to 24:00, the code computes `j = tojul(y,mo,d,0,0,
 ## SJW2-26
 
 **silent data loss** · Conf M / Sev L  
-**Listed lines:** 373-377
+**Lines (current code):** 373-377  
+**Lines at review (Oct 2026):** 373-377
 
 **Function:** `DateToJulian()`
 

@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [CNV2-15](#cnv2-15) | 33-35 | H/M | parsing / wrong index | `*strchr(str, '_') = '\0'` treats everything before the first `_` as the fishery code. Fishery codes containin… |  | [ ] |
 | [CNV2-16](#cnv2-16) | 257, 259 | H/L | duplicate parameter | `UseEconQuotaDefine` is parsed twice in a row, giving two same-named nodes in `Economic_Flags` (the first with… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV2-15
 
 **parsing / wrong index** · Conf H / Sev M  
-**Listed lines:** 33-35
+**Lines (current code):** 33-35  
+**Lines at review (Oct 2026):** 33-35
 
 **Function:** `FisheryFirstXMLFunction()`
 
@@ -60,7 +61,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV2-16
 
 **duplicate parameter** · Conf H / Sev L  
-**Listed lines:** 257, 259
+**Lines (current code):** 257, 259  
+**Lines at review (Oct 2026):** 257, 259
 
 **Function:** `economicFlagParamsXML()`
 
@@ -100,7 +102,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV2-17
 
 **copy-paste text** · Conf H / Sev L  
-**Listed lines:** 253, 823
+**Lines (current code):** 253, 823  
+**Lines at review (Oct 2026):** 253, 823
 
 **Why it's thought to be a bug**
 
@@ -136,7 +139,8 @@ The `UseConstPrice` description is copied from `MultiPlanEffort`. The quit messa
 ## CNV2-18
 
 **parsing limitation** · Conf M / Sev L  
-**Listed lines:** 69-71, 95-106, 117-118, 170-171, 603-604, 651-652
+**Lines (current code):** 69-71, 95-106, 117-118, 170-171, 603-604, 651-652  
+**Lines at review (Oct 2026):** 69-71, 95-106, 117-118, 170-171, 603-604, 651-652
 
 **Why it's thought to be a bug**
 

@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 2 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [PHY2-04](#phy2-04) | 223-244 | H/M | stale variable | `ncattget(fid, NC_GLOBAL, "icenz", &n); if(n!= 0)` runs with `ncopts=0`. When the attribute is missing, ncattg… |  | [ ] |
 | [PHY2-05](#phy2-05) | 590, 682, 721 | H/L | accumulator not reset | `found_partial_match_n` is set to 1 but never reset per tracer (only `found_partial_match` is reset at 658). O… |  | [ ] |
@@ -19,13 +19,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY2-04
 
 **stale variable** · Conf H / Sev M  
-**Listed lines:** 223-244
+**Lines (current code):** 223-244  
+**Lines at review (Oct 2026):** 223-244
 
 **Function:** `readBMTracerInfo()`
 
 **Why it's thought to be a bug**
 
-`ncattget(fid, NC_GLOBAL, "icenz", &n); if(n!= 0)` runs with `ncopts=0`. When the attribute is missing, ncattget fails without writing to `n`, so `n` keeps the `sednz` value read at line 227 (non-zero). So `ice_on` is set TRUE for every model that has no ice. Then every tracer goes through the `inice` read path, and `boxes[b].ice.ntr` is set to ntracer (nice++ for every tracer). In atlantismain.c:1125 this triggers `readBMIceInfo`, which only partly undoes it: it sets ice_on FALSE but `num_active_habitats = ICE_BASED` (4), not the `EPIFAUNA+1` (3) intended here. Function: `readBMTracerInfo()`.
+`ncattget(fid, NC_GLOBAL, "icenz", &n); if(n!= 0)` runs with `ncopts=0`. When the attribute is missing, ncattget fails without writing to `n`, so `n` keeps the `sednz` value read at line 227 (non-zero). So `ice_on` is set TRUE for every model that has no ice. Then every tracer goes through the `inice` read path, and `boxes[b].ice.ntr` is set to ntracer (nice++ for every tracer). In atlantismain.c:1267 this triggers `readBMIceInfo`, which only partly undoes it: it sets ice_on FALSE but `num_active_habitats = ICE_BASED` (4), not the `EPIFAUNA+1` (3) intended here. Function: `readBMTracerInfo()`.
 
 **Current code** (`atphysics/attracerIO.c` lines 221–246)
 
@@ -78,7 +79,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY2-05
 
 **accumulator not reset** · Conf H / Sev L  
-**Listed lines:** 590, 682, 721
+**Lines (current code):** 590, 682, 721  
+**Lines at review (Oct 2026):** 590, 682, 721
 
 **Function:** `readBMTracerData()`
 
@@ -116,7 +118,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY2-06
 
 **format specifier** · Conf H / Sev L  
-**Listed lines:** 821
+**Lines (current code):** 821  
+**Lines at review (Oct 2026):** 821
 
 **Function:** `writeBMTracerData()`
 

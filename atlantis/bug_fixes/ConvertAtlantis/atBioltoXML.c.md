@@ -2,19 +2,19 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **17 findings** (severity H: 2; confidence H and severity H: 1; on the priority list: 1), plus 4 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [CNV1-01](#cnv1-01) ⭐ | 1780-1786 | H/H | buffer overrun / wrong variable | `tempStr[strlen(secondlastLetter) - strlen("popratioStock") - 2] = '\0';`: `secondlastLetter` points at the la… |  | [ ] |
 | [CNV1-02](#cnv1-02) | 1159-1177 | H/M | wrong variable / logic | When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` branch overwrites the `cohort = ju… |  | [ ] |
 | [CNV1-03](#cnv1-03) | 948-985 | H/L | stale variable / not reset in loop | `groupNode` is set to NULL once, before the guild loop. For a guild that is `isOverWinter` but not mobile (or … |  | [ ] |
-| [CNV1-04](#cnv1-04) | 4078-4079 | M/M | format mismatch / wrong check | `quit("...(%d)... (value of %d)...", numGroups, convertedXMLFileName, bm->K_num_tot_sp)`: the 2nd `%d` gets a … |  | [ ] |
-| [CNV1-05](#cnv1-05) | 4092-4128 | M/M | missing bounds check | `start_stage` and `migrationID` come straight from the CSV and are used unchecked as `MIGRATION[sp].X_Prm[star… |  | [ ] |
+| [CNV1-04](#cnv1-04) | 4080-4081 | M/M | format mismatch / wrong check | `quit("...(%d)... (value of %d)...", numGroups, convertedXMLFileName, bm->K_num_tot_sp)`: the 2nd `%d` gets a … |  | [ ] |
+| [CNV1-05](#cnv1-05) | 4094-4130 | M/M | missing bounds check | `start_stage` and `migrationID` come straight from the CSV and are used unchecked as `MIGRATION[sp].X_Prm[star… |  | [ ] |
 | [CNV1-06](#cnv1-06) | 636-680 | M/H | buffer overrun | `char sedimentValues[1000]; char finalValues[1000];` collect K_num_tot_sp tokens with `strcat`, and the input … |  | [ ] |
 | [CNV1-07](#cnv1-07) | 744-757, 762-767 | L/M | OOB index / wrong error text | `cohortNode = ...cohortStrings[i]` (753) runs *before* the `i == -1` check at 755. `cohortStrings` has only 2 … |  | [ ] |
 | [CNV1-08](#cnv1-08) | 94-107 | M/M | buffer overrun (edge) | `malloc(3*size)` followed by `strcpy(zeroString,"")`: with size==0 this is malloc(0) followed by a 1-byte writ… |  | [ ] |
@@ -23,17 +23,18 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 | [CNV1-11](#cnv1-11) | 2426-2427, 2433-2435, 2439-2440 | H/L | copy-paste (metadata) | `max_move_temp_id` is described as "Min tolerated temperatures" and `min_move_temp_id` as "Maximum tolerated t… |  | [ ] |
 | [CNV1-12](#cnv1-12) | 2465, 2636, 2644, 3104, 3129, 3458, 3460 | H/L | copy-paste (metadata) | Copy-pasted descriptions or units: FLAG_LYSIS_RATE units "mg O2 m-3" (rate is d-1); `coral_compete_id` reuses … |  | [ ] |
 | [CNV1-13](#cnv1-13) | 2106-2110, 2172 | H/L | wrong XML type | `flag_refuge_model` is declared XML_TYPE_BOOLEAN but has a 3-value lookup (0/1/2, and 2 = rugosity_refuge_mode… |  | [ ] |
-| [CNV1-14](#cnv1-14) | 3760, 3764 | H/L | duplicate block | `Util_XML_Parse_Create_Node(..., "InvadersEntering", ...)` is called twice, so two identical attribute nodes a… |  | [ ] |
-| [CNV1-15](#cnv1-15) | 3953-4018 | L/M | NULL deref on malformed input | Each of the 17 `strtok(NULL, seps)` results is passed straight to `Util_XML_Create_Node` as a value. A data ro… |  | [ ] |
+| [CNV1-14](#cnv1-14) | 3762, 3766 | H/L | duplicate block | `Util_XML_Parse_Create_Node(..., "InvadersEntering", ...)` is called twice, so two identical attribute nodes a… |  | [ ] |
+| [CNV1-15](#cnv1-15) | 3955-4020 | L/M | NULL deref on malformed input | Each of the 17 `strtok(NULL, seps)` results is passed straight to `Util_XML_Create_Node` as a value. A data ro… |  | [ ] |
 | [CNV1-16](#cnv1-16) | 1345-1379 | L/L | uninitialised variable | `char param[30]` is left uninitialised if none of the `strstr` branches match, then used as a node name. The f… |  | [ ] |
-| [CNV1-17](#cnv1-17) | 3795-3798, 3910-3913 | L/L | resource leak | `if (doc == NULL) { ... return; }` returns without `fclose(fp)` / `fclose(inputFP)`. Functions: `Convert_Biol_… |  | [ ] |
+| [CNV1-17](#cnv1-17) | 3797-3800, 3912-3915 | L/L | resource leak | `if (doc == NULL) { ... return; }` returns without `fclose(fp)` / `fclose(inputFP)`. Functions: `Convert_Biol_… |  | [ ] |
 
 ---
 
 ## CNV1-01
 
 **buffer overrun / wrong variable** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 1780-1786
+**Lines (current code):** 1780-1786  
+**Lines at review (Oct 2026):** 1780-1786
 
 **Function:** `PopRatioStockXMLFunction()`
 
@@ -77,13 +78,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV1-02
 
 **wrong variable / logic** · Conf H / Sev M  
-**Listed lines:** 1159-1177
+**Lines (current code):** 1159-1177  
+**Lines at review (Oct 2026):** 1159-1177
 
 **Function:** `InvertebrateClearanceRateXMLFunction()`
 
 **Why it's thought to be a bug**
 
-When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` branch overwrites the `cohort = juv_id` / `adult_id` value set at 1149/1161 for every non-Epi/Root parameter, including non-seagrass groups. For AGE_STRUCTURED_BIOMASS inverts (e.g. CEP/PWN), both `C_CEP_T15` and `C_jCEP_T15` (and the `mum_` versions, via the call at 2977) then go to index 0 (main_biomass_id = 0) in `Util_XML_Replace_Node_Value(...,2,cohort)`. Whichever comes last wins, and the adult slot (index 1) stays at the "0.0" default (atUtilXML.c:1136-1142). Result: adult clearance/growth = 0 for those groups in macro-model runs. Function: `InvertebrateClearanceRateXMLFunction()`.
+When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` branch overwrites the `cohort = juv_id` / `adult_id` value set at 1149/1161 for every non-Epi/Root parameter, including non-seagrass groups. For AGE_STRUCTURED_BIOMASS inverts (e.g. CEP/PWN), both `C_CEP_T15` and `C_jCEP_T15` (and the `mum_` versions, via the call at 2977) then go to index 0 (main_biomass_id = 0) in `Util_XML_Replace_Node_Value(...,2,cohort)`. Whichever comes last wins, and the adult slot (index 1) stays at the "0.0" default (atUtilXML.c:1189-1195). Result: adult clearance/growth = 0 for those groups in macro-model runs. Function: `InvertebrateClearanceRateXMLFunction()`.
 
 **Current code** (`ConvertAtlantis/atBioltoXML.c` lines 1157–1179)
 
@@ -133,7 +135,8 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 ## CNV1-03
 
 **stale variable / not reset in loop** · Conf H / Sev L  
-**Listed lines:** 948-985
+**Lines (current code):** 948-985  
+**Lines at review (Oct 2026):** 948-985
 
 **Function:** `InitVertDistributionXML()`
 
@@ -206,7 +209,8 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 ## CNV1-04
 
 **format mismatch / wrong check** · Conf M / Sev M  
-**Listed lines:** 4078-4079
+**Lines (current code):** 4080-4081  
+**Lines at review (Oct 2026):** 4078-4079
 
 **Function:** `Util_Read_Migration_XML()`
 
@@ -214,15 +218,15 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 
 `quit("...(%d)... (value of %d)...", numGroups, convertedXMLFileName, bm->K_num_tot_sp)`: the 2nd `%d` gets a `char*` (UB on the error path). Separately, the check itself (`numGroups > K_num_tot_sp`) is wrong: each CSV row is one (group, stage, MigID) migration, so a valid file can have more rows than species (e.g. juv + adult rows for many groups), and this would quit spuriously. Function: `Util_Read_Migration_XML()`.
 
-**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 4079–4084) — code appears to have moved +3 lines since the review
+**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 4078–4083)
 
 ```c
+ 4078:     if (groupList && groupList->nodesetval->nodeNr > 0) {
  4079:         
  4080:         /* Check the number of groups match the values in the run input file*/
  4081:         numGroups = groupList->nodesetval->nodeNr;
  4082:         if (numGroups > bm->K_num_tot_sp) {
  4083:             quit("Util_Read_Migration_XML: Number of groups specified (%d) in your migration definition file is greater than the number of species - K_num_tot_sp (value of %d) in your run file\n", numGroups, convertedXMLFileName, bm->K_num_tot_sp);
- 4084:         }
 ```
 
 **Suggested fix (from review):** Remove or replace the check (e.g. validate per group against numStages*num_migs). Fix the format string to match its arguments.
@@ -245,17 +249,20 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 ## CNV1-05
 
 **missing bounds check** · Conf M / Sev M  
-**Listed lines:** 4092-4128
+**Lines (current code):** 4094-4130  
+**Lines at review (Oct 2026):** 4092-4128
 
 **Function:** `Util_Read_Migration_XML()`
 
 **Why it's thought to be a bug**
 
-`start_stage` and `migrationID` come straight from the CSV and are used unchecked as `MIGRATION[sp].X_Prm[start_stage][migrationID]`. Those arrays are `[numStages][num_migrate+1]` (atBiologyXMLParamIO.c:4331, 4402-4421) and Stagger_Prm is `[numStages][num_migs][2]`. A stage >= numStages, a negative value, or a MigID > num_migrate gives a silent heap write out of bounds. Function: `Util_Read_Migration_XML()`.
+`start_stage` and `migrationID` come straight from the CSV and are used unchecked as `MIGRATION[sp].X_Prm[start_stage][migrationID]`. Those arrays are `[numStages][num_migrate+1]` (atBiologyXMLParamIO.c:4376, 4402-4421?) and Stagger_Prm is `[numStages][num_migs][2]`. A stage >= numStages, a negative value, or a MigID > num_migrate gives a silent heap write out of bounds. Function: `Util_Read_Migration_XML()`.
 
-**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 4094–4133 (truncated)) — code appears to have moved +4 lines since the review
+**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 4092–4131 (truncated))
 
 ```c
+ 4092: 
+ 4093:             if (verbose > 0)
  4094:                 printf("Reading in migration definition of %s\n", FunctGroupArray[speciesIndex].groupCode);
  4095: 
  4096:             Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "StartStage", &start_stage);
@@ -294,8 +301,6 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
  4129:             
  4130:             MIGRATION[speciesIndex].Stagger_Prm[start_stage][migrationID][stagger_years_id] = MIGRATION[speciesIndex].MaxYearsAway_Prm[start_stage][migrationID] - MIGRATION[speciesIndex].MinYearsAway_Prm[start_stage][migrationID];
  4131:             if( MIGRATION[speciesIndex].Stagger_Prm[start_stage][migrationID][stagger_years_id] > 0) {
- 4132:                 MIGRATION[speciesIndex].Stagger_Prm[start_stage][migrationID][return_stagger_id] = 1;
- 4133:             }
 ```
 
 **Suggested fix (from review):** Add `if(start_stage<0 || start_stage>=numStages || migrationID<0 || migrationID>num_migrate) quit(...)`.
@@ -318,7 +323,8 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 ## CNV1-06
 
 **buffer overrun** · Conf M / Sev H  
-**Listed lines:** 636-680
+**Lines (current code):** 636-680  
+**Lines at review (Oct 2026):** 636-680
 
 **Function:** `spInvertEatXMLFunction()`
 
@@ -391,7 +397,8 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 ## CNV1-07
 
 **OOB index / wrong error text** · Conf L / Sev M  
-**Listed lines:** 744-757, 762-767
+**Lines (current code):** 744-757, 762-767  
+**Lines at review (Oct 2026):** 744-757, 762-767
 
 **Function:** `spVERTEatXMLFunction()`
 
@@ -399,9 +406,18 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 
 `cohortNode = ...cohortStrings[i]` (753) runs *before* the `i == -1` check at 755. `cohortStrings` has only 2 entries (atUtil.c:175), and neither `i` (last char) nor `j` (leading digit) is range-checked. The error message at 756 names `spInvertEatXMLFunction` (copy-paste). `finalValues[STRLEN]` with `%.10e` (17 chars/value) also overflows for more than about 117 groups. Function: `spVERTEatXMLFunction()`.
 
-**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 751–778) — code appears to have moved +9 lines since the review
+**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 742–769)
 
 ```c
+  742: 	strcpy(finalValues, "");
+  743: 
+  744:     sscanf(str, "pPREY%d%s", &j, speciesStr);
+  745: 
+  746: 	i = atoi(speciesStr + strlen(speciesStr) - 1);
+  747: 	*(speciesStr + strlen(speciesStr) - 1) = '\0';
+  748: 	j--;
+  749: 	i--;
+  750: 
   751: 	speciesIndex = Util_Get_FG_Index_From_Token(bm, speciesStr, fileName, str, TRUE);
   752: 	speciesNode = Util_XML_Get_Or_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode);
   753: 	cohortNode = Util_XML_Get_Or_Create_Node(ATLANTIS_AGE_CLASS_ATTRIBUTE, speciesNode, cohortStrings[i]);
@@ -421,15 +437,6 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
   767: 
   768: 			//snprintf(finalValues, sizeof(finalValue), "%s%s%.10e", finalValues, sp>0?" ":"", p[sp]);
   769: 		} else {
-  770: 			sedimentArray[sp - bm->K_num_tot_sp] = p[sp];
-  771: 		}
-  772: 	}
-  773: 	trim(finalValues);
-  774: 
-  775:     /* Now find the node and set the value */
-  776: 	Util_XML_Set_Node_Value(ATLANTIS_AGE_CLASS_ATTRIBUTE, cohortNode, cohortStrings[j], finalValues);
-  777: 
-  778: 	/* Now set the sediment detritus values.*/
 ```
 
 **Suggested fix (from review):** Validate `0<=i<=1 && 0<=j<=1` before using them. Fix the message text. Bound the strcat.
@@ -452,7 +459,8 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 ## CNV1-08
 
 **buffer overrun (edge)** · Conf M / Sev M  
-**Listed lines:** 94-107
+**Lines (current code):** 94-107  
+**Lines at review (Oct 2026):** 94-107
 
 **Function:** `CreateZeroString()`
 
@@ -503,7 +511,8 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 ## CNV1-09
 
 **hard-coded code length** · Conf M / Sev M  
-**Listed lines:** 1115-1135
+**Lines (current code):** 1115-1135  
+**Lines at review (Oct 2026):** 1115-1135
 
 **Function:** `AgeDietXMLFunction()`
 
@@ -561,7 +570,8 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 ## CNV1-10
 
 **hard-coded code length** · Conf M / Sev M  
-**Listed lines:** 1267-1271
+**Lines (current code):** 1267-1271  
+**Lines at review (Oct 2026):** 1267-1271
 
 **Function:** `ImplicitMortalityRateXMLFunction()`
 
@@ -603,7 +613,8 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 ## CNV1-11
 
 **copy-paste (metadata)** · Conf H / Sev L  
-**Listed lines:** 2426-2427, 2433-2435, 2439-2440
+**Lines (current code):** 2426-2427, 2433-2435, 2439-2440  
+**Lines at review (Oct 2026):** 2426-2427, 2433-2435, 2439-2440
 
 **Function:** `createMovementXML()`
 
@@ -655,20 +666,21 @@ When `bm->flag_macro_model` is on, the `else { cohort = main_biomass_id; }` bran
 ## CNV1-12
 
 **copy-paste (metadata)** · Conf H / Sev L  
-**Listed lines:** 2465, 2636, 2644, 3104, 3129, 3458, 3460
+**Lines (current code):** 2465, 2636, 2644, 3104, 3129, 3458, 3460  
+**Lines at review (Oct 2026):** 2465, 2636, 2644, 3104, 3129, 3458, 3460
 
 **Why it's thought to be a bug**
 
 Copy-pasted descriptions or units: FLAG_LYSIS_RATE units "mg O2 m-3" (rate is d-1); `coral_compete_id` reuses "Rate macroalgae overgrow coral"; `HAB_mum_scalar_id` has units "W m-2" and range "3 - 65" (copied from KI); FLAG_SALT_SENSITIVE is described as "Temperature sensitivty"; FLAG_PH_CONSTC as "Coefficient B"; `mBleach_id` as "Slow recovery period", "days", "10 - 200"; `bleach_recovery_rate_id` (d-1) has range "10 - 200". Functions: `createMortalityXML()`, `createPrimaryProduceXML()`, `createQ10XML()`, `createCoralXML()`.
 
-**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 2636–2640) — code appears to have moved +173 lines since the review
+**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 2463–2467) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
- 2636: 	if(bm->containsCoral){
- 2637: 		Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, coral_overgrow_id, "Rate macroalgae overgrow coral", "d-1", XML_TYPE_FLOAT, "");
- 2638: 		Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, coral_compete_id, "Rate macroalgae overgrow coral", "d-1", XML_TYPE_FLOAT, "");
- 2639: 	}
- 2640:     if(bm->containsSponge){
+ 2463: 	xmlNodePtr newnode;
+ 2464: 
+ 2465: 	childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Mortality", "Mortality Parameters", "", "");
+ 2466: 
+ 2467: 	InitPrimaryProducerSpeciesZeroValuesXML(bm, childGroupingNode, "FLAG_LYSIS_RATE", "Mircoalgae groups lysis rate", "mg O2 m-3");
 ```
 
 **Suggested fix (from review):** Correct each description/units/range.
@@ -691,7 +703,8 @@ Copy-pasted descriptions or units: FLAG_LYSIS_RATE units "mg O2 m-3" (rate is d-
 ## CNV1-13
 
 **wrong XML type** · Conf H / Sev L  
-**Listed lines:** 2106-2110, 2172
+**Lines (current code):** 2106-2110, 2172  
+**Lines at review (Oct 2026):** 2106-2110, 2172
 
 **Function:** `createPhysicalLim_n_FLagsXML()`
 
@@ -733,7 +746,8 @@ Copy-pasted descriptions or units: FLAG_LYSIS_RATE units "mg O2 m-3" (rate is d-
 ## CNV1-14
 
 **duplicate block** · Conf H / Sev L  
-**Listed lines:** 3760, 3764
+**Lines (current code):** 3762, 3766  
+**Lines at review (Oct 2026):** 3760, 3764
 
 **Function:** `createInvaderXML()`
 
@@ -741,11 +755,9 @@ Copy-pasted descriptions or units: FLAG_LYSIS_RATE units "mg O2 m-3" (rate is d-
 
 `Util_XML_Parse_Create_Node(..., "InvadersEntering", ...)` is called twice, so two identical attribute nodes are emitted in the XML. Function: `createInvaderXML()`.
 
-**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 3758–3766)
+**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 3760–3768)
 
 ```c
- 3758:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "maxInvaderAge", "", "", XML_TYPE_INTEGER, "");
- 3759:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderEntryBox", "", "", XML_TYPE_INTEGER, "");
  3760:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderMinDepth", "", "", XML_TYPE_FLOAT, "");
  3761:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderMaxDepth", "", "", XML_TYPE_FLOAT, "");
  3762:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderStartDay", "", "", XML_TYPE_FLOAT, "");
@@ -753,9 +765,11 @@ Copy-pasted descriptions or units: FLAG_LYSIS_RATE units "mg O2 m-3" (rate is d-
  3764:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvadersEntering", "", "", XML_TYPE_INTEGER, "");
  3765:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderScalar", "", "", XML_TYPE_FLOAT, "");
  3766:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvaderSpeed", "", "", XML_TYPE_FLOAT, "");
+ 3767: 
+ 3768:     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "InvadersEntering", "", "", XML_TYPE_INTEGER, "");
 ```
 
-**Suggested fix (from review):** Delete the first call (3760).
+**Suggested fix (from review):** Delete the first call (3762).
 
 **Your response** (tick one; add detail in comments)
 - [ ] A. Agree it's a bug — apply the suggested fix
@@ -775,7 +789,8 @@ Copy-pasted descriptions or units: FLAG_LYSIS_RATE units "mg O2 m-3" (rate is d-
 ## CNV1-15
 
 **NULL deref on malformed input** · Conf L / Sev M  
-**Listed lines:** 3953-4018
+**Lines (current code):** 3955-4020  
+**Lines at review (Oct 2026):** 3953-4018
 
 **Function:** `Convert_Migration_To_XML()`
 
@@ -783,11 +798,9 @@ Copy-pasted descriptions or units: FLAG_LYSIS_RATE units "mg O2 m-3" (rate is d-
 
 Each of the 17 `strtok(NULL, seps)` results is passed straight to `Util_XML_Create_Node` as a value. A data row with fewer columns than the header (only the header row is counted, 3928-3937) passes NULL. Also, `seps=","` keeps the trailing `\r\n` on the last field. Function: `Convert_Migration_To_XML()`.
 
-**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 3951–3985 (range truncated))
+**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 3953–3992 (truncated))
 
 ```c
- 3951:         if (ch != '\t' && ch != '\n' && ch != '#' && ch != ',') {
- 3952:             
  3953:             /* Create the node for the group */
  3954:             groupNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, rootnode, "MigrationGroup", "The defintion of a migration", "", "");
  3955:             
@@ -821,6 +834,13 @@ Each of the 17 `strtok(NULL, seps)` results is passed straight to `Util_XML_Crea
  3983:             
  3984:             /* IsAnnualMigration */
  3985:             varStr = strtok(NULL, seps);
+ 3986:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "IsAnnualMigration", "", "", varStr);
+ 3987:             
+ 3988:             /* Min time away */
+ 3989:             varStr = strtok(NULL, seps);
+ 3990:             Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, groupNode, "MinTimeAway", "", "", varStr);
+ 3991:             
+ 3992:             /* Max time away */
 ```
 
 **Suggested fix (from review):** Check each token for NULL and quit with row info. Add `\r\n` to seps.
@@ -843,7 +863,8 @@ Each of the 17 `strtok(NULL, seps)` results is passed straight to `Util_XML_Crea
 ## CNV1-16
 
 **uninitialised variable** · Conf L / Sev L  
-**Listed lines:** 1345-1379
+**Lines (current code):** 1345-1379  
+**Lines at review (Oct 2026):** 1345-1379
 
 **Function:** `MigrateReturnXMLFunction()`
 
@@ -915,23 +936,24 @@ Each of the 17 `strtok(NULL, seps)` results is passed straight to `Util_XML_Crea
 ## CNV1-17
 
 **resource leak** · Conf L / Sev L  
-**Listed lines:** 3795-3798, 3910-3913
+**Lines (current code):** 3797-3800, 3912-3915  
+**Lines at review (Oct 2026):** 3795-3798, 3910-3913
 
 **Why it's thought to be a bug**
 
 `if (doc == NULL) { ... return; }` returns without `fclose(fp)` / `fclose(inputFP)`. Functions: `Convert_Biol_To_XML()`, `Convert_Migration_To_XML()`.
 
-**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 3782–3789) — code appears to have moved -11 lines since the review
+**Current code** (`ConvertAtlantis/atBioltoXML.c` lines 3795–3802) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
- 3782: 
- 3783: 
- 3784: void Convert_Biol_To_XML(MSEBoxModel *bm, char *fileName, char *outputFileName) {
- 3785: 	xmlDocPtr doc;
- 3786: 	xmlNodePtr rootnode;
- 3787:     FILE *fp;
- 3788: 
- 3789: 	/* Init libxml */
+ 3795: 	}
+ 3796: 
+ 3797: 	doc = xmlNewDoc((unsigned char *) "1.0");
+ 3798: 
+ 3799: 	if (doc == NULL) {
+ 3800: 		fprintf(stderr, "Document not created successfully. \n");
+ 3801: 		return;
+ 3802: 	}
 ```
 
 **Suggested fix (from review):** fclose before returning (or quit).

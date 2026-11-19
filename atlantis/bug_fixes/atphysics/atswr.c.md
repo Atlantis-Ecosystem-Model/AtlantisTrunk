@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [PHY3-26](#phy3-26) | 56 | H/L | format/argument mismatch | `quit("%s in %d at time %e is not finite %e\n", b, bm->dayt, inputData->variableName, bp->swr)`: an int is pas… |  | [ ] |
 | [PHY3-27](#phy3-27) | 80,86,96 | M/L | buffer overrun | `char buf[200]` is filled by `readkeyprm_s(fp,"Solar_radiation",buf)`, while the caller `readSolar` uses `buf[… |  | [ ] |
@@ -18,7 +18,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-26
 
 **format/argument mismatch** · Conf H / Sev L  
-**Listed lines:** 56
+**Lines (current code):** 56  
+**Lines at review (Oct 2026):** 56
 
 **Function:** `swrForcingBM()`
 
@@ -56,7 +57,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-27
 
 **buffer overrun** · Conf M / Sev L  
-**Listed lines:** 80,86,96
+**Lines (current code):** 80,86,96  
+**Lines at review (Oct 2026):** 80,86,96
 
 **Function:** `init_SolarData()`
 
@@ -64,9 +66,15 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `char buf[200]` is filled by `readkeyprm_s(fp,"Solar_radiation",buf)`, while the caller `readSolar` uses `buf[STRLEN]` (2000) for the same key. A long path overflows. Function: `init_SolarData()`.
 
-**Current code** (`atphysics/atswr.c` lines 84–104) — code appears to have moved +6 lines since the review
+**Current code** (`atphysics/atswr.c` lines 78–98)
 
 ```c
+   78: 
+   79: void init_SolarData(MSEBoxModel *bm, FILE *fp, PhyPropertyData *propInput, char *variableName, char *shortName, char *longName, double minValue, double maxValue){
+   80: 	char buf[200];
+   81: 
+   82: 	if (propInput->tracerID == -1)
+   83: 		quit("init_PhyPropertyData: no %sid set\n", variableName);
    84: 
    85: 	propInput->is_valid_z = FALSE;
    86: 	readkeyprm_s(fp, "Solar_radiation", buf);
@@ -82,12 +90,6 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
    96: 	strcpy(propInput->fname[0], buf);
    97: 	propInput->variableName = c_alloc1d(BMSLEN);
    98: 	strcpy(propInput->variableName, variableName);
-   99: 	snprintf(buf, sizeof(buf), "%s_rewind", shortName);
-  100: 	readkeyprm_i(fp, buf, &propInput->rewind);
-  101: 
-  102:     if(propInput->rewind == FALSE) {  // Just inc case looking for swr_rewind and its Solar_radiation_rewind
-  103:         snprintf(buf, sizeof(buf), "Solar_radiation_rewind");
-  104:         readkeyprm_i(fp, buf, &propInput->rewind);
 ```
 
 **Suggested fix (from review):** Use `char buf[STRLEN]`

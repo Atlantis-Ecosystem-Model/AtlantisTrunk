@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [UTH-01](#uth-01) | 306 | M/M | fixed-size array vs unbounded index | `int spMinMax[4];` holds the min/max SN tracer id per stage, for juvenile and adult only. atbiolsetup.c:3600-3… |  | [ ] |
 | [UTH-02](#uth-02) | 351-353 | M/M | allocation size vs index (stage vs habitat) | The comment says `pSP_SG_eat` is "diet available for each cohort of seagrass". It is allocated with a fixed si… |  | [ ] |
@@ -33,20 +33,21 @@ Lower-confidence notes:
 ## UTH-01
 
 **fixed-size array vs unbounded index** · Conf M / Sev M  
-**Listed lines:** 306
+**Lines (current code):** 306  
+**Lines at review (Oct 2026):** 306
 
 **Why it's thought to be a bug**
 
-`int spMinMax[4];` holds the min/max SN tracer id per stage, for juvenile and adult only. atbiolsetup.c:3600-3603 (`Set_spMinMax_Values()`) fills just [0..3]. It is read as `spMinMax[(preystage * 2)]` / `[(preystage * 2 + 1)]` with `preystage < FunctGroupArray[prey].numStages` (atmovement.c:283, 299-300), and the same with `predstage < numStages` (atmovement.c:472, 481-482). `numStages` is only checked to be >= 1 (atUtilGroupIO.c:294). An AGE_STRUCTURED group with 3+ stages therefore reads past the array into the next struct members (`AGEnewden` pointer bytes), and the garbage value is then used as a tracer index. This is the same root cause as BXML-05 (no `numStages <= 2` check), but that finding doesn't list `spMinMax`. Struct: `FunctionalGroupStruct`.
+`int spMinMax[4];` holds the min/max SN tracer id per stage, for juvenile and adult only. atbiolsetup.c:3828-3831 (`Set_spMinMax_Values()`) fills just [0..3]. It is read as `spMinMax[(preystage * 2)]` / `[(preystage * 2 + 1)]` with `preystage < FunctGroupArray[prey].numStages` (atmovement.c:283, 299-300), and the same with `predstage < numStages` (atmovement.c:472, 481-482). `numStages` is only checked to be >= 1 (atUtilGroupIO.c:294). An AGE_STRUCTURED group with 3+ stages therefore reads past the array into the next struct members (`AGEnewden` pointer bytes), and the garbage value is then used as a tracer index. This is the same root cause as BXML-05 (no `numStages <= 2` check), but that finding doesn't list `spMinMax`. Struct: `FunctionalGroupStruct`.
 
-**Current code** (`atecology/atbiolsetup.c` lines 392–396) — code appears to have moved +88 lines since the review
+**Current code** (`atecology/atbiolsetup.c` lines 304–308) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  392: static void Setup_PreyAvail(MSEBoxModel *bm, FILE *llogfp);
-  393: static void Setup_Invade(MSEBoxModel *bm);
-  394: static void Set_spMinMax_Values(MSEBoxModel *bm);
-  395: 
-  396: /* Home range functions */
+  304:  Large piscivorous fish (tuna)   FVT special
+  305:  Other tuna                      FVO special
+  306:  Migratory mesopelagics fish     FMM special
+  307:  Non-migratory mesopelagics fish FMN special
+  308:  Benthopelagics                  FBP special
 ```
 
 **Suggested fix (from review):** Add a group-load check that `numStages <= 2` for vertebrates (covers BXML-05 too), or make `spMinMax` `int *` sized `2*numStages` and fill per stage.
@@ -69,7 +70,8 @@ Lower-confidence notes:
 ## UTH-02
 
 **allocation size vs index (stage vs habitat)** · Conf M / Sev M  
-**Listed lines:** 351-353
+**Lines (current code):** 351-353  
+**Lines at review (Oct 2026):** 351-353
 
 **Why it's thought to be a bug**
 
@@ -107,22 +109,23 @@ The comment says `pSP_SG_eat` is "diet available for each cohort of seagrass". I
 ## UTH-03
 
 **buffer overrun (unbounded strcpy)** · Conf M / Sev L  
-**Listed lines:** 80-82
+**Lines (current code):** 80-82  
+**Lines at review (Oct 2026):** 80-82
 
 **Why it's thought to be a bug**
 
-`char groupCode[20]`, `name[200]`, `fullName[200]` are filled by `Util_XML_Get_Value_String(..., "GroupCode"/"Name"/"LongName", FunctGroupArray[groupIndex].groupCode)` (atUtilGroupIO.c:264, 274-275). That function does `strcpy(returnValue, value)` with no length (atUtilXML.c:1310). `Is_Valid_Group_Code()` (2-3 letters) only runs after the copy (line 269). An over-long code or name in the groups XML/CSV therefore overflows into the following int fields before validation. The earlier UTL2 note only covered `FisheryStruct.fisheryCode[20]`/`name[200]` (same mechanism, atUtilFisheryIO.c).
+`char groupCode[20]`, `name[200]`, `fullName[200]` are filled by `Util_XML_Get_Value_String(..., "GroupCode"/"Name"/"LongName", FunctGroupArray[groupIndex].groupCode)` (atUtilGroupIO.c:264, 274-275). That function does `strcpy(returnValue, value)` with no length (atUtilXML.c:1363). `Is_Valid_Group_Code()` (2-3 letters) only runs after the copy (line 269). An over-long code or name in the groups XML/CSV therefore overflows into the following int fields before validation. The earlier UTL2 note only covered `FisheryStruct.fisheryCode[20]`/`name[200]` (same mechanism, atUtilFisheryIO.c).
 
-**Current code** (`atlantisUtil/atUtilGroupIO.c` lines 276–282) — code appears to have moved +198 lines since the review
+**Current code** (`atlantisUtil/atUtilGroupIO.c` lines 78–84) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  276: 					&FunctGroupArray[groupIndex].speciesParams[flag_id]);
-  277: 			Util_XML_Get_Value_String(convertedXMLFileName, ATLANTIS_ATTRIBUTE, TRUE, groupNode, "Name", FunctGroupArray[groupIndex].name);
-  278: 			Util_XML_Get_Value_String(convertedXMLFileName, ATLANTIS_ATTRIBUTE, TRUE, groupNode, "LongName", FunctGroupArray[groupIndex].fullName);
-  279: 			Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "NumCohorts", &FunctGroupArray[groupIndex].numCohorts);
-  280: 			Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "NumGeneTypes", &FunctGroupArray[groupIndex].numGeneTypes);
-  281: 			Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "NumStages", &FunctGroupArray[groupIndex].numStages);
-  282: 			Util_XML_Get_Value_Integer(convertedXMLFileName, ATLANTIS_ATTRIBUTE, 0, TRUE, groupNode, integer_check, "NumSpawns", &FunctGroupArray[groupIndex].numSpawns);
+   78:  *	Added support to calculate the detIndex of the detritus groups.
+   79:  *
+   80:  *	02-06-2012 Beth Fulton
+   81:  *	Added overwinter as functional group property
+   82:  *
+   83:  */
+   84: /*  Open library routines */
 ```
 
 **Suggested fix (from review):** Add a size argument to `Util_XML_Get_Value_String` and use a bounded copy (`snprintf(dst, size, "%s", value)`), or check `strlen(value)` before copying.
@@ -145,15 +148,24 @@ The comment says `pSP_SG_eat` is "diet available for each cohort of seagrass". I
 ## UTH-04
 
 **enum vs name table (converter lookup)** · Conf H / Sev L  
-**Listed lines:** 36-72
+**Lines (current code):** 36-72  
+**Lines at review (Oct 2026):** 36-72
 
 **Why it's thought to be a bug**
 
 The GROUP_TYPES enum has 33 real values, and the runtime table in atGroupTypes.h covers all of them. The converter's `GroupType` Lookup list (ConvertAtlantis/atGroupsXML.c:181-206) is missing `BIRD`, `MICROPHTYBENTHOS`, `CORAL`, `SPONGE`, `ICE_DIATOMS`, `ICE_MIXOTROPHS` and `ICE_ZOOBIOTA`. The Lookup nodes are documentation only (nothing validates against them), so this doesn't change results, but the generated XML advertises an incomplete set of legal group types.
 
-**Current code** (`atlantisUtil/include/atGroupTypes.h` lines 42–60) — code appears to have moved +8 lines since the review
+**Current code** (`atlantisUtil/include/atGroupTypes.h` lines 34–60)
 
 ```c
+   34: 		{ CEP, "CEP" },
+   35: 		{ PWN, "PWN" },
+   36: 		{ PL_BACT, "PL_BACT" },
+   37: 		{ SED_BACT, "SED_BACT" },
+   38: 		{ ICE_BACT, "ICE_BACT" },
+   39: 		{ SM_INF, "SM_INF" },
+   40: 		{ LG_INF, "LG_INF" },
+   41: 		{ SED_EP_FF, "SED_EP_FF" },
    42: 		{ SED_EP_OTHER, "SED_EP_OTHER" },
    43: 		{ MOB_EP_OTHER, "MOB_EP_OTHER" },
    44: 		{ MICROPHTYBENTHOS, "MICROPHTYBENTHOS" },

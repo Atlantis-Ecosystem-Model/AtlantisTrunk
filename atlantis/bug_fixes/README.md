@@ -20,7 +20,7 @@ Before starting on the bug files, work through **[00_merge_from_main.md](00_merg
 5. Bugs marked D get investigated and written up in that bug's Outcome, and come back to you for a decision before any code changes.
 
 **Notes**
-- **Listed lines** are the line numbers from the review (10–12 Oct 2026). The **Current code** snippets were taken from the merged working tree on 2026-11-19, and follow the code if it has moved. ⚠ means the quoted code could not be found. These ~23 cases may already be fixed and should be checked first.
+- **Line numbers** were re-mapped on 2026-11-19 to the merged code. Each one was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)**, the code snippets and the file:line references in the text are all current. ≈ = approximate (the code there has changed), ? = could not be traced (the review's number is kept), and **Lines at review** keeps the October numbers. ⚠ on a snippet means the quoted code is no longer at those lines (62 findings): it may have been changed or already fixed. Line numbers will drift again as fixes go in. Claude always re-reads the code before editing.
 - **Conf/Sev**: H/M/L confidence it's a bug / severity if it is. ✔ = the reviewer re-checked it by hand. ⭐ = on the priority list. 🔀 = the merge of main changed this code (21 findings), so check whether it's already fixed before acting.
 - `_lower_confidence_<GROUP>.md` files hold speculative notes (from §B.3 of the list) that could not be tied to one file. Other lower-confidence notes are at the end of the relevant file's review.
 - The original list's Status column is not being updated. These files are the record.

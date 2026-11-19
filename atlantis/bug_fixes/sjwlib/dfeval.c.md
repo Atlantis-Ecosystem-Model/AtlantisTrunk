@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW3-01](#sjw3-01) | 65-77, 105-119 | H/M | wrong index / buffer overrun | `dfReadRecords(df, v, before, after - before + 1); ... v->data[before] ... v->data[after]` — for netCDF datafi… |  | [ ] |
 | [SJW3-02](#sjw3-02) | 264-266, 294-296 | M/L | buffer overrun (latent) | `int coffsets[MAXNUMDIMS * MAXNUMDIMS - 1][MAXNUMDIMS]; ... ncorners = 1 << nd` — with MAXNUMDIMS=10 the array… |  | [ ] |
@@ -18,7 +18,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW3-01
 
 **wrong index / buffer overrun** · Conf H / Sev M  
-**Listed lines:** 65-77, 105-119
+**Lines (current code):** 65-77, 105-119  
+**Lines at review (Oct 2026):** 65-77, 105-119
 
 **Why it's thought to be a bug**
 
@@ -89,7 +90,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW3-02
 
 **buffer overrun (latent)** · Conf M / Sev L  
-**Listed lines:** 264-266, 294-296
+**Lines (current code):** 264-266, 294-296  
+**Lines at review (Oct 2026):** 264-266, 294-296
 
 **Function:** `df_interp_linear()`
 

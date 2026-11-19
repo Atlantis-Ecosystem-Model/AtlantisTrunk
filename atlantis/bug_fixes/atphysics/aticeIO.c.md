@@ -2,24 +2,24 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **11 findings** (severity H: 2; confidence H and severity H: 2; on the priority list: 2), plus 5 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
-| [PHY1-01](#phy1-01) ⭐ | 68, 707, 744, 747 | H/H | NULL dereference | `int *tsiceid;` is a file-global never allocated anywhere in the repo (grep: only uses are in this file). `Loa… |  | [ ] |
+| [PHY1-01](#phy1-01) ⭐ | 68, 709, 746, 749 | H/H | NULL dereference | `int *tsiceid;` is a file-global never allocated anywhere in the repo (grep: only uses are in this file). `Loa… |  | [ ] |
 | [PHY1-02](#phy1-02) ⭐ | 730, 746 | H/H | uninitialised variable / wrong index | `char key[BMSLEN];` is never set, then `strcmp(key, this_ts->ts.varname[b])` compares garbage. It also indexes… |  | [ ] |
 | [PHY1-03](#phy1-03) | 771 (with 944) | H/M | logic / divide-by-zero | `get_ice_property(bm, &(bm->iceinput))` runs unconditionally at the end. (a) For `cdf_file`, `ice_cdf_init()` … |  | [ ] |
 | [PHY1-04](#phy1-04) | 454-455 | H/M | type mismatch | `value = bm->tinfo[i].inice; ncattput(fid, vid, "inice", NC_LONG, 1, &value);`: `value` is a `doubleINPUT`, bu… |  | [ ] |
-| [PHY1-05](#phy1-05) | 1319-1337 | M/M | logic / reset in wrong loop | `ice->wc_layer_match[i] = bm->boxes[b].nz - 1;` (the default) runs inside the outer water-layer loop `z`. On e… |  | [ ] |
-| [PHY1-06](#phy1-06) | 1249-1295, 1322-1330 | M/M | stale state | When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Layers `z..icenz-1` keep their va… |  | [ ] |
-| [PHY1-07](#phy1-07) | 809 | H/L | format/arg mismatch | `quit("read%sTimeSeries: Can't allocate memory for %s time series list\n", tsname);` has two `%s` but only one… |  | [ ] |
+| [PHY1-05](#phy1-05) | 1324-1342 | M/M | logic / reset in wrong loop | `ice->wc_layer_match[i] = bm->boxes[b].nz - 1;` (the default) runs inside the outer water-layer loop `z`. On e… |  | [ ] |
+| [PHY1-06](#phy1-06) | 1254-1300, 1327-1335 | M/M | stale state | When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Layers `z..icenz-1` keep their va… |  | [ ] |
+| [PHY1-07](#phy1-07) | 811 | H/L | format/arg mismatch | `quit("read%sTimeSeries: Can't allocate memory for %s time series list\n", tsname);` has two `%s` but only one… |  | [ ] |
 | [PHY1-08](#phy1-08) | 819 | H/L | uninitialised read | `fprintf(..., fts[i].iceclass)` prints a field of a `malloc`ed array that is never set, here or anywhere else.… |  | [ ] |
 | [PHY1-09](#phy1-09) | 629 | H/L | format specifier | `quit("... code compiled with %d\n", ..., sizeof(doubleINPUT))`: `%d` is given a `size_t`. Function: `writeBMI… |  | [ ] |
-| [PHY1-10](#phy1-10) | 1203-1207 | M/L | dangling pointer | `close_iceprop` frees `dzvaluebuf` but does not NULL it. `tbuf` and `valuebuf` are NULLed. A second close (for… |  | [ ] |
+| [PHY1-10](#phy1-10) | 1205-1209 | M/L | dangling pointer | `close_iceprop` frees `dzvaluebuf` but does not NULL it. `tbuf` and `valuebuf` are NULLed. A second close (for… |  | [ ] |
 | [PHY1-11](#phy1-11) | 536-547, 370, 516, 534, 537, 542 | H/L | dead branch / debug output | `icestart[]` and `start[]` are identical, so the `insed\|\|inwc` if/else branches do the same thing. Leftover un… |  | [ ] |
 
 ---
@@ -27,7 +27,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-01
 
 **NULL dereference** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 68, 707, 744, 747
+**Lines (current code):** 68, 709, 746, 749  
+**Lines at review (Oct 2026):** 68, 707, 744, 747
 
 **Why it's thought to be a bug**
 
@@ -63,7 +64,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-02
 
 **uninitialised variable / wrong index** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 730, 746
+**Lines (current code):** 730, 746  
+**Lines at review (Oct 2026):** 730, 746
 
 **Function:** `Load_Ice_Timeseries()`
 
@@ -117,7 +119,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-03
 
 **logic / divide-by-zero** · Conf H / Sev M  
-**Listed lines:** 771 (with 944)
+**Lines (current code):** 771 (with 944)  
+**Lines at review (Oct 2026):** 771 (with 944)
 
 **Function:** `Load_Ice_Timeseries()`
 
@@ -155,7 +158,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-04
 
 **type mismatch** · Conf H / Sev M  
-**Listed lines:** 454-455
+**Lines (current code):** 454-455  
+**Lines at review (Oct 2026):** 454-455
 
 **Function:** `writeBMIceInfo()`
 
@@ -194,7 +198,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-05
 
 **logic / reset in wrong loop** · Conf M / Sev M  
-**Listed lines:** 1319-1337
+**Lines (current code):** 1324-1342  
+**Lines at review (Oct 2026):** 1319-1337
 
 **Function:** `Enter_IceBM()`
 
@@ -202,14 +207,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `ice->wc_layer_match[i] = bm->boxes[b].nz - 1;` (the default) runs inside the outer water-layer loop `z`. On each new `z` the inner loop goes over ice layers from 0 again and resets the layers already matched to a higher `z` back to `nz-1`, because their `last_depth < icedepth` test now fails. So any ice layer that maps to a water layer between 1 and nz-2 ends up recorded as the surface layer. Function: `Enter_IceBM()`.
 
-**Current code** (`atphysics/aticeIO.c` lines 1317–1339)
+**Current code** (`atphysics/aticeIO.c` lines 1322–1344)
 
 ```c
- 1317: 
- 1318: 		// Assign the actual value
- 1319: 		for(z=bm->boxes[b].nz - 1; z>= 0; z--){
- 1320: 			tot_depth += bm->boxes[b].dz[z];
- 1321: 			icedepth = 0.0;
  1322: 			for(i=0; i<bm->icenz; i++){
  1323: 				icedepth += ice->dz[i];
  1324: 
@@ -228,6 +228,11 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
  1337: 		}
  1338: 
  1339: 		// Find total ice cover
+ 1340: 		bm->boxes[b].tot_ice_prop = 0.0;
+ 1341: 		z = 0;
+ 1342: 		for(k=0; k<bm->K_num_ice_classes; k++){
+ 1343: 			bm->boxes[b].tot_ice_prop += ice->ice_classes[z][k];
+ 1344: 		}
 ```
 
 **Suggested fix (from review):** Set the default once per box, before the `z` loop
@@ -250,7 +255,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-06
 
 **stale state** · Conf M / Sev M  
-**Listed lines:** 1249-1295, 1322-1330
+**Lines (current code):** 1254-1300, 1327-1335  
+**Lines at review (Oct 2026):** 1249-1295, 1322-1330
 
 **Function:** `Enter_IceBM()`
 
@@ -258,10 +264,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Layers `z..icenz-1` keep their values from the previous time step when ice thins, and nothing zeroes them. The mapping loop then adds `ice_classes[i][k]` over all `icenz` layers into `ice_prop`, so stale ice fractions get counted. Function: `Enter_IceBM()`.
 
-**Current code** (`atphysics/aticeIO.c` lines 1251–1290 (truncated)) — code appears to have moved +4 lines since the review
+**Current code** (`atphysics/aticeIO.c` lines 1252–1291 (truncated))
 
 ```c
- 1251: 			slush_allowed = 1;
  1252: 
  1253: 			while(ice_depth > tot_depth && z < bm->icenz){
  1254: 				last_depth = tot_depth;
@@ -301,6 +306,7 @@ When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Lay
  1288: 						ice->ice_classes[z-1][i] = ice_data_array[b][i] * depth_prop;
  1289: 					}
  1290: 				}
+ 1291: 
 ```
 
 **Suggested fix (from review):** After filling, zero `ice_classes[zz][*]` for `zz >= z`
@@ -323,7 +329,8 @@ When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Lay
 ## PHY1-07
 
 **format/arg mismatch** · Conf H / Sev L  
-**Listed lines:** 809
+**Lines (current code):** 811  
+**Lines at review (Oct 2026):** 809
 
 **Function:** `Ice_Read_Time_Series()`
 
@@ -331,14 +338,14 @@ When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Lay
 
 `quit("read%sTimeSeries: Can't allocate memory for %s time series list\n", tsname);` has two `%s` but only one argument, which is undefined behaviour on this error path. Function: `Ice_Read_Time_Series()`.
 
-**Current code** (`atphysics/aticeIO.c` lines 807–811)
+**Current code** (`atphysics/aticeIO.c` lines 809–813)
 
 ```c
-  807: 	/* Allocate memory for list of time series */
-  808: 	if ((fts = (IceTimeSeries *) malloc((size_t)nnts * sizeof(IceTimeSeries))) == NULL)
   809: 		quit("read%sTimeSeries: Can't allocate memory for %s time series list\n", tsname);
   810: 
   811: 	/* Read each fisheries time series input */
+  812: 	for (i = 0; i < nnts; i++) {
+  813: 		char key[MAXLINELEN];
 ```
 
 **Suggested fix (from review):** Add a second `tsname` argument
@@ -361,7 +368,8 @@ When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Lay
 ## PHY1-08
 
 **uninitialised read** · Conf H / Sev L  
-**Listed lines:** 819
+**Lines (current code):** 819  
+**Lines at review (Oct 2026):** 819
 
 **Function:** `Ice_Read_Time_Series()`
 
@@ -399,7 +407,8 @@ When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Lay
 ## PHY1-09
 
 **format specifier** · Conf H / Sev L  
-**Listed lines:** 629
+**Lines (current code):** 629  
+**Lines at review (Oct 2026):** 629
 
 **Function:** `writeBMIceData()`
 
@@ -437,7 +446,8 @@ When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Lay
 ## PHY1-10
 
 **dangling pointer** · Conf M / Sev L  
-**Listed lines:** 1203-1207
+**Lines (current code):** 1205-1209  
+**Lines at review (Oct 2026):** 1203-1207
 
 **Function:** `close_iceprop()`
 
@@ -445,11 +455,9 @@ When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Lay
 
 `close_iceprop` frees `dzvaluebuf` but does not NULL it. `tbuf` and `valuebuf` are NULLed. A second close (for example `freeCDFIceFiles` after a failed reopen) would double-free. Function: `close_iceprop()`.
 
-**Current code** (`atphysics/aticeIO.c` lines 1201–1209)
+**Current code** (`atphysics/aticeIO.c` lines 1203–1211)
 
 ```c
- 1201: 	/* Free buffers */
- 1202: 	free1d(propInput->tbuf);
  1203: 	free3d((double ***) propInput->valuebuf);
  1204: 	free2d((double **)propInput->dzvaluebuf);
  1205: 
@@ -457,6 +465,8 @@ When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Lay
  1207: 	propInput->valuebuf = NULL;
  1208: }
  1209: 
+ 1210: /*****************************************************************************************
+ 1211:  * Enter ice values into the IceModel per box
 ```
 
 **Suggested fix (from review):** Add `propInput->dzvaluebuf = NULL;`
@@ -479,7 +489,8 @@ When ice is present, only layers `0..z-1` of `ice->ice_classes` are written. Lay
 ## PHY1-11
 
 **dead branch / debug output** · Conf H / Sev L  
-**Listed lines:** 536-547, 370, 516, 534, 537, 542
+**Lines (current code):** 536-547, 370, 516, 534, 537, 542  
+**Lines at review (Oct 2026):** 536-547, 370, 516, 534, 537, 542
 
 **Why it's thought to be a bug**
 

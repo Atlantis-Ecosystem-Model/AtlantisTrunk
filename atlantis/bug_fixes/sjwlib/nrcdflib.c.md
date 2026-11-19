@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **5 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW2-08](#sjw2-08) | 103 | H/M | wrong formula (copy-paste) | `return (0.5 * erfc(-0.7071... * (x - mu )/ sigma));` is the normal CDF formula. The lognormal CDF (NR3 Lognor… |  | [ ] |
 | [SJW2-09](#sjw2-09) | 141-143 | H/M | wrong formula (copy-paste) | The Cauchy CDF returns the lognormal formula `0.5*erfc(-0.707*(log(x)-mu)/sigma)` and the lognormal `x==0` gua… |  | [ ] |
@@ -21,7 +21,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-08
 
 **wrong formula (copy-paste)** · Conf H / Sev M  
-**Listed lines:** 103
+**Lines (current code):** 103  
+**Lines at review (Oct 2026):** 103
 
 **Function:** `lognorm_cdf_values()`
 
@@ -59,7 +60,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-09
 
 **wrong formula (copy-paste)** · Conf H / Sev M  
-**Listed lines:** 141-143
+**Lines (current code):** 141-143  
+**Lines at review (Oct 2026):** 141-143
 
 **Function:** `cauchy_cdf_values()`
 
@@ -99,7 +101,8 @@ The Cauchy CDF returns the lognormal formula `0.5*erfc(-0.707*(log(x)-mu)/sigma)
 ## SJW2-10
 
 **wrong formula** · Conf H / Sev M  
-**Listed lines:** 309
+**Lines (current code):** 309  
+**Lines at review (Oct 2026):** 309
 
 **Function:** `weibull_cdf_values()`
 
@@ -137,7 +140,8 @@ The Cauchy CDF returns the lognormal formula `0.5*erfc(-0.707*(log(x)-mu)/sigma)
 ## SJW2-11
 
 **ignored parameters** · Conf M / Sev L  
-**Listed lines:** 192-194
+**Lines (current code):** 192-194  
+**Lines at review (Oct 2026):** 192-194
 
 **Function:** `studentt_cdf_values()`
 
@@ -145,16 +149,16 @@ The Cauchy CDF returns the lognormal formula `0.5*erfc(-0.707*(log(x)-mu)/sigma)
 
 The two-tailed branch uses the raw `t` and ignores `mu`/`sigma`, while the one-tailed branch standardises `(t-mu)/sigma`. Function: `studentt_cdf_values()`.
 
-**Current code** (`sjwlib/nrcdflib.c` lines 187–193) — code appears to have moved -3 lines since the review
+**Current code** (`sjwlib/nrcdflib.c` lines 190–196) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  187:     if(tails == 1) {
-  188:         step1 = (t - mu) / sigma;
-  189:         p = 0.5 * betai(0.5 * nu, 0.5, nu/(nu + (step1 * step1)));
   190:         if (t >= mu) return 1.0 - p;
   191:         else return p;
   192:     } else if(tails == 2) {
   193:         if (t < 0.0) quit("Can not have t < 0 in two tailed student t cdf");
+  194:         return (1.0 - betai(0.5 * nu, 0.5, nu / (nu + (t * t))));
+  195:     } else {
+  196:         quit("You can not ask for more than two tails for a student t distribution\n");
 ```
 
 **Suggested fix (from review):** Use `step1 = (t-mu)/sigma` in the two-tailed branch as well.
@@ -177,13 +181,14 @@ The two-tailed branch uses the raw `t` and ignores `mu`/`sigma`, while the one-t
 ## SJW2-12
 
 **typo vs source** · Conf M / Sev L  
-**Listed lines:** 645
+**Lines (current code):** 645  
+**Lines at review (Oct 2026):** 645
 
 **Function:** `betai()`
 
 **Why it's thought to be a bug**
 
-`if (a > 3000 && b > 300)`: NR3 uses SWITCH=3000 for both a and b. With b in (300, 3000] the code switches to the quadrature approximation outside its intended range, which reduces accuracy. This also affects F/beta/binomial/negbinomial CDFs, and negbinomial is live (atmanage/atManageSetup.c:1551). Function: `betai()`.
+`if (a > 3000 && b > 300)`: NR3 uses SWITCH=3000 for both a and b. With b in (300, 3000] the code switches to the quadrature approximation outside its intended range, which reduces accuracy. This also affects F/beta/binomial/negbinomial CDFs, and negbinomial is live (atmanage/atManageSetup.c:1550). Function: `betai()`.
 
 **Current code** (`sjwlib/nrcdflib.c` lines 643–647)
 

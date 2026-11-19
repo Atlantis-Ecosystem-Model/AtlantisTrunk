@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 1; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [ECIO-23](#ecio-23) | 221-286 | M/M | exception across C ABI | `FishMIP_Adapter_CalcPrice()`, `FishMIP_Adapter_CalcEffort()` and `FishMIP_Adapter_RunAssessment()` are `exter… |  | [ ] |
 | [ECIO-24](#ecio-24) | 231 | L/H | unchecked buffer copy | `std::copy(pr.price_ctry.begin(), pr.price_ctry.end(), price_out)` assumes `price_ctry.size() == nsp`, but `pr… |  | [ ] |
@@ -18,13 +18,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-23
 
 **exception across C ABI** · Conf M / Sev M  
-**Listed lines:** 221-286
+**Lines (current code):** 221-286  
+**Lines at review (Oct 2026):** 221-286
 
 **Why it's thought to be a bug**
 
 `FishMIP_Adapter_CalcPrice()`, `FishMIP_Adapter_CalcEffort()` and `FishMIP_Adapter_RunAssessment()` are `extern "C"` and called from C, but unlike the two loaders (l.100-128, 174-191) they have no try/catch. Any std::exception from the plug-in (bad_alloc, runtime_error, NdArray bounds) unwinding into C frames ends in std::terminate.
 
-**Current code** (`ateconomic/atFishMIP_OSP_PluginAdapter.cpp` lines 219–253 (range truncated))
+**Current code** (`ateconomic/atFishMIP_OSP_PluginAdapter.cpp` lines 219–258 (truncated))
 
 ```c
   219:  * Price / effort / assessment calls.
@@ -62,6 +63,11 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   251:                                                       f_growth_rate_half_sat);
   252:     for (std::size_t i = 0; i < nf; ++i) f_out[i] = ec.f(0, i);
   253: }
+  254: 
+  255: void FishMIP_Adapter_RunAssessment(int speciesId, int nyears, int nfishery, const double *catchFlat,
+  256:                                     const double *effortFlat, double prior_mean_r, double prior_sd_logr,
+  257:                                     double prior_mean_z, double prior_sd_logz, int optimizer, int verbose,
+  258:                                     FishMIP_AssessmentResult *out) {
 ```
 
 **Suggested fix (from review):** Wrap each body in try/catch and return a failure flag / leave outputs unchanged.
@@ -84,7 +90,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECIO-24
 
 **unchecked buffer copy** · Conf L / Sev H  
-**Listed lines:** 231
+**Lines (current code):** 231  
+**Lines at review (Oct 2026):** 231
 
 **Function:** `FishMIP_Adapter_CalcPrice()`
 

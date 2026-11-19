@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SJW2-01](#sjw2-01) ⭐ | 298-347, 561-604 | H/H | invalid free / realloc of caller memory | `add_argument()` copies the caller's string pointers into the new array (`new_args[i+1] = args[i]`, line 587).… |  | [ ] |
 | [SJW2-02](#sjw2-02) | 401-405 | H/M | wrong formula | `mp->ellip_flat = 1 / (1 - sqrt(1 - ecc * ecc));` In PROJ, `es` is the eccentricity squared, and flattening is… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-01
 
 **invalid free / realloc of caller memory** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 298-347, 561-604
+**Lines (current code):** 298-347, 561-604  
+**Lines at review (Oct 2026):** 298-347, 561-604
 
 **Function:** `mpInitialise()`
 
@@ -93,7 +94,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-02
 
 **wrong formula** · Conf H / Sev M  
-**Listed lines:** 401-405
+**Lines (current code):** 401-405  
+**Lines at review (Oct 2026):** 401-405
 
 **Function:** `mpInitialise()`
 
@@ -135,7 +137,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-03
 
 **memory leak** · Conf H / Sev L  
-**Listed lines:** 561-590, 1043-1051
+**Lines (current code):** 561-590, 1043-1051  
+**Lines at review (Oct 2026):** 561-590, 1043-1051
 
 **Function:** `add_argument()`
 
@@ -202,7 +205,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SJW2-04
 
 **prefix match** · Conf M / Sev L  
-**Listed lines:** 548-556
+**Lines (current code):** 548-556  
+**Lines at review (Oct 2026):** 548-556
 
 **Function:** `find_argument()`
 

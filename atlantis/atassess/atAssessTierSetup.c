@@ -451,8 +451,9 @@ int Tier_Assessment_PostLoad_Allocate(MSEBoxModel *bm) {
         
         bm->RBCestimation.RBCspeciesArray[groupIndex].agesel_bysex = Util_Alloc_Init_2D_Double(bm->K_num_sexes, FunctGroupArray[groupIndex].numCohorts, 0.0);
         
-        if (tier == tier1)  // As only used in tier1 routines
+        if (tier == tier1) { // As only used in tier1 routines
             bm->RBCestimation.RBCspeciesArray[groupIndex].fval = Util_Alloc_Init_2D_Double(bm->K_num_sexes, FunctGroupArray[groupIndex].numCohorts, 0.0);
+        }
         
         if (Tier3maxage < maxage)
             maxA = maxage;

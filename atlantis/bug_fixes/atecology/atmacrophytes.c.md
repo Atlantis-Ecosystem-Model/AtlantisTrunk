@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 3 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [BIOL-25](#biol-25) | 88 | H/L | format specifier mismatch | `quit("This is not coded for %s group types ...", FunctGroupArray[sp_id].groupType, ...)` — `groupType` is a `… |  | [ ] |
 | [BIOL-26](#biol-26) | 190-192 vs 118 | L/M | wrong parameter | Epiphyte nutrient limitation uses `KNepi_id` (l.118), but epiphyte NH/NO uptake partitioning uses `KN_id` (the… |  | [ ] |
@@ -18,7 +18,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## BIOL-25
 
 **format specifier mismatch** · Conf H / Sev L  
-**Listed lines:** 88
+**Lines (current code):** 88  
+**Lines at review (Oct 2026):** 88
 
 **Function:** `Grow_Macrophytes()`
 
@@ -56,7 +57,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## BIOL-26
 
 **wrong parameter** · Conf L / Sev M  
-**Listed lines:** 190-192 vs 118
+**Lines (current code):** 190-192 vs 118  
+**Lines at review (Oct 2026):** 190-192 vs 118
 
 **Function:** `Grow_Macrophytes()`
 
@@ -109,7 +111,7 @@ atmacrophytes.c l.148-152: root growth is `this_biom(roots) * growth[main] * ...
 
 ### LC-2
 
-atmacrophytes.c l.174-215: P and C uptake (`Calculate_Phosphorus_Uptake/Carbon_Uptake`) is only computed for the epiphyte cohort. For leaves and roots `uptakeP = uptakeC = 0` is passed to `PP_uptake()`, although growth is P-limited (`Nutrient_Lim(...P...)`), so N:P:C ratios of leaves/roots drift. In the caller (atGroupProcesses.c:738-739) P and C come from *sediment* tracers even for epiphytes, which draw uptake from the WC.
+atmacrophytes.c l.174-215: P and C uptake (`Calculate_Phosphorus_Uptake/Carbon_Uptake`) is only computed for the epiphyte cohort. For leaves and roots `uptakeP = uptakeC = 0` is passed to `PP_uptake()`, although growth is P-limited (`Nutrient_Lim(...P...)`), so N:P:C ratios of leaves/roots drift. In the caller (atGroupProcesses.c:751-752) P and C come from *sediment* tracers even for epiphytes, which draw uptake from the WC.
 
 - [ ] Investigate   - [ ] Ignore
 
@@ -119,7 +121,7 @@ atmacrophytes.c l.174-215: P and C uptake (`Calculate_Phosphorus_Uptake/Carbon_U
 
 ### LC-3
 
-atmacrophytes.c l.178-179: `/ DINs` has no `small_num` guard (the same pattern as atprocess.c:1517), so it gives NaN if sediment DIN is exactly 0.
+atmacrophytes.c l.178-179: `/ DINs` has no `small_num` guard (the same pattern as atprocess.c:1664), so it gives NaN if sediment DIN is exactly 0.
 
 - [ ] Investigate   - [ ] Ignore
 

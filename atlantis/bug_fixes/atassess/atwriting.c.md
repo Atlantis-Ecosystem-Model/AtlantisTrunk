@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **5 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [WRT-01](#wrt-01) | 768 | M/M | div-by-zero | CPUE = catch/effort with no guard (line 1099 adds small_num). |  | [ ] |
 | [WRT-02](#wrt-02) ⭐ | 914, 940-941 | H/H | stale layout | Header reads `Salt LightWc LightSed O2 DON DIN`, but samplephys[0..5] = salinity, light_wc, light_sed, o2_sed,… |  | [ ] |
@@ -21,20 +21,21 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## WRT-01
 
 **div-by-zero** · Conf M / Sev M  
-**Listed lines:** 768
+**Lines (current code):** 768  
+**Lines at review (Oct 2026):** 768
 
 **Why it's thought to be a bug**
 
 CPUE = catch/effort with no guard (line 1099 adds small_num).
 
-**Current code** (`atassess/atwriting.c` lines 591–595) — code appears to have moved -175 lines since the review
+**Current code** (`atassess/atwriting.c` lines 766–770) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  591: 		/* Write Info */
-  592: 		if (bm->flagareacorrect)
-  593: 			area_correct = (zonearea[z] / (1000.0 * 1000.0)) + small_num; /* So can get output per km2 from m2 total areas*/
-  594: 		else
-  595: 			area_correct = 1.0;
+  766: 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
+  767: 			if (FunctGroupArray[sp].isVertebrate == TRUE) {
+  768: 				fprintf(fid, "%.8g ", stockinfo[stotcatch_id][sp][z][id] / stockinfo[stoteffort_id][sp][z][id]);
+  769: 			}
+  770: 		}
 ```
 
 **Suggested fix (from review):** `+ small_num`
@@ -57,7 +58,8 @@ CPUE = catch/effort with no guard (line 1099 adds small_num).
 ## WRT-02
 
 **stale layout** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 914, 940-941
+**Lines (current code):** 914, 940-941  
+**Lines at review (Oct 2026):** 914, 940-941
 
 **Why it's thought to be a bug**
 
@@ -120,13 +122,14 @@ Header reads `Salt LightWc LightSed O2 DON DIN`, but samplephys[0..5] = salinity
 ## WRT-03
 
 **size mismatch** · Conf M / Sev M  
-**Listed lines:** 1647-1650, 1700-1707
+**Lines (current code):** 1647-1650, 1700-1707  
+**Lines at review (Oct 2026):** 1647-1650, 1700-1707
 
 **Why it's thought to be a bug**
 
 Loops to `K_num_abcbin` over `endnums` sized K_num_tot_sp; the parameter is not capped.
 
-**Current code** (`atassess/atwriting.c` lines 1645–1684 (truncated))
+**Current code** (`atassess/atwriting.c` lines 1645–1652)
 
 ```c
  1645:     /* Column definitions */
@@ -137,38 +140,6 @@ Loops to `K_num_abcbin` over `endnums` sized K_num_tot_sp; the parameter is not 
  1650: 		fprintf(fid, " A%d", j + 1);
  1651: 
  1652: 	index = 0;
- 1653: 	for (j = 0; j < bm->K_num_tot_sp; j++) {
- 1654: 		if (FunctGroupArray[j].isMacroFauna == TRUE) {
- 1655: 			fprintf(fid, " BB%d", index + 1);
- 1656: 			index++;
- 1657: 		}
- 1658: 	}
- 1659: 	fprintf(fid, " BB%d", index + 1);
- 1660: 
- 1661: 	index = 0;
- 1662: 	for (j = 0; j < bm->K_num_tot_sp; j++) {
- 1663: 		if (FunctGroupArray[j].isMacroFauna == TRUE) {
- 1664: 			fprintf(fid, " BA%d", index + 1);
- 1665: 			index++;
- 1666: 		}
- 1667: 	}
- 1668: 	fprintf(fid, " BA%d", index + 1);
- 1669: 
- 1670: 	//	for (j = 0; j < bm->K_num_abcbin - bm->K_num_microfauna; j++)
- 1671: 	//		fprintf(fid, " BA%d", j + 1);
- 1672: 
- 1673: 	/* New line */
- 1674: 	fprintf(fid, "\n");
- 1675: 	/* Return file pointer */
- 1676: 	return (fid);
- 1677: }
- 1678: 
- 1679: /**
- 1680:  *
- 1681:  *	\brief Routine to write data to the ABC curve indices file
- 1682:  *
- 1683:  */
- 1684: void Write_Abcs(FILE *fid, MSEBoxModel *bm, int ij) {
 ```
 
 **Suggested fix (from review):** cap in ParamIO
@@ -191,7 +162,8 @@ Loops to `K_num_abcbin` over `endnums` sized K_num_tot_sp; the parameter is not 
 ## WRT-04
 
 **header text** · Conf H / Sev L  
-**Listed lines:** 854, 1540, 1593, 2179, 1286/1323/1361, 2473, 1486, 2708, 2782
+**Lines (current code):** 854, 1540, 1593, 2179, 1286/1323/1361, 2473, 1486, 2708, 2782  
+**Lines at review (Oct 2026):** 854, 1540, 1593, 2179, 1286/1323/1361, 2473, 1486, 2708, 2782
 
 **Why it's thought to be a bug**
 
@@ -227,7 +199,8 @@ Hard-coded bin counts in headers; "Location" label; missing `#`/space/newline.
 ## WRT-05
 
 **dead code** · Conf H / Sev L  
-**Listed lines:** 2648-2669
+**Lines (current code):** 2648-2669  
+**Lines at review (Oct 2026):** 2648-2669
 
 **Why it's thought to be a bug**
 

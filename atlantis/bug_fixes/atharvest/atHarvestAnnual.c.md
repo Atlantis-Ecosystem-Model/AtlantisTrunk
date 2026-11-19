@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 1; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [HRV2-16](#hrv2-16) | 201 | M/H | buffer overrun | `TotCumCatch[k][n][bm->thisyear+1] = 0.0;`. TotCumCatch is allocated with `max_year = (int)(tstop/yr)+1` years… |  | [ ] |
 | [HRV2-17](#hrv2-17) | 195 | M/M | wrong index (year) | `bm->TotOldCumCatch[k][n] += TotCumCatch[k][n][bm->thisyear];` runs after `thisyear++` (atlantismain.c:385), s… |  | [ ] |
@@ -19,13 +19,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-16
 
 **buffer overrun** · Conf M / Sev H  
-**Listed lines:** 201
+**Lines (current code):** 201  
+**Lines at review (Oct 2026):** 201
 
 **Function:** `Harvest_Annual_Reset()`
 
 **Why it's thought to be a bug**
 
-`TotCumCatch[k][n][bm->thisyear+1] = 0.0;`. TotCumCatch is allocated with `max_year = (int)(tstop/yr)+1` years (atHarvestSetup.c:428-442). The main loop runs `while t < tstop` (atlantismain.c:693), and thisyear is incremented at each year start. If tstop is not a whole number of years (e.g. 10.5 yr), the last annual call has thisyear = floor(tstop/yr) = max_year-1, so thisyear+1 = max_year is out of range. This writes into the next fishery's year-0 entry, or past the block end for the last sp/nf. Function: `Harvest_Annual_Reset()`.
+`TotCumCatch[k][n][bm->thisyear+1] = 0.0;`. TotCumCatch is allocated with `max_year = (int)(tstop/yr)+1` years (atHarvestSetup.c:428-442). The main loop runs `while t < tstop` (atlantismain.c:822), and thisyear is incremented at each year start. If tstop is not a whole number of years (e.g. 10.5 yr), the last annual call has thisyear = floor(tstop/yr) = max_year-1, so thisyear+1 = max_year is out of range. This writes into the next fishery's year-0 entry, or past the block end for the last sp/nf. Function: `Harvest_Annual_Reset()`.
 
 **Current code** (`atharvest/atHarvestAnnual.c` lines 199–203)
 
@@ -57,13 +58,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-17
 
 **wrong index (year)** · Conf M / Sev M  
-**Listed lines:** 195
+**Lines (current code):** 195  
+**Lines at review (Oct 2026):** 195
 
 **Function:** `Harvest_Annual_Reset()`
 
 **Why it's thought to be a bug**
 
-`bm->TotOldCumCatch[k][n] += TotCumCatch[k][n][bm->thisyear];` runs after `thisyear++` (atlantismain.c:385), so it adds the new, empty year. The comment says the intent is the year just finished ("Could use TotCumCatch[thisyear-1] instead"). With bulkTAC the multi-year cumulative catch is never accumulated, which breaks bulk-TAC over-quota checks (atManage.c:797, atHarvestDiscards.c:279). Function: `Harvest_Annual_Reset()`.
+`bm->TotOldCumCatch[k][n] += TotCumCatch[k][n][bm->thisyear];` runs after `thisyear++` (atlantismain.c:451), so it adds the new, empty year. The comment says the intent is the year just finished ("Could use TotCumCatch[thisyear-1] instead"). With bulkTAC the multi-year cumulative catch is never accumulated, which breaks bulk-TAC over-quota checks (atManage.c:809, atHarvestDiscards.c:279). Function: `Harvest_Annual_Reset()`.
 
 **Current code** (`atharvest/atHarvestAnnual.c` lines 193–197)
 
@@ -95,7 +97,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HRV2-18
 
 **unit mismatch (log)** · Conf H / Sev L  
-**Listed lines:** 91-99, 110-112
+**Lines (current code):** 91-99, 110-112  
+**Lines at review (Oct 2026):** 91-99, 110-112
 
 **Function:** `Report_Annual_Harvest()`
 

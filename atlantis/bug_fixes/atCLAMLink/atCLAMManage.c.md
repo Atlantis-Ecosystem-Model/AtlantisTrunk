@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **7 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1), plus 2 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [LINK-16](#link-16) ⭐ | 440 | H/H | off-by-one / wrong condition | `if (bestScenarioIndex > 0 && bestStrategyIndex > 0) Implement_Strategy(...)` — indices are 0-based and -1 mea… |  | [ ] |
 | [LINK-17](#link-17) | 592-594 | H/M | copy-paste | `"Change in Seagrass Area"` returns `Assess_Get_Physical_Sampled_Value(bm, o2_wc_id, b)`, the dissolved oxygen… |  | [ ] |
@@ -23,7 +23,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-16
 
 **off-by-one / wrong condition** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 440
+**Lines (current code):** 440  
+**Lines at review (Oct 2026):** 440
 
 **Function:** `Run_CLAM()`
 
@@ -61,7 +62,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-17
 
 **copy-paste** · Conf H / Sev M  
-**Listed lines:** 592-594
+**Lines (current code):** 592-594  
+**Lines at review (Oct 2026):** 592-594
 
 **Function:** `Get_Box_Indicator_Value()`
 
@@ -101,7 +103,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-18
 
 **uninitialised / div-by-zero** · Conf M / Sev M  
-**Listed lines:** 155-163, 616-617
+**Lines (current code):** 155-163, 616-617  
+**Lines at review (Oct 2026):** 155-163, 616-617
 
 **Why it's thought to be a bug**
 
@@ -145,25 +148,56 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-19
 
 **stale value / div-by-zero** · Conf M / Sev M  
-**Listed lines:** 114-119, 152, 298, 348
+**Lines (current code):** 114-119, 152, 298, 348  
+**Lines at review (Oct 2026):** 114-119, 152, 298, 348
 
 **Why it's thought to be a bug**
 
 In the second loop every indicator gets `runScenarios = TRUE` (line 117; the comment above says "not running" — a copy-paste of line 74). `targetChange` is only updated when `requiredChange != 0`, so an indicator in range keeps a stale or uninitialised `targetChange`. Run_CLAM then divides by `fabs(targetChange)` (line 348), which gives inf/NaN when it is 0. Functions: `CLAM_Check_Indicators()`, `Run_CLAM()`.
 
-**Current code** (`atCLAMLink/atCLAMManage.c` lines 59–68) — code appears to have moved -53 lines since the review
+**Current code** (`atCLAMLink/atCLAMManage.c` lines 112–151 (truncated))
 
 ```c
-   59:  *
-   60:  */
-   61: void CLAM_Check_Indicators(MSEBoxModel *bm, FILE *llogfp) {
-   62: 	int i, b, bb;
-   63: 	double indicatorValue, change, requiredChange;
-   64: 	double tempIndicatorValue;
-   65: 	int runCLAM = FALSE; /* Assume that all the indicators are within the target range */
-   66: 	double SD;
-   67: 	//double maxScenarioImpact;
-   68: 	//int numOutputStates;
+  112: 	if (runCLAM) {
+  113: 		printf("numIndicators = %d\n", numIndicators);
+  114: 		for (i = 0; i < numIndicators; i++) {
+  115: 
+  116: 			/* By default we are not running the scenarios attached to this indicator */
+  117: 			indicators[i].runScenarios = TRUE;
+  118: 			//numOutputStates = CLAMOutputOptions[indicators[i].CLAMOutputIndex].numStates;
+  119: 			requiredChange = 0;
+  120: 
+  121: 			/* How we calculate the required change depends on the type of indicator.
+  122: 			 * If its a standard dev indicator then we calculate the standard deviation over all boxes.
+  123: 			 * If its a percent change indicator then we calculate the indicator value in a number of special boxes.
+  124: 			 */
+  125: 			/* For each site of interest - get the required change. Just look at the intense sites.*/
+  126: 			for (bb = 0; bb < bm->nsbox_i; bb++) {
+  127: 				b = bm->nsboxes[bb];
+  128: 				tempIndicatorValue = Get_Box_Indicator_Value(bm, i, b);
+  129: 
+  130: 				printf("name = %s, tempIndicatorValue = %e\n", indicators[i].CLAMOutputName, tempIndicatorValue);
+  131: 				/* Check that the indicator is inside the allowed range */
+  132: 				//if (tempIndicatorValue < indicators[i].minValue || tempIndicatorValue > indicators[i].maxValue) {
+  133: 
+  134: 				/* get the required change */
+  135: 				change = indicators[i].idealValue - tempIndicatorValue;
+  136: 
+  137: 				/* Save if its the max required change - might need other ways of doing this - might want to do weighted average over sites */
+  138: 				if (change > requiredChange || requiredChange == 0) {
+  139: 					requiredChange = change;
+  140: 					indicatorValue = tempIndicatorValue;
+  141: 
+  142: 					/* if this indicator values are returned from the CLAM in SD then get the SD of this indicator so we can
+  143: 					 * work out the required change as a prop of the SD.
+  144: 					 */
+  145: 					if (CLAMOutputOptions[indicators[i].CLAMOutputIndex].outputType == STANDARD_DEV) {
+  146: 
+  147: 						SD = Get_Indicator_SD(bm, i, b);
+  148: 					}
+  149: 				}
+  150: 				//}
+  151: 			}
 ```
 
 **Suggested fix (from review):** Set targetChange = 0 for in-range indicators and skip the distance division when it is 0.
@@ -186,7 +220,8 @@ In the second loop every indicator gets `runScenarios = TRUE` (line 117; the com
 ## LINK-20
 
 **div-by-zero** · Conf M / Sev M  
-**Listed lines:** 157
+**Lines (current code):** 157  
+**Lines at review (Oct 2026):** 157
 
 **Function:** `CLAM_Check_Indicators()`
 
@@ -224,7 +259,8 @@ In the second loop every indicator gets `runScenarios = TRUE` (line 117; the com
 ## LINK-21
 
 **logic** · Conf L / Sev M  
-**Listed lines:** 96, 138
+**Lines (current code):** 96, 138  
+**Lines at review (Oct 2026):** 96, 138
 
 **Function:** `CLAM_Check_Indicators()`
 
@@ -232,7 +268,7 @@ In the second loop every indicator gets `runScenarios = TRUE` (line 117; the com
 
 `if (change > requiredChange || requiredChange == 0)` selects the most positive change, not the largest magnitude, so when all changes are negative it keeps the smallest decrease. This contradicts the comment "Save if its the max required change". Function: `CLAM_Check_Indicators()`.
 
-**Current code** (`atCLAMLink/atCLAMManage.c` lines 94–133 (truncated))
+**Current code** (`atCLAMLink/atCLAMManage.c` lines 94–98)
 
 ```c
    94: 
@@ -240,41 +276,6 @@ In the second loop every indicator gets `runScenarios = TRUE` (line 117; the com
    96: 				if (change > requiredChange || requiredChange == 0) {
    97: 					requiredChange = change;
    98: 				}
-   99: 			}
-  100: 		}
-  101: 		if (requiredChange != 0) {
-  102: 			runCLAM = TRUE;
-  103: 
-  104: 		} else {
-  105: 			fprintf(bm->logFile, "CLAM run not required\n");
-  106: 		}
-  107: 	}
-  108: 
-  109: 	/* Ok one of our indicators is outside its acceptable range - now take all of the other indicators into account
-  110: 	 * so we don't select a strategy that will have nasty effects on the rest of them
-  111: 	 */
-  112: 	if (runCLAM) {
-  113: 		printf("numIndicators = %d\n", numIndicators);
-  114: 		for (i = 0; i < numIndicators; i++) {
-  115: 
-  116: 			/* By default we are not running the scenarios attached to this indicator */
-  117: 			indicators[i].runScenarios = TRUE;
-  118: 			//numOutputStates = CLAMOutputOptions[indicators[i].CLAMOutputIndex].numStates;
-  119: 			requiredChange = 0;
-  120: 
-  121: 			/* How we calculate the required change depends on the type of indicator.
-  122: 			 * If its a standard dev indicator then we calculate the standard deviation over all boxes.
-  123: 			 * If its a percent change indicator then we calculate the indicator value in a number of special boxes.
-  124: 			 */
-  125: 			/* For each site of interest - get the required change. Just look at the intense sites.*/
-  126: 			for (bb = 0; bb < bm->nsbox_i; bb++) {
-  127: 				b = bm->nsboxes[bb];
-  128: 				tempIndicatorValue = Get_Box_Indicator_Value(bm, i, b);
-  129: 
-  130: 				printf("name = %s, tempIndicatorValue = %e\n", indicators[i].CLAMOutputName, tempIndicatorValue);
-  131: 				/* Check that the indicator is inside the allowed range */
-  132: 				//if (tempIndicatorValue < indicators[i].minValue || tempIndicatorValue > indicators[i].maxValue) {
-  133: 
 ```
 
 **Suggested fix (from review):** Compare `fabs(change) > fabs(requiredChange)`.
@@ -297,7 +298,8 @@ In the second loop every indicator gets `runScenarios = TRUE` (line 117; the com
 ## LINK-22
 
 **div-by-zero** · Conf L / Sev L  
-**Listed lines:** 335, 348-349
+**Lines (current code):** 335, 348-349  
+**Lines at review (Oct 2026):** 335, 348-349
 
 **Function:** `Run_CLAM()`
 

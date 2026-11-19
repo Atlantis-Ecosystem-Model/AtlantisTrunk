@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 2; confidence H and severity H: 2; on the priority list: 2).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [PHY3-17](#phy3-17) ⭐ | 102-119,150-166,196-213 | H/H | operation repeated per tracer | `transfer_sed(sm,k,dst,thick)` moves the whole sediment slab (dz and *all* tracers, atvertgeom.c:398-417), but… |  | [ ] |
 | [PHY3-18](#phy3-18) ⭐ | 98,143,189 | H/H | unit mismatch (s vs days) | `thick[k] = ... * bm->dt * 86400.0`: the comment assumes dt is in days, but `bm->dt` is in seconds (read via U… |  | [ ] |
@@ -20,15 +20,30 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-17
 
 **operation repeated per tracer** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 102-119,150-166,196-213
+**Lines (current code):** 102-119,150-166,196-213  
+**Lines at review (Oct 2026):** 102-119,150-166,196-213
 
 **Why it's thought to be a bug**
 
 `transfer_sed(sm,k,dst,thick)` moves the whole sediment slab (dz and *all* tracers, atvertgeom.c:398-417), but it is called inside `for(n...)` over tracers. The bulk transfer therefore runs once for every qualifying particulate tracer, multiplying bioturbation by roughly the number of such tracers. Functions: `partic_diff()`, `expul()`, `mix_in()`.
 
-**Current code** (`atphysics/atbioturb.c` lines 114–135) — code appears to have moved +14 lines since the review
+**Current code** (`atphysics/atbioturb.c` lines 100–139 (truncated))
 
 ```c
+  100: 
+  101: 	/* Loop over tracers */
+  102: 	for(n=0; n<bm->ntracer; n++) {
+  103: 
+  104: 	/* Skip tracers which are dissolved or not allowed in the sediment or
+  105: 	macrobenthos (indicated by particle size).
+  106: 	*/
+  107: 		if( !(bm->tinfo[n].partic) || !(bm->tinfo[n].insed) || (bm->tinfo[n].psize >= 1.0) || !bm->tinfo[n].can_be_moved)
+  108: 			continue;
+  109: 
+  110: 	/* Do diffusion - using simplification of simply moving amounts in
+  111: 	the following way: x-1 <-> x <-> x+1 (where <-> means movement goes both ways
+  112: 	to and from x etc.). This is a simplification, but its OK wrt to the
+  113: 	small amounts being moved between layers in multi-layered cases. */
   114: 		for(k=tk; k<sm->nz-1; k++){
   115: 			if( k<sm->nz )
   116: 				transfer_sed(sm,k,k+1,thick[k]);
@@ -51,6 +66,10 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   133: 
   134: 	/* Nothing to do if less than 2 layers */
   135: 	if( tk >= sm->nz-1){
+  136: 		free1d(thick);
+  137: 		return;
+  138: 	}
+  139: 
 ```
 
 **Suggested fix (from review):** Drop the tracer loop and call transfer_sed once per layer
@@ -73,7 +92,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-18
 
 **unit mismatch (s vs days)** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 98,143,189
+**Lines (current code):** 98,143,189  
+**Lines at review (Oct 2026):** 98,143,189
 
 **Why it's thought to be a bug**
 
@@ -109,13 +129,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-19
 
 **changes lost (wrong storage)** · Conf H / Sev M  
-**Listed lines:** 59-65 (all routines)
+**Lines (current code):** 59-65 (all routines)  
+**Lines at review (Oct 2026):** 59-65 (all routines)
 
 **Function:** `bioturb()`
 
 **Why it's thought to be a bug**
 
-`transfer_sed` changes `sm->tr` (= `bm->sedtr[b]`, atlantismain.c:1191), not the `newsed` working copy passed in. atlantismain.c:575 then copies `newsedtr` back over `sedtr`, so bioturbation's tracer redistribution is thrown away while the layer-thickness changes persist. Function: `bioturb()`.
+`transfer_sed` changes `sm->tr` (= `bm->sedtr[b]`, atlantismain.c:1333), not the `newsed` working copy passed in. atlantismain.c:697 then copies `newsedtr` back over `sedtr`, so bioturbation's tracer redistribution is thrown away while the layer-thickness changes persist. Function: `bioturb()`.
 
 **Current code** (`atphysics/atbioturb.c` lines 57–67)
 
@@ -153,7 +174,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-20
 
 **off-by-one / missing init** · Conf M / Sev M  
-**Listed lines:** 90-118
+**Lines (current code):** 90-118  
+**Lines at review (Oct 2026):** 90-118
 
 **Function:** `partic_diff()`
 
@@ -161,9 +183,12 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `thick[k]` is only set for `k = tk+1..nz-1`. The loop at 114 uses `thick[tk]` (always 0) for the `tk -> tk+1` transfer, so the top layer never diffuses downward but does receive from below, giving net upward pumping. `if(k<sm->nz)` at 115 is always true. Function: `partic_diff()`.
 
-**Current code** (`atphysics/atbioturb.c` lines 91–123) — code appears to have moved +3 lines since the review
+**Current code** (`atphysics/atbioturb.c` lines 88–120)
 
 ```c
+   88: 
+   89: 	/* Calculate the amount to 'diffuse' (move) between layers */
+   90: 	for(k=tk+1; k<sm->nz; k++) {
    91: 		sm->partic_kz[k] = bm->bt_partic_kz * sm->biodens * sm->turbenh
    92: 			* bioprofile(bm,sm->gridz[k],sm->biodepth);
    93: 	/* To convert this rate to a thickness multiply by timestep (as then
@@ -194,9 +219,6 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   118: 				transfer_sed(sm,k,k-1,thick[k]);
   119: 		}
   120: 	}
-  121: 
-  122:     free1d(thick);
-  123: 
 ```
 
 **Suggested fix (from review):** Compute thick[tk] too, or use the interface value thick[k+1] for k->k+1

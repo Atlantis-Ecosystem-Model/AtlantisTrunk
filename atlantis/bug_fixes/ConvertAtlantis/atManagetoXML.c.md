@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **5 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [CNV2-01](#cnv2-01) | 911 (with 176-211) | H/M | wrong regex / key mismatch | `"^[A-Z]{2,3}_co_sp_catch[1-9]{1,2}"` requires a trailing digit and exactly 2-3 uppercase letters for the grou… |  | [ ] |
 | [CNV2-02](#cnv2-02) | 692-698 | H/M | parsing / wrong index | `PortXMLFunction()` treats the text after the last `_` as the fishery code. Fishery codes that contain `_` (e.… |  | [ ] |
@@ -21,7 +21,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV2-01
 
 **wrong regex / key mismatch** · Conf H / Sev M  
-**Listed lines:** 911 (with 176-211)
+**Lines (current code):** 911 (with 176-211)  
+**Lines at review (Oct 2026):** 911 (with 176-211)
 
 **Function:** `TACXML()`
 
@@ -59,7 +60,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV2-02
 
 **parsing / wrong index** · Conf H / Sev M  
-**Listed lines:** 692-698
+**Lines (current code):** 692-698  
+**Lines at review (Oct 2026):** 692-698
 
 **Function:** `PortXMLFunction()`
 
@@ -67,12 +69,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `PortXMLFunction()` treats the text after the last `_` as the fishery code. Fishery codes that contain `_` (e.g. `Astoria_Generic`, `Com_boat`, which exist in /Users/ful083/runs prm files) resolve to `Generic`/`boat`. `Util_Get_Fishery_Index()` then quits (atUtil.c:228), or maps to the wrong fishery if a fishery with that name exists. Function: `PortXMLFunction()`.
 
-**Current code** (`ConvertAtlantis/atManagetoXML.c` lines 687–697) — code appears to have moved -3 lines since the review
+**Current code** (`ConvertAtlantis/atManagetoXML.c` lines 690–700)
 
 ```c
-  687: 			strcmp(str, "ports_start") == 0 || strcmp(str, "ports_end") == 0 ||
-  688: 			strcmp(str, "ports_pop") == 0	|| strcmp(str, "ports_markets") == 0
-  689: 			|| strcmp(str, "ports_popchange") == 0 || strcmp(str, "ports_popnumchange") == 0 )
   690: 		return;
   691: 
   692: 	fisheryStr = strchr(str, '_');
@@ -81,6 +80,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   695: 		fisheryStr = strchr(fisheryStr, '_');
   696: 		fisheryStr++;
   697: 	}
+  698: 	fisheryIndex = Util_Get_Fishery_Index(bm, fisheryStr);
+  699: 	Util_XML_Set_Node_Value(ATLANTIS_FISHERY_ATTRIBUTE, parent, FisheryArray[fisheryIndex].fisheryCode, valueStr);
+  700: }
 ```
 
 **Suggested fix (from review):** Strip the known `ports_` prefix (or match against FisheryArray codes) instead of taking the last `_`
@@ -103,7 +105,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV2-03
 
 **logic (latent)** · Conf H / Sev L  
-**Listed lines:** 46-56
+**Lines (current code):** 46-56  
+**Lines at review (Oct 2026):** 46-56
 
 **Function:** `Fix_Not_Fished_Species_Last_XMLFunction()`
 
@@ -151,7 +154,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV2-04
 
 **NULL deref / overflow** · Conf M / Sev L  
-**Listed lines:** 112-127
+**Lines (current code):** 112-127  
+**Lines at review (Oct 2026):** 112-127
 
 **Function:** `BiMonthlyXML()`
 
@@ -204,7 +208,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## CNV2-05
 
 **copy-paste metadata** · Conf H / Sev L  
-**Listed lines:** 507, 590, 742, 749, 788
+**Lines (current code):** 507, 590, 742, 749, 788  
+**Lines at review (Oct 2026):** 507, 590, 742, 749, 788
 
 **Why it's thought to be a bug**
 

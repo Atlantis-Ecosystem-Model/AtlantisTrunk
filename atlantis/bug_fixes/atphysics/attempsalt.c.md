@@ -2,18 +2,18 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **8 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [PHY1-12](#phy1-12) ⭐ | 497-499 | H/H | invalid free | `if(propInput->input_Varname) c_free1d(propInput->input_Varname);`: `input_Varname` is declared `char input_Va… |  | [ ] |
 | [PHY1-13](#phy1-13) | 996 | H/M | wrong variable (copy-paste) | The sediment loop accumulates `inputData->total_input += ((new_value - cur_value) * bp->dz[k]);`, using the wa… |  | [ ] |
 | [PHY1-14](#phy1-14) | 999, 1011, 1154, 1165 | H/L | format/arg order | `quit("... %s in %d:%d at time %e ...", b, k, bm->dayt, inputData->variableName, ...)`: `%s` receives an int, … |  | [ ] |
-| [PHY1-15](#phy1-15) | 1122, 1148 | M/M | wrong quantity | When a reset fires, `total_input += new_value * dz`, which adds the whole new concentration. `tracerForcingBM`… |  | [ ] |
+| [PHY1-15](#phy1-15) | 1141, 1167 | M/M | wrong quantity | When a reset fires, `total_input += new_value * dz`, which adds the whole new concentration. `tracerForcingBM`… |  | [ ] |
 | [PHY1-16](#phy1-16) | 64-66, 155-163, 191-193 | M/M | uninitialised sentinel | Only `tempid`, `saltid` and `pHid` are set to -1. `windid`, `noiseid` and `lightpid` (and the matching `*input… |  | [ ] |
 | [PHY1-17](#phy1-17) | 471-480 | M/M | config backward-compat | The new keys `<name>_ignore_units` and `<name>_input_Varname` are read with `set_keyprm_errfn(quit)` in force … |  | [ ] |
 | [PHY1-18](#phy1-18) | 888-890 | H/L | wrong array in message | The epibenthic unit check compares against `bm->einfo[tracerID].units`, but the error message prints `bm->tinf… |  | [ ] |
@@ -24,13 +24,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-12
 
 **invalid free** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 497-499
+**Lines (current code):** 497-499  
+**Lines at review (Oct 2026):** 497-499
 
 **Function:** `free_PhyPropertyData()`
 
 **Why it's thought to be a bug**
 
-`if(propInput->input_Varname) c_free1d(propInput->input_Varname);`: `input_Varname` is declared `char input_Varname[BMSLEN]` in the struct (atlantisboxmodel.h:3997). The test is always true, and `free()` gets a pointer into the middle of `bm` or the `forceTracerInput` malloc block. At shutdown (`freePhysics` -> `freeTempSalt`) this aborts or corrupts the heap for every active property input (temp, salt, pH, forced tracers, ...). This code is new in the uncommitted changes. Function: `free_PhyPropertyData()`.
+`if(propInput->input_Varname) c_free1d(propInput->input_Varname);`: `input_Varname` is declared `char input_Varname[BMSLEN]` in the struct (atlantisboxmodel.h:4169). The test is always true, and `free()` gets a pointer into the middle of `bm` or the `forceTracerInput` malloc block. At shutdown (`freePhysics` -> `freeTempSalt`) this aborts or corrupts the heap for every active property input (temp, salt, pH, forced tracers, ...). This code is new in the uncommitted changes. Function: `free_PhyPropertyData()`.
 
 **Current code** (`atphysics/attempsalt.c` lines 495–501)
 
@@ -64,13 +65,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY1-13
 
 **wrong variable (copy-paste)** · Conf H / Sev M  
-**Listed lines:** 996
+**Lines (current code):** 996  
+**Lines at review (Oct 2026):** 996
 
 **Function:** `tracerForcingBM()`
 
 **Why it's thought to be a bug**
 
-The sediment loop accumulates `inputData->total_input += ((new_value - cur_value) * bp->dz[k]);`, using the water-column `dz`. It should use `bp->sm.dz[k]`, as `resetForcingBM` line 1148 does. `total_input` feeds the contaminant mass checks (atContaminants.c:2173-2250). Function: `tracerForcingBM()`.
+The sediment loop accumulates `inputData->total_input += ((new_value - cur_value) * bp->dz[k]);`, using the water-column `dz`. It should use `bp->sm.dz[k]`, as `resetForcingBM` line 1148 does. `total_input` feeds the contaminant mass checks (atContaminants.c:2226-2303). Function: `tracerForcingBM()`.
 
 **Current code** (`atphysics/attempsalt.c` lines 994–998)
 
@@ -102,13 +104,14 @@ The sediment loop accumulates `inputData->total_input += ((new_value - cur_value
 ## PHY1-14
 
 **format/arg order** · Conf H / Sev L  
-**Listed lines:** 999, 1011, 1154, 1165
+**Lines (current code):** 999, 1011, 1154, 1165  
+**Lines at review (Oct 2026):** 999, 1011, 1154, 1165
 
 **Why it's thought to be a bug**
 
 `quit("... %s in %d:%d at time %e ...", b, k, bm->dayt, inputData->variableName, ...)`: `%s` receives an int, so this crashes instead of printing the error message. In the 1-D branches (1011, 1165) `k` is also stale. Functions: `tracerForcingBM()`, `resetForcingBM()`.
 
-**Current code** (`atphysics/attempsalt.c` lines 997–1001)
+**Current code** (`atphysics/attempsalt.c` lines 997–1013)
 
 ```c
   997: 							quit("tracerForcingBM - %s in %d:%d at time %e sed value is not finite %e\n", b, k, bm->dayt, inputData->variableName, newsedtr[b][k][inputData->tracerID]);
@@ -116,6 +119,18 @@ The sediment loop accumulates `inputData->total_input += ((new_value - cur_value
   999: 						//fprintf(bm->logFile, "Time %e: %s in box %d:sediment layer %d is set to %e, inputData->tleft= %e, rewind = %d\n",
  1000: 						//		bm->dayt, inputData->variableName, b, k, newsedtr[b][k][inputData->tracerID], inputData->tleft, inputData->rewind);
  1001: 					}
+ 1002: 				}
+ 1003: 			} else {
+ 1004: 
+ 1005: 				/* We are just looking at 1D data */
+ 1006: 
+ 1007: 				/* Check the value read in is valid - otherwise quit now - non NAN values allowed ! */
+ 1008: 				if (!_finite(inputData->dataBuffer[b][0])) {
+ 1009: 					quit("tracerForcingBM - %s in %d:%d at time %e has non finite %e input value\n", b, k, bm->dayt, inputData->variableName, inputData->dataBuffer[b][0]);
+ 1010: 				}
+ 1011: 
+ 1012: 				if(inputData->isBoxValue == TRUE){
+ 1013: 					switch(inputData->boxValueIndex){
 ```
 
 **Suggested fix (from review):** Pass `variableName` first: `(..., inputData->variableName, b, k, bm->dayt, value)`
@@ -138,7 +153,8 @@ The sediment loop accumulates `inputData->total_input += ((new_value - cur_value
 ## PHY1-15
 
 **wrong quantity** · Conf M / Sev M  
-**Listed lines:** 1122, 1148
+**Lines (current code):** 1141, 1167  
+**Lines at review (Oct 2026):** 1122, 1148
 
 **Function:** `resetForcingBM()`
 
@@ -146,28 +162,9 @@ The sediment loop accumulates `inputData->total_input += ((new_value - cur_value
 
 When a reset fires, `total_input += new_value * dz`, which adds the whole new concentration. `tracerForcingBM` adds the actual change `(new_value - cur_value) * dz`. The reset path therefore overstates the mass added, which inflates the contaminant budget tolerance. Function: `resetForcingBM()`.
 
-**Current code** (`atphysics/attempsalt.c` lines 1120–1150)
+**Current code** (`atphysics/attempsalt.c` lines 1139–1169)
 
 ```c
- 1120:                         }
- 1121: 
- 1122:                         if (!_finite(newwc[b][k][inputData->tracerID])) {
- 1123:                             quit("resetForcingBM - %s in %d:%d at time %e is not finite %e\n", inputData->variableName, b, k, bm->dayt, newwc[b][k][inputData->tracerID]);
- 1124:                         }
- 1125:                         //fprintf(bm->logFile, "Time %e: %s in box %d:%d is set to %e, inputData->tleft= %e, rewind = %d, new_value: %e, cur_value: %e, tol_valueA: %e, tol_valueB: %e\n", bm->dayt, inputData->variableName, b, k, newwc[b][k][inputData->tracerID], inputData->tleft, inputData->rewind, new_value, cur_value, tol_valueA, tol_valueB);
- 1126:                     }
- 1127:                 }
- 1128:                 /* Loop through sediment columns */
- 1129:                 for (k = 0; k < bp->sm.nz; k++) {
- 1130: 
- 1131:                     if(inputData->missing_value_set == FALSE || inputData->dataBuffer[b][k + bm->wcnz] != inputData->missing_value){
- 1132:                         //newsedtr[b][k][inputData->tracerID] = inputData->dataBuffer[b][k + bm->wcnz];
- 1133:                         cur_value = newsedtr[b][k][inputData->tracerID];
- 1134:                         if(inputData->wgt_coefft < 0) {
- 1135:                             new_value = cur_value + inputData->dataBuffer[b][k + bm->wcnz];
- 1136:                         } else {
- 1137:                             new_value = ((1.0 - inputData->wgt_coefft) * cur_value + inputData->wgt_coefft * inputData->dataBuffer[b][k + bm->wcnz]);
- 1138:                         }
  1139:                         tol_valueA = (1.0 - inputData->ResetTol) * new_value;
  1140:                         tol_valueB = (1.0 + inputData->ResetTol) * new_value;
  1141:                         
@@ -180,6 +177,25 @@ When a reset fires, `total_input += new_value * dz`, which adds the whole new co
  1148: 
  1149:                         if (!_finite(newsedtr[b][k][inputData->tracerID])) {
  1150:                             quit("resetForcingBM - %s in %d:%d sed value at time %e is not finite %e\n", b, k, bm->dayt, inputData->variableName, newsedtr[b][k][inputData->tracerID]);
+ 1151:                         }
+ 1152:                         //fprintf(bm->logFile, "Time %e: %s in box %d:sediment layer %d is set to %e, inputData->tleft= %e, rewind = %d, new_value: %e, cur_value: %e, tol_valueA: %e, tol_valueB: %e\n", bm->dayt, inputData->variableName, b, k, newsedtr[b][k][inputData->tracerID], inputData->tleft, inputData->rewind, new_value, cur_value, tol_valueA, tol_valueB);
+ 1153:                     }
+ 1154:                 }
+ 1155:             } else {
+ 1156: 
+ 1157:                 /* We are just looking at 1D data */
+ 1158: 
+ 1159:                 /* Check the value read in is valid - otherwise quit now - non NAN values allowed ! */
+ 1160:                 if (!_finite(inputData->dataBuffer[b][0])) {
+ 1161:                     quit("resetForcingBM - %s in %d:%d at time %e is non finite %e input\n", b, k, bm->dayt, inputData->variableName, inputData->dataBuffer[b][0]);
+ 1162:                 }
+ 1163: 
+ 1164:                 if(inputData->isBoxValue == TRUE){
+ 1165:                     switch(inputData->boxValueIndex){
+ 1166:                         case EDDY_ID:
+ 1167:                             bm->boxes[b].eddy = inputData->dataBuffer[b][0];
+ 1168:                             break;
+ 1169:                         case VERTMIX_ID:
 ```
 
 **Suggested fix (from review):** `(new_value - cur_value) * dz`
@@ -202,7 +218,8 @@ When a reset fires, `total_input += new_value * dz`, which adds the whole new co
 ## PHY1-16
 
 **uninitialised sentinel** · Conf M / Sev M  
-**Listed lines:** 64-66, 155-163, 191-193
+**Lines (current code):** 64-66, 155-163, 191-193  
+**Lines at review (Oct 2026):** 64-66, 155-163, 191-193
 
 **Function:** `tempsalt_init()`
 
@@ -242,7 +259,8 @@ Only `tempid`, `saltid` and `pHid` are set to -1. `windid`, `noiseid` and `light
 ## PHY1-17
 
 **config backward-compat** · Conf M / Sev M  
-**Listed lines:** 471-480
+**Lines (current code):** 471-480  
+**Lines at review (Oct 2026):** 471-480
 
 **Function:** `init_forceTracers()`
 
@@ -289,7 +307,8 @@ The new keys `<name>_ignore_units` and `<name>_input_Varname` are read with `set
 ## PHY1-18
 
 **wrong array in message** · Conf H / Sev L  
-**Listed lines:** 888-890
+**Lines (current code):** 888-890  
+**Lines at review (Oct 2026):** 888-890
 
 **Function:** `open_phyprop()`
 
@@ -329,7 +348,8 @@ The epibenthic unit check compares against `bm->einfo[tracerID].units`, but the 
 ## PHY1-19
 
 **buffer sizing** · Conf L / Sev L  
-**Listed lines:** 822
+**Lines (current code):** 822  
+**Lines at review (Oct 2026):** 822
 
 **Function:** `open_phyprop()`
 
@@ -337,14 +357,14 @@ The epibenthic unit check compares against `bm->einfo[tracerID].units`, but the 
 
 `bytes = sizeof(double)*nbox*wcnz`, but each buffered step holds `nbox*(wcnz+sednz)` values (line 830), so the cache can exceed MAXBUFMEM. Function: `open_phyprop()`.
 
-**Current code** (`atphysics/attempsalt.c` lines 819–823)
+**Current code** (`atphysics/attempsalt.c` lines 820–824)
 
 ```c
-  819: 	 */
   820: 	bytes = (long int)sizeof(double) * (long int)bm->nbox * (long int)bm->wcnz;
   821: 	propInput->nbuf = min(MAXBUFMEM/bytes, propInput->nstep);
   822: 	if (propInput->nbuf < 1)
   823: 		propInput->nbuf = 1;
+  824: 
 ```
 
 **Suggested fix (from review):** Use `wcnz + sednz`

@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [UTL2-08](#utl2-08) | 142, 166 | H/M | prototype/definition type mismatch | The definitions are `Util_Alloc_Init_3D_Long_Double(int,int,int, double value)` and `Util_Alloc_Init_2D_Long_D… |  | [ ] |
 | [UTL2-09](#utl2-09) | 243 | H/L | prototype mismatch | The definition is `Util_Init_5D_Int(int *****array, ...)` but atUtilLib.h:112 declares `int ****array`. The po… |  | [ ] |
@@ -19,11 +19,12 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## UTL2-08
 
 **prototype/definition type mismatch** · Conf H / Sev M  
-**Listed lines:** 142, 166
+**Lines (current code):** 142, 166  
+**Lines at review (Oct 2026):** 142, 166
 
 **Why it's thought to be a bug**
 
-The definitions are `Util_Alloc_Init_3D_Long_Double(int,int,int, double value)` and `Util_Alloc_Init_2D_Long_Double(int,int, double value)`, but atUtilLib.h:102-103 declares the last argument as `long double value`. atUtilArray.c doesn't include atUtilLib.h, so the compiler never catches this. Callers (e.g. atlantisUtil/atUtilGroupIO.c:821-822, 894-896, which include atUtilLib.h) pass a long double. On x86-64 Linux, long double goes on the stack and double in xmm0, so the callee reads a garbage init value and arrays such as `preyEaten` and `ratioLost` may not start at 0. On ARM64 macOS long double == double, so the problem stays hidden there. This is undefined behaviour. Functions: `Util_Alloc_Init_2D_Long_Double()`, `Util_Alloc_Init_3D_Long_Double()`.
+The definitions are `Util_Alloc_Init_3D_Long_Double(int,int,int, double value)` and `Util_Alloc_Init_2D_Long_Double(int,int, double value)`, but atUtilLib.h:102-103 declares the last argument as `long double value`. atUtilArray.c doesn't include atUtilLib.h, so the compiler never catches this. Callers (e.g. atlantisUtil/atUtilGroupIO.c:820-821, 893-895, which include atUtilLib.h) pass a long double. On x86-64 Linux, long double goes on the stack and double in xmm0, so the callee reads a garbage init value and arrays such as `preyEaten` and `ratioLost` may not start at 0. On ARM64 macOS long double == double, so the problem stays hidden there. This is undefined behaviour. Functions: `Util_Alloc_Init_2D_Long_Double()`, `Util_Alloc_Init_3D_Long_Double()`.
 
 **Current code** (`atlantisUtil/atUtilArray.c` lines 140–168)
 
@@ -79,7 +80,8 @@ The definitions are `Util_Alloc_Init_3D_Long_Double(int,int,int, double value)` 
 ## UTL2-09
 
 **prototype mismatch** · Conf H / Sev L  
-**Listed lines:** 243
+**Lines (current code):** 243  
+**Lines at review (Oct 2026):** 243
 
 **Function:** `Util_Init_5D_Int()`
 
@@ -117,7 +119,8 @@ The definition is `Util_Init_5D_Int(int *****array, ...)` but atUtilLib.h:112 de
 ## UTL2-10
 
 **buffer overrun (latent)** · Conf M / Sev L  
-**Listed lines:** 396-403, 439-444
+**Lines (current code):** 396-403, 439-444  
+**Lines at review (Oct 2026):** 396-403, 439-444
 
 **Why it's thought to be a bug**
 

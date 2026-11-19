@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **10 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [ECON-18](#econ-18) ⭐ | 496-515 | H/H | accumulator in wrong loop | `tot_expecteffort += bm->EffortSchedule[nf][ns][month][hist_id];` is inside the species loop, so annual effort… |  | [ ] |
 | [ECON-19](#econ-19) | 350 | H/M | accumulator never reset | `QuotaAlloc[..][spexpectvalue_id] +=` every year, but only `spexpectcatch_id` is reset (Initialise_Annual_Effo… |  | [ ] |
@@ -26,7 +26,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-18
 
 **accumulator in wrong loop** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 496-515
+**Lines (current code):** 496-515  
+**Lines at review (Oct 2026):** 496-515
 
 **Function:** `Dynamic_Effort_Allocation()`
 
@@ -83,7 +84,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-19
 
 **accumulator never reset** · Conf H / Sev M  
-**Listed lines:** 350
+**Lines (current code):** 350  
+**Lines at review (Oct 2026):** 350
 
 **Function:** `Calculate_Projected_Income()`
 
@@ -121,7 +123,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-20
 
 **wrong index** · Conf H / Sev M  
-**Listed lines:** 1012
+**Lines (current code):** 1012  
+**Lines at review (Oct 2026):** 1012
 
 **Function:** `Calculate_Box_Allocation()`
 
@@ -159,7 +162,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-21
 
 **rank vs species index** · Conf M / Sev M  
-**Listed lines:** 378-381, 398-407
+**Lines (current code):** 378-381, 398-407  
+**Lines at review (Oct 2026):** 378-381, 398-407
 
 **Function:** `Identify_Target_Species()`
 
@@ -226,7 +230,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-22
 
 **logic / parameter overwritten** · Conf M / Sev M  
-**Listed lines:** 383-419
+**Lines (current code):** 383-419  
+**Lines at review (Oct 2026):** 383-419
 
 **Function:** `Identify_Target_Species()`
 
@@ -299,7 +304,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-23
 
 **sentinel collision** · Conf M / Sev M  
-**Listed lines:** 427, 431, 444-447
+**Lines (current code):** 427, 431, 444-447  
+**Lines at review (Oct 2026):** 427, 431, 444-447
 
 **Function:** `Identify_Target_Species()`
 
@@ -357,7 +363,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-24
 
 **unit mismatch** · Conf M / Sev M  
-**Listed lines:** 1047-1048
+**Lines (current code):** 1047-1048  
+**Lines at review (Oct 2026):** 1047-1048
 
 **Function:** `Do_EconArray_Rescaling()`
 
@@ -396,7 +403,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-25
 
 **division by zero** · Conf M / Sev M  
-**Listed lines:** 541
+**Lines (current code):** 541  
+**Lines at review (Oct 2026):** 541
 
 **Function:** `Dynamic_Effort_Allocation()`
 
@@ -434,7 +442,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-26
 
 **accumulator never reset** · Conf M / Sev L  
-**Listed lines:** 247
+**Lines (current code):** 247  
+**Lines at review (Oct 2026):** 247
 
 **Function:** `Initialise_Annual_Effort()`
 
@@ -472,7 +481,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## ECON-27
 
 **log text** · Conf H / Sev L  
-**Listed lines:** 740
+**Lines (current code):** 740  
+**Lines at review (Oct 2026):** 740
 
 **Function:** `Stocastic_Effort_Allocation()`
 
@@ -480,7 +490,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The message says "100th iteration" but the bail-out is at `itc > 1000`. Function: `Stocastic_Effort_Allocation()`.
 
-**Current code** (`ateconomic/atEconomicAnnual.c` lines 738–742) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `Stocastic_Effort_Allocation()` now starts at line 12
+**Current code** (`ateconomic/atEconomicAnnual.c` lines 738–742)
 
 ```c
   738: 

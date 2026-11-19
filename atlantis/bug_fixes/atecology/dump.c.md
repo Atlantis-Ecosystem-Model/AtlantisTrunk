@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [EMISC-09](#emisc-09) | 300 | H/L | format specifier | `fscanf(f, "bnd_vert %e %e ", &p.x, &p.y)` reads into `dpoint` members that are `double` (sjwlib/include/polyl… |  | [ ] |
 | [EMISC-10](#emisc-10) | 445-463 | H/L | NULL dereference | `hd->fname`, `hd->fid`, `hd->nb`... are read in the declarations before the `if (hd == NULL ...)` check. Funct… |  | [ ] |
@@ -23,7 +23,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EMISC-09
 
 **format specifier** · Conf H / Sev L  
-**Listed lines:** 300
+**Lines (current code):** 300  
+**Lines at review (Oct 2026):** 300
 
 **Function:** `init_from_bm_dump()`
 
@@ -61,7 +62,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EMISC-10
 
 **NULL dereference** · Conf H / Sev L  
-**Listed lines:** 445-463
+**Lines (current code):** 445-463  
+**Lines at review (Oct 2026):** 445-463
 
 **Function:** `write_exchange_dump()`
 
@@ -117,7 +119,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EMISC-11
 
 **leak / uninitialised** · Conf M / Sev L  
-**Listed lines:** 104, 111, 189-194, 247-252
+**Lines (current code):** 104, 111, 189-194, 247-252  
+**Lines at review (Oct 2026):** 104, 111, 189-194, 247-252
 
 **Function:** `init_from_meco_dump()`
 
@@ -125,7 +128,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `validu` is never freed; `meco->zgrid[nk]` is never set; for a non-boundary cell with 0 MECO cells, `c->mecocells` is left uninitialised (only the boundary branch sets NULL). Function: `init_from_meco_dump()`.
 
-**Current code** (`atecology/dump.c` lines 102–106)
+**Current code** (`atecology/dump.c` lines 102–113)
 
 ```c
   102:     //h2acell = malloc(ni * nj * sizeof(double));
@@ -133,6 +136,13 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   104:     validu = malloc(ni * nj * nk * sizeof(double));
   105:     nxy = ni * nj;
   106:     meco->count[0] = 1;
+  107:     meco->count[1] = nk;
+  108:     meco->count[2] = nj;
+  109:     meco->count[3] = ni;
+  110:     meco->ncells = nk * nj * ni;
+  111:     meco->zgrid = malloc((nk+1) * sizeof(double));
+  112: 
+  113:     /* read cell positions */
 ```
 
 **Suggested fix (from review):** free(validu); set mecocells=NULL in both branches

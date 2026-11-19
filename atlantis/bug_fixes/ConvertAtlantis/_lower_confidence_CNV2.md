@@ -14,7 +14,7 @@ These came from section B.3 of the list. They were not raised as findings. Tick 
 
 ### LC-1
 
-These are outside my files but surfaced while checking readers. atManageParamIO.c:662 reads `CPUEshotavgdis` from key `"CPUEshotfdis"`, which is a copy-paste and gives the wrong value. In atUtilXML.c `Util_XML_Parse_Create_Node()` (1360) the duplicate-key test is `skipToKeyEndNoRewind(...) < 0`, while `Parse_File` uses `> 0` (atCreateXML.c:216). Also at atUtilXML.c:1373, `strcpy(valuestr, tempBuf)` writes the "value unit" string back into the middle of `buf`, which can overrun the line buffer.
+These are outside my files but surfaced while checking readers. atManageParamIO.c:662 reads `CPUEshotavgdis` from key `"CPUEshotfdis"`, which is a copy-paste and gives the wrong value. In atUtilXML.c `Util_XML_Parse_Create_Node()` (1360) the duplicate-key test is `skipToKeyEndNoRewind(...) < 0`, while `Parse_File` uses `> 0` (atCreateXML.c:216). Also at atUtilXML.c:1426, `strcpy(valuestr, tempBuf)` writes the "value unit" string back into the middle of `buf`, which can overrun the line buffer.
 
 - [ ] Investigate   - [ ] Ignore
 

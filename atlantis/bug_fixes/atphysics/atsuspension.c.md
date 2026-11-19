@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 2; confidence H and severity H: 1; on the priority list: 1), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [PHY3-21](#phy3-21) ⭐ | 153-156 | H/H | missing braces | `else if (insed && dissol && can_be_moved)` has no braces, so line 156 `newsed[b][tk][n] -= newsed[b][tk][n]*p… |  | [ ] |
 | [PHY3-22](#phy3-22) | 146,156,164-165 | M/H | erosion counted twice | Sediment tracers are per volume (summary output multiplies by sm.dz, atsummaryIO.c:346). After moving `c*ervol… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-21
 
 **missing braces** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 153-156
+**Lines (current code):** 153-156  
+**Lines at review (Oct 2026):** 153-156
 
 **Function:** `resuspendBM()`
 
@@ -61,7 +62,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## PHY3-22
 
 **erosion counted twice** · Conf M / Sev H  
-**Listed lines:** 146,156,164-165
+**Lines (current code):** 146,156,164-165  
+**Lines at review (Oct 2026):** 146,156,164-165
 
 **Function:** `resuspendBM()`
 
@@ -118,7 +120,8 @@ Sediment tracers are per volume (summary output multiplies by sm.dz, atsummaryIO
 ## PHY3-23
 
 **division by zero** · Conf M / Sev M  
-**Listed lines:** 66,100
+**Lines (current code):** 66,100  
+**Lines at review (Oct 2026):** 66,100
 
 **Function:** `resuspendBM()`
 
@@ -190,7 +193,8 @@ Sediment tracers are per volume (summary output multiplies by sm.dz, atsummaryIO
 ## PHY3-24
 
 **logic: loop variable not set** · Conf M / Sev M  
-**Listed lines:** 46,108-120
+**Lines (current code):** 46,108-120  
+**Lines at review (Oct 2026):** 46,108-120
 
 **Function:** `resuspendBM()`
 

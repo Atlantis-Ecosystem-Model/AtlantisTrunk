@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1), plus 2 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [HARV-11](#harv-11) ⭐ | 232 | H/H | wrong parameter id | `Get_Fishery_Group_Change_Scale(bm, nf, sp, bm->flagchangeF, mFC_num_changes_id, mFCchange[sp])` passes the gl… |  | [ ] |
 | [HARV-12](#harv-12) | 709-718, 732-743 | M/L | copy-paste | The "baseline" selectivity `sel_temp` should be computed without the change offsets. For `q_bimodal_id`, line … |  | [ ] |
@@ -19,7 +19,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HARV-11
 
 **wrong parameter id** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 232
+**Lines (current code):** 232  
+**Lines at review (Oct 2026):** 232
 
 **Function:** `Get_Fishing_Mortality()`
 
@@ -57,7 +58,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## HARV-12
 
 **copy-paste** · Conf M / Sev L  
-**Listed lines:** 709-718, 732-743
+**Lines (current code):** 709-718, 732-743  
+**Lines at review (Oct 2026):** 709-718, 732-743
 
 **Function:** `Get_addlsm_Scale()`
 
@@ -65,10 +67,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 The "baseline" selectivity `sel_temp` should be computed without the change offsets. For `q_bimodal_id`, line 714 adds `addlsm` to `sel_bilsm2` for the baseline second mode. For `q_binormal_id`, lines 737-738 add both `addlsm` and `addsigma` to the baseline. So `sel - sel_temp` understates the change. Only affects invertebrates using bimodal curves with selectivity changes. Function: `Get_addlsm_Scale()`.
 
-**Current code** (`atharvest/atHarvestCatch.c` lines 706–744)
+**Current code** (`atharvest/atHarvestCatch.c` lines 707–745)
 
 ```c
-  706: 				returnValue = sel - sel_temp;
   707: 				break;
   708: 			case q_bimodal_id: /* Bimodal assymetric "normal" selectivity curve based on size */
   709: 				sel_lsm = bm->FISHERYprms[nf][sel_bilsm1_id];
@@ -107,6 +108,7 @@ The "baseline" selectivity `sel_temp` should be computed without the change offs
   742:                 sel_temp2 = sel_ampli * exp(step2);
   743:                 sel_temp = max(sel_temp1, sel_temp2);
   744:                 sel_lsm = bm->FISHERYprms[nf][sel_bilsm1_id] + addlsm;
+  745:                 sel_sigma = bm->FISHERYprms[nf][sel_bisigma_id] + addsigma;
 ```
 
 **Suggested fix (from review):** Drop `+ addlsm` / `+ addsigma` in the baseline (`sel_temp2`) lines.
@@ -129,13 +131,14 @@ The "baseline" selectivity `sel_temp` should be computed without the change offs
 ## HARV-13
 
 **cohort vs cohort x genotype** · Conf M / Sev M  
-**Listed lines:** 829, 835
+**Lines (current code):** 829, 835  
+**Lines at review (Oct 2026):** 829, 835
 
 **Function:** `Harvest_How_Much_Fishery_Access()`
 
 **Why it's thought to be a bug**
 
-`Ecology_Get_Size(bm, species, Wgt, basechrt)` passes the age class. `Ecology_Get_Size` indexes `sn[]`, `X_RS[]` and `VERTinfo[][]` by cohort x genotype (atUtilGroupIO.c:771,843), and the main fishing path passes `chrt` (atHarvest.c:444). With `numGeneTypes > 1`, this gives the wrong genotype's length, so selectivity in the output access calculation is wrong. Function: `Harvest_How_Much_Fishery_Access()`.
+`Ecology_Get_Size(bm, species, Wgt, basechrt)` passes the age class. `Ecology_Get_Size` indexes `sn[]`, `X_RS[]` and `VERTinfo[][]` by cohort x genotype (atUtilGroupIO.c:770,842), and the main fishing path passes `chrt` (atHarvest.c:444). With `numGeneTypes > 1`, this gives the wrong genotype's length, so selectivity in the output access calculation is wrong. Function: `Harvest_How_Much_Fishery_Access()`.
 
 **Current code** (`atharvest/atHarvestCatch.c` lines 827–837)
 

@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [SS3-41](#ss3-41) | 73-76 | H/M | off-by-one (Fortran port) | `a1 = (int)(ran3*np + 1)` gives the range 1..np: `dum[0]` is never chosen and `dum[np]` (unfilled, 0) can be. … |  | [ ] |
 | [SS3-42](#ss3-42) | 36-39, 45-49, 64 | M/L | leak / div0 / fixed buffer | `dum` is allocated before the `tc==0` early return, which leaks it. `tot==0` produces NaN props. `dum[15000]` … |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SS3-41
 
 **off-by-one (Fortran port)** · Conf H / Sev M  
-**Listed lines:** 73-76
+**Lines (current code):** 73-76  
+**Lines at review (Oct 2026):** 73-76
 
 **Function:** `GenMnomial()`
 
@@ -61,7 +62,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SS3-42
 
 **leak / div0 / fixed buffer** · Conf M / Sev L  
-**Listed lines:** 36-39, 45-49, 64
+**Lines (current code):** 36-39, 45-49, 64  
+**Lines at review (Oct 2026):** 36-39, 45-49, 64
 
 **Function:** `GenMnomial()`
 
@@ -69,7 +71,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `dum` is allocated before the `tc==0` early return, which leaks it. `tot==0` produces NaN props. `dum[15000]` is fixed while np can reach about 10000+ndim/2, with no bound check. Function: `GenMnomial()`.
 
-**Current code** (`atSS3Link/atSS3Util.c` lines 34–66) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `GenMnomial()` now starts at line 32
+**Current code** (`atSS3Link/atSS3Util.c` lines 34–66)
 
 ```c
    34: 	int i,j,icount,np,a,a1;
@@ -127,7 +129,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## SS3-43
 
 **off-by-one (NR port)** · Conf H / Sev L  
-**Listed lines:** 235-241
+**Lines (current code):** 235-241  
+**Lines at review (Oct 2026):** 235-241
 
 **Function:** `LUBKSB()`
 
@@ -135,7 +138,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 In the 0-based port, `ii=0` serves both as the "not started" flag and as a valid index: if the first nonzero is at i=0, forward substitution never starts. The loop `j < (i-1)` should be `j < i`. INVM gives wrong inverses. INVM/LUBKSB are currently never called (latent). Function: `LUBKSB()`.
 
-**Current code** (`atSS3Link/atSS3Util.c` lines 233–243) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `LUBKSB()` now starts at line 227
+**Current code** (`atSS3Link/atSS3Util.c` lines 233–243)
 
 ```c
   233:         sum = B[ip];
@@ -171,7 +174,8 @@ In the 0-based port, `ii=0` serves both as the "not started" flag and as a valid
 ## SS3-44
 
 **leak / div0** · Conf M / Sev L  
-**Listed lines:** 165, 174-177
+**Lines (current code):** 165, 174-177  
+**Lines at review (Oct 2026):** 165, 174-177
 
 **Function:** `LUDCMP()`
 
@@ -179,7 +183,7 @@ In the 0-based port, `ii=0` serves both as the "not started" flag and as a valid
 
 `VV` is never freed, and on a singular row `VV[i] = 1.0/big` is computed with big==0 after only a printf. Latent (unused). Function: `LUDCMP()`.
 
-**Current code** (`atSS3Link/atSS3Util.c` lines 163–179) — ⚠ the quoted code was not found in the current file (changed, or already fixed?). These are just the listed line numbers, which may now hold unrelated code; `LUDCMP()` now starts at line 159
+**Current code** (`atSS3Link/atSS3Util.c` lines 163–179) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
   163:     double *VV;

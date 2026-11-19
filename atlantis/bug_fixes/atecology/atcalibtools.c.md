@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **2 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [EINIT-25](#einit-25) | 364-375, 382-389, 434-440 | M/M | off-by-one / OOB read | `qid = EMBRYO[sp].next_larvae; if (SpawnRecruitOverlap) qid++;` is then used in `Larvae[k][n][qid]` and `Start… |  | [ ] |
 | [EINIT-26](#einit-26) | 486-538 | M/M | buffer overrun | `strcat(keywithin/keymore/keyless, key)` appends about 25-30 chars per prey group (e.g. `" CODE-12 (>SN 1.2345… |  | [ ] |
@@ -18,15 +18,16 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EINIT-25
 
 **off-by-one / OOB read** · Conf M / Sev M  
-**Listed lines:** 364-375, 382-389, 434-440
+**Lines (current code):** 364-375, 382-389, 434-440  
+**Lines at review (Oct 2026):** 364-375, 382-389, 434-440
 
 **Function:** `Check_Gape()`
 
 **Why it's thought to be a bug**
 
-`qid = EMBRYO[sp].next_larvae; if (SpawnRecruitOverlap) qid++;` is then used in `Larvae[k][n][qid]` and `StartDay[n][qid]`. Both arrays have queue length `max_num = num_in_spawn_queue` (atbiolsetup.c:3807/3816). The guard `if (next_larvae > num_in_spawn_queue)` permits `next_larvae == num_in_spawn_queue`, and the `++` can add one more, so the reads can go past the end, most likely at `coming_to_end`. Function: `Check_Gape()`.
+`qid = EMBRYO[sp].next_larvae; if (SpawnRecruitOverlap) qid++;` is then used in `Larvae[k][n][qid]` and `StartDay[n][qid]`. Both arrays have queue length `max_num = num_in_spawn_queue` (atbiolsetup.c:4035/3816). The guard `if (next_larvae > num_in_spawn_queue)` permits `next_larvae == num_in_spawn_queue`, and the `++` can add one more, so the reads can go past the end, most likely at `coming_to_end`. Function: `Check_Gape()`.
 
-**Current code** (`atecology/atcalibtools.c` lines 362–377)
+**Current code** (`atecology/atcalibtools.c` lines 362–391)
 
 ```c
   362: 					totrec = 0;
@@ -45,6 +46,20 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   375:                         quit("EMBRYO[%s].next_larvae (%d) > EMBRYO[].num_in_spawn_queue %d)\n", FunctGroupArray[sp].groupCode, EMBRYO[sp].next_larvae, EMBRYO[sp].num_in_spawn_queue);
   376: 
   377:                     
+  378:                     for (n = 0; n < FunctGroupArray[sp].numCohortsXnumGenes; n++) {
+  379:                         
+  380:                         if (n < FunctGroupArray[sp].numGeneTypes) {
+  381: 							for (k = 0; k < FunctGroupArray[sp].numStocks; k++) {
+  382: 								totrec += EMBRYO[sp].Larvae[k][n][qid];
+  383: 								totrecold += EMBRYO[sp].Larvae[k][n][qidi];
+  384: 
+  385:                                 //printf("Last step Check_Gape W-%d-%d %s k: %d qid: %d qidi: %d\n", sp, n, FunctGroupArray[sp].groupCode, k, qid, qidi);
+  386:                                 
+  387: 								if(EMBRYO[sp].Larvae[k][n][qid] || EMBRYO[sp].Larvae[k][n][expect_id])
+  388: 									fprintf(llogfp,"%s stock %d, gene: %d, VERTembryo: %e, VERTembryoOld: %e\n",
+  389: 											FunctGroupArray[sp].groupCode, k, n, EMBRYO[sp].Larvae[k][n][qid], EMBRYO[sp].Larvae[k][n][qidi]);
+  390:                                 
+  391:                                 
 ```
 
 **Suggested fix (from review):** Guard with `if (qid >= num_in_spawn_queue) qid = num_in_spawn_queue - 1;` (and use `>=` in the check)
@@ -67,13 +82,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EINIT-26
 
 **buffer overrun** · Conf M / Sev M  
-**Listed lines:** 486-538
+**Lines (current code):** 486-538  
+**Lines at review (Oct 2026):** 486-538
 
 **Function:** `Check_Gape()`
 
 **Why it's thought to be a bug**
 
-`strcat(keywithin/keymore/keyless, key)` appends about 25-30 chars per prey group (e.g. `" CODE-12 (>SN 1.234567e+00)"`) into `char[BMSLEN*2]` (1024) buffers with no length check. A predator stage with more than about 35-40 linked vertebrate prey in one category overflows the stack buffer. Function: `Check_Gape()`.
+`strcat(keywithin/keymore/keyless, key)` appends about 25-30 chars per prey group (e.g. `" CODE-12 (>SN 1.234567e+00)"`) into `char[BMSLEN*2]` (1024?) buffers with no length check. A predator stage with more than about 35-40 linked vertebrate prey in one category overflows the stack buffer. Function: `Check_Gape()`.
 
 **Current code** (`atecology/atcalibtools.c` lines 484–523 (truncated))
 

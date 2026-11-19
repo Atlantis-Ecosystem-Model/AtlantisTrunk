@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 1; confidence H and severity H: 1; on the priority list: 1).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [LINK-23](#link-23) ⭐ | 321-328 | H/H | buffer / sizeof(pointer) / overlap | `snprintf(str, sizeof(str), "%s,%e", str, ...)` — `str` is a `char *`, so `sizeof(str)` is 8 and the output is… |  | [ ] |
 | [LINK-24](#link-24) | 345, 353 | H/M | copy-paste / ignored param | `soap_ctx_new_with_method(EwEUrn, EwEGetBiomassMethod, ...)` and `soap_env_add_item(..., "name", "PL")` — the … |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-23
 
 **buffer / sizeof(pointer) / overlap** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 321-328
+**Lines (current code):** 321-328  
+**Lines at review (Oct 2026):** 321-328
 
 **Function:** `buildDataString()`
 
@@ -65,7 +66,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-24
 
 **copy-paste / ignored param** · Conf H / Sev M  
-**Listed lines:** 345, 353
+**Lines (current code):** 345, 353  
+**Lines at review (Oct 2026):** 345, 353
 
 **Function:** `getParameter()`
 
@@ -111,7 +113,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-25
 
 **copy-paste** · Conf M / Sev M  
-**Listed lines:** 252
+**Lines (current code):** 252  
+**Lines at review (Oct 2026):** 252
 
 **Function:** `callBooleanServerFunction()`
 
@@ -149,7 +152,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-26
 
 **leak** · Conf L / Sev L  
-**Listed lines:** 265-268
+**Lines (current code):** 265-268  
+**Lines at review (Oct 2026):** 265-268
 
 **Function:** `callBooleanServerFunction()`
 

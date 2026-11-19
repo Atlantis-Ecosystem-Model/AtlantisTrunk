@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 2 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [NUTR-17](#nutr-17) | 560, 578-660 | M/M | stale globals | `H2Otemp`, `current_SALT` and `current_PH` are only assigned inside `if (!checked_already)`. When the box/laye… |  | [ ] |
 | [NUTR-18](#nutr-18) | 626 | M/M | wrong variable | The depth correction uses the global `cell_depth` instead of the `cdepth` argument (which line 567 uses). Call… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## NUTR-17
 
 **stale globals** · Conf M / Sev M  
-**Listed lines:** 560, 578-660
+**Lines (current code):** 560, 578-660  
+**Lines at review (Oct 2026):** 560, 578-660
 
 **Function:** `Properties_At_Depth()`
 
@@ -28,7 +29,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 `H2Otemp`, `current_SALT` and `current_PH` are only assigned inside `if (!checked_already)`. When the box/layer has already been checked since the last reset of `checkedalready` (attime.c:84 daily, attempsalt.c on forcing), these globals keep whatever box/layer was computed last. Parameter_Q10 (atq10.c:126-133) then computes Tcorr from that stale value. This hits repeat calls such as atmovement.c:904/3029 (box 1) and atexternalpop.c:42, and every timestep within a day when no forcing reset happens. Function: `Properties_At_Depth()`.
 
-**Current code** (`atecology/atbiophysics.c` lines 558–562)
+**Current code** (`atecology/atbiophysics.c` lines 558–597 (truncated))
 
 ```c
   558: 
@@ -36,6 +37,41 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
   560: 	checked_already = bm->checkedalready[pBox->n][clayer + flagmodel * bm->wcnz];
   561:     
   562: 	/* Regression and southern hemisphere */
+  563: 	if ((bm->flagmodeltemp == 1) && (!bm->flaghemisphere)) {
+  564: 		/* Determine sea surface temperature using linear regression
+  565: 		 equations determined from CARS data. Assumes midpoint is
+  566: 		 the value in metres of the latitude (-ve metres as -ve latitude) */
+  567: 		if (cdepth < -250.0) {
+  568: 			basetemp = 0.000005 * midpoint + 38.158;
+  569: 		} else {
+  570: 			basetemp = 0.000006 * midpoint + 38.365;
+  571: 		}
+  572: 	} else if (bm->flagmodeltemp == 2) {
+  573: 		basetemp = bm->baseline_temp;
+  574: 	} else {
+  575: 		basetemp = Y1[Temp_i];
+  576: 	}
+  577: 
+  578: 	if (!checked_already) { /* Only do calculations if haven't already */
+  579: 
+  580: 		/* if this is the sediment use the Tchange value in the first water column layer */
+  581: 		if(flagmodel == SED){
+  582: 			T_scale = bm->TempLayerScalar[0];
+  583: 		}else{
+  584: 			T_scale = bm->TempLayerScalar[clayer];
+  585: 		}
+  586: 
+  587: 		//fprintf(bm->logFile, "Time %e, box %d, layer %d, T_scale = %e\n", bm->dayt, pBox->n, clayer, T_scale);
+  588: 
+  589: 		/* If appropriate use a regression to define the seasonal signal
+  590: 		 Note that would normally convert degrees to radians as 2pi/360, but as got 365 days
+  591: 		 in a revolution (one turn through the calendar) then divide by 365 instead. Also offset
+  592: 		 the peak value by 31 days as don't peak summer heat in the water column until after mid summer
+  593: 		 (so in February not January).
+  594: 		 */
+  595: 		if (bm->flagseason && bm->flagmodeltemp > 0) {
+  596: 			if (!bm->flaghemisphere) // Southern hemisphere
+  597: 				surfH2Otemp = (bm->temp_amplitude * cos(2.0 * 3.1415926 * (dayt - 31.0) / 365.0) + basetemp);
 ```
 
 **Suggested fix (from review):** In the `else` branch reload `H2Otemp = Y1[Temp_i]; current_SALT = Y1[Salinity_i]; current_PH = track_pH ? Y1[pH_i] : 8.0;`.
@@ -58,7 +94,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## NUTR-18
 
 **wrong variable** · Conf M / Sev M  
-**Listed lines:** 626
+**Lines (current code):** 626  
+**Lines at review (Oct 2026):** 626
 
 **Function:** `Properties_At_Depth()`
 
@@ -96,7 +133,8 @@ The depth correction uses the global `cell_depth` instead of the `cdepth` argume
 ## NUTR-19
 
 **unit / double count** · Conf M / Sev L  
-**Listed lines:** 161-172
+**Lines (current code):** 161-172  
+**Lines at review (Oct 2026):** 161-172
 
 **Function:** `Calculate_Box_Light()`
 
@@ -104,9 +142,13 @@ The depth correction uses the global `cell_depth` instead of the `cdepth` argume
 
 `intensity = 1.353 * (...)` is already a solar flux in kW m-2, because 1.353 is the solar constant. It is then multiplied by `Io`, which also contains the solar constant (`swr_const`, ~1367), so SWR is too high by about 1.35x. Also at elevation 0 (night) AM ≈ 38 still gives a nonzero intensity. Function: `Calculate_Box_Light()`.
 
-**Current code** (`atecology/atbiophysics.c` lines 163–178) — code appears to have moved +4 lines since the review
+**Current code** (`atecology/atbiophysics.c` lines 159–174)
 
 ```c
+  159: 	/* Intensity - currently assumed to be at sea level */
+  160: 	double height = 0.0;   // Height above sea level TODO: Actually have this as real height eventually
+  161: 	double AM = 1.0 / (cos(zenith * deg2rad) + 0.50572 * pow((96.07995 - zenith),(-1.6364)));  // Air mass including curvature of the earth
+  162: 	double step0 = pow(AM,0.678);
   163: 	double step1 = pow(0.7,step0);
   164: 	double step2 = 0.14 * height;
   165: 	double intensity = 1.353 * ((1.0 - step2) * step1 + step2); // Sunlight intensity at sea level
@@ -119,10 +161,6 @@ The depth correction uses the global `cell_depth` instead of the `cdepth` argume
   172: 	pBox->swr = intensity * Io;
   173: 
   174: 	if (verbose > 0)
-  175: 		printf("Calculating light\n");
-  176: 
-  177: 	return;
-  178: }
 ```
 
 **Suggested fix (from review):** Use `(intensity / 1.353) * Io` (or drop Io's constant).
@@ -145,7 +183,8 @@ The depth correction uses the global `cell_depth` instead of the `cdepth` argume
 ## NUTR-20
 
 **log flooding** · Conf H / Sev L  
-**Listed lines:** 764
+**Lines (current code):** 764  
+**Lines at review (Oct 2026):** 764
 
 **Function:** `pH_At_Depth()`
 
@@ -196,7 +235,7 @@ atbiophysics.c `Box_Light_Process()` (319-320, 387-402): `midwater_dz` is half t
 
 ### LC-2
 
-atbiophysics.c `Get_Enviro_Scalar()` (859-862): if trailing Xchange entries are zero-filled up to Xchange_max_num, `timeNow >= 0` makes `now_change` the last (empty) entry.
+atbiophysics.c `Get_Enviro_Scalar()` (857-860): if trailing Xchange entries are zero-filled up to Xchange_max_num, `timeNow >= 0` makes `now_change` the last (empty) entry.
 
 - [ ] Investigate   - [ ] Ignore
 

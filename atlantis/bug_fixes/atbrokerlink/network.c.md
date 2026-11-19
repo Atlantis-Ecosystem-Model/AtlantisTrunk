@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **3 findings** (severity H: 0; confidence H and severity H: 0; on the priority list: 0), plus 1 lower-confidence notes.
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [LINK-65](#link-65) | 19-21 | H/M | unchecked return | The return values of `zmq_init`, `zmq_socket` and `zmq_bind` are ignored. A bind failure (port in use, bad URL… |  | [ ] |
 | [LINK-66](#link-66) | 31-40 | H/M | error path continues | When `zmq_recv` returns -1 the code prints an error and then still builds a message from the uninitialised/emp… |  | [ ] |
@@ -19,7 +19,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## LINK-65
 
 **unchecked return** · Conf H / Sev M  
-**Listed lines:** 19-21
+**Lines (current code):** 19-21  
+**Lines at review (Oct 2026):** 19-21
 
 **Function:** `Network_Initialise()`
 
@@ -59,7 +60,8 @@ The return values of `zmq_init`, `zmq_socket` and `zmq_bind` are ignored. A bind
 ## LINK-66
 
 **error path continues** · Conf H / Sev M  
-**Listed lines:** 31-40
+**Lines (current code):** 31-40  
+**Lines at review (Oct 2026):** 31-40
 
 **Function:** `Network_Receive()`
 
@@ -106,7 +108,8 @@ When `zmq_recv` returns -1 the code prints an error and then still builds a mess
 ## LINK-67
 
 **leak / unchecked** · Conf M / Sev L  
-**Listed lines:** 52-61
+**Lines (current code):** 52-61  
+**Lines at review (Oct 2026):** 52-61
 
 **Function:** `Network_Send()`
 

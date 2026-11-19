@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **7 findings** (severity H: 3; confidence H and severity H: 3; on the priority list: 3).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [DIE-1](#die-1) ⭐ | 115-138 | H/H | accumulator in wrong loop | `Calculate_Overall_Diet_Composition` runs inside the box loop on running totals, so early boxes are counted ma… |  | [ ] |
 | [DIE-2](#die-2) | 162-164 | M/M | wrong slot | Prey availability uses `biolbiom[prey][b][WC]` only, so infauna and sediment bacteria are never eaten (see DAT… |  | [ ] |
@@ -23,43 +23,44 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## DIE-1
 
 **accumulator in wrong loop** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 115-138
+**Lines (current code):** 115-138  
+**Lines at review (Oct 2026):** 115-138
 
 **Why it's thought to be a bug**
 
 `Calculate_Overall_Diet_Composition` runs inside the box loop on running totals, so early boxes are counted many times (atattribute.c:1115 does it after the loop).
 
-**Current code** (`atassess/atdiet.c` lines 135–162) — code appears to have moved +22 lines since the review
+**Current code** (`atassess/atdiet.c` lines 113–140)
 
 ```c
+  113: 	Util_Init_4D_Double(totareadiet, bm->K_num_tot_sp, 2, bm->K_num_tot_sp, 2, 0.0);
+  114: 
+  115: 	for (bb = 0; bb < bm->nsbox; bb++) {
+  116: 		b = bm->nsboxes[bb];
+  117: 		d = phys[wc_depth_id][b];
+  118: 
+  119: 		Util_Init_2D_Int(stomachs, bm->K_num_tot_sp, 2, 0);
+  120: 
+  121: 		/* This will set up the food available to each predator.
+  122: 		 * The values per predator are then normalised to sum to 1.0
+  123: 		 * So its basically the proportion that each prey group makes up the
+  124: 		 * diet of each predator.
+  125: 		 */
+  126: 		Setup_Avail_Food(bm, b, ofp);
+  127: 
+  128: 		if (d < bm->cdz) {
+  129: 			/* Inshore diets */
+  130: 			Sample_Diet(bm, inshorediet);
+  131: 		} else {
+  132: 			/* Offshore diets */
+  133: 			Sample_Diet(bm, offshorediet);
+  134: 		}
   135: 
   136: 		/* Overall diet composition */
   137: 		Calculate_Overall_Diet_Composition(bm, totareadiet, inshorediet, offshorediet);
   138: 	}
   139: 
   140: 	/* Normalise diet composition */
-  141: 	Normalise_AvailFood(bm, inshorediet);
-  142: 	Normalise_AvailFood(bm, offshorediet);
-  143: 	Normalise_AvailFood(bm, totareadiet);
-  144: 
-  145: 	Calculate_Trophic_Levels(bm, TL, inshorediet, offshorediet, totareadiet, ofp);
-  146: 
-  147: 	return;
-  148: 
-  149: }
-  150: /**
-  151:  * \brief Set the invertebrate availfood array values for the given predator and stage.
-  152:  * This is called for consumer groups.
-  153:  */
-  154: static void Set_Species_Avail_Food(MSEBoxModel *bm, int b, int pred, int predStage) {
-  155: 	int prey;
-  156: 	for (prey = 0; prey < bm->K_num_tot_sp; prey++) {
-  157: 		if (FunctGroupArray[prey].isVertebrate == FALSE && FunctGroupArray[prey].isAssessed == TRUE) {
-  158: 			if (FunctGroupArray[prey].isDetritus == TRUE) {
-  159: 				availfood[pred][predStage][prey][WC] = biolbiom[prey][b][WC] * dietpref[pred][predStage][prey][WC];
-  160: 				availfood[pred][predStage][prey][SED] = biolbiom[prey][b][SED] * dietpref[pred][predStage][prey][SED];
-  161: 
-  162: 			} else {
 ```
 
 **Suggested fix (from review):** move after the loop
@@ -82,7 +83,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## DIE-2
 
 **wrong slot** · Conf M / Sev M  
-**Listed lines:** 162-164
+**Lines (current code):** 162-164  
+**Lines at review (Oct 2026):** 162-164
 
 **Why it's thought to be a bug**
 
@@ -120,7 +122,8 @@ Prey availability uses `biolbiom[prey][b][WC]` only, so infauna and sediment bac
 ## DIE-3
 
 **swapped dims in Init** · Conf H / Sev H ✔ re-checked ⭐ priority  
-**Listed lines:** 243 (alloc atsamplesetup.c:277)
+**Lines (current code):** 243 (alloc atsamplesetup.c:277)  
+**Lines at review (Oct 2026):** 243 (alloc atsamplesetup.c:277)
 
 **Why it's thought to be a bug**
 
@@ -156,7 +159,8 @@ Allocated `Util_Alloc_Init_2D_Double(2, K)` = `[K][2]`, but reset with `Util_Ini
 ## DIE-4
 
 **misplaced break** · Conf H / Sev L  
-**Listed lines:** 547-555
+**Lines (current code):** 547-555  
+**Lines at review (Oct 2026):** 547-555
 
 **Why it's thought to be a bug**
 
@@ -200,7 +204,8 @@ Allocated `Util_Alloc_Init_2D_Double(2, K)` = `[K][2]`, but reset with `Util_Ini
 ## DIE-5
 
 **wrong variable** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 667-671, 690-692
+**Lines (current code):** 667-671, 690-692  
+**Lines at review (Oct 2026):** 667-671, 690-692
 
 **Why it's thought to be a bug**
 
@@ -261,7 +266,8 @@ Diagonal uses `pred*numStages+stage`; the rest of the matrix uses `pred*2+stage`
 ## DIE-6
 
 **copy-paste** · Conf M / Sev M  
-**Listed lines:** 767-784
+**Lines (current code):** 767-784  
+**Lines at review (Oct 2026):** 767-784
 
 **Why it's thought to be a bug**
 
@@ -314,7 +320,8 @@ Detritus preference is always written to `allStage=0`, so adults never eat detri
 ## DIE-7
 
 **wrong variable** · Conf M / Sev L  
-**Listed lines:** 804-807
+**Lines (current code):** 804-807  
+**Lines at review (Oct 2026):** 804-807
 
 **Why it's thought to be a bug**
 

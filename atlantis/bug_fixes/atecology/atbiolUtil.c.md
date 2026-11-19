@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **4 findings** (severity H: 2; confidence H and severity H: 2; on the priority list: 2).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [EMISC-22](#emisc-22) ⭐ | 143-157 | H/H | data loss | A new zeroed 5D array is allocated and only `[speciesIndex][cohort][box]` is copied (the memcpy is commented o… |  | [ ] |
 | [EMISC-23](#emisc-23) | 143 | H/M | wrong dimension | `Util_Alloc_Init_5D_Double(3, maxMortChange, bm->nbox, 2, bm->K_num_tot_sp, 0)` uses stage dimension 2, but th… |  | [ ] |
@@ -20,7 +20,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## EMISC-22
 
 **data loss** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 143-157
+**Lines (current code):** 143-157  
+**Lines at review (Oct 2026):** 143-157
 
 **Function:** `Scale_Group_Linear_Mortality()`
 
@@ -28,12 +29,9 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 
 A new zeroed 5D array is allocated and only `[speciesIndex][cohort][box]` is copied (the memcpy is commented out); then the old array is freed. Every other group/stage/box's scheduled linear-mortality changes are wiped, while `numMortChanges` still counts them. Function: `Scale_Group_Linear_Mortality()`.
 
-**Current code** (`atecology/atbiolUtil.c` lines 138–156) — code appears to have moved -3 lines since the review
+**Current code** (`atecology/atbiolUtil.c` lines 141–159)
 
 ```c
-  138: 	printf("maxMortChange = %d\n", maxMortChange);
-  139: 	if (((int) numMortChanges[speciesIndex][cohort][box]) > maxMortChange) {
-  140: 		maxMortChange = numMortChanges[speciesIndex][cohort][box];
   141: 	}
   142: 	/* Allocate a new array */
   143: 	tempArray = Util_Alloc_Init_5D_Double(3, maxMortChange, bm->nbox, 2, bm->K_num_tot_sp, 0);
@@ -50,6 +48,9 @@ A new zeroed 5D array is allocated and only `[speciesIndex][cohort][box]` is cop
   154: 	/* Now do some pointer magic and free up the 'old' array*/
   155: 	tempArrayPointer = LinearMortChange;
   156: 	LinearMortChange = tempArray;
+  157: 	free5d(tempArrayPointer);
+  158: 
+  159: 	for(i = 0; i < ((int) numMortChanges[speciesIndex][cohort][box]); i++){
 ```
 
 **Suggested fix (from review):** Copy all [sp][stage][box][0..oldmax) entries into tempArray before inserting
@@ -72,7 +73,8 @@ A new zeroed 5D array is allocated and only `[speciesIndex][cohort][box]` is cop
 ## EMISC-23
 
 **wrong dimension** · Conf H / Sev M  
-**Listed lines:** 143
+**Lines (current code):** 143  
+**Lines at review (Oct 2026):** 143
 
 **Function:** `Scale_Group_Linear_Mortality()`
 
@@ -110,7 +112,8 @@ A new zeroed 5D array is allocated and only `[speciesIndex][cohort][box]` is cop
 ## EMISC-24
 
 **data loss** · Conf H / Sev H ⭐ priority  
-**Listed lines:** 210-219
+**Lines (current code):** 210-219  
+**Lines at review (Oct 2026):** 210-219
 
 **Function:** `Scale_Habitat()`
 
@@ -157,7 +160,8 @@ Same problem for habitats: only `BEDchange[habitatIndex]` is copied into the new
 ## EMISC-25
 
 **debug output** · Conf H / Sev L  
-**Listed lines:** 138
+**Lines (current code):** 138  
+**Lines at review (Oct 2026):** 138
 
 **Function:** `Scale_Group_Linear_Mortality()`
 

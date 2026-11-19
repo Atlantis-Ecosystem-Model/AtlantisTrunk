@@ -2,13 +2,13 @@
 
 Generated 2026-11-19 from `atlantis/to-do-fixt-list.md`. **17 findings** (severity H: 6; confidence H and severity H: 2; on the priority list: 2).
 
-Line numbers in **Listed lines** are from the review (10–12 Oct 2026). The code shown is from the working tree on 2026-11-19. Where the code has moved, the snippet follows it and says so. ⚠ means the quoted code could not be found: it may have been changed or already fixed.
+Line numbers were re-mapped on 2026-11-19 to the current code (after the merge of main). Each was traced through git history from the version the review used, then checked against the text of the line. **Lines (current code)** and line numbers in the text are now current; ≈ means the code there has changed so the position is approximate. The review's own numbers are kept as **Lines at review**; a number ending in ? could not be traced and is the review's number. ⚠ means the quoted code is no longer at those lines: it may have changed or already been fixed.
 
 Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash, M = wrong in some configs, L = cosmetic, log, leak or latent). ✔ = the reviewer re-checked it by hand. ⭐ = on the high-priority list.
 
 ## Summary
 
-| ID | Listed lines | Conf/Sev | Category | Short description | Decision | Done |
+| ID | Lines (current) | Conf/Sev | Category | Short description | Decision | Done |
 |---|---|---|---|---|---|---|
 | [API-01](#api-01) ✔ ⭐ | 647-652 | H/H | wrong variable | `speciesParamStructArray[sp]` is the parameter-descriptor table `[tot_prms]`, indexed here by species. `Multis… |  | [ ] |
 | [API-02](#api-02) | 639-660 (alloc 614-617) | M/H | NULL deref | `RBCspeciesParam` is only allocated when `useRBCTiers`; it's used when `useMultispAssess` is set, so it crashe… |  | [ ] |
@@ -18,7 +18,7 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 | [API-04](#api-04) ✔ ⭐ | 891 | H/H | wrong variable | `FunctGroupArray[sp].speciesParams[sp] == TRUE`: species index used as a parameter id. Can also write to an un… |  | [ ] |
 | [API-04b](#api-04b) | 895-896 | H/L | dead check | `scale_index = b; if (scale_index != -1)` is always true. |  | [ ] |
 | [API-05](#api-05) | 921-922 | H/L | copy-paste | Opens `assessprmIfname` but the error message prints `forceIfname`. Line 916 duplicates line 918. |  | [ ] |
-| [API-06](#api-06) | 964 | M/M | wrong check type | `Num_Sexes` is read with `binary_check`, so 2 sexes is impossible and 0 is allowed. |  | [ ] |
+| [API-06](#api-06) | 971 | M/M | wrong check type | `Num_Sexes` is read with `binary_check`, so 2 sexes is impossible and 0 is allowed. |  | [ ] |
 | [API-06b](#api-06b) | 1082 | H/L | copy-paste | Error says 'Tier6/TriggerPoints' but the value is read from 'Tier_Assessment'. |  | [ ] |
 | [API-06c](#api-06c) | 1086-1099 (alloc 619) | L/L | uninitialised | `CloseKinEst` is a per-species malloc but only `[0]` is filled. Seeds at 1007-1009 come from consecutive `cloc… |  | [ ] |
 | [API-07](#api-07) | 438-441, 53 (alloc 601) | L/H | bounds | 4 `detrit_import` rows are written but `K_num_detritus*2` are allocated, so it overruns if there is only 1 det… |  | [ ] |
@@ -33,7 +33,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## API-01
 
 **wrong variable** · Conf H / Sev H ✔ re-checked ⭐ priority  
-**Listed lines:** 647-652
+**Lines (current code):** 647-652  
+**Lines at review (Oct 2026):** 647-652
 
 **Why it's thought to be a bug**
 
@@ -74,7 +75,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## API-02
 
 **NULL deref** · Conf M / Sev H  
-**Listed lines:** 639-660 (alloc 614-617)
+**Lines (current code):** 639-660 (alloc 614-617)  
+**Lines at review (Oct 2026):** 639-660 (alloc 614-617)
 
 **Why it's thought to be a bug**
 
@@ -131,7 +133,8 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## API-02b
 
 **no NULL check** · Conf H / Sev L  
-**Listed lines:** 589
+**Lines (current code):** 589  
+**Lines at review (Oct 2026):** 589
 
 **Why it's thought to be a bug**
 
@@ -167,13 +170,14 @@ Conf/Sev: confidence it's a bug / severity if it is (H = wrong results or crash,
 ## API-03
 
 **unchecked bounds** · Conf M / Sev H  
-**Listed lines:** 722-815
+**Lines (current code):** 722-815  
+**Lines at review (Oct 2026):** 722-815
 
 **Why it's thought to be a bug**
 
 Stock loop bound is `NumRegions` from XML, never checked against `K_num_stocks_per_sp`. `CvLA0`/`CvLAmax` are allocated with `K_num_reg` but filled by the stock loop.
 
-**Current code** (`atassess/atassessParamIO.c` lines 720–754 (range truncated))
+**Current code** (`atassess/atassessParamIO.c` lines 720–759 (truncated))
 
 ```c
   720:     xmlNodePtr speciesNode, sexNode;
@@ -211,6 +215,11 @@ Stock loop bound is `NumRegions` from XML, never checked against `K_num_stocks_p
   752:                 if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, eString, sexNode, checkType, str, &values, length) == FALSE) {
   753:                     quit("Error: Unable to find parameter '%s/%s/%s' in input file %s\n", errorString, FunctGroupArray[guild].groupCode, str, fileName);
   754:                 }
+  755: 
+  756:                 for (index = 0; index < length; index++) {
+  757:                     array[nstock][ns][index] = values[index];
+  758:                 }
+  759:                 free(values);
 ```
 
 **Suggested fix (from review):** check bound; allocate with `K_num_stocks_per_sp`
@@ -233,13 +242,14 @@ Stock loop bound is `NumRegions` from XML, never checked against `K_num_stocks_p
 ## API-03b
 
 **cosmetic** · Conf H / Sev L  
-**Listed lines:** 741, 799
+**Lines (current code):** 741, 799  
+**Lines at review (Oct 2026):** 741, 799
 
 **Why it's thought to be a bug**
 
 `\n` embedded in the error-path string.
 
-**Current code** (`atassess/atassessParamIO.c` lines 739–778 (truncated))
+**Current code** (`atassess/atassessParamIO.c` lines 739–743)
 
 ```c
   739:             quit("%s/%s species attribute group not found.\n", errorString, FunctGroupArray[guild].groupCode);
@@ -247,41 +257,6 @@ Stock loop bound is `NumRegions` from XML, never checked against `K_num_stocks_p
   741:         for (ns = 0; ns < bm->K_num_sexes; ns++) {
   742:             snprintf(str, sizeof(str), "%s", sexStrings[ns]);
   743:             snprintf(eString, sizeof(eString), "%s/%s/%s\n", errorString, FunctGroupArray[guild].groupCode, str);
-  744:                 
-  745:             sexNode = Util_XML_Get_Node(ATLANTIS_SEX_ATTRIBUTE, speciesNode, str);
-  746:             if (sexNode == NULL)
-  747:                 quit("%s gender attribute group not found.\n", eString);
-  748:                 
-  749:             for (nstock = 0; nstock < nloop; nstock++) {
-  750:                 snprintf(str, sizeof(str), "stock%d", nstock+1);
-  751:         
-  752:                 if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, eString, sexNode, checkType, str, &values, length) == FALSE) {
-  753:                     quit("Error: Unable to find parameter '%s/%s/%s' in input file %s\n", errorString, FunctGroupArray[guild].groupCode, str, fileName);
-  754:                 }
-  755: 
-  756:                 for (index = 0; index < length; index++) {
-  757:                     array[nstock][ns][index] = values[index];
-  758:                 }
-  759:                 free(values);
-  760:             }
-  761:         }
-  762:         
-  763:         
-  764:         // Copy to other stocks
-  765:         if ((bm->assess_share_params) && (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)) {
-  766:             for (nstock = nloop; nstock < bm->RBCestimation.RBCspeciesParam[guild][NumRegions_id]; nstock++) {
-  767:                 for (ns = 0; ns < bm->K_num_sexes; ns++) {
-  768:                     for (index = 0; index < length; index++) {
-  769:                         array[nstock][ns][index] = array[0][ns][index];
-  770:                     }
-  771:             	}
-  772:             }
-  773:         }
-  774: 	}
-  775: }
-  776: 
-  777: /**
-  778:  * \brief Read in the stock, sex and age specific values
 ```
 
 **Suggested fix (from review):** drop `\n`
@@ -304,20 +279,21 @@ Stock loop bound is `NumRegions` from XML, never checked against `K_num_stocks_p
 ## API-04
 
 **wrong variable** · Conf H / Sev H ✔ re-checked ⭐ priority  
-**Listed lines:** 891
+**Lines (current code):** 891  
+**Lines at review (Oct 2026):** 891
 
 **Why it's thought to be a bug**
 
 `FunctGroupArray[sp].speciesParams[sp] == TRUE`: species index used as a parameter id. Can also write to an unallocated `TAC_mult`.
 
-**Current code** (`atassess/atassessParamIO.c` lines 891–895)
+**Current code** (`atassess/atassessParamIO.c` lines 889–893)
 
 ```c
+  889: 
+  890: 	if(bm->tsTACmult != NULL){
   891: 		/* Set up the indexing on the names in the forcing file */
   892: 		for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
   893: 			if ((FunctGroupArray[sp].speciesParams[flag_id] == TRUE) && ((FunctGroupArray[sp].isImpacted == TRUE) || (FunctGroupArray[sp].speciesParams[sp] == TRUE))) {
-  894: 				snprintf(str, sizeof(str), "%s", FunctGroupArray[sp].groupCode);
-  895: 				for (b = 0; b < bm->tsTACmult->nv; b++) {
 ```
 
 **Suggested fix (from review):** `speciesParams[assess_flag_id] > 0` (or `isFished`)
@@ -340,21 +316,22 @@ Stock loop bound is `NumRegions` from XML, never checked against `K_num_stocks_p
 ## API-04b
 
 **dead check** · Conf H / Sev L  
-**Listed lines:** 895-896
+**Lines (current code):** 895-896  
+**Lines at review (Oct 2026):** 895-896
 
 **Why it's thought to be a bug**
 
 `scale_index = b; if (scale_index != -1)` is always true.
 
-**Current code** (`atassess/atassessParamIO.c` lines 895–900)
+**Current code** (`atassess/atassessParamIO.c` lines 893–898)
 
 ```c
+  893: 			if ((FunctGroupArray[sp].speciesParams[flag_id] == TRUE) && ((FunctGroupArray[sp].isImpacted == TRUE) || (FunctGroupArray[sp].speciesParams[sp] == TRUE))) {
+  894: 				snprintf(str, sizeof(str), "%s", FunctGroupArray[sp].groupCode);
   895: 				for (b = 0; b < bm->tsTACmult->nv; b++) {
   896: 					if (strcmp(str, bm->tsTACmult->varname[b]) == 0){
   897: 						scale_index = b;
   898: 						if(scale_index != -1){
-  899: 							for(titer = 0; titer < bm->RBCestimation.RBCspeciesParam[sp][Nyears_id]; titer++){
-  900: 								tstit = titer * 365.0 * 86400.0;
 ```
 
 **Suggested fix (from review):** tidy
@@ -377,21 +354,22 @@ Stock loop bound is `NumRegions` from XML, never checked against `K_num_stocks_p
 ## API-05
 
 **copy-paste** · Conf H / Sev L  
-**Listed lines:** 921-922
+**Lines (current code):** 921-922  
+**Lines at review (Oct 2026):** 921-922
 
 **Why it's thought to be a bug**
 
 Opens `assessprmIfname` but the error message prints `forceIfname`. Line 916 duplicates line 918.
 
-**Current code** (`atassess/atassessParamIO.c` lines 921–926)
+**Current code** (`atassess/atassessParamIO.c` lines 919–924)
 
 ```c
+  919: 	if (verbose > 1)
+  920:         printf("Reading in TAC_mult time series forcing file\n");
   921: 
   922: 	/* Open the file */
   923: 	if ((fp = fopen(bm->assessprmIfname, "r")) == NULL)
   924: 		quit("get_TAC_mult: Can't open %s\n", bm->forceIfname);
-  925: 
-  926: 	/** Get time series **/
 ```
 
 **Suggested fix (from review):** print the right name
@@ -414,20 +392,21 @@ Opens `assessprmIfname` but the error message prints `forceIfname`. Line 916 dup
 ## API-06
 
 **wrong check type** · Conf M / Sev M  
-**Listed lines:** 964
+**Lines (current code):** 971  
+**Lines at review (Oct 2026):** 964
 
 **Why it's thought to be a bug**
 
 `Num_Sexes` is read with `binary_check`, so 2 sexes is impossible and 0 is allowed.
 
-**Current code** (`atassess/atassessParamIO.c` lines 963–967)
+**Current code** (`atassess/atassessParamIO.c` lines 969–973)
 
 ```c
-  963: 		quit("readTierAssessmentManagementXML: Tier_Assessment attribute group not found in input file %s.\n", fileName);
-  964:     
-  965:     bm->assess_share_params = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "assess_share_params");
-  966: 	bm->K_num_sexes = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "Num_Sexes");
-  967:     bm->RBCestimation.HistYrMin = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "HistYrMin");
+  969: 	bm->RBCestimation.OverallMaxAge = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "OverallMaxAge");
+  970:     
+  971:     bm->RBCestimation.tier6_to_tier4 = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "tier6_to_tier4");
+  972:     bm->RBCestimation.delTAE = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "delTAE");
+  973:     
 ```
 
 **Suggested fix (from review):** `integer_check`, 1–2
@@ -450,7 +429,8 @@ Opens `assessprmIfname` but the error message prints `forceIfname`. Line 916 dup
 ## API-06b
 
 **copy-paste** · Conf H / Sev L  
-**Listed lines:** 1082
+**Lines (current code):** 1082  
+**Lines at review (Oct 2026):** 1082
 
 **Why it's thought to be a bug**
 
@@ -486,7 +466,8 @@ Error says 'Tier6/TriggerPoints' but the value is read from 'Tier_Assessment'.
 ## API-06c
 
 **uninitialised** · Conf L / Sev L  
-**Listed lines:** 1086-1099 (alloc 619)
+**Lines (current code):** 1086-1099 (alloc 619)  
+**Lines at review (Oct 2026):** 1086-1099 (alloc 619)
 
 **Why it's thought to be a bug**
 
@@ -535,23 +516,24 @@ Error says 'Tier6/TriggerPoints' but the value is read from 'Tier_Assessment'.
 ## API-07
 
 **bounds** · Conf L / Sev H  
-**Listed lines:** 438-441, 53 (alloc 601)
+**Lines (current code):** 438-441, 53 (alloc 601)  
+**Lines at review (Oct 2026):** 438-441, 53 (alloc 601)
 
 **Why it's thought to be a bug**
 
 4 `detrit_import` rows are written but `K_num_detritus*2` are allocated, so it overruns if there is only 1 detritus group.
 
-**Current code** (`atassess/atassessParamIO.c` lines 599–606) — code appears to have moved +163 lines since the review
+**Current code** (`atassess/atassessParamIO.c` lines 436–443) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
-  599: 	printf("Create assessment detritus flow vectors\n");
-  600: 
-  601: 	detrit_import = (double **) alloc2d(bm->nfzones, bm->K_num_detritus * 2);
-  602: 	DiscardFate = (double **) alloc2d(2, bm->K_num_detritus);
-  603: 
-  604: 	/* Read the rest of the model run parameters */
-  605: 	readErrorStructureXML(bm, filename, inputDoc->children);
-  606: 	readBiasedSampleXML(bm, filename,inputDoc->children);
+  436: 		quit("readDetritusXML: Detritus_Input attribute group not found in input file %s.\n", fileName);
+  437: 
+  438: 	readZoneXML(bm, fileName, groupingNode, "input_DLwc", 0);
+  439: 	readZoneXML(bm, fileName, groupingNode, "input_DRwc", 1);
+  440: 	readZoneXML(bm, fileName, groupingNode, "input_DLsed", 2);
+  441: 	readZoneXML(bm, fileName, groupingNode, "input_DRsed", 3);
+  442: 
+  443: 	/* Read in the discard fate values for detritus */
 ```
 
 **Suggested fix (from review):** allocate `max(4, 2*K_num_detritus)`
@@ -574,50 +556,56 @@ Error says 'Tier6/TriggerPoints' but the value is read from 'Tier_Assessment'.
 ## API-08
 
 **unchecked bounds** · Conf M / Sev H  
-**Listed lines:** 1182-1311, 1476, 1483, 1541
+**Lines (current code):** 1182-1311, 1476, 1483, 1541  
+**Lines at review (Oct 2026):** 1182-1311, 1476, 1483, 1541
 
 **Why it's thought to be a bug**
 
 Arrays sized `K_num_fisheries` are filled with XML `NumFisheries`; `Mzero`/`MeanLenAge`/`Fecund` are sized `OverallMaxAge` but filled to `MaxAge`. The guard in `Tier_Assessment_Setup` runs after this read.
 
-**Current code** (`atassess/atassessParamIO.c` lines 967–1001 (range truncated)) — code appears to have moved -213 lines since the review
+**Current code** (`atassess/atassessParamIO.c` lines 1180–1219 (truncated))
 
 ```c
-  967:     bm->RBCestimation.HistYrMin = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "HistYrMin");
-  968: 	bm->RBCestimation.HistYrMax = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "HistYrMax");
-  969: 	bm->RBCestimation.OverallMaxAge = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "OverallMaxAge");
-  970:     
-  971:     bm->RBCestimation.tier6_to_tier4 = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "tier6_to_tier4");
-  972:     bm->RBCestimation.delTAE = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "delTAE");
-  973:     
-  974: 	/* Now allocate the rest of the memory */
-  975:     bm->RBCestimation.UseAtlantisPGMSY = (int) (Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseAtlantisPGMSY"));
-  976: 	bm->RBCestimation.UseSS = (int) (Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseSS"));
-  977:     bm->RBCestimation.AssessDelay = (int) (Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "AssessDelay"));
-  978:     bm->RBCestimation.UseTierBuffers = (int) (Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseTierBuffers"));
-  979:     bm->RBCestimation.myTACbuffer = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "myTACbuffer");   // Nov 2026: was cast to int so fractions became 0
-  980:     bm->RBCestimation.myTACperiod = (int) (Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "myTACperiod"));
-  981:     bm->RBCestimation.myTACperiod_MCT = (int) (Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "myTACperiod_MCT"));
-  982:     
-  983:     bm->RBCestimation.sexratio_cv = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "sexratio_cv");
-  984:     
-  985:     bm->RBCestimation.ReviewPeriod = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "ReviewPeriod");
-  986:     bm->RBCestimation.TriggerCheckPeriod = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "TriggerCheckPeriod");
-  987:     bm->RBCestimation.LagPeriod = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "LagPeriod");
-  988:     bm->RBCestimation.GradientWindow = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "GradientWindow");
-  989:     bm->RBCestimation.GradientPeriod = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "GradientPeriod");
-  990:     bm->RBCestimation.GradientBuffer = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "GradientBuffer");
-  991:     bm->RBCestimation.UseCategory = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseCategory");
-  992:     bm->RBCestimation.UseClosest = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseClosest");
-  993:     bm->RBCestimation.UseTriggerMgmt = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseTriggerMgmt");
-  994:     bm->RBCestimation.ProjYr = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "ProjYr");
-  995:     
-  996:     bm->RBCestimation.ThresholdDepletion = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "ThresholdDepletion");
-  997:     bm->RBCestimation.ThresholdBound = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "ThresholdBound");
-  998:     bm->RBCestimation.MaxIteration = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "MaxIteration");
-  999:     
- 1000: 	childGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Seeds");
- 1001: 	if (childGroupingNode == NULL)
+ 1180:     
+ 1181:     childGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "CVs");
+ 1182: 	if (childGroupingNode == NULL)
+ 1183: 		quit("readTierAssessmentManagementXML: CVs attribute group not found in input file %s.\n", fileName);
+ 1184:     
+ 1185:     attributeGroup = getParentNode(bm, fileName, childGroupingNode, "DiscardCV", errorString, sizeof(errorString));
+ 1186: 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
+ 1187:         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
+ 1188:             readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].DiscCV, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+ 1189: 	}
+ 1190: 
+ 1191:     attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CatchCV", errorString, sizeof(errorString));
+ 1192: 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
+ 1193:         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
+ 1194:             readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CatchCV, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+ 1195: 	}
+ 1196: 
+ 1197:     attributeGroup = getParentNode(bm, fileName, childGroupingNode, "EffortCV", errorString, sizeof(errorString));
+ 1198: 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
+ 1199:         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
+ 1200:             readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].EffortCV, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+ 1201: 	}
+ 1202:     
+ 1203:     
+ 1204: 	childGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "CPUE");
+ 1205: 	if (childGroupingNode == NULL)
+ 1206: 		quit("readTierAssessmentManagementXML: CPUE attribute group not found in input file %s.\n", fileName);
+ 1207: 
+ 1208: 	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUECV", errorString, sizeof(errorString));
+ 1209: 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
+ 1210:         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
+ 1211:             readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CPUEcv, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+ 1212: 	}
+ 1213: 
+ 1214: 	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUEvar", errorString, sizeof(errorString));
+ 1215: 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
+ 1216:         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
+ 1217:             readGroupAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].CPUEvar, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][NumFisheries_id]);
+ 1218: 	}
+ 1219: 	attributeGroup = getParentNode(bm, fileName, childGroupingNode, "CPUEcorr", errorString, sizeof(errorString));
 ```
 
 **Suggested fix (from review):** check bounds before reading
@@ -640,25 +628,26 @@ Arrays sized `K_num_fisheries` are filled with XML `NumFisheries`; `Mzero`/`Mean
 ## API-09
 
 **leak** · Conf M / Sev L  
-**Listed lines:** 1158-1163 (and 565)
+**Lines (current code):** 1158-1163 (and 565)  
+**Lines at review (Oct 2026):** 1158-1163 (and 565)
 
 **Why it's thought to be a bug**
 
 `RAssessRscriptName` is re-allocated and the first allocation leaks.
 
-**Current code** (`atassess/atassessParamIO.c` lines 1163–1172) — code appears to have moved +7 lines since the review
+**Current code** (`atassess/atassessParamIO.c` lines 1156–1165)
 
 ```c
+ 1156:     
+ 1157:     // Nov 2026: ss3Name now also read when using SS for Tier 1 (was only read for multispecies assessments)
+ 1158:     if (bm->useMultispAssess || bm->RBCestimation.UseSS) {
+ 1159:         Util_XML_Get_Value_String(fileName, ATLANTIS_ATTRIBUTE, 1, groupingNode, "ss3Name", bm->ss3Name);
+ 1160:     }
+ 1161: 
+ 1162:     if (bm->useMultispAssess) {        
  1163:         
  1164:         bm->NumRAssessScriptNames = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, integer_check, "NumRAssessScriptNames");
  1165:         bm->RAssessRscriptName = c_alloc2d(BMSLEN, bm->NumRAssessScriptNames);
- 1166:         for (nf = 0; nf < bm->NumRAssessScriptNames; nf ++) {
- 1167:             snprintf(nameString, sizeof(nameString), "RAssessRscriptName%d", nf);
- 1168:             Util_XML_Get_Value_String(fileName, ATLANTIS_ATTRIBUTE, 1, groupingNode, nameString, bm->RAssessRscriptName[nf]);
- 1169:         }
- 1170:         
- 1171:         if(Util_XML_Read_Array_Integer(ATLANTIS_ATTRIBUTE, fileName, groupingNode, integer_check, "PGMSYlinks", &PGMSYLinksInputs, bm->K_num_fisheries) == FALSE){
- 1172:             quit("Error: Unable to read parameter 'PGMSYlinks' from input file %s\n", fileName);
 ```
 
 **Suggested fix (from review):** free first / read once
@@ -681,20 +670,21 @@ Arrays sized `K_num_fisheries` are filled with XML `NumFisheries`; `Mzero`/`Mean
 ## API-10
 
 **truncation** · Conf L / Sev M  
-**Listed lines:** 1148
+**Lines (current code):** 1148  
+**Lines at review (Oct 2026):** 1148
 
 **Why it's thought to be a bug**
 
 `min_TACchange = (int)...` would truncate a proportion to 0.
 
-**Current code** (`atassess/atassessParamIO.c` lines 1148–1152)
+**Current code** (`atassess/atassessParamIO.c` lines 1146–1150)
 
 ```c
+ 1146:     
+ 1147: 	bm->RBCestimation.Use_TAC_mult = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "Use_TAC_mult");
  1148: 	get_TAC_mult(bm,"TAC_mult", &bm->tsTACmult, bm->t_units, warn);
  1149: 
  1150: 	bm->RBCestimation.min_TACchange = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "RBC_TACchange_min");   // Nov 2026: was cast to int so fractions became 0
- 1151: 
- 1152:     bm->RBCestimation.MULTISPestNspecies = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "MULTISPestNspecies");
 ```
 
 **Suggested fix (from review):** check field type
@@ -717,20 +707,21 @@ Arrays sized `K_num_fisheries` are filled with XML `NumFisheries`; `Mzero`/`Mean
 ## API-11
 
 **possibly inverted condition** · Conf L / Sev M  
-**Listed lines:** 1482
+**Lines (current code):** 1482  
+**Lines at review (Oct 2026):** 1482
 
 **Why it's thought to be a bug**
 
 `MeanLenAge` is read when `!flagLAdirect`, which looks opposite to the SigmaLenAge pattern.
 
-**Current code** (`atassess/atassessParamIO.c` lines 1483–1487) — code appears to have moved +3 lines since the review
+**Current code** (`atassess/atassessParamIO.c` lines 1480–1484) — ⚠ the code quoted in the review is not at these lines any more (changed, or already fixed?)
 
 ```c
+ 1480:     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
+ 1481:         if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
+ 1482:             readStockAgeAssessTierXMLData(bm, fileName, attributeGroup, guild, bm->RBCestimation.RBCspeciesArray[guild].Mzero, no_checking, errorString, (int)bm->RBCestimation.RBCspeciesParam[guild][MaxAge_id]);
  1483:     }
  1484:     
- 1485: 	attributeGroup = getParentNode(bm, fileName, groupingNode, "MeanLenAge", errorString, sizeof(errorString));
- 1486:     for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
- 1487:          if (FunctGroupArray[guild].speciesParams[assess_flag_id] > 0)
 ```
 
 **Suggested fix (from review):** confirm meaning
@@ -753,7 +744,8 @@ Arrays sized `K_num_fisheries` are filled with XML `NumFisheries`; `Mzero`/`Mean
 ## API-12
 
 **float == TRUE** · Conf M / Sev L  
-**Listed lines:** 496
+**Lines (current code):** 496  
+**Lines at review (Oct 2026):** 496
 
 **Why it's thought to be a bug**
 
