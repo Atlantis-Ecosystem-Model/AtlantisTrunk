@@ -36,7 +36,7 @@ int tsDiscardtype; /**< Whether to use interpolated or last valid entries from t
 int *tsdiscardid; /**< Array matching boxmodel species ids to discard time series entry ids */
 FisheryTimeSeries *tsDiscard; /**< List of discard time series (one per box) */
 
-//int first_data_done;
+int first_data_done;
 
 static double Get_Loaded_FC(MSEBoxModel *bm, int guildcase, int nf, int chrt, int stage, int boxkey_id, double vert_scale, double Biom, double *mpa_losses,
 		int do_debug, FILE *llogfp);

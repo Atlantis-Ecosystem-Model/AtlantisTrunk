@@ -152,6 +152,7 @@ typedef struct {
     GROUP_TYPES groupType;		        /**< If this is a group if inverts then what type of invert is it.
 											This might be changed to allow for vert types if necessary */
     double Tcorr;	/** Temperature correction value for this functional group */
+    double current_corr; /** Current correction for this functional group - gkiven might need optimal temeprature not baseline temeprature*/
     double TcorrEff; /**< Temperature efficiency correction */
     double Scorr;	/** Salinity correction value for this functional group */
     double pHcorr;	/** pH correction value for this functional group */
@@ -382,7 +383,10 @@ typedef struct {
     double ***distrib;
 
 }FunctionalGroupStruct;
-extern FunctionalGroupStruct *FunctGroupArray;
+
+/* Thread-local in OpenMP builds: extra threads point this at their own copy while running boxes */
+#include "atBoxWorkspace.h"
+extern BOX_THREAD_LOCAL FunctionalGroupStruct *FunctGroupArray;
 
 /* Data structure holding demographic information for functional groups */
 typedef struct{
@@ -441,6 +445,7 @@ typedef struct{
     
 	int *Leave_Now;
 	int *Return_Now;
+    int *Checked;
 
 	/* Timing parameters */
 	int *Return_Period;

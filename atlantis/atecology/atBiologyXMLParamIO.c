@@ -673,6 +673,7 @@ static void Read_Group_Flags(MSEBoxModel *bm, char *fileName, xmlNodePtr parent)
 static void Read_Physical_Limitation(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 
 	int sp;
+    int tmp_light = 0;
 	xmlNodePtr attributeGroupNode;
 
 	printf("Read_Physical_Limitation\n");
@@ -689,12 +690,18 @@ static void Read_Physical_Limitation(MSEBoxModel *bm, char *fileName, xmlNodePtr
 	bm->flaglight = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "flaglight");
 	bm->flaglightopt = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "flaglightopt");
 	bm->lim_sun_hours = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "lim_sun_hours");
+    
+    /* Add a check to make sure we have loaded solar radiation files if lim_sun_hours is false */
+    if( bm->lim_sun_hours == 0 && bm->swr == NULL && bm->swrinput.nFiles == 0) {
+        quit("ERROR - You have set lim_sun_hours in your biology file (%s) to 0 but you haven't provided a solar radiation file in your forcing file.\n", fileName);
+    }
 
-	/* Add a check to make sure we have loaded solar radiation files if lim_sun_hours is false */
-	if( bm->lim_sun_hours == 0 && bm->swr == NULL && bm->swrinput.nFiles == 0) {
-		quit("ERROR - You have set lim_sun_hours in your biology file (%s) to 0 but you haven't provided a solar radiation file in your forcing file.\n", fileName);
-	}
-
+    /* Check on whether sunlight forcing is set correctly */
+    tmp_light = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "force_light");
+    if(bm->force_light != tmp_light) {
+        quit("ERROR - You have set force_light in the biology file (%s) but you are reading in a Light tracer in your forcing file. Please delete the forcing or set force_light to 1\n", fileName);
+    }
+ 
 	bm->flagmodeltemp = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "flagmodeltemp");
 	bm->flagq10 = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "flagq10");
 	bm->O2case = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "O2case");
@@ -711,6 +718,7 @@ static void Read_Physical_Limitation(MSEBoxModel *bm, char *fileName, xmlNodePtr
 	bm->flagsenesce = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "flagsenesce");
 	bm->flagtsforcerecruit = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "flagtsforcerecruit");
     bm->flag_modify_KWSR = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "flag_modify_KWSR");
+    bm->flagbayHAB = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "flagbayHAB");
     
     bm->flag_extpop_growth_option = 0;
     if(bm->external_populations)
@@ -735,7 +743,7 @@ static void Read_Physical_Limitation(MSEBoxModel *bm, char *fileName, xmlNodePtr
 	bm->flag_fine_ontogenetic_diets = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "flag_fine_ontogenetic_diets");
 	bm->UseHardFeedingWindow = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "UseHardFeedingWindow");
     bm->UseBiLogisticFeedingWindow = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "UseBiLogisticFeedingWindow");
-    bm->flag_satiation = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "flag_satiation");
+    //bm->flag_satiation = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "flag_satiation");
     bm->flag_shrinkfat = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "flag_shrinkfat");
     bm->flag_predratiodepend = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "flag_predratiodepend");
     bm->flag_dynamicXRS = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, binary_check, "flag_dynamicXRS");
@@ -767,6 +775,8 @@ static void Read_Physical_Limitation(MSEBoxModel *bm, char *fileName, xmlNodePtr
 	bm->flagmodelpH = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "flagmodelpH");
 	if(bm->flagmodelpH){
         //bm->pH_sensitivity_model = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "pH_sensitivity_model"); Deprecated as now a species level parameter
+        
+        bm->pH_min_effect = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "pH_min_effect"); 
         
         bm->flagPHmortcase = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "flagPHmortcase");
 
@@ -810,6 +820,7 @@ static void Read_Physical_Limitation(MSEBoxModel *bm, char *fileName, xmlNodePtr
         bm->Pads_K = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "Pads_K");
         bm->Pads_KO = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "Pads_KO");
         bm->r_immob_PIP_t0 = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "r_immob_PIP_t0");
+        bm->flag_adv_P = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "flag_adv_P");
     }
 
 	/*** Do checking ***/
@@ -1115,8 +1126,7 @@ static void Read_Active_Trait_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr pa
 
 	/* Create a node for each functional group*/
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
-		if (Util_XML_Read_Array_Double(ATLANTIS_GROUP_ATTRIBUTE, fileName, "Evolution/ActiveTrait", attributeNode, no_checking, FunctGroupArray[guild].groupCode, &values,
-				K_num_traits) == FALSE) {
+		if (Util_XML_Read_Array_Double(ATLANTIS_GROUP_ATTRIBUTE, fileName, "Evolution/ActiveTrait", attributeNode, no_checking, FunctGroupArray[guild].groupCode, &values, K_num_traits) == FALSE) {
 			quit("Error: Unable to find parameter 'Evolution/ActiveTrait/%s' in input file %s\n", FunctGroupArray[guild].groupCode, fileName);
 		}
 
@@ -1208,13 +1218,14 @@ static void Read_Primary_Producer_Values(MSEBoxModel *bm, char *fileName, xmlNod
 	Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, KS_id);
 	Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, KF_id);
 	Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, KI_T15_id);
-
+    
 	if(bm->ice_on) {
 		attributeGroupNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, parent, "IcePrimaryProduction");
 		if (attributeGroupNode == NULL)
 			quit("IcePrimaryProduction attribute group not found in input file %s.\n", fileName);
 		Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, Beta_D_id);
 		Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, PBmax_D_id);
+        Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, light_a_id);
 	}
 
 	if(bm->flag_macro_model) {
@@ -1235,6 +1246,15 @@ static void Read_Primary_Producer_Values(MSEBoxModel *bm, char *fileName, xmlNod
         Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, sponge_overgrow_id);
         Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, sponge_compete_id);
     }
+    
+    if(bm->flagbayHAB == TRUE){
+        Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, HAB_mum_scalar_id);
+        attributeGroupNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, parent, "HAB_Location");
+        if (Util_XML_Read_Array_Double(ATLANTIS_ATTRIBUTE, fileName, "HAB_Location", parent, binary_check, "HAB_box", &HAB_boxi, bm->nbox) == FALSE) {
+            quit("Error: Unable to find parameters 'HAB_box' in input file %s\n", fileName);
+        }
+    }
+
 }
 
 static void Read_Bacteria_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
@@ -1405,7 +1425,7 @@ static void Read_Coral_Species_Values(MSEBoxModel *bm, char *fileName, xmlNodePt
 }
 
 /**
- *	\brief Read the data into the recruit_vdistrib array from the input XML file.
+ *	\brief Read the data into the habitat use array from the input XML file.
  */
 static void Read_Habitat_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 
@@ -1497,7 +1517,7 @@ static void Read_Habitat_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent)
 
 
 /**
- *	\brief Read the data into the recruit_vdistrib array from the input XML file.
+ *	\brief Read the data into the ice habitat use array from the input XML file.
  */
 static void Read_Ice_Habitat_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 
@@ -2311,8 +2331,9 @@ static void Read_Age_Diet_Avail_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr 
 									FunctGroupArray[guild].groupCode, fileName);
 						}
 
-						for (b = 0; b < FunctGroupArray[vertGuild].numCohorts; b++)
-							bm->pSPageeat[vertGuild][b][guild] = values[b];
+                        for (b = 0; b < FunctGroupArray[vertGuild].numCohorts; b++) {
+                            bm->pSPageeat[vertGuild][b][guild] = values[b];
+                        }
 
 						free(values);
 					} else {
@@ -2377,7 +2398,7 @@ static void Read_Seagrass_Diet_Avail_XML(MSEBoxModel *bm, char *fileName, xmlNod
 }
 
 /**
- *	\brief Read the data into the recruit_vdistrib array from the input XML file.
+ *	\brief Read the data into the pSTOCK age distribution array from the input XML file.
  */
 static void Read_PStock_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 
@@ -2902,6 +2923,8 @@ static void Read_Diet_Information_Values(MSEBoxModel *bm, char *fileName, xmlNod
 
 	Read_Vert_Growth_Rate_XML(bm, fileName, attributeGroup);
 	Read_Invert_Growth_Rates_XML(bm, fileName, attributeGroup);
+    
+    Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, flag_satiation_id);
 
 	Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, KL_id);
 	Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, KU_id);
@@ -2936,9 +2959,23 @@ static void Read_Diet_Information_Values(MSEBoxModel *bm, char *fileName, xmlNod
         Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, RSstarve_id);
     }
     
+    /* Starvation and shrinking associated with feeding */
+    attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, attributeGroupNode, "Shrinking related");
+    if (attributeGroup == NULL) {
+        quit("Shrinking/Starvation related shrinking information input file %s.\n", fileName);
+    }
+    
+    bm->size_shrinking_type = (int)(Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, integer_check, "size_shrinking_type"));
+    if (bm->size_shrinking_type > 0){
+        bm->shrink_tol = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroup, no_checking, "shrink_tol");
+        Util_XML_Read_Species_Param(bm, fileName, attributeGroup, shrinkStarve_id);
+        Util_XML_Read_Species_Param(bm, fileName, attributeGroup, shrinkProp_id);
+    }
+    
 	attributeGroup = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, attributeGroupNode, "Assimilation_Efficiency");
-	if (attributeGroup == NULL)
-		quit("Diet/Assimilation_Efficiency attribute group not found in input file %s.\n", fileName);
+    if (attributeGroup == NULL) {
+        quit("Diet/Assimilation_Efficiency attribute group not found in input file %s.\n", fileName);
+    }
 
 	Util_XML_Read_Species_Param(bm, fileName, attributeGroup, E1_id);
 	Util_XML_Read_Species_Param(bm, fileName, attributeGroup, E2_id);
@@ -3157,10 +3194,14 @@ static void Read_Mortality_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr pa
 
     Read_Cohort_Species_Param_Values(bm, fileName, attributeGroupNode, mL_T15_id);
     Read_Cohort_Species_Param_Values(bm, fileName, attributeGroupNode, mQ_T15_id);
-
+    
     if(bm->external_populations){
         Read_Cohort_Species_Param_Values(bm, fileName, attributeGroupNode, mLext_id);
         Read_Cohort_Species_Param_Values(bm, fileName, attributeGroupNode, mPext_id);
+    }
+    
+    if(bm->flagbayHAB == TRUE){
+        Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode,  HAB_mort_scalar_id);
     }
     
     Read_Implicit_Mortality_Rate_XML(bm, fileName, attributeGroupNode);
@@ -3231,7 +3272,7 @@ static void Read_Detritus_Conversion_Values(MSEBoxModel *bm, char *fileName, xml
 }
 
 /**
- *	\brief Read the data into the recruit_vdistrib array from the input XML file.
+ *	\brief Read the data into the KDENR array from the input XML file.
  */
 static void Read_KDENR_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 
@@ -3285,7 +3326,7 @@ static void Read_KDENR_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 }
 
 /**
- *	\brief Read the data into the recruit_vdistrib array from the input XML file.
+ *	\brief Read the data into the recStock array from the input XML file.
  */
 static void Read_RecSTOCK_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 
@@ -3319,7 +3360,7 @@ static void Read_RecSTOCK_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent
 }
 
 /**
- *	\brief Read the data into the recruit_vdistrib array from the input XML file.
+ *	\brief Read the data into the PopRatio array from the input XML file.
  */
 static void Read_Popratio_Stock_XML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent) {
 
@@ -3456,6 +3497,7 @@ static void Read_Reproduction_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr
 	Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, log_mult_id);
     Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, norm_sigma_id);
     Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, flag_recruit_stochastic_id);
+    Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, flag_flatinitrecruit_id);
     
     if(bm->ice_on) {
         Util_XML_Read_Species_Param(bm, fileName, attributeGroupNode, prod_alpha_id);
@@ -3656,6 +3698,8 @@ static void Read_Contaminant_Values(MSEBoxModel *bm, char *fileName, xmlNodePtr 
     bm->flag_contam_distrib = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "flag_contam_distrib");
     
     bm->biopools_dodge_contam = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, integer_check, "biopools_dodge_contam");
+    
+    bm->min_pool_cont = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "min_pool_cont");
     
     bm->contam_tau = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, attributeGroupNode, no_checking, "contam_tau");
     
@@ -4268,7 +4312,7 @@ void Zero_Create_Migration_Arrays(MSEBoxModel *bm, FILE *llogfp) {
 void Create_Migration_Arrays(MSEBoxModel *bm, FILE *llogfp) {
     int sp, cohort;
     int maxnum, num_migs;
-    //int use_nyears;  // Was used previously but not anymore excpet for reporting
+    //int use_nyears;  // Was used previously but not anymore except for reporting
     int nyears = (int) (ceil((bm->tstop - bm->tstart) / (365.0 * 86400.0))) + 1;
     
     if(verbose > 1) {
@@ -4309,6 +4353,7 @@ void Create_Migration_Arrays(MSEBoxModel *bm, FILE *llogfp) {
         MIGRATION[sp].aging = Util_Alloc_Init_2D_Double(maxnum, cohort, 0.0);
         MIGRATION[sp].Leave_Now = Util_Alloc_Init_1D_Int(maxnum, MAXINT);
         MIGRATION[sp].Return_Now = Util_Alloc_Init_1D_Int(maxnum, MAXINT);
+        MIGRATION[sp].Checked = Util_Alloc_Init_1D_Int(maxnum, 0);
         
         MIGRATION[sp].all_go = Util_Alloc_Init_2D_Int(maxnum, cohort, 0);
         MIGRATION[sp].survival = Util_Alloc_Init_1D_Double(maxnum, 0);

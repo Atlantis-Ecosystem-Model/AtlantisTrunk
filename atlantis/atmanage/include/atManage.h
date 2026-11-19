@@ -62,8 +62,7 @@ extern int need_discard;
 extern int /***catchind, */*flagdropeffort, *MPAKeyMap, *checkedbox;
 
 /* External parameters */
-extern double H2Otemp, tot_dyn_sea_area;
-extern int it_count, waterboundary;
+extern double tot_dyn_sea_area;
 
 
 /*************************************************************************************
@@ -106,7 +105,7 @@ extern int flagcount;
 
 extern double k_avgcount, k_varcount;
 
-extern BoxLayerValues *boxLayerInfo;
+extern BOX_THREAD_LOCAL BoxLayerValues *boxLayerInfo;
 
 /**************************************************************************
  Needed for close kin - leave in atCLoseKin.c for now, may move here later  */

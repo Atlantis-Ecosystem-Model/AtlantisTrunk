@@ -83,3 +83,6 @@ xmlNodePtr Create_Species_ParamXML(MSEBoxModel *bm, char *fileName, FILE *inputF
 xmlNodePtr Create_RBC_Species_ParamXML(MSEBoxModel *bm, char *fileName, FILE *inputFP, xmlNodePtr parent,
 		int paramID, char *comment, char *units, ATL_XML_ATTRIBUTE_TYPES type,
 		char *recommendedValue);
+xmlNodePtr Create_RBC_Species_ParamXML_Optional(MSEBoxModel *bm, char *fileName, FILE *inputFP, xmlNodePtr parent,
+		int paramID, char *comment, char *units, ATL_XML_ATTRIBUTE_TYPES type,
+		char *recommendedValue);

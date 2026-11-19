@@ -447,10 +447,10 @@ typedef enum {
 #define buffer_ratio 0.0000000000001
 #define mg_2_tonne 0.00000002    /* mg C converted to wet weight in tonnes == 20 / 1000000000 */
 #define mg_2_kg 0.00002 		 /* mg C converted to wet weight in kg == 20 / 1000000 */
-#define mg_2_g 0.02 			 /* mg C converted to wet weight in kg == 20 / 1000 */
-#define tonne_2_mg 50000000.0	 /* mg C converted to wet weight in tonnes == 1000000000 / 20 */
-#define kg_2_mg 50000.0			 /* mg C converted to wet weight in kg == 1000000 / 20 */
-#define g_2_mg 50.0				 /* mg C converted to wet weight in kg == 1000 / 20 */
+#define mg_2_g 0.02 			 /* mg C converted to wet weight in g == 20 / 1000 */
+#define tonne_2_mg 50000000.0	 /* wet weight in tonnes conveted to mg C == 1000000000 / 20 */
+#define kg_2_mg 50000.0			 /* wet weight in kg conveted to mg C == 1000000 / 20 */
+#define g_2_mg 50.0				 /* wet weight in g conveted to mg C == 1000 / 20 */
 
 #define s_2_yr 31536000			 /* seconds in a year */
 #define per_m2_from_per_km2 0.000001
@@ -574,6 +574,11 @@ typedef enum {
 #define base_resp 1
 #define deb_resp 2
 
+/* Define different shrinking types - for krill and urchins etc */
+#define no_shrink 0
+#define XRS_shrink 1
+#define incremental_shrink 2
+
 /* Migration (in/out model domain) id numbers - still needed for parameter read in */
 #define Time_id 0
 #define Return_id 1
@@ -615,7 +620,8 @@ typedef enum {
 /* Light limitation ids */
 #define irr_adapt_off 0
 #define irr_adapt_on 1
-#define irr_ice 2
+#define irr_ice_v1 2
+#define irr_ice_v2 3
 
 /* Transport option ids */
 #define true_mirror 1
@@ -1316,12 +1322,29 @@ typedef enum {
 #define dyntier1B0 11
 #define sp_rollover 12
 #define tier13 13
-#define tier14 14
+#define tier14 14   // Perfect information + error assessment with ACLIM harvest control rules (Ratpack Tier_5)
 
 #define orig_tier_rule 1
 #define new_tier_rule 2
 #define alt_tier_rule 3
 #define safe_tier_rule 4
+#define ratpack_tier_rule 5   // For dyntier4 - native C version of Ratpack (PuntRatpackR) dynamic Tier 4 (Tier_4a)
+
+/* Tier 1 mimic harvest control rule options (Tier1_HCRoption) */
+#define orig_T1_hcr 0      // Original hard-wired rule
+#define ramp_T1_hcr 1      // Continuous ramp using mgt_HCRlimit, mgt_HCRbreak and F at mgt_HCRtarget
+#define aclim_T1_hcr 2     // ACLIM harvest control rule (HCRtype)
+
+/* Ratpack dynamic Tier 4 ABC options */
+#define DT4_hockey_abc 1   // Hockey stick (or ACLIM if HCRtype > 0)
+#define DT4_constF_abc 2   // Constant harvest rate based on PGMSY limit
+
+/* RBC averaging options (UseRBCAveraging_XX) - Nov 2026 (review item 27) */
+#define no_RBC_avg 0        // No averaging
+#define moving_RBC_avg 1    // Atlantis rule: moving average of this assessment's RBC and the RBCs from the previous nRBCaverage-1 years
+#define ratpack_RBC_avg 2   // Ratpack rule: average of the first nRBCaverage years of this assessment's projected RBCs
+                            // (dynamic Tier 4 and SS3 only - tiers that give a single RBC are left unchanged)
+#define MAX_RBC_PROJ 100    // Maximum number of projected RBCs stored from an assessment
 
 #define NoTrigger 0
 #define TotTrigger 1
@@ -1633,6 +1656,7 @@ typedef enum {
 	log_mult_id,
     norm_sigma_id,
     flag_recruit_stochastic_id,
+    flag_flatinitrecruit_id,
 	PP_id,
 	pR_id,
 	recover_mult_id,
@@ -1773,6 +1797,9 @@ typedef enum {
 	mS_T15_id,
 	KO2_id,
 	KO2LIM_id,
+    /* HAB associated */
+    HAB_mum_scalar_id,
+    HAB_mort_scalar_id,   
 	/* Space restrictions for sedentary (epibenthic) groups and deposit feeders */
 	max_id,
 	low_id,
@@ -1935,6 +1962,7 @@ typedef enum {
 	/* Ice related parameters */
 	Beta_D_id,
 	PBmax_D_id,
+    light_a_id,
 	ICE_KDEP_id,
     /* External population related parameters */
     linf_id,
@@ -1949,6 +1977,9 @@ typedef enum {
     SNcost_id,
     RNcost_id,
     RSstarve_id,
+    shrinkStarve_id,
+    shrinkProp_id,
+    flag_satiation_id, // used to be model wide setting
     //flagusingRedusR_HCR_id,  // Using R harvest control rules for this species - just assume using Redus for all or none for now
     /* Lake fish recruitment parameters */
     prod_alpha_id,
@@ -2328,6 +2359,81 @@ enum{
 
 #define K_num_port_indx 2
 
+/****************************************************************************
+ ** OSP related settings
+ **
+ * The three modelling options requested alongside this bridge, plus a
+ * native/off passthrough. See FishMIP_OSP_Bridge_NOTES.md for the full
+ * rationale; in short:
+ *
+ *  OSP_MODE_ATLANTIS_NATIVE       Atlantis runs completely unmodified
+ *  OSP_MODE_A_EFFORT_ECONOMICS    Use biomass and catch processes from Atlantis but effort levels and
+ *                                 economics all comes from the plug in models" -- reads Atlantis biomass & this
+ *                                 year's realised catch, then computes both price (plugin_model_1_calc_price) and next
+ *                                 year's effort (plugin_model_2_calc_effort) and writes both back into Atlantis
+ *                                 (bm->SP_FISHERYprms[...][saleprice_id],bm->Effort[box][fishery]).
+ *  OSP_MODE_B_MARKET_VALUE             Use biomass, catch and effort processes from Atlantis but market value
+ *                                 from the plug in model" - reads Atlantis biomass, catch AND effort (all left alone;
+ *                                 Atlantis's own Economic_Response() / Annual_Effort_Schedule() still set next
+ *                                 year's effort as normal), and only overwrites bm->SP_FISHERYprms[...]
+ *                                 [saleprice_id] with the plug-in price.
+ *  OSP_MODE_C_NATIVE_WITH_DRIVERS  All existing Atlantis processes but uses drivers that plug-in model would
+ *                                 use - writes nothing that Atlantis's own Get_Fish_Prices() computes directly;
+ *                                 instead it translates the plug-in price into the *driver* Get_Fish_Prices() already
+ *                                 reads (bm->MARKETprms[market][sp][market_intercept_id]), so Atlantis's own
+ *                                 formula (intercept * trend * season * AR residual) still runs, just informed by a
+ *                                 plug-in-derived intercept.
+ */
+#define OSP_MODE_ATLANTIS_NATIVE 0
+#define OSP_MODE_A_EFFORT_ECONOMICS 1
+#define OSP_MODE_B_MARKET_VALUE 2
+#define OSP_MODE_C_NATIVE_WITH_DRIVERS 3
+
+/**
+ * How the fishing-mortality target passed to plugin_model_2_calc_effort
+ * (mode OSP_MODE_A_EFFORT_ECONOMICS only) is obtained. Independent of
+ * OSPBridgeMode -- it only has any effect when mode ==
+ * OSP_MODE_A_EFFORT_ECONOMICS, since that is the only mode that calls
+ * plugin_model_2_calc_effort at all.
+ *
+ *  OSP_FTARGET_PLACEHOLDER        Fixed constant per fishery (OSPBridgeConfig::Ftarget_placeholder).
+ *  OSP_FTARGET_PIM_ASSESSMENT     Use the stock assessment from PIM to set [the effort target], then [that is] used
+ *                                 to set the effort and to feed back to TACs": runs fit_one_stock() - the same
+ *                                 Pella & Tomlinson fit PIM_assess_stocks itself calls once per stock - on
+ *                                 Atlantis's own multi-year catch/effort history for each fished species, uses the
+ *                                 resulting FMSY as the effort target, and additionally writes the resulting MSY into
+ *                                 bm->TACamt[sp][nf][now_id] and bm->SP_FISHERYprms[sp][nf][TAC_id] (see
+ *                                 RunPIMAssessment()), so Atlantis's own quota/TAC machinery (Annual_Quota_
+ *                                 Allocation(), atimplementation/ atImplementationAnnual.c's TAC checks)
+ *                                 sees a plug-in-derived TAC.
+ *  OSP_FTARGET_ATLANTIS_ASSESSMENT For Atlantis stock assessment to feed the PIM effort calculations": reads
+ *                                 Atlantis's OWN existing stock-assessment output (bm->RBCestimation.RBCspeciesParam,
+ *                                 populated by its Tier system, atmanage/atManageTier.c) and derives the
+ *                                 effort target from that instead of running the plug-in's own assessment at all -- see
+ *                                 FtargetFromAtlantisAssessment().
+ */
+#define OSP_FTARGET_PLACEHOLDER 0
+#define OSP_FTARGET_PIM_ASSESSMENT 1
+#define OSP_FTARGET_ATLANTIS_ASSESSMENT 2
+
+/**
+ * Where the per-species sale price written/used by this file comes from.
+ * See FishMIP_OSP_Bridge_NOTES.md section 8.
+ *
+ *  OSP_PRICE_LOCAL_PLUGIN   Default/original behaviour: price computed by plugin_model_1_calc_price(), treating each
+ *                           fished species as its own small, local market (see Step 3's doc comment). This is only ever a
+ *                           local supply/demand clearing price - it cannot reproduce the price a *global* market would set,
+ *                           since that would need the rest-of-world supply and demand the full multi-country PIM run
+ *                           (PIM_load_drivers() across all ~228 countries) accounts for and this bridge does not attempt
+ *                           (see section 2, "No EEZ/country/DWFN spatial resolution").
+ *  OSP_PRICE_EXTERNAL_GLOBAL Reads a global-market price time series supplied by the caller (FishMIP_OSP_Bridge_
+ *                           LoadGlobalPrice(), see below) instead of computing one locally - i.e. treats the global price as an external input,
+ *                           since this bridge runs Atlantis for one region only and has no way to derive a
+ *                           genuine global equilibrium price itself. Falls back to OSP_PRICE_LOCAL_PLUGIN's computation,
+ *                           per species, for any species/year the loaded series doesn't cover.
+ */
+#define OSP_PRICE_LOCAL_PLUGIN 0
+#define OSP_PRICE_EXTERNAL_GLOBAL 1
 
 /****************************************************************************
  * Ice time series structure
@@ -2503,6 +2609,7 @@ typedef enum {
     
     //MYTAC related
     myTACend_id,
+    myTACperiod_sp_id,
 
 	//  for tier 4 log file
 	est_discard_rate_id,
@@ -2605,7 +2712,61 @@ typedef enum {
     prevAssessment_id,
     PropClosed_id,
     MultispAssessType_id,
-    
+
+    // Ratpack (PuntRatpackR) dynamic Tier 4 (Tier_4a) inputs
+    DT4_logr_init_id,
+    DT4_K_init_mult_id,
+    DT4_alpha_id,
+    DT4_beta_id,
+    DT4_target_id,
+    DT4_MSYPriorY1_id,
+    DT4_MSYPriorY2_id,
+    DT4_MSYL_id,
+    DT4_MSYRY1_id,
+    DT4_MSYRY2_id,
+    DT4_EstR_id,
+    DT4_EstZ_id,
+    DT4_ProcessError_id,
+    DT4_CVMSYL_id,
+    DT4_PriorMeanR_id,
+    DT4_PriorSDr_id,
+    DT4_ABCoption_id,
+    DT4_PGMSYlimit_id,
+    DT4_CPUEfleet_id,
+
+    // Ratpack dynamic Tier 4 outputs
+    DT4_r_id,
+    DT4_K_id,
+    DT4_z_id,
+    DT4_MSY_id,
+    DT4_BMSY_id,
+    DT4_nll_id,
+    DT4_maxgrad_id,
+
+    // ACLIM harvest control rules (Ratpack MISC HCR)
+    HCRtype_id,
+    HCR_alpha_id,
+    HCR_gamma_id,
+    HCR_theta_id,
+    HCR_omega1_id,
+    HCR_omega2_id,
+    HCR_omega3_id,
+    HCR_cov_id,
+    HCR_Blim_id,
+    HCR_Btarget_id,
+    HCR_Fref_id,
+    HCR_rebuilding_id,      // State flag for ACLIM HCR 2 (lagged recovery) - not read in
+
+    // Ratpack options for existing tiers and meta-rules
+    Tier1_HCRoption_id,
+    Tier4_UseHCRtarget_id,
+    Tier4_UseMaxCatch_id,
+    Tier4_MaxCatch_id,
+    Buffer_stale_rate_id,
+    Buffer_min_id,
+    Tier3_replicate_old_id,  // Use original (pre Nov 2026) newTier3Rule F ramp so old simulations can be replicated
+    Ratpack_baseRBC_id,     // RBC from last actual assessment (used by staleness buffer) - not read in
+
     // To do with indicator harvest control rule
     avgInd_deltaRBC_id,
     trigger_threshold_id,
@@ -2922,6 +3083,10 @@ typedef struct {
     double *SSHsteep;
     double **RBC_post_PGMSY_by_year;
     double *RBC_by_year;
+    double *TAC_by_year;      // Nov 2026: TAC by year (RBC_by_year now always holds the RBC)
+    double *RBC_proj;         // Nov 2026: projected RBCs from the latest assessment (index 0 = first year the RBC applies) - for Ratpack style averaging
+    int nRBC_proj;            // Nov 2026: number of projected RBCs stored in RBC_proj (0 if the assessment gives a single RBC)
+    double lastAssessRBC;     // Nov 2026: RBC (after averaging, before buffers) from the last successful assessment - carried through rollover years (review item 31)
     double *FFs;
     double *PGMSY_q;
     double *PGMSY_selcurve;
@@ -2967,6 +3132,7 @@ typedef struct {
     int UseTierBuffers;  /* Flag indicating whether using tier buffers (used to say US tiers) */
     double myTACbuffer;  /* Buffer used for myTAC multi-year TACs in subsequent years */
     int myTACperiod;     /* Length of myTAC */
+    int myTACperiod_MCT;  /* Length of myTAC for byproduct MCT species */
     int AssessDelay;     /* Length of delay in the assessment process (years from data collection to RBC setting) */
 	int SSForecastType;  /* SS Forecast type */
     double SSFscalar;    /* SS F scalar */
@@ -3902,9 +4068,10 @@ typedef struct {
 
     /* Data assimilation weighting */
     double wgt_coefft;
-    int *use_resets; /* Whether Atantis should reset it's values based on this, rather than adding in new values */
+    int *use_resets; /* Whether Atlantis should reset it's values based on this, rather than adding in new values */
     double ResetTol; /* The buffer around the Atlantis value before the reset value is used instead */
     double total_input;  /* Track of total material added */
+    char input_Varname[BMSLEN]; /**< name of the variable in the forcing file, in case it does not match Atlantis */
 
     /* Timing of start of activity */
     double movetstart;
@@ -3915,6 +4082,9 @@ typedef struct {
 
     /* true of the input is a scalar */
     int isScalar;
+    
+    /* Whethern need to pay attention to Units or not*/
+    int ignoreUnits;
     
 	int isBoxValue;					/* True if the force tracer corresponds to a box value such as eddy value instead of a tracer value */
 	BOX_VALUE_INDEX boxValueIndex;	/* The index of the variable name  - allows for easy expansion later */
@@ -4229,6 +4399,16 @@ typedef struct {
 	int flagecon_on; /**< flag indicating economics in use */
 	int flag_fisheries_on; /**< flag indicating fisheries active */
     int flag_migration_on; /**< flag indicating migration active */
+    /*@}*/
+
+    /**@name
+     * Options for FishMIP OSP plug in models
+     */
+    /*@{*/
+    int flag_OSP_mode; /**< flag indicating whether OSP plug in models being used for eocnomic aspects or not */
+    int flag_OSP_FtargetSource; /**< flag indicating source of F - whether OSP or other assessments in/called by Atlantis */
+    int flag_OSP_PriceSource; /**< flag indicating source of prices - whether OSP or Atlantis native model */
+    int g_effortHistoryCount; /**< counter */
 	/*@}*/
 
 	/**@name
@@ -4236,8 +4416,8 @@ typedef struct {
 	 */
 	/*@{*/
 	char ncIfname[BMSLEN]; /**< tracer input file name */
-	char	destFolder[BMSLEN];			/**< Destination folder */
-	char	inputFolder[BMSLEN];			/**< Input folder */
+	char destFolder[BMSLEN];			/**< Destination folder */
+	char inputFolder[BMSLEN];			/**< Input folder */
 	int ncIfdump; /**< tracer input file dump - dump indicates where in input file to start*/
 	char geomIfname[BMSLEN]; /**< geometry input file name */
 	char ncOfname[BMSLEN]; /**< tracer output file name */
@@ -4841,6 +5021,8 @@ typedef struct {
 
     int flagPHmortcase; /**< What kind of pH related mortality to use */
     int pH_sensitivity_model; /**< What kind of pH sensitivity model to use */
+    double pH_min_effect; /**< pH corrections of parameters divide mortality and multiply growth,
+                               so making them small_num is bad */
 
 	/* And Aragonite parameterisation - needed for coral reefs in particular
 	 * Values for coefficients from proxy fitting exercise - from data
@@ -4863,6 +5045,7 @@ typedef struct {
     double r_immob_PIP_t0;
     double Pads_K;
     double Pads_KO;
+    int flag_adv_P; // Whether using EMS model for phytoplankton or not
     
 	/*@}*/
 
@@ -4957,11 +5140,13 @@ typedef struct {
 	int flagIsEstuary; /**< Flag indicating model is estuary. If this is true then the sediment tracer will be read in from the
 	 initial conditions file and used in the light model */
     int flagIsPolar; /**< Flag indicating model is polar - so it turns off the light level warnings */
+    int flagIncludesCoastal; /**< Flag indicating whetehr coasatl processes are included - either in land-sea models or on land edge of marine models */
 
 	int flagIncludepH; /**< Flag indicating model is including pH. If this is true then the sediment tracer will be read in from the
 		 initial conditions file and used in the light model */
 	int flaglightopt; /**< Flag indicating which light model to use */
 	int lim_sun_hours; /**< whether to worry about finely resolved daylight hours */
+    int force_light; /**< Whether forcing light from an input tracer file */
 	int flagmodeltemp; /**< Flag indicating which seasonal temperature variation
 	 formulation to use */
 	int flagq10; /**< Flag indicating whether q10 considerations on */
@@ -4978,6 +5163,7 @@ typedef struct {
 	int flagtempchange; /**< Flag indicating whether baseline temperature is changing */
 	int flagsaltchange; /**< Flag indicating whether baseline salinity is changing */
 	int flagpHchange; /**< Flag indicating whether baseline salinity is changing */
+    int flagbayHAB; /**< WHether want HAB specific picohphytoplankton and dinoflag dynamics in specific cells */
 
 	int flagdegrade; /**< Flag indicating whether have habitat degradation */
 	int flaghabdepend; /**< Flag indicating whether habitat dependency (especially
@@ -4999,6 +5185,8 @@ typedef struct {
 	 of recruitment */
     int flag_modify_KWSR; /**< Flag indicating whether scaling or forcing KWSR in recrutiment */
     int flag_extpop_growth_option; /**< Flag indicating which growth option to use for the external populations */
+    int size_shrinking_type; /**< Flag indicarting what kind of shrinkage (of invertebrates) is being use, if any */
+    double shrink_tol; /**< Tolerated proprtion of a month will starve before shrink */
     
     int norm_larval_distrib; /** Flag indicating whether to normalise recruit distributions or have the potential for recruits to be lost from the system */
     int larvae_connect_only; /** Flag indicating whether want to condition recruit_hdistrib with a connectivity matrix or just use a connectivity matrix */
@@ -5026,7 +5214,7 @@ typedef struct {
 	int flag_olddiet; /**< Whether want to reproduce the old way of mapping diets or not - best not to, but just in case */
 	int UseHardFeedingWindow; /**< Whether using heaviside step function for feeding or smoother curves */
     int UseBiLogisticFeedingWindow; /**< Whether using humped or bi-logistic shape smoothed feeding curve */
-    int flag_satiation; /**< Flag to indicate whether using satiation of feeding functions - especially for standard form of functional responses */
+    //int flag_satiation; /**< Flag to indicate whether using satiation of feeding functions - especially for standard form of functional responses -- Now species level setting */
     int flag_shrinkfat; /**< Flag to indicate whetehr the growth of fish allows fish to lose fat (1) or not (0) */
     int flag_predratiodepend; /**< Flag indicating whether using any ratio dependent feeding functions */
     int need_predcomp_params; /**< Flag indicating whether need to allow for predator interferernce */
@@ -5106,6 +5294,8 @@ typedef struct {
     
     double contam_sig_uptake_const;
     double contam_tau;
+    double min_pool_cont; /**< Minimum size of a pool before it was ignored as negligible */
+	
     
     double *ContamClosed;
     ContaminantStructure **contaminantStructure;
@@ -5505,13 +5695,13 @@ typedef struct {
 	double targ_refB; /* Target reference point B (e.g. B40) for tiered harvest rules */
 	double targ_refC; /* Target reference point C (e.g. B60) for tiered harvest rules */
 	double targ_refD; /* Target reference point D (e.g. B50) for tiered harvest rules */
-  double targ_refE; /* Target reference point E (e.g. B20) for tiered harvest rules */
+    double targ_refE; /* Target reference point E (e.g. B20) for tiered harvest rules */
 	double lim_ref; /* Limit reference point for assessments and TAC setting */
 	double forage_refA; /* Target reference point A (e.g. B48) for forage species in tiered harvest rules */
 	double forage_refB; /* Target reference point B (e.g. B40) for forage species in tiered harvest rules */
 	double forage_refC; /* Target reference point C (e.g. B60) for forage species in tiered harvest rules */
 	double forage_refD; /* Target reference point D (e.g. B50) for forage species in tiered harvest rules */
-  double forage_refE; /* Target reference point E (e.g. B20) for forage species in tiered harvest rules */
+    double forage_refE; /* Target reference point E (e.g. B20) for forage species in tiered harvest rules */
 	double forage_lim_ref; /* Limit reference point for forage species in assessments and TAC setting */
     double byproduct_refA; /* Target reference point A (e.g. B48) for byproduct species in tiered harvest rules */
     double byproduct_refB; /* Target reference point B (e.g. B40) for byproduct species in tiered harvest rules */
@@ -5970,7 +6160,7 @@ extern double **CatchSum;
 extern double ****mFCchange;
 extern double track_warn;
 
-extern int it_count, waterboundary;
+#include "atBoxWorkspace.h" /* it_count, waterboundary and the other per-box working values */
 extern int verbose;
 extern int fishtest;
 extern int noudunits;

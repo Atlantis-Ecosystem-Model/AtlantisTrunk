@@ -354,7 +354,7 @@ void Apply_Annual_Fisheries_Mgmt(MSEBoxModel *bm, FILE *llogfp) {
 			}
             
             /* Disable TAC check */
-            if(bm -> flagdisableTAC) {
+            if(bm->flagdisableTAC) {
                 for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
                     if (FunctGroupArray[sp].isTAC) {
                         if (flagTACchange == disable_tac ) {

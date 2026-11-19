@@ -1000,6 +1000,7 @@ xmlNodePtr Create_Species_ParamXML(MSEBoxModel *bm, char *fileName, FILE *inputF
 				case Kcov_ad_id:
 				case Bcov_ad_id:
 				case Acov_ad_id:
+                case flag_satiation_id:
 				case KL_id:
 				case KU_id:
 				case KUP_id:
@@ -1047,6 +1048,8 @@ xmlNodePtr Create_Species_ParamXML(MSEBoxModel *bm, char *fileName, FILE *inputF
                 case SNcost_id:
                 case RNcost_id:
                 case RSstarve_id:
+                case shrinkStarve_id:
+                case shrinkProp_id:
 				case KSPA_id:
 				case FSP_id:
 				case vlb_id:
@@ -1066,6 +1069,8 @@ xmlNodePtr Create_Species_ParamXML(MSEBoxModel *bm, char *fileName, FILE *inputF
 				case KS_id:
 				case KF_id:
 				case KLYS_id:
+                case HAB_mum_scalar_id:
+                case HAB_mort_scalar_id:
 				case mD_id:
 				case mO_id:
 				case mS_id:
@@ -1147,6 +1152,7 @@ xmlNodePtr Create_Species_ParamXML(MSEBoxModel *bm, char *fileName, FILE *inputF
 	            case min_trait_variance_id:
 	            case Beta_D_id:
 	            case PBmax_D_id:
+                case light_a_id:
                 case whichRAssess_id:
 					speciesStr = varStr + strlen(paramStrings[paramID]);
 					break;
@@ -1220,6 +1226,7 @@ xmlNodePtr Create_Species_ParamXML(MSEBoxModel *bm, char *fileName, FILE *inputF
 				case log_mult_id:
                 case norm_sigma_id:
                 case flag_recruit_stochastic_id:
+                case flag_flatinitrecruit_id:
 				case min_spawn_temp_id:
 				case max_spawn_temp_id:
 				case min_spawn_salt_id:
@@ -2201,6 +2208,10 @@ int Check_RBC_Species_Param(MSEBoxModel *bm, char *fileName, int index, int para
 }
 
 
+static xmlNodePtr Create_RBC_Species_ParamXML_Core(MSEBoxModel *bm, char *fileName, FILE *inputFP, xmlNodePtr parent,
+		int paramID, char *comment, char *units, ATL_XML_ATTRIBUTE_TYPES type,
+		char *recommendedValue, int isOptional);
+
 /**
  *
  * \brief Create a species parameter in the XML document for the given paramID.
@@ -2220,6 +2231,59 @@ int Check_RBC_Species_Param(MSEBoxModel *bm, char *fileName, int index, int para
 xmlNodePtr Create_RBC_Species_ParamXML(MSEBoxModel *bm, char *fileName, FILE *inputFP, xmlNodePtr parent,
 		int paramID, char *comment, char *units, ATL_XML_ATTRIBUTE_TYPES type,
 		char *recommendedValue) {
+
+	return Create_RBC_Species_ParamXML_Core(bm, fileName, inputFP, parent, paramID, comment, units, type, recommendedValue, FALSE);
+}
+
+/**
+ *
+ * \brief Create an optional species parameter in the XML document for the given paramID.
+ *
+ * As for Create_RBC_Species_ParamXML except that any fished or impacted group that is not
+ * listed in the prm file is given the recommendedValue rather than causing an error.
+ * Used for the Ratpack options so that older prm files still convert (and give the same
+ * results as before because the defaults switch the new options off).
+ *
+ */
+xmlNodePtr Create_RBC_Species_ParamXML_Optional(MSEBoxModel *bm, char *fileName, FILE *inputFP, xmlNodePtr parent,
+		int paramID, char *comment, char *units, ATL_XML_ATTRIBUTE_TYPES type,
+		char *recommendedValue) {
+
+	return Create_RBC_Species_ParamXML_Core(bm, fileName, inputFP, parent, paramID, comment, units, type, recommendedValue, TRUE);
+}
+
+/**
+ * \brief Fill in the default value for any fished or impacted group not given in the prm file
+ */
+static void Fill_RBC_Species_Param_Default(MSEBoxModel *bm, int index, xmlNodePtr newNode, int *guildCheck, char *recommendedValue) {
+	int guild, isNeeded;
+
+	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
+		isNeeded = FALSE;
+		switch (RBCSpeciesParamStructArray[index].paramType) {
+		case SP_FISHED:
+			if (FunctGroupArray[guild].isFished == TRUE)
+				isNeeded = TRUE;
+			break;
+		case SP_IMPACTED:
+			if (FunctGroupArray[guild].isImpacted == TRUE)
+				isNeeded = TRUE;
+			break;
+		default:
+			quit("Fill_RBC_Species_Param_Default - paramType %d not found\n", RBCSpeciesParamStructArray[index].paramType);
+			break;
+		}
+		if (isNeeded && (guildCheck[guild] == FALSE)) {
+			Util_XML_Set_Node_Value(ATLANTIS_GROUP_ATTRIBUTE, newNode, FunctGroupArray[guild].groupCode, recommendedValue);
+			guildCheck[guild] = TRUE;
+		}
+	}
+	return;
+}
+
+static xmlNodePtr Create_RBC_Species_ParamXML_Core(MSEBoxModel *bm, char *fileName, FILE *inputFP, xmlNodePtr parent,
+		int paramID, char *comment, char *units, ATL_XML_ATTRIBUTE_TYPES type,
+		char *recommendedValue, int isOptional) {
 	int buflen = 5000, guild, index;
 	char *varStr, *valuestr, *speciesStr = NULL;
 	char tempBuf[5000], ch, buf[5000], seps[] = " ,\t\n";
@@ -2365,6 +2429,43 @@ xmlNodePtr Create_RBC_Species_ParamXML(MSEBoxModel *bm, char *fileName, FILE *in
                 case init_mgt_sp_id:
                 case PGMSYBHalpha_id:
                 case PGMSYBHbeta_id:
+                case DT4_logr_init_id:
+                case DT4_K_init_mult_id:
+                case DT4_alpha_id:
+                case DT4_beta_id:
+                case DT4_target_id:
+                case DT4_MSYPriorY1_id:
+                case DT4_MSYPriorY2_id:
+                case DT4_MSYL_id:
+                case DT4_MSYRY1_id:
+                case DT4_MSYRY2_id:
+                case DT4_EstR_id:
+                case DT4_EstZ_id:
+                case DT4_ProcessError_id:
+                case DT4_CVMSYL_id:
+                case DT4_PriorMeanR_id:
+                case DT4_PriorSDr_id:
+                case DT4_ABCoption_id:
+                case DT4_PGMSYlimit_id:
+                case DT4_CPUEfleet_id:
+                case HCRtype_id:
+                case HCR_alpha_id:
+                case HCR_gamma_id:
+                case HCR_theta_id:
+                case HCR_omega1_id:
+                case HCR_omega2_id:
+                case HCR_omega3_id:
+                case HCR_cov_id:
+                case HCR_Blim_id:
+                case HCR_Btarget_id:
+                case HCR_Fref_id:
+                case Tier1_HCRoption_id:
+                case Tier4_UseHCRtarget_id:
+                case Tier4_UseMaxCatch_id:
+                case Tier4_MaxCatch_id:
+                case Buffer_stale_rate_id:
+                case Buffer_min_id:
+                case Tier3_replicate_old_id:
 					speciesStr = varStr + strlen(RBCParamStrings[paramID]);
 					break;
 				default:
@@ -2387,8 +2488,11 @@ xmlNodePtr Create_RBC_Species_ParamXML(MSEBoxModel *bm, char *fileName, FILE *in
 		}
 	}
 
-	/* Check that we read in all of the required values */
-	Check_RBC_Species_Param(bm, fileName, index, paramID, guildCheck);
+	/* Check that we read in all of the required values (or fill in defaults if optional) */
+	if (isOptional)
+		Fill_RBC_Species_Param_Default(bm, index, newNode, guildCheck, recommendedValue);
+	else
+		Check_RBC_Species_Param(bm, fileName, index, paramID, guildCheck);
 	regfree(&(regBuffer));
 	free(guildCheck);
 	return newNode;

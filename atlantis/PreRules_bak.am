@@ -1,0 +1,127 @@
+# External FishMIP-OSP toy-model plug-in project (not part of this repo).
+# ateconomic/atFishMIP_OSP_PluginAdapter.cpp needs its headers, and the
+# final atlantisMerged link needs libfishmip_osp_plugin_models.a built by
+# that project's own CMake build. Override this for your own checkout with:
+#   make FISHMIP_OSP_DIR=/path/to/FishMIP-OSP_Toy_Model
+# or by exporting FISHMIP_OSP_DIR in your shell before running make.
+FISHMIP_OSP_DIR ?= $(HOME)/Work/climate_change_and_futures/Projects/Fish-MIP/OSP/OSP_code/FishMIP-OSP_Toy_Model
+
+INCLUDES = $(shell pkg-config --cflags libxml-2.0) \
+	-I$(top_srcdir)/atassess/include -I$(top_srcdir)/atecology/include \
+	-I$(top_srcdir)/ateconomic/include -I$(top_srcdir)/atlantisUtil/include -I$(top_srcdir)/atlantismain/include \
+	-I$(top_srcdir)/atharvest/include -I$(top_srcdir)/atimplementation/include \
+	-I$(top_srcdir)/atmanage/include -I$(top_srcdir)/atphysics/include -I$(top_srcdir)/atFileConvert/include \
+	-I$(top_srcdir)/sjwlib/include  -I$(top_srcdir)/ConvertAtlantis/include -I$(top_srcdir)/atSS3Link/include \
+	-I. -I$(top_srcdir)/atlantismain
+
+# -I$(top_srcdir)/atlink/include  -I$(top_srcdir)/atCLAMLink/include
+
+# Comment out first option and uncomment second option for for OPT if on Apple M1 chips 
+#OPT = -msse2 -mfpmath=sse
+#OPT = -mcpu=apple-m1
+OPT = -mtune=native
+
+# Uncomment this if want to use mac valgrin equivalent
+#OPT = -mtune=native -fsanitize=address -fno-omit-frame-pointer
+
+DBG = -g
+#-pg
+# if you don't want small log files get rid of the defintion of SMALL_LOG_FILE_SIZE
+
+DEFINES = -D PROJ4 -D REPLICATE_OLD_RESULTS -D BETH_LOG_FILE_SIZE
+
+#-D SMALL_LOG_FILE_SIZE
+#-D ORIGINAL_GROUP_ORDER
+
+GCCVERSION = $(shell gcc --version | grep ^gcc | sed 's/^.* //g')
+
+WARN =
+WARN += -Wall -Wextra
+#-Wconversion
+WARN += -Wno-unused-parameter
+WARN += -Wuninitialized
+WARN += -Warray-bounds
+
+#WARN += -Wno-error
+#WARN += -Werror
+
+# Comment out for Mac
+#WARN += -Wformat-overflow
+
+# Needed for Docker (uncomment if commented out)
+WARN += -Wno-error=unused-but-set-variable
+WARN += -Wno-error=misleading-indentation
+WARN += -Wno-error=implicit-function-declaration
+
+# Comment out to run Docker - needed on Mac
+#WARN += -Wno-error=pointer-bool-conversion
+#WARN += -Wno-nullability-completeness
+#WARN += -Wno-nonnull
+
+# if using clang then turn this on and use the Wconditional-uninitialized warning.
+#CC = clang
+#WARN += -Wconditional-uninitialized
+
+#WARN += -Wformat
+#WARN += -Wno-pointer-arith
+#WARN += -Wstrict-prototypes
+#WARN += -Wno-unused-but-set-variable
+#WARN += --analyze
+#WARN += -Weverything
+#WARN += -Wno-documentation-unknown-command
+#WARN += -Wno-documentation
+#WARN += -Wno-incompatible-pointer-types-discards-qualifiers
+#WARN += -Wno-missing-prototypes
+#WARN += -Wno-padded
+#WARN += -Wno-missing-variable-declarations
+#WARN += -Wno-float-equal
+#WARN += -Wmaybe-uninitialized
+
+#WARN += -Wno-unused-but-set-variable
+#WARN += -Wno-error=unused-variable
+#-Wswitch-default
+#WARN += -fprofile-arcs -ftest-coverage
+
+if GCC_GE_730
+    WARN += -Wno-format-overflow
+endif
+
+
+AM_CFLAGS = $(DEFINES) $(INCLUDE) $(DBG) $(OPT) $(EF) $(PG) $(WARN)
+
+if BROKER_LINK_ENABLED
+AM_CFLAGS +=  -D BROKER_LINK_ENABLED -I$(top_srcdir)/atbrokerlink/include
+else
+AM_CFLAGS += -pedantic  -std=c99
+endif
+
+if LINK_ENABLED
+AM_CFLAGS += -D LINK_ENABLED -I$(top_srcdir)/atlink/include $(shell pkg-config --cflags libcsoap)
+endif
+
+if CLAM_LINK_ENABLED
+AM_CFLAGS += -D CLAM_LINK_ENABLED -I$(top_srcdir)/atCLAMLink/include
+endif
+
+#if SS3_LINK_ENABLED
+#AM_CFLAGS += -D SS3_LINK_ENABLED -I$(top_srcdir)/atSS3Link/include
+#endif
+
+if RASSESS_LINK_ENABLED
+AM_CFLAGS += -D RASSESS_LINK_ENABLED
+
+# For the R links
+# A working R installation is required.
+# R must have been built with the '--enable-R-shlib' option enabled to provide the R shared library
+# Ensure the R_HOME environment variable is set appropriately
+#
+# R_HOME = $(shell R RHOME)
+# on Ubuntu Linux
+# R_HOME = /usr/lib/R
+# R_BASE = /usr/lib/R
+# on OS X
+R_BASE = /Library/Frameworks/R.framework/Resources
+R_HOME = /Library/Frameworks/R.framework/Resources
+AM_CFLAGS += -I$(R_BASE)/include -I/usr/share/R/include
+LIBS += -L$(R_BASE)/lib -lR
+endif

@@ -877,8 +877,9 @@ void Ecology_Do_External_Age_Structured_Spawning(MSEBoxModel *bm, int species, i
     int flag_allow_spawn = 1;
     *semelparous_migrants = 0;
     
-    if(verbose)
+    if(verbose) {
         printf("Ecology_Do_External_Age_Structured_Spawning for %s\n", FunctGroupArray[species].groupCode);
+    }
     
     //fprintf(llogfp, "Time: %e, %s-%d box%d-%d Spawn_Now: %d (next_spawn: %d) overall_checkday: %d recruitType: %d\n", bm->dayt, FunctGroupArray[species].groupCode, cohort, bm->current_box, bm->current_layer, EMBRYO[species].Spawn_Now[cohort][EMBRYO[species].next_spawn], EMBRYO[species].next_spawn, overall_checkday, FunctGroupArray[sp].recruitType);
     
@@ -1047,15 +1048,15 @@ void Ecology_Do_Internal_Age_Structured_Spawning(MSEBoxModel *bm, int species, i
             
 		EMBRYO[species].TotSpawn[recieve_ngene] += EMBRYO[species].IndSpawn[cohort] * VERTinfo[species][cohort][DEN_id];
 
-        /**
+        /**/
 		//if (do_debug && (bm->which_check == species)) {
         //if (do_debug ) {
-        if (species == 33) {
+        if ((species == 73) || (species == 68) || (species == 66)) {
 			fprintf(llogfp, "Time: %e, %s cohort %d, internal_Spawning Box %d, layer %d, TotSpawn: %e, IndSpawn[%d]: %e, DEN: %e, FSPB: %e, SN: %e, RN: %e, FSP: %e, KSPA: %e step1: %e\n", bm->dayt,
 					FunctGroupArray[species].groupCode,cohort, bm->current_box, bm->current_layer, EMBRYO[species].TotSpawn[recieve_ngene], cohort, EMBRYO[species].IndSpawn[cohort], VERTinfo[species][cohort][DEN_id],
 					FunctGroupArray[species].scaled_FSPB[cohort], VERTinfo[species][cohort][SN_id], VERTinfo[species][cohort][RN_id], FSP_sp, KSPA_sp, step1);
 		}
-        **/
+        /**/
         
 		/* If semelparous reproduction */
 		if (flagmother < 0) {
@@ -1075,25 +1076,29 @@ void Apply_Semelparous_Deaths(MSEBoxModel *bm, int species, int do_debug, int se
     int cohort, qid;
     
     for (cohort = ((FunctGroupArray[species].numCohortsXnumGenes) - 1); cohort >= 0; cohort--) {
-        
         if(FunctGroupArray[species].scaled_FSPB[cohort] > 0.0) {
-
             /* If semelparous external reproduction */
             if (semelparous_migrants) {
                 for (qid = MIGRATION[species].num_in_queue_done; qid < MIGRATION[species].num_in_queue; qid++) {
-                    fprintf(llogfp,"Time: %e %s-%d qid: %d has starting MIGRATION_den_expect: %e", bm->dayt, FunctGroupArray[species].groupCode, cohort, qid,  MIGRATION[species].DEN[cohort][qid]);
+                    if ((species == 73) || (species == 68) || (species == 66)) {
+                        fprintf(llogfp,"Time: %e %s-%d qid: %d has starting MIGRATION_den_expect: %e", bm->dayt, FunctGroupArray[species].groupCode, cohort, qid,  MIGRATION[species].DEN[cohort][qid]);
+                    }
                 
                     MIGRATION[species].DEN[cohort][qid] *= (1.0 - FunctGroupArray[species].scaled_FSPB[cohort]);
                 
-                    fprintf(llogfp," ending: %e as scaled_FSPB: %e\n", MIGRATION[species].DEN[cohort][qid], FunctGroupArray[species].scaled_FSPB[cohort]);
+                    if ((species == 73) || (species == 68) || (species == 66)) {
+                        fprintf(llogfp," ending: %e as scaled_FSPB: %e\n", MIGRATION[species].DEN[cohort][qid], FunctGroupArray[species].scaled_FSPB[cohort]);
+                    }
                 }
             }
 
     
             /* If semelparous reproduction internal to the model domain */
             if (semelparous_parents) {
-                fprintf(llogfp,"Time: %e %s-%d current_box: %d has DEN: %e and shiftDEN: %e ", bm->dayt, FunctGroupArray[species].groupCode, cohort, bm->current_box, VERTinfo[species][cohort][DEN_id], shiftVERT[species][cohort][DEN_id]);
-            
+                if ((species == 73) || (species == 68) || (species == 66)) {
+                    fprintf(llogfp,"Time: %e %s-%d current_box: %d has DEN: %e and shiftDEN: %e ", bm->dayt, FunctGroupArray[species].groupCode, cohort, bm->current_box, VERTinfo[species][cohort][DEN_id], shiftVERT[species][cohort][DEN_id]);
+                }
+                
                 /* In case need to do aging correct adult abundance directly */
                 VERTinfo[species][cohort][DEN_id] *= (1.0 - FunctGroupArray[species].scaled_FSPB[cohort]);
         
@@ -1103,7 +1108,9 @@ void Apply_Semelparous_Deaths(MSEBoxModel *bm, int species, int do_debug, int se
                  shiftVERT[species][cohort][DEN_id] = VERTinfo[species][cohort][DEN_id];
                  shiftVERTON[species][cohort]++;
             
-                fprintf(llogfp," DEN ending: %e shift ending: %e as scaled_FSPB: %e\n", VERTinfo[species][cohort][DEN_id], shiftVERT[species][cohort][DEN_id], FunctGroupArray[species].scaled_FSPB[cohort]);
+                if ((species == 73) || (species == 68) || (species == 66)) {
+                    fprintf(llogfp," DEN ending: %e shift ending: %e as scaled_FSPB: %e\n", VERTinfo[species][cohort][DEN_id], shiftVERT[species][cohort][DEN_id], FunctGroupArray[species].scaled_FSPB[cohort]);
+                }
 
             }
         }
@@ -1202,14 +1209,14 @@ void Ecology_Find_Embryoes(MSEBoxModel *bm, int species, int stock_id, double pl
 			// Evolution only works for these spawning cases for now - TODO: Generalise so evolution works in all cases
 			EMBRYO[species].Larvae[stock_id][ngene][qid] += EMBRYO[species].TotSpawn[ngene];
 
-            /**
+            /**/
             //if (do_debug && (bm->which_check == species)) {
-            if (species == 33) {
+            if ((species == 73) || (species == 68) || (species == 66)) {
 				fprintf(llogfp,"Doing %s stock %d, ngene: %d, qid: %d, TotSpawn: %e, Larvae: %e\n",
 				FunctGroupArray[species].groupCode, stock_id, ngene, qid, EMBRYO[species].TotSpawn[ngene], 
 				EMBRYO[species].Larvae[stock_id][ngene][qid]);
             }
-            **/
+            /**/
 			break;
 		case fixed_linear_recruit:/* Pupping or calving a fixed number per adult spawning */
 			for(bcohort = 0; bcohort < FunctGroupArray[species].numCohorts; bcohort++){
@@ -1312,15 +1319,15 @@ void Ecology_Find_Embryoes(MSEBoxModel *bm, int species, int stock_id, double pl
             EMBRYO[species].Larvae[stock_id][ngene][qid] += stocked_larvae;
         }
 
-        /**
+        /**/
 		//if (do_debug && (bm->which_check == species)) {
         //if (stocking_sp) {
-        if (do_debug) {
+        if ((species == 73) || (species == 68) || (species == 66)) {
             fprintf(llogfp, "species %s, case: %d, stock: %d, ngene: %d, qid: %d, stocked larvae: %e (tot new Larvae: %e), totspawn: %e recruit_sp: %d\n",
 				FunctGroupArray[species].groupCode, recruit_sp, stock_id, ngene, qid, stocked_larvae,
 				EMBRYO[species].Larvae[stock_id][ngene][qid], EMBRYO[species].TotSpawn[ngene], recruit_sp);
 		}
-        **/
+        /**/
         
         if(bm->track_contaminants && bm->flag_contamMaternalTransfer){
             Store_Recruit_Contaminants(bm, species, stock_id, ngene, qid);
@@ -1411,10 +1418,10 @@ void Get_Recruits(MSEBoxModel *bm, int species, int stock_id, double plankton, F
 		case BevHolt_recruit: /* Beverton-Holt stock-recruit relationship - Atlantis basic version (mix numbers and biomass) */
 			temprec = (recSTOCK[species][stock_id] * BHalpha_sp * EMBRYO[species].Larvae[stock_id][ngene][qid] / (BHbeta_sp + bm->totfishpop[species] * stock_prop[species][stock_id]));
 
-            /**
+            /**/
 			//if (do_debug && (bm->which_check == species)) {
             //if (do_debug) {
-            if (species == 33) {
+            if ((species == 73) || (species == 68) || (species == 66)) {
 				fprintf( llogfp,
 					"Time: %e, box%d-%d, species %s, ngene: %d, stock: %d, temprec: %e, recSTOCK: %e, BHalpha: %e, Larvae: %e, BHbeta: %e, totfish: %e, stock_prop: %e)\n",
 						bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[species].groupCode, 
@@ -1422,7 +1429,7 @@ void Get_Recruits(MSEBoxModel *bm, int species, int stock_id, double plankton, F
 						EMBRYO[species].Larvae[stock_id][ngene][qid], BHbeta_sp, bm->totfishpop[species],
 						stock_prop[species][stock_id]);
 			}
-            **/
+            /**/
 			break;
         case BevHolt_direct_num_recruit: /* Beverton-Holt stock-recruit relationship - numbers only case (when spawn set proprtional to numbers spawning) */
         case BevHolt_num_recruit: /* Beverton-Holt stock-recruit relationship - numbers only case */
@@ -1515,7 +1522,7 @@ void Get_Recruits(MSEBoxModel *bm, int species, int stock_id, double plankton, F
                 
                 recruit_var = FunctGroupArray[species].speciesParams[recruit_var_id];
                 
-                step1 = prod_alpha - dd_beta1 * this_stock * dd_beta2 * current_ICE + temp_coefft * bm->airtemp_index + rate_coefft * bm->airT_rate_index +  recruit_var * 0.5;
+                step1 = prod_alpha + this_stock * (dd_beta2 * current_ICE - dd_beta1) + temp_coefft * bm->airtemp_index + rate_coefft * bm->airT_rate_index +  recruit_var * 0.5;
                 if(bm->track_wind) {
                     step1 += (wind_coefft * current_WIND);
                 }
@@ -1542,16 +1549,16 @@ void Get_Recruits(MSEBoxModel *bm, int species, int stock_id, double plankton, F
         // Store the final number of recruits
 		EMBRYO[species].BulkRecruits[ngene] = temprec;
 
-        /**
+        /**/
         //if (do_debug && (bm->which_check == species)) {
         //if (do_debug) {
         //if (recruit_sp == fixed_linear_recruit) {
-        if (species == 33) {
+        if ((species == 73) || (species == 68) || (species == 66)) {
 			fprintf( llogfp, "Time: %e, box%d-%d, species %s, ngene: %d, recruit_sp case: %d, BulkRecruits: %e, temprec: %e, Larvae: %e qid: %d)\n",
 					bm->dayt, bm->current_box, bm->current_layer, FunctGroupArray[species].groupCode, ngene, recruit_sp,
 					EMBRYO[species].BulkRecruits[ngene], temprec, EMBRYO[species].Larvae[stock_id][ngene][qid], qid);
 		}
-        **/
+        /**/
         
         if(bm->track_contaminants && bm->flag_contamMaternalTransfer){
             Get_Recruit_Contaminants(bm, species, ngene, stock_id, qid);
@@ -1697,14 +1704,14 @@ double Get_Enviro_Recruit_Forcing(MSEBoxModel *bm, int species, int do_debug, FI
          */
 	}
 
-    /**
+    /**/
 	//if (do_debug && (bm->which_check == species)) {
-    if (species == 52) {
+    if ((species == 73) || (species == 68) || (species == 66)) {
 		fprintf(llogfp, "%s enviro_scalar: %e, has sensitive_sp: %d (saltsens: %d), pHscalar: %e, Tscalar: %e, flagtsforcerecruit: %d\n", FunctGroupArray[species].groupCode, enviro_scalar, temp_sensitive_sp, salt_sensitive_sp, pHscalar, Tscalar, bm->flagtsforcerecruit);
 		fprintf(llogfp, "%s has H2Otemp: %e min_spawntemp_sp: %e max_spawntemp_sp: %e current_SALT: %e min_spawnsalt_sp: %e max_spawnsalt_sp: %e\n",
 				FunctGroupArray[species].groupCode, H2Otemp, min_spawntemp_sp, max_spawntemp_sp, current_SALT, min_spawnsalt_sp, max_spawnsalt_sp);
 	}
-    **/
+    /**/
     
 	return enviro_scalar;
 }
@@ -1893,12 +1900,12 @@ void Find_Final_Recruit_Distribution(MSEBoxModel *bm, int species, double enviro
 			EMBRYO[species].num_recruits[bm->current_box][wclayer][ngene][qid] = EMBRYO[species].BulkRecruits[ngene] * enviro_scalar * vertdistrib * bm->recruit_hdistrib[ngene][bm->current_box][species];
 			totrecruit[species][stock_id][ngene] += EMBRYO[species].num_recruits[bm->current_box][wclayer][ngene][qid];
 
-            /**
-            if (do_debug && (species == bm->which_check)) {
-            //if (species < 6) {
+            /**/
+            //if (do_debug && (species == bm->which_check)) {
+            if ((species == 73) || (species == 68) || (species == 66)) {
                 fprintf(llogfp,"Time: %e, %s box%d-%d ngene: %d, qid: %d, totrecruit: %e num_rec: %e (Bulkrecruits: %e, enviro_scalar: %e, vdistrib: %e, hdistrib: %e)\n", bm->dayt, FunctGroupArray[species].groupCode, bm->current_box, wclayer, ngene, qid, totrecruit[species][stock_id][ngene], EMBRYO[species].num_recruits[bm->current_box][wclayer][ngene][qid], EMBRYO[species].BulkRecruits[ngene], enviro_scalar, vertdistrib, bm->recruit_hdistrib[ngene][bm->current_box][species]);
             }
-            **/
+            /**/
                 
 			break;
 		case external_recruit:
@@ -1936,7 +1943,6 @@ void Find_Final_Recruit_Distribution(MSEBoxModel *bm, int species, double enviro
                         //MIGRATION[species].RN[ngene][mid] = (oldRN * oldDEN + KWRR_sp *	EMBRYO[species].BulkRecruits[ngene] * enviro_scalar) / (EMBRYO[species].BulkRecruits[ngene] * enviro_scalar + oldDEN + small_num);
                         
                         /**
-                        //if ((species == 64) || (species == 69)) {
                         if (species == 52) {
                             fprintf(bm->logFile, "Time: %e %s ngene: %d mid: %d MIGRATIONrecruit: %e BulkRecruits: %e enviro_scalar: %e\n",
                                 bm->dayt, FunctGroupArray[species].groupCode, ngene, mid, MIGRATION[species].recruit[ngene][mid], EMBRYO[species].BulkRecruits[ngene], enviro_scalar);
@@ -1991,14 +1997,12 @@ void Find_Final_Recruit_Distribution(MSEBoxModel *bm, int species, double enviro
             Set_Recruit_Final_Contaminants(bm, wclayer, species, ngene, mid, qid, recruit_outside);
         }
         
-        /**
+        /**/
         //if (do_debug && (bm->which_check == species)) {
-        //if (species == 33) {
-        //if (species == 52) {
-        if (species < 6) {
+        if ((species == 73) || (species == 68) || (species == 66)) {
             fprintf(llogfp, "Time: %e %s-%d box %d-%d totrecruit: %e, num_recruit: %e, qid: %d recruitType: %d\n", bm->dayt, FunctGroupArray[species].groupCode, ngene, bm->current_box, wclayer, totrecruit[species][stock_id][ngene], EMBRYO[species].num_recruits[bm->current_box][wclayer][ngene][qid], qid, FunctGroupArray[species].recruitType);
 		}
-        **/
+        /**/
 	}
 
 	return;
@@ -2384,12 +2388,12 @@ void Get_Settlers(MSEBoxModel *bm, int species, int wclayer, int stock_id, int *
 
             }
 
-            /**
+            /**/
             //if (do_debug && (bm->which_check == species)) {
-            if ((species == 33) || (species == 32)) {
+            if ((species == 73) || (species == 68) || (species == 66)) {
                 fprintf(llogfp, "Time: %e, %s ngene: %d, qid (next_recruit): %d StartDay: %d, EndDay: %d, sp_checkday: %d, recruitSPden: %e, remaining larvae: %e, num_recruits%d-%d: %e, temprec: %e, RecruitPeriod: %e, flagtrecruitdistrib: %d\n", bm->dayt, FunctGroupArray[species].groupCode, ngene, EMBRYO[species].next_recruit, EMBRYO[species].StartDay[ngene][EMBRYO[species].next_recruit], EMBRYO[species].EndDay[ngene][EMBRYO[species].next_recruit], sp_checkday, EMBRYO[species].recruitSPden[ngene], EMBRYO[species].num_recruits_updating[bm->current_box][wclayer][ngene][EMBRYO[species].next_recruit], bm->current_box, wclayer, EMBRYO[species].num_recruits[bm->current_box][wclayer][ngene][EMBRYO[species].next_recruit], temprec, EMBRYO[species].RecruitPeriod[EMBRYO[species].next_recruit], flagtrecruitdistrib);
             }
-            **/
+            /**/
             
             if (EMBRYO[species].num_recruits_updating[bm->current_box][wclayer][ngene][EMBRYO[species].next_recruit] < 0.0) {
                     
@@ -3652,9 +3656,6 @@ void Ecology_Update_Vertebrate_Cohorts(MSEBoxModel *bm, FILE *llogfp) {
              
              if((bm->dayt >= bm->checkstart) && (species == bm->which_check))
              do_debug = 1;
-
-             if ((species == 64) || (species == 69))
-             do_debug = 1;
             
             if((bm->dayt >= bm->checkstart) && (species == bm->which_check))
                 do_debug = 1;
@@ -3946,8 +3947,6 @@ void Ecology_Update_Vertebrate_Cohorts(MSEBoxModel *bm, FILE *llogfp) {
 								}
                                 
                                 /**
-                                //if ((species == 64) || (species == 69)) {
-                                //if (species == 22) {
                                 if (species == 35) {
                                     fprintf(llogfp, "Update2-Marine Time: %e, box%d-%d %s-chrt%d, dennow: %e, snnow: %e, aging-stock%d-SN: %e, totprop_mig: %e, denup: %e, nextden: %e\n",
                                             bm->dayt, ij, k, FunctGroupArray[species].groupCode, cohort, dennow, snnow, stock_id,

@@ -486,11 +486,11 @@ void Allocate_Final_Effort(MSEBoxModel *bm, FILE *llogfp) {
 		do_debug_base = 1;
 	} else
 		do_debug_base = 0;
-
+    
 	if (verbose > 1)
 		printf("Calculating final effort allocation\n");
-
-	/** Base economic model **/
+    
+ 	/** Base economic model **/
 	if (bm->MultiPlanEffort) {
 		Multi_Plan_Effort_Final_Allocation(bm, llogfp);
 	} else {
@@ -510,24 +510,29 @@ void Allocate_Final_Effort(MSEBoxModel *bm, FILE *llogfp) {
 					do_debug = 1;
 				} else
 					do_debug = 0;
-
+                
 				if (bm->FISHERYprms[nf][flageffortmodel_id] > rec_econ_model) {
 					for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) {
 						toteffort += bm->SpatialBlackBook[nf][ns][bm->MofY][ij][current_id];
 
-						//fprintf(llogfp,"Time: %e, ij: %d, %s-%d, mth: %d, toteffort: %e, bm->SpatialBlackBook[current_id: %e\n",
-						//	bm->dayt, ij, FisheryArray[nf].fisheryCode, ns, bm->MofY, toteffort, bm->SpatialBlackBook[nf][ns][bm->MofY][ij][current_id]);
-
+                        /*
+                        if (do_debug) {
+                            fprintf(llogfp,"Time: %e, ij: %d, %s-%d, mth: %d, toteffort: %e, bm->SpatialBlackBook[current_id: %e\n",
+                                    bm->dayt, ij, FisheryArray[nf].fisheryCode, ns, bm->MofY, toteffort, bm->SpatialBlackBook[nf][ns][bm->MofY][ij][current_id]);
+                        }
+                         */
 					}
 
 					/* Normalise relative effort per subfleet in each box (for use in Allocate_Catch()) */
 					for (ns = 0; ns < bm->FISHERYprms[nf][nsubfleets_id]; ns++) {
 						bm->SpatialBlackBook[nf][ns][bm->MofY][ij][current_id] /= (toteffort + small_num);
 
+                        /*
 						if (do_debug) {
 							fprintf(llogfp, "Time: %e, ij: %d, %s-%d, mth: %d, bm->SpatialBlackBook[current_id: %e, toteffort: %e\n", bm->dayt, ij,
 									FisheryArray[nf].fisheryCode, ns, bm->MofY, bm->SpatialBlackBook[nf][ns][bm->MofY][ij][current_id], toteffort);
 						}
+                         */
 
 						if (bm->MultiPlanEffort) {
 							/* Do nothing as current effort updated continuously without discontinuity */
@@ -638,11 +643,13 @@ void Multi_Plan_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
 					all_done = 0;
 				}
 
+                /*
 				if (do_debug) {
 					fprintf(llogfp, "Time: %e, %s-%d mth: %d all_done: %d, EffortSchedule[expect_id]: %e, EffortSchedule[current_id]: %e\n", bm->dayt,
 							FisheryArray[nf].fisheryCode, ns, bm->MofY, all_done, bm->EffortSchedule[nf][ns][bm->MofY][expect_id],
 							bm->EffortSchedule[nf][ns][bm->MofY][current_id]);
 				}
+                 */
 
 				/* If quota remains (or quota management not in use) allocate
 				 effort level based on expected returns. If this is the last
@@ -712,6 +719,7 @@ void Multi_Plan_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
 							CPUEbased *= (1 - (bm->SpatialDisPUE[nf][ns][bm->MofY][ij] / (totDIS + small_num)));
 						}
 
+                        /*
 						if (do_debug) {
 							fprintf(
 									llogfp,
@@ -720,6 +728,7 @@ void Multi_Plan_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
 									bm->SpatialCPUE[nf][ns][bm->MofY][ij], bm->SUBFLEET_ECONprms[nf][ns][cpue_ind_id],
 									bm->EffortSchedule[nf][ns][bm->MofY][expect_id]);
 						}
+                         */
 
 						/* Find petrol cost implications - as for alt_cpue_effort fleet dynamics
 						 models in atmanage.lib
@@ -765,12 +774,14 @@ void Multi_Plan_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
 						if (tempEffort < 0)
 							tempEffort = 0;
 
+                        /*
 						if (do_debug) {
 							fprintf(llogfp,
 									"Time: %e %s-%d in %d tempEffort: %e, SUBFLEET_ECONprms[flexweight_id]: %e, CPUEbased: %e, bm->Effort_hdistrib[%d]: %e\n",
 									bm->dayt, FisheryArray[nf].fisheryCode, ns, ij, tempEffort, bm->SUBFLEET_ECONprms[nf][ns][flexweight_id], CPUEbased,
 									bm->MofY, bm->Effort_hdistrib[ij][nf][bm->MofY]);
 						}
+                         */
 
 						/* For final effort distribution take distribution based on plan update by immediate CPUE
 						 results (the ideal distribution effectively) and interpolate it with the current
@@ -782,6 +793,7 @@ void Multi_Plan_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
 						bm->Effort_hdistrib[ij][nf][calc_effort] += FCpressure;
 						toteffort += bm->Effort_hdistrib[ij][nf][calc_effort];
 
+                        /*
 						if (do_debug) {
 							fprintf(
 									llogfp,
@@ -790,6 +802,7 @@ void Multi_Plan_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
 									(max(1.0,(bm->Speed_boat * bm->dt / bm->width))), bm->Speed_boat, (bm->dt / bm->width), tempEffort,
 									bm->OldEffort[ij][nf], toteffort);
 						}
+                         */
 					}
 				}
 
@@ -811,6 +824,7 @@ void Multi_Plan_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
 							bm->Effort_hdistrib[ij][nf][new_today_effort] += FCpressure;
 							this_effort += FCpressure;
 
+                            /*
 							if (do_debug) {
 								fprintf(
 										llogfp,
@@ -820,6 +834,7 @@ void Multi_Plan_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
 										((bm->EffortSchedule[nf][ns][bm->MofY][expect_id] / 30.0) / bm->SUBFLEET_ECONprms[nf][ns][nboat_id]),
 										bm->SUBFLEET_ECONprms[nf][ns][nboat_id], this_effort);
 							}
+                             */
 						}
 					}
 				}
@@ -845,11 +860,13 @@ void Multi_Plan_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
 									* (bm->EffortSchedule[nf][ns][bm->MofY][expect_id] / 30.0) * (bm->Effort_hdistrib[ij][nf][calc_effort] / (toteffort
 									+ small_num)) * permisible_left / (this_effort + small_num);
 
+                            /*
 							if (do_debug) {
 								fprintf(llogfp, "Time: %e %s-%d new rescaled Effort_hdistrib-%d: %e, permissible: %e this_effort: %e, max_month_effort: %e\n",
 										bm->dayt, FisheryArray[nf].fisheryCode, ns, ij, bm->Effort_hdistrib[ij][nf][today_effort], permisible_left,
 										this_effort, max_month_effort);
 							}
+                             */
 						}
 					}
 					/* Store new realised effort */
@@ -860,16 +877,20 @@ void Multi_Plan_Effort_Final_Allocation(MSEBoxModel *bm, FILE *llogfp) {
 						if (bm->boxes[ij].type != BOUNDARY) {
 							bm->Effort_hdistrib[ij][nf][today_effort] = bm->Effort_hdistrib[ij][nf][new_today_effort];
 
+                            /*
 							if (do_debug) {
 								fprintf(llogfp, "Time: %e %s-%d new setting Effort_hdistrib-%d: %e\n", bm->dayt, FisheryArray[nf].fisheryCode, ns, ij,
 										bm->Effort_hdistrib[ij][nf][today_effort]);
 							}
+                             */
 						}
 					}
 				}
 			}
 		}
 	}
+    
+    return;
 }
 
 /**

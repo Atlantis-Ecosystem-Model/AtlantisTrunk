@@ -131,14 +131,18 @@ static int Read_Run_Parameters(MSEBoxModel *bm, char *fileName) {
 
 	bm->flagecon_on = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flagecon_on");
 	bm->flag_fisheries_on = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flag_fisheries_on");
-    bm->flag_migration_on = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flag_migration_on");
-	
     bm->flagindustry_on = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flagindustry_on");
-    
+
     if(bm->flagindustry_on == simple_industry_model) {
         bm->K_num_vessel_sizes = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "K_num_vessel_sizes");;
     }
-    
+
+    bm->flag_OSP_mode = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "flag_OSP_mode");
+    bm->flag_OSP_FtargetSource = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "flag_OSP_FtargetSource");
+    bm->flag_OSP_PriceSource = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "flag_OSP_PriceSource");
+	
+    bm->flag_migration_on = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flag_migration_on");
+
     bm->flag_skip_biol = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flag_skip_biol");
 	bm->flag_skip_phys = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flag_skip_phys");
 	bm->check_dups = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "check_dups");
@@ -181,6 +185,7 @@ static int Read_Run_Parameters(MSEBoxModel *bm, char *fileName) {
     
     bm->flagpassivetracer = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flagpassivetracer");
 	bm->terrestrial_on = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flagAllowLand");
+    bm->flagIncludesCoastal = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flagIncludesCoastal");
     
     bm->flag_pollutant_impacts = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "flag_pollutant_impacts");
 

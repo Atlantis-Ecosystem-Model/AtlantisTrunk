@@ -102,6 +102,7 @@
 /* Prototypes */
 
 void	quit(char *format, ...);
+extern int suppress_runtime_warnings;  // Set from the -Q command flag. Warnings are not part of the model state. //
 void	warn(char *format, ...);
 void 	quiet(char *format, ...);
 extern void (*keyprm_errfn)(char *format, ...);// = quit;

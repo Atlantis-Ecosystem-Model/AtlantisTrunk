@@ -175,42 +175,39 @@ void Init_Co_Sp_CatchXML(MSEBoxModel *bm, xmlNodePtr parent) {
 
 void Co_Sp_CatchXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *str, char *valueStr) {
 
+    static const char *marker = "_co_sp_catch";
+    size_t markerLen = strlen(marker);
+    char *suffixStart;
+    char *digits;
+    size_t speciesLen;
     int cospIndex;
-    char *lastLetter;
-    char *secondlastLetter;
     char speciesStr[50];
-    int i;
-    char step1Str[50];
-    char tempStr[50];
     char attributeName[100];
     int speciesIndex;
     xmlNodePtr speciesNode;
 
-    // Find stock index
-    strcpy(tempStr, str);
-    strcpy(step1Str, str);
-    lastLetter = step1Str + strlen(step1Str) - 1;
-    secondlastLetter = step1Str + strlen(step1Str) - 2;
+     suffixStart = strstr(str, marker);
+     if (suffixStart == NULL) {
+         quit("co_sp_catch token missing '_co_sp_catch' marker in %s in string %s", fileName, str);
+     }
 
-    if(isdigit(secondlastLetter[0])) {  // Is the first digit a number if yes then a two digit case
-        cospIndex = atoi(secondlastLetter);
-        tempStr[strlen(secondlastLetter) - strlen("_co_sp_catch") - 2] = '\0';        
-    } else {  // No make it a single string case
-        cospIndex = atoi(lastLetter);
-        tempStr[strlen(tempStr) - strlen("_co_sp_catch") - 1] = '\0';
-    }
+     // Everything before the marker is the species code
+     speciesLen = suffixStart - str;
+     if (speciesLen >= sizeof(speciesStr)) speciesLen = sizeof(speciesStr) - 1;
+     strncpy(speciesStr, str, speciesLen);
+     speciesStr[speciesLen] = '\0';
 
-    // Get the species string section of the string.
-    for (i = 0; isalpha(tempStr[i]); i++) {
-        speciesStr[i] = tempStr[i];
-    }
-    speciesStr[i] = '\0';
-    speciesIndex = Util_Get_FG_Index_From_Token(bm, speciesStr, fileName, str, TRUE);
-    speciesNode = Util_XML_Get_Or_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode);
+    // Anything after the marker is the companion index; no digits = companion 1
+     digits = suffixStart + markerLen;
+     cospIndex = (*digits == '\0') ? 1 : atoi(digits);
 
-    snprintf(attributeName, sizeof(attributeName),"companion%d", cospIndex);
-    Util_XML_Set_Node_Value(ATLANTIS_COMPANION_ATTRIBUTE, speciesNode, attributeName, valueStr);
+     speciesIndex = Util_Get_FG_Index_From_Token(bm, speciesStr, fileName, str, TRUE);
+     speciesNode = Util_XML_Get_Or_Create_Node(ATLANTIS_GROUP_ATTRIBUTE, parent, FunctGroupArray[speciesIndex].groupCode);
 
+     snprintf(attributeName, sizeof(attributeName), "companion%d", cospIndex);
+     Util_XML_Set_Node_Value(ATLANTIS_COMPANION_ATTRIBUTE, speciesNode, attributeName, valueStr);
+
+    //quit("Debug\n");
 }
 
 void MakeBasketTACXML(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, char *str, char *valueStr) {
@@ -911,7 +908,7 @@ void TACXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc, xmlNodePtr
 
         Create_Species_ParamXML(bm, fileName, fp, groupingNode, coType_id, "Type of companion TAC (0 = weakest link dictates quota, 1 = strongest link dictates quota)", "", XML_TYPE_BOOLEAN,"1");
         
-        Parse_File(bm, fp, fileName, groupingNode, "co_sp_catch", "^[A-Z]{2,3}_co_sp_catch[1-9]{1,2}","Ratio of catch of companions in companion TAC - for all entries must have as many entries as there are fisheries. \nOne vctor is required per companion species.", "", XML_TYPE_FLOATARRAY, bm->K_num_fisheries, TRUE, Init_Co_Sp_CatchXML, Co_Sp_CatchXMLFunction);
+        Parse_File(bm, fp, fileName, groupingNode, "co_sp_catch", "^[A-Z]{2,3}_co_sp_catch[1-9]{1,2}","Ratio of catch of companions in companion TAC - for all entries must have as many entries as there are fisheries. \nOne vector is required per companion species.", "", XML_TYPE_FLOATARRAY, bm->K_num_fisheries, TRUE, Init_Co_Sp_CatchXML, Co_Sp_CatchXMLFunction);
 
     }
 

@@ -301,7 +301,8 @@ void Util_Setup_Species_Param_Strings(MSEBoxModel *bm) {
 	snprintf(paramStrings[Kcov_ad_id], paramlen, "%s", "Kcov_ad_");
 	snprintf(paramStrings[Bcov_ad_id], paramlen, "%s", "Bcov_ad_");
 	snprintf(paramStrings[Acov_ad_id], paramlen, "%s", "Acov_ad_");
-
+    
+    snprintf(paramStrings[flag_satiation_id], paramlen, "%s",  "flagsatiation_");
 	snprintf(paramStrings[KL_id], paramlen, "%s", "KL_");
 	snprintf(paramStrings[KU_id], paramlen, "%s", "KU_");
 	snprintf(paramStrings[KUP_id], paramlen, "%s", "KUP_");
@@ -356,7 +357,9 @@ void Util_Setup_Species_Param_Strings(MSEBoxModel *bm) {
     snprintf(paramStrings[SNcost_id], paramlen, "%s", "SNcost_");
     snprintf(paramStrings[RNcost_id], paramlen, "%s", "RNcost_");
     snprintf(paramStrings[RSstarve_id], paramlen, "%s", "RNstarve_");
-    
+    snprintf(paramStrings[shrinkStarve_id], paramlen, "%s", "shrinkStarve_");
+    snprintf(paramStrings[shrinkProp_id], paramlen, "%s", "shrinkProp_");
+
 	snprintf(paramStrings[overwinterStartTofY_id], paramlen, "%s", "overwinterStartTofY_");
 	snprintf(paramStrings[overwinterEndTofY_id], paramlen, "%s", "overwinterEndTofY_");
 	snprintf(paramStrings[overwinterStartTemp_id], paramlen, "%s", "overwinterStartTemp_");
@@ -393,6 +396,8 @@ void Util_Setup_Species_Param_Strings(MSEBoxModel *bm) {
 	snprintf(paramStrings[log_mult_id], paramlen, "%s", "_log_mult");
     snprintf(paramStrings[norm_sigma_id], paramlen, "%s", "_norm_sigma");
     snprintf(paramStrings[flag_recruit_stochastic_id], paramlen, "%s", "_flag_recruit_stochastic");
+    snprintf(paramStrings[flag_flatinitrecruit_id], paramlen, "%s", "_flag_flatinitrecruit");
+    
 	snprintf(paramStrings[min_spawn_temp_id], paramlen, "%s", "_min_spawn_temp");
 	snprintf(paramStrings[max_spawn_temp_id], paramlen, "%s", "_max_spawn_temp");
 	snprintf(paramStrings[min_spawn_salt_id], paramlen, "%s", "_min_spawn_salt");
@@ -432,7 +437,11 @@ void Util_Setup_Species_Param_Strings(MSEBoxModel *bm) {
 	snprintf(paramStrings[KI_T15_id], paramlen, "%s", "KI_*_T15");
 	snprintf(paramStrings[Beta_D_id], paramlen, "%s", "Beta_D_");
 	snprintf(paramStrings[PBmax_D_id], paramlen, "%s", "PBmax_D_");
-	snprintf(paramStrings[ICE_KDEP_id], paramlen, "%s", "ICE_KDEP_");
+    snprintf(paramStrings[light_a_id], paramlen, "%s", "light_a_");
+    snprintf(paramStrings[ICE_KDEP_id], paramlen, "%s", "ICE_KDEP_");
+    
+    snprintf(paramStrings[HAB_mum_scalar_id], paramlen, "%s", "HAB_mum_scalar_");
+    snprintf(paramStrings[HAB_mort_scalar_id], paramlen, "%s", "HAB_mort_scalar_");
 
 	snprintf(paramStrings[KI_L_T15_id], paramlen, "%s", "L_KI_*_T15");
 	snprintf(paramStrings[Kext_id], paramlen, "%s", "Kext_");
@@ -725,6 +734,49 @@ void Util_Setup_Species_Param_Strings(MSEBoxModel *bm) {
     
     snprintf(RBCParamStrings[PGMSYBHalpha_id], paramlen, "%s", "PGMSYBHalpha_");
     snprintf(RBCParamStrings[PGMSYBHbeta_id], paramlen, "%s", "PGMSYBHbeta_");
+
+    // Ratpack dynamic Tier 4
+    snprintf(RBCParamStrings[DT4_logr_init_id], paramlen, "%s", "DT4_logr_init_");
+    snprintf(RBCParamStrings[DT4_K_init_mult_id], paramlen, "%s", "DT4_K_init_mult_");
+    snprintf(RBCParamStrings[DT4_alpha_id], paramlen, "%s", "DT4_alpha_");
+    snprintf(RBCParamStrings[DT4_beta_id], paramlen, "%s", "DT4_beta_");
+    snprintf(RBCParamStrings[DT4_target_id], paramlen, "%s", "DT4_target_");
+    snprintf(RBCParamStrings[DT4_MSYPriorY1_id], paramlen, "%s", "DT4_MSYPriorY1_");
+    snprintf(RBCParamStrings[DT4_MSYPriorY2_id], paramlen, "%s", "DT4_MSYPriorY2_");
+    snprintf(RBCParamStrings[DT4_MSYL_id], paramlen, "%s", "DT4_MSYL_");
+    snprintf(RBCParamStrings[DT4_MSYRY1_id], paramlen, "%s", "DT4_MSYRY1_");
+    snprintf(RBCParamStrings[DT4_MSYRY2_id], paramlen, "%s", "DT4_MSYRY2_");
+    snprintf(RBCParamStrings[DT4_EstR_id], paramlen, "%s", "DT4_EstR_");
+    snprintf(RBCParamStrings[DT4_EstZ_id], paramlen, "%s", "DT4_EstZ_");
+    snprintf(RBCParamStrings[DT4_ProcessError_id], paramlen, "%s", "DT4_ProcessError_");
+    snprintf(RBCParamStrings[DT4_CVMSYL_id], paramlen, "%s", "DT4_CVMSYL_");
+    snprintf(RBCParamStrings[DT4_PriorMeanR_id], paramlen, "%s", "DT4_PriorMeanR_");
+    snprintf(RBCParamStrings[DT4_PriorSDr_id], paramlen, "%s", "DT4_PriorSDr_");
+    snprintf(RBCParamStrings[DT4_ABCoption_id], paramlen, "%s", "DT4_ABCoption_");
+    snprintf(RBCParamStrings[DT4_PGMSYlimit_id], paramlen, "%s", "DT4_PGMSYlimit_");
+    snprintf(RBCParamStrings[DT4_CPUEfleet_id], paramlen, "%s", "DT4_CPUEfleet_");
+
+    // ACLIM harvest control rules
+    snprintf(RBCParamStrings[HCRtype_id], paramlen, "%s", "HCRtype_");
+    snprintf(RBCParamStrings[HCR_alpha_id], paramlen, "%s", "HCR_alpha_");
+    snprintf(RBCParamStrings[HCR_gamma_id], paramlen, "%s", "HCR_gamma_");
+    snprintf(RBCParamStrings[HCR_theta_id], paramlen, "%s", "HCR_theta_");
+    snprintf(RBCParamStrings[HCR_omega1_id], paramlen, "%s", "HCR_omega1_");
+    snprintf(RBCParamStrings[HCR_omega2_id], paramlen, "%s", "HCR_omega2_");
+    snprintf(RBCParamStrings[HCR_omega3_id], paramlen, "%s", "HCR_omega3_");
+    snprintf(RBCParamStrings[HCR_cov_id], paramlen, "%s", "HCR_cov_");
+    snprintf(RBCParamStrings[HCR_Blim_id], paramlen, "%s", "HCR_Blim_");
+    snprintf(RBCParamStrings[HCR_Btarget_id], paramlen, "%s", "HCR_Btarget_");
+    snprintf(RBCParamStrings[HCR_Fref_id], paramlen, "%s", "HCR_Fref_");
+
+    // Ratpack options for existing tiers and meta-rules
+    snprintf(RBCParamStrings[Tier1_HCRoption_id], paramlen, "%s", "Tier1_HCRoption_");
+    snprintf(RBCParamStrings[Tier4_UseHCRtarget_id], paramlen, "%s", "Tier4_UseHCRtarget_");
+    snprintf(RBCParamStrings[Tier4_UseMaxCatch_id], paramlen, "%s", "Tier4_UseMaxCatch_");
+    snprintf(RBCParamStrings[Tier4_MaxCatch_id], paramlen, "%s", "Tier4_MaxCatch_");
+    snprintf(RBCParamStrings[Buffer_stale_rate_id], paramlen, "%s", "Buffer_stale_rate_");
+    snprintf(RBCParamStrings[Buffer_min_id], paramlen, "%s", "Buffer_min_");
+    snprintf(RBCParamStrings[Tier3_replicate_old_id], paramlen, "%s", "Tier3_replicate_old_");
 
     return;
 }

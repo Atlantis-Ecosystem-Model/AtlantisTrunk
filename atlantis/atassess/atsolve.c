@@ -91,64 +91,69 @@ void Amoeba(MSEBoxModel *bm, int assessing, int sp, double dayt, char* speciesna
 	 function value. On output p and y will have been reset to ndim+1 new points all
 	 within ftol of a minimum function value, and nfunk gives the number of function
 	 evaluations taken.
+
+	 Nov 2026: corrected to match Numerical Recipes -
+	   - uses all ndim+1 vertices (was mpts = ndim, so the last vertex was never used)
+	   - on return (converged or not) the best point is in row 0 of p and y[0] and ilow = 0
+	     (the best point was swapped into row 1 but ilow left pointing at the old row)
+	   - psum recalculated correctly after a contraction
+	 Callers must set up ndim+1 rows of p and y.
 	 */
 
 	int i, j, ilo, ihi, inhi;
-	//int mpts=ndim+1;
-	int mpts = ndim;
+	int mpts = ndim + 1;
 	double ytry, ysave, sum, rtol, swap;
 	double *psum = alloc1d(ndim); /* Temporary storage */
 
 	*nfunk = 0;
 
 	for (j = 0; j < ndim; j++) {
-		for (sum = 0.0, i = 0; i < mpts; i++) {   // Note added the sum to be in line with Numerical Recipes
+		for (sum = 0.0, i = 0; i < mpts; i++) {
 			sum += p[i][j];
 		}
-        psum[j] = sum;
+		psum[j] = sum;
 	}
 
 	for (;;) {
 		/* First determine which point is highest (worst), next highest, and lowest (best)
 		 by looping over the points in the simplex */
 		ilo = 0;
-		ihi = 1;
-		ihi = y[0] > y[1] ? (inhi = 1, 0) : (inhi = 0, 1);
+		if (y[0] > y[1]) {
+			ihi = 0;
+			inhi = 1;
+		} else {
+			ihi = 1;
+			inhi = 0;
+		}
 		for (i = 0; i < mpts; i++) {
-			if (y[i] < y[ilo])
+			if (y[i] <= y[ilo])
 				ilo = i;
 			if (y[i] > y[ihi]) {
 				inhi = ihi;
 				ihi = i;
-			} else if (y[i] > y[inhi]) {
-				if (i != ihi)
-					inhi = i;
+			} else if ((y[i] > y[inhi]) && (i != ihi)) {
+				inhi = i;
 			}
 		}
 		rtol = 2.0 * fabs(y[ihi] - y[ilo]) / (fabs(y[ihi]) + fabs(y[ilo]) + small_num);
 
-		/* Compute the fractional range from the highest to lowest
-		 and return if satisfactory */
-		if (rtol < ftol) {
-			// First version just had break here, but the book has additional content so adding that again here
-			// to be in line with Numerical Recipes. Maybe add an if (!assessing) test here so consistent with old approach?
-
-			// If returning, put best point and value in slot 1
-			SWAP(y[0],y[ilo]); 
-			for(i=0; i<ndim; i++){
-				SWAP(p[1][i],p[ilo][i]);
+		/* Compute the fractional range from the highest to lowest and return if satisfactory,
+		 or if run out of function evaluations. Either way put best point and value in slot 0 */
+		if ((rtol < ftol) || (*nfunk >= itmax)) {
+			SWAP(y[0],y[ilo]);
+			for (j = 0; j < ndim; j++) {
+				SWAP(p[0][j],p[ilo][j]);
+			}
+			*ilow = 0;
+			if (rtol >= ftol) {
+				if (assessing)
+					fprintf(ofp, "Time: %e assessment of %s has failed to converge\n ", dayt, speciesname);
+				else
+					fprintf(ofp, "Time %e downhill_simplex (amoeba) failed to converge\n", dayt);
 			}
 			break;
 		}
-		if (*nfunk >= itmax) {
-			*ilow = ilo;
-			if (assessing)
-				fprintf(ofp, "Time: %e assessment of %s has failed to converge\n ", dayt, speciesname);
-			else
-				fprintf(ofp, "Time %e downhill_simplex (amoeba) failed to converge\n", dayt);
-			return;
-		}
-		*nfunk += 2;				// Added this line to be in line with Numerical Recipes
+		*nfunk += 2;
 
 		/* Begin a new iteration */
 		/* First extrapolate by a factor alpha through the face of the simplex
@@ -179,18 +184,16 @@ void Amoeba(MSEBoxModel *bm, int assessing, int sp, double dayt, char* speciesna
 
 				/* Recompute psum */
 				for (j = 0; j < ndim; j++) {
-					for (sum = 0.0, i = 0; i < mpts; i++) {  // Note added the sum to be in line with Numerical Recipes
+					for (sum = 0.0, i = 0; i < mpts; i++) {
 						sum += p[i][j];
-						psum[j] = sum;
 					}
+					psum[j] = sum;
 				}
 			}
-		} else -- (*nfunk);   // Correct the evaluation count       // Added this line to be in line with Numerical Recipes
+		} else -- (*nfunk);   // Correct the evaluation count
 
 		/* Go back for the test of doneness and the next iteration */
 	}
-
-	*ilow = ilo;
 
 	/* Free local array */
 	free1d(psum);
@@ -294,10 +297,16 @@ double Funk(MSEBoxModel *bm, int funkflag, int sp, int nchrt, int ndim, int YrMa
 		ans = SS;
 		break;
 	case EquilF_Funk_model:
-		EquilF_Funk(bm, sp, xpar, ofp);
+		/* Evaluate at the trial point X (Nov 2026 - previously ignored X and returned 0) */
+		for (i = 0; i < ndim; i++)
+			xpar[i] = X[i];
+		ans = EquilF_Funk(bm, sp, xpar, ofp);
 		break;
 	case SurplusProduction_model:
-		SurplusProduction(bm, sp, xpar, ofp);
+		/* Evaluate at the trial point X (Nov 2026 - previously ignored X and returned 0) */
+		for (i = 0; i < ndim; i++)
+			xpar[i] = X[i];
+		ans = SurplusProduction(bm, sp, xpar, ofp);
 		break;
 	default:
 		quit("No such function flag defined - how did it get here?\n");
@@ -490,7 +499,8 @@ void Prod_Calc(MSEBoxModel *bm,int ndim, int sp, int nchrt, int YrMax, double pr
 		XX[0] = 1.0;
 		XX[1] = 1.0;
 
-		Linear_Regression(bm, qlinear_regress, sp, XX, ndim, PP, YY, YrMax, 1, ofp);
+		// Nov 2026: regression has 2 parameters (was passed the production model ndim)
+		Linear_Regression(bm, qlinear_regress, sp, XX, 2, PP, YY, YrMax, 1, ofp);
 
 		/* Get results of regression - need to take exponent as linear
 		 regression dealt with logged ratios */
@@ -576,8 +586,8 @@ void Linear_Regression(MSEBoxModel *bm, int funkflag, int sp, double *X, int ndi
 	//double SS;
 	double GRD = 1.2;
 
-	/* Assumes X already initialised so set up tolerances and gridding */
-	for (i = 0; i < ndim; i++) {
+	/* Assumes X already initialised so set up tolerances and gridding - Nov 2026: ndim+1 vertices (was ndim) */
+	for (i = 0; i < ndim + 1; i++) {
 		for (j = 0; j < ndim; j++) {
 			P[i][j] = X[j];
 			if (i - 1 == j)
@@ -585,7 +595,7 @@ void Linear_Regression(MSEBoxModel *bm, int funkflag, int sp, double *X, int ndi
 		}
 	}
 
-	for (i = 0; i < ndim; i++) {
+	for (i = 0; i < ndim + 1; i++) {
 		for (j = 0; j < ndim; j++) {
 			X[j] = P[i][j];
 		}

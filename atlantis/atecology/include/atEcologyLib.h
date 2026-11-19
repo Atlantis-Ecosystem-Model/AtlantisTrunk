@@ -40,6 +40,15 @@ void Ecology_Output_Mort_Estimates(MSEBoxModel *bm, FILE *llogfp);
 void Ecology_Output_Mort_Per_Pred_Estimates(MSEBoxModel *bm, FILE *llogfp);
 
 void Ecology_Box_Biology(MSEBoxModel *bm, Box *pBox, double dt, FILE *llogfp);
+
+/* Per-thread workspace for running boxes in parallel (OpenMP builds only) */
+int Box_Biology_Can_Run_In_Parallel(MSEBoxModel *bm);
+void Box_Biology_Parallel_Begin(MSEBoxModel *bm);
+void Box_Biology_Thread_Start(MSEBoxModel *bm);
+MSEBoxModel *Box_Biology_Thread_Model(MSEBoxModel *bm);
+void Box_Biology_Thread_End(MSEBoxModel *bm);
+void Box_Biology_Parallel_End(MSEBoxModel *bm);
+
 void Ecology_Annual(MSEBoxModel *bm, FILE *llogfp);
 void Ecology_Calculate_Total_Abundance(MSEBoxModel *bm, double dt, int call_type, FILE *llogfp);
 

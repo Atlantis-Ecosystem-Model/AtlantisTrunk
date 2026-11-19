@@ -236,7 +236,7 @@ void Update_Vessel_Numbers(MSEBoxModel *bm, FILE *llogfp) {
 			}
 		}
 	}
-    orig_max_num_boats = bm-> K_max_num_boats;
+    orig_max_num_boats = bm->K_max_num_boats;
     
 	/** Boats leaving or entering the fishery - based on models by Thebaud et al 2006 and Guyader 2002 */
 	for (nf = 0; nf < bm->K_num_fisheries; nf++) {
@@ -592,7 +592,7 @@ void Update_Vessel_Numbers(MSEBoxModel *bm, FILE *llogfp) {
 	}
 
 	/* Check for new boats - if new boats are allowed to enter */
-    bm-> K_max_num_boats = 0;
+    bm->K_max_num_boats = 0;
 	for (nf = 0; nf < bm->K_num_fisheries; nf++) {
 		if (bm->FISHERYprms[nf][flageffortmodel_id] > rec_econ_model) {
 

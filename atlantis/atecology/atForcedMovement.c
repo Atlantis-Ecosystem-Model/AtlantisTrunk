@@ -70,6 +70,7 @@ void init_forceMoveEntries(MSEBoxModel *bm, FILE *fp) {
             bm->forceMoveEntryInput[tracerIndex].isEpi = FALSE;    /* NA */
             bm->forceMoveEntryInput[tracerIndex].isBoxValue = FALSE;    /* To be filled */
             bm->forceMoveEntryInput[tracerIndex].isScalar = TRUE;  /* So we can test per species */
+            bm->forceMoveEntryInput[tracerIndex].ignoreUnits = FALSE; 
 
             /* property to specify if this is a 2D or 3D property - assume for now all distributions are 2D. */
             /* if required in the future we can allow users to specify */
@@ -143,7 +144,7 @@ void open_move_prop(MSEBoxModel *bm, PhyPropertyData *propInput) {
     ncopts = NC_VERBOSE;
 
     /* Open the file */
-    printf("open_move_prop - opening %s", propInput->fname[propInput->curFile]);
+    printf("open_move_prop - opening %s\n", propInput->fname[propInput->curFile]);
     if ((propInput->fid = Util_ncopen(bm->inputFolder, propInput->fname[propInput->curFile], NC_NOWRITE)) < 0)
         quit("open_move_prop: Can't open netcdf input data file %s\n", propInput->fname[propInput->curFile]);
 
@@ -263,10 +264,10 @@ void open_move_prop(MSEBoxModel *bm, PhyPropertyData *propInput) {
     ncopts = NC_VERBOSE | NC_FATAL;
 }
 
-/* Routine to close an already open hydrodynamic input file */
+/* Routine to close an already open forced movement input file */
 void close_move_prop(MSEBoxModel *bm, PhyPropertyData *propInput) {
 
-    /* Close salinity file */
+    /* Close movement property file */
     if (propInput->fid >= 0)
         ncclose(propInput->fid);
     propInput->fid = -1;
@@ -410,7 +411,7 @@ void Init_full_move_array(MSEBoxModel *bm, PhyPropertyData *propInput, int trace
         new_value = bm->forceMoveEntryInput[tracerIndex].dataBuffer[b][0]; // Take the entry for next time period from the file
 
         if (!_finite(new_value)) {
-            quit("%s in box %d is not finite %e for the first period\n", bm->forceMoveEntryInput[tracerIndex].variableName, b);
+            quit("%s in box %d is not finite %e for the first period\n", bm->forceMoveEntryInput[tracerIndex].variableName, b, new_value);
         }
 
         fprintf(bm->logFile, "Time: %e Doing b %d speciesIndex: %d qrt: %d stageIndex: %d new_value: %e\n", bm->dayt, b, speciesIndex, qrt, stageIndex, new_value);
@@ -422,18 +423,18 @@ void Init_full_move_array(MSEBoxModel *bm, PhyPropertyData *propInput, int trace
     //* Now repeat for second value
     get_move_property(bm, &(bm->forceMoveEntryInput[tracerIndex]));  // based on get_property()
     if(bm->forceMoveEntryInput[tracerIndex].atEnd == TRUE) {
-        warn("Really only supposed to hae a single distribution value in the file for %s-%d\n", FunctGroupArray[speciesIndex].groupCode, stageIndex);
+        warn("Really only supposed to have a single distribution value in the file for %s-%d\n", FunctGroupArray[speciesIndex].groupCode, stageIndex);
         
         for (b = 0; b < bm->nbox; b++) {
             FunctGroupArray[speciesIndex].distrib[b][next_qrt][stageIndex] = FunctGroupArray[speciesIndex].distrib[b][qrt][stageIndex];
         }
     } else {
-        /* As thee are valid values Loop over each box to store this second set of values */
+        /* As there are valid values Loop over each box to store this second set of values */
         for (b = 0; b < bm->nbox; b++) {
             new_value = bm->forceMoveEntryInput[tracerIndex].dataBuffer[b][0]; // Take the entry for next time period from the file
 
             if (!_finite(new_value)) {
-                quit("%s in box %d is not finite for the second period\n", bm->forceMoveEntryInput[tracerIndex].variableName, b);
+                quit("%s in box %d is not finite %e for the second period\n", bm->forceMoveEntryInput[tracerIndex].variableName, b, new_value);
             }
 
             fprintf(bm->logFile, "Time: %e Doing b %d speciesIndex: %d next_qrt: %d stageIndex: %d new_value: %e\n", bm->dayt, b, speciesIndex, next_qrt, stageIndex, new_value);
@@ -460,7 +461,7 @@ void Ecology_Update_Move_Entry(MSEBoxModel *bm, FILE *llogfp) {
         printf("Doing Ecology_Update_Move_Entry\n");
     
     if (bm->use_move_entries) {
-        /* Initialise the fored movement arrays - once get to tstart */
+        /* Initialise the forced movement arrays - once get to tstart */
         for (tracerIndex = 0; tracerIndex < bm->numForceMoveEntries; tracerIndex++) {
             if (!bm->forceMoveEntryInput[tracerIndex].moveInitDone) {
                 if (bm->dayt != bm->forceMoveEntryInput[tracerIndex].movetstart) {
@@ -486,8 +487,9 @@ void Ecology_Update_Move_Entry(MSEBoxModel *bm, FILE *llogfp) {
                 if (!FunctGroupArray[speciesIndex].NeedMoveUpdate[stageIndex])
                     continue;
             
-                if(bm->forceMoveEntryInput[tracerIndex].atEnd)
-                    return;
+                if(bm->forceMoveEntryInput[tracerIndex].atEnd) {
+                    continue; // Skip this tracer, continue with others
+                }
 
                 /* Loop while more time remains in this transport time step */
                 qrt = FunctGroupArray[speciesIndex].moveEntryIndex;
@@ -498,8 +500,9 @@ void Ecology_Update_Move_Entry(MSEBoxModel *bm, FILE *llogfp) {
            
                 /* Get more data if necessary */
                 get_move_property(bm, &(bm->forceMoveEntryInput[tracerIndex]));  // based on get_property()
-                if(bm->forceMoveEntryInput[tracerIndex].atEnd == TRUE)
-                    return;
+                if(bm->forceMoveEntryInput[tracerIndex].atEnd == TRUE){
+                    continue; // Skip this tracer, continue with others
+                }
 
                 /* Loop over each box to check the values */
                 for (b = 0; b < bm->nbox; b++) {
@@ -527,4 +530,6 @@ void Ecology_Update_Move_Entry(MSEBoxModel *bm, FILE *llogfp) {
             }
         }
     }
+    
+    return;
 }

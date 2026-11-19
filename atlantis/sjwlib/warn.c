@@ -28,9 +28,15 @@
 #include <stdio.h>
 #include "sjwlib.h"
 
+int suppress_runtime_warnings = 0;
+
 void warn(char *format, ...)
 {
     va_list args;
+
+    if (suppress_runtime_warnings) {
+        return;
+    }
 
     fprintf(stderr,"WARNING: ");
     va_start(args,format);

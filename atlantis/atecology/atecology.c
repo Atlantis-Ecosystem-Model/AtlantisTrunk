@@ -435,11 +435,10 @@ void Water_Column_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo
 	boxLayerInfo->sDRscale = 0.0;
 	boxLayerInfo->sDCscale = 0.0;
 
-    /**/
-	//if ((verbose > 1) || ((bm->debug == debug_biology_process) && (bm->dayt >= bm->checkstart) && (bm->dayt < bm->checkstop)))
-    if (verbose > 1)
+    /*
+	if ((verbose > 1) || ((bm->debug == debug_biology_process) && (bm->dayt >= bm->checkstart) && (bm->dayt < bm->checkstop)))
 		fprintf(llogfp, "\nWater column processes running now (it_count = %d), t = %e\n", it_count, bm->dayt);
-    /**/
+    */
     
     /* Initialise the arrays */
 	Reset_Arrays(bm, WC, it_count, boxLayerInfo, llogfp);
@@ -659,7 +658,7 @@ void Water_Column_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo
 		for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
 			for(cohort=0; cohort<FunctGroupArray[guild].numCohortsXnumGenes; cohort++){
 				/* If there is a scalar to apply then grab it now */
-                basecohort = (int)floor(cohort / FunctGroupArray[guild].numGeneTypes);
+                		basecohort = (int)floor(cohort / FunctGroupArray[guild].numGeneTypes);
 				mortality_scalar = Ecology_Get_Mortality_Scalar(bm, guild, basecohort);
 
 				FunctGroupArray[guild].dead[cohort] = FunctGroupArray[guild].dead[cohort] * mortality_scalar;
@@ -1395,6 +1394,9 @@ void Water_Column_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo
 				bm->boxes[bm->current_box].volume[bm->current_layer]);
 
 	}
+
+	/* Loss of ice prey grazed by water column predators from below the ice */
+	Set_Ice_Grazing_Flux(bm, boxLayerInfo);
 
 	return;
 }
@@ -2735,7 +2737,7 @@ void Epibenthic_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, 
 											for (ct = 0; ct < FunctGroupArray[guild].numCohortsXnumGenes; ct++){
 												grazeEaten += FunctGroupArray[guild].preyEaten[ct][SED];
 											}
-											grazeEaten *= (boxLayerInfo->localWCTracers[FunctGroupArray[guild].totNTracers[cohort]] / totalBiomass);
+											grazeEaten *= (boxLayerInfo->localSEDTracers[FunctGroupArray[guild].totNTracers[cohort]] / totalBiomass);
 										} else {
 											grazeEaten = FunctGroupArray[guild].preyEaten[cohort][SED];
 										}
@@ -3209,6 +3211,9 @@ void Epibenthic_Box(MSEBoxModel *bm, double dtsz, BoxLayerValues *boxLayerInfo, 
         quit("Epibenthic_Box: Got an QNAN result box: %d, on day: %e, wcflux: %e, smflux: %e, epiflux: %e, Totflux: %e\n", bm->current_box, bm->dayt, wcFlux, smFlux, epiFlux,
 				TotFlux);
 	}
+
+	/* Loss of ice prey grazed from below if the ice reaches down to this bottom cell */
+	Set_Ice_Grazing_Flux(bm, boxLayerInfo);
 
 }
 

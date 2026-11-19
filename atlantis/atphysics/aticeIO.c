@@ -662,6 +662,8 @@ void Get_Ice(MSEBoxModel *bm, FILE *llogfp)
 {
 	int i, b;
 	double new_val = 0.0;
+    double h_safe, conduction, dhdt, h_new;
+
 
 	if (verbose)
 		fprintf(stderr, "Entering getIce\n");
@@ -1228,6 +1230,9 @@ void Enter_IceBM(MSEBoxModel *bm, double **ice_data_array, double *dzData) {
 
 		/* Loop through ice levels and distribute them accordingly */
 		depth_prop = 1.0;
+        
+        
+        
 		ice_depth = dzData[b];
 		tot_depth = 0;
 		/* Check if freezing or melting - assume no change at the start */

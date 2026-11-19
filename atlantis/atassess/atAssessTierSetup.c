@@ -295,6 +295,10 @@ int Tier_Assessment_Allocate(MSEBoxModel *bm) {
         bm->RBCestimation.RBCspeciesArray[groupIndex].SelBlock = Util_Alloc_Init_2D_Double(bm->K_num_tot_sp, bm->K_num_fisheries, 0.0);
         bm->RBCestimation.RBCspeciesArray[groupIndex].Sel_Phase = Util_Alloc_Init_2D_Double(bm->K_num_tot_sp, bm->K_num_fisheries, 0.0);
         bm->RBCestimation.RBCspeciesArray[groupIndex].RBC_by_year = Util_Alloc_Init_1D_Double(nYears, 0.0);
+        bm->RBCestimation.RBCspeciesArray[groupIndex].TAC_by_year = Util_Alloc_Init_1D_Double(nYears, 0.0);
+        bm->RBCestimation.RBCspeciesArray[groupIndex].RBC_proj = Util_Alloc_Init_1D_Double(MAX_RBC_PROJ, 0.0);
+        bm->RBCestimation.RBCspeciesArray[groupIndex].nRBC_proj = 0;
+        bm->RBCestimation.RBCspeciesArray[groupIndex].lastAssessRBC = 0.0;
         
         bm->RBCestimation.RBCspeciesArray[groupIndex].Mortality = Util_Alloc_Init_1D_Double(2, 0.0);
                 
@@ -857,6 +861,10 @@ int Tier_Assessment_Free(MSEBoxModel *bm) {
             free2d(bm->RBCestimation.RBCspeciesArray[groupIndex].Sel_Phase);
         if(bm->RBCestimation.RBCspeciesArray[groupIndex].RBC_by_year)
             free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].RBC_by_year);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].TAC_by_year)
+            free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].TAC_by_year);
+        if(bm->RBCestimation.RBCspeciesArray[groupIndex].RBC_proj)
+            free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].RBC_proj);
         
         if(bm->RBCestimation.RBCspeciesArray[groupIndex].Mortality)
             free1d(bm->RBCestimation.RBCspeciesArray[groupIndex].Mortality);
@@ -1419,6 +1427,22 @@ int Tier_Assessment_Setup(MSEBoxModel *bm) {
         bm->RBCestimation.RBCspeciesParam[groupIndex][mgt_HCRbreak_id] = FunctGroupArray[groupIndex].speciesParams[BrefB_id];
         bm->RBCestimation.RBCspeciesParam[groupIndex][mgt_HCRlimit_id] = FunctGroupArray[groupIndex].speciesParams[Blim_id];
         bm->RBCestimation.RBCspeciesParam[groupIndex][mgt_category_id] = whichrefi[groupIndex];
+
+        /* Nov 2026: initialise first year the latest RBC applies (was never set so held uninitialised memory).
+           Reset at each assessment in DoTierAssessment */
+        bm->RBCestimation.RBCspeciesArray[groupIndex].mgt_rbcYear = 0;
+        
+        /* SeT up MyTAC frequency */
+        switch ((int)(bm->RBCestimation.RBCspeciesParam[groupIndex][mgt_category_id])) {
+        case target_tier: /* Target species reference points */
+            bm->RBCestimation.RBCspeciesParam[groupIndex][myTACperiod_sp_id] = bm->RBCestimation.myTACperiod;
+            break;
+        case byproduct_tier: /* Byproduct species reference points */
+        case forage_secondary_tier: /* Forage (secondary) species reference points */
+        case bycatch_tier: /* Bycatch species reference points */
+            bm->RBCestimation.RBCspeciesParam[groupIndex][myTACperiod_sp_id] = bm->RBCestimation.myTACperiod_MCT;
+            break;
+        }
         
 		// Find original TAC and number of active fisheries for the species
 		tot_nf = 0;
@@ -1520,7 +1544,7 @@ int Tier_Assessment_Setup(MSEBoxModel *bm) {
     if (bm->RBCestimation.LastMetier > -1) {
         bm->RBCestimation.LastMetier++; // So don't cut off the final fleet
     }
-    
+        
     /* Clean up unneeded readin vectors */
     if(TrigPts) {
         free1d(TrigPts);

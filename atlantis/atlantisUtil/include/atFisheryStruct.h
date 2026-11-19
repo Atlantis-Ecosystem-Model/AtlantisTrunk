@@ -56,5 +56,4 @@ typedef struct {
 }AssessProjectionStruct;
 extern AssessProjectionStruct *ASSESS_PROJECTION;
 
-
 #endif /* ATFISHERYSTRUCT_H_ */

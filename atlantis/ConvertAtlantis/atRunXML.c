@@ -52,7 +52,15 @@ void Convert_Run_To_XML(MSEBoxModel *bm, char *fileName, char *outputFileName) {
 			XML_TYPE_BOOLEAN, "1");
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_fisheries_on", "Flag showing whether want fisheries loaded and submodel run (1) or not (0)",
 			"", XML_TYPE_BOOLEAN,"1");
-	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_skip_biol",
+    
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flagindustry_on", "Flag showing whether want industries loaded and submodel run (1) or not (0)",
+            "", XML_TYPE_BOOLEAN,"1");
+    
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_OSP_mode", "Flag showing whether what OSP setting is any are being used", "", XML_TYPE_INTEGER,"0");
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_OSP_FtargetSource", "Flag indicating source of F - whether OSP or other assessments in/called by Atlantis", "", XML_TYPE_INTEGER,"0");
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_OSP_PriceSource", "Flag indicating source of prices - whether OSP or Atlantis native model ", "", XML_TYPE_INTEGER,"0");
+    
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_skip_biol",
 			"Flag showing whether want biological model run (1) or not (0 - only used when debugging fisheries)", "", XML_TYPE_BOOLEAN,"0");
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_skip_phys",
 			"Flag showing whether want physics loaded and submodel run (1) or not (0). Should only be used for debugging.", "", XML_TYPE_BOOLEAN,"1");
@@ -73,6 +81,7 @@ void Convert_Run_To_XML(MSEBoxModel *bm, char *fileName, char *outputFileName) {
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flagIsEstuary", "Flag indicating model is an estuary.", "", XML_TYPE_BOOLEAN,"0");
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flagAllowLand", "Flag indicating model can include land.", "", XML_TYPE_BOOLEAN,"0");
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flagIsPolar", "Flag indicating model is polar", "", XML_TYPE_BOOLEAN,"0");
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flagIncludesCoastal", "Flag indicating model includes coastal processes", "", XML_TYPE_BOOLEAN,"0");
     
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flagpassivetracer", "Flag indicating want a passive tracer to track to check transports", "", XML_TYPE_BOOLEAN,"0");
 

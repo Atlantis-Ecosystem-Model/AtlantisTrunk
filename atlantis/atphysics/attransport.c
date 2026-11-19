@@ -358,11 +358,12 @@ void transportBM(MSEBoxModel *bm, double ***newwc, FILE *llogfp) {
 							can_be_moved = 0;
 						}
                         
+                        /*
                         if(bm->dayt > 1090.0 && (strcmp(bm->tinfo[n].name, "salt") == 0)){
                             fprintf(llogfp,"Time %e transportBM box%d-%d for tracer %d (%s) - salinity %e starts %s starts %e\n", bm->dayt, b, k, n, bm->tinfo[n].name, newwc[23][1][Salinity_i], bm->tinfo[n].name, newwc[b][k][n]);
                             fflush(llogfp);
                         }
-
+                         */
 						//if(strcmp(bm->tinfo[n].name, "Rugosity") == 0)
                         //    fprintf(bm->logFile, "Time %e %d-%d Rugosity starts %e ", bm->dayt, b, k, newwc[b][k][n]);
 						//	printf("trying to transport %s with flagid %d\n", bm->tinfo[n].name, bm->tinfo[n].flagid);
@@ -394,10 +395,12 @@ void transportBM(MSEBoxModel *bm, double ***newwc, FILE *llogfp) {
                                        bm->tinfo[n].name,newwc[b][k][n],newwat,b,k,oldvol,newvol,dtr[b][k][n], bm->tinfo[n].can_be_moved);
 							 **/
                             
+                            /**
                             if(bm->dayt > 1090.0 && (strcmp(bm->tinfo[n].name, "salt") == 0)){
                                 fprintf(llogfp,"Time %e transportBM box%d-%d for tracer %d (%s) - salinity now %e and %s was %.10g, now %.10g, oldvol = %.10g, newvol = %.10g, dtr = %.10g, dvol = %.10g\n", bm->dayt, b, k, n, bm->tinfo[n].name, newwc[23][1][Salinity_i], bm->tinfo[n].name, newwc[b][k][n], newwat, oldvol, newvol, dtr[b][k][n], dvol[b][k]);
                                 fflush(llogfp);
                             }
+                            **/
 						} else{
 							newwat = newwc[b][k][n];
 						}

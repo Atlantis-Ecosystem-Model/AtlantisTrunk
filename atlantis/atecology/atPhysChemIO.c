@@ -30,7 +30,7 @@
 #include "atecology.h"
 
 
-static void Add_Phyio_Chem_Tracer(MSEBoxModel *bm, FILE *llogfp, int index,
+static void Add_Physio_Chem_Tracer(MSEBoxModel *bm, FILE *llogfp, int index,
 		char *name, int *tracerIndex, int flux, int tol, int biol,
 		int *debugIndex,
         void (*fp)(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int index, BoxLayerValues *boxLayerInfo))
@@ -62,8 +62,12 @@ void Ecology_Assign_Physio_Chem(MSEBoxModel *bm, FILE *llogfp)
     }
     
 	bm->K_num_physiochem = 17;
-	if(bm->flagIsEstuary || bm->flagpassivetracer)
-		bm->K_num_physiochem++;
+    if(bm->flagIsEstuary) {
+        bm->K_num_physiochem++;
+    }
+    if(bm->flagpassivetracer){
+        bm->K_num_physiochem++;
+    }
 	if (bm->track_pH) {
 		bm->K_num_physiochem++;
 	}
@@ -80,64 +84,64 @@ void Ecology_Assign_Physio_Chem(MSEBoxModel *bm, FILE *llogfp)
 
 	PhysioChemArray = (PhysioChemStruct *)malloc(sizeof(PhysioChemStruct) * (size_t)bm->K_num_physiochem);
 
-    Add_Phyio_Chem_Tracer(bm, llogfp, i++, "NH3", &NH3_i, 0, 1, 0, NULL, Ammonium_ROC);
+    Add_Physio_Chem_Tracer(bm, llogfp, i++, "NH3", &NH3_i, 0, 1, 0, NULL, Ammonium_ROC);
     if(bm->flagIsEstuary) {
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "SED", &SED_i, 0, 1, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "SED", &SED_i, 0, 1, 0, NULL, NULL);
     }
     if(bm->flagpassivetracer) { // Intentionally overloading SED_i tracer
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "SED", &SED_i, 0, 0, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "SED", &SED_i, 0, 0, 0, NULL, NULL);
     }
-    Add_Phyio_Chem_Tracer(bm, llogfp, i++, "NO3", &NO3_i, 0, 1, 0, NULL, Nitrate_ROC);
-    Add_Phyio_Chem_Tracer(bm, llogfp, i++, "DON", &DON_i, 0, 1, 0, NULL, DON_ROC);
-    Add_Phyio_Chem_Tracer(bm, llogfp, i++, "MicroNut", &MicroNut_i, 0, 1, 0, NULL, Micronutrient_ROC);
-    Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Oxygen", &Oxygen_i, 0, 0, 0, NULL, Oxygen_ROC);
-    Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Si", &Si_i, 0, 1, 0, NULL, Dissolved_Silica_ROC);
-    Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Det_Si", &Det_Si_i, 0, 1, 0, NULL, Detrital_Silica_ROC);
+    Add_Physio_Chem_Tracer(bm, llogfp, i++, "NO3", &NO3_i, 0, 1, 0, NULL, Nitrate_ROC);
+    Add_Physio_Chem_Tracer(bm, llogfp, i++, "DON", &DON_i, 0, 1, 0, NULL, DON_ROC);
+    Add_Physio_Chem_Tracer(bm, llogfp, i++, "MicroNut", &MicroNut_i, 0, 1, 0, NULL, Micronutrient_ROC);
+    Add_Physio_Chem_Tracer(bm, llogfp, i++, "Oxygen", &Oxygen_i, 0, 0, 0, NULL, Oxygen_ROC);
+    Add_Physio_Chem_Tracer(bm, llogfp, i++, "Si", &Si_i, 0, 1, 0, NULL, Dissolved_Silica_ROC);
+    Add_Physio_Chem_Tracer(bm, llogfp, i++, "Det_Si", &Det_Si_i, 0, 1, 0, NULL, Detrital_Silica_ROC);
 
-	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Light", &Light_i, 0, 0, 0, NULL, NULL);
-    Add_Phyio_Chem_Tracer(bm, llogfp, i++, "DayLight", &DayLight_i, 0, 0, 0, NULL, NULL);
-	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Temp", &Temp_i, 0, 0, 0, NULL, NULL);
+	Add_Physio_Chem_Tracer(bm, llogfp, i++, "Light", &Light_i, 0, 0, 0, NULL, NULL);
+    Add_Physio_Chem_Tracer(bm, llogfp, i++, "DayLight", &DayLight_i, 0, 0, 0, NULL, NULL);
+	Add_Physio_Chem_Tracer(bm, llogfp, i++, "Temp", &Temp_i, 0, 0, 0, NULL, NULL);
 	if (bm->track_pH) {
-		Add_Phyio_Chem_Tracer(bm, llogfp, i++, "pH", &pH_i, 0, 0, 0, NULL, NULL);
+		Add_Physio_Chem_Tracer(bm, llogfp, i++, "pH", &pH_i, 0, 0, 0, NULL, NULL);
 	} else {
 		/* Set to -1 so we will get valgrind issues if used without being defined */
 		pH_i = -1;
 	}
 
-	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Denitrification", &Denitrification_i, 1, 0, 0, NULL, NULL);
-	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Nitrification", &Nitrification_i, 1, 0, 0, NULL, NULL);
-	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Chl_a", &Chl_a_i, 1, 0, 0, NULL, NULL);
-	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Stress", &Stress_i, 1, 0, 0, NULL, NULL);
-	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "DiagNGain", &DiagNGain_i, 1, 0, 0, NULL, NULL);
-	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "DiagNLoss", &DiagNLoss_i, 1, 0, 0, NULL, NULL);
-	Add_Phyio_Chem_Tracer(bm, llogfp, i++, "DiagNFlux", &DiagNFlux_i, 1, 0, 0, NULL, NULL);
+	Add_Physio_Chem_Tracer(bm, llogfp, i++, "Denitrification", &Denitrification_i, 1, 0, 0, NULL, NULL);
+	Add_Physio_Chem_Tracer(bm, llogfp, i++, "Nitrification", &Nitrification_i, 1, 0, 0, NULL, NULL);
+	Add_Physio_Chem_Tracer(bm, llogfp, i++, "Chl_a", &Chl_a_i, 1, 0, 0, NULL, NULL);
+	Add_Physio_Chem_Tracer(bm, llogfp, i++, "Stress", &Stress_i, 1, 0, 0, NULL, NULL);
+	Add_Physio_Chem_Tracer(bm, llogfp, i++, "DiagNGain", &DiagNGain_i, 1, 0, 0, NULL, NULL);
+	Add_Physio_Chem_Tracer(bm, llogfp, i++, "DiagNLoss", &DiagNLoss_i, 1, 0, 0, NULL, NULL);
+	Add_Physio_Chem_Tracer(bm, llogfp, i++, "DiagNFlux", &DiagNFlux_i, 1, 0, 0, NULL, NULL);
 
 	if(bm->track_atomic_ratio == TRUE){
-		Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Phosphorus", &P_i, 0, 1, 0, NULL, Phosphorus_ROC);
-		Add_Phyio_Chem_Tracer(bm, llogfp, i++, "TOP", &TOP_i, 0, 1, 0, NULL, TOP_ROC);
-		Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Carbon", &C_i, 0, 1, 0, NULL, Carbon_ROC);
-		Add_Phyio_Chem_Tracer(bm, llogfp, i++, "CO2", &CO2_i, 0, 1, 0, NULL, NULL);
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Tfactor", &Tfactor_i, 0, 1, 0, NULL, NULL);
+		Add_Physio_Chem_Tracer(bm, llogfp, i++, "Phosphorus", &P_i, 0, 1, 0, NULL, Phosphorus_ROC);
+		Add_Physio_Chem_Tracer(bm, llogfp, i++, "TOP", &TOP_i, 0, 1, 0, NULL, TOP_ROC);
+		Add_Physio_Chem_Tracer(bm, llogfp, i++, "Carbon", &C_i, 0, 1, 0, NULL, Carbon_ROC);
+		Add_Physio_Chem_Tracer(bm, llogfp, i++, "CO2", &CO2_i, 0, 1, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "Tfactor", &Tfactor_i, 0, 1, 0, NULL, NULL);
         
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Pads_r", &Pads_r_i, 0, 1, 0, NULL, NULL);
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "r_immob_PIP", &r_immob_PIP_i, 0, 1, 0, NULL, NULL);
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "DIP", &DIP_i, 0, 1, 0, NULL, NULL);
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "EFI", &EFI_i, 0, 1, 0, NULL, NULL);
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "PIP", &PIP_i, 0, 1, 0, NULL, NULL);
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "PIPI", &PIPI_i, 0, 1, 0, NULL, NULL);
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "TIP", &TIP_i, 0, 1, 0, NULL, NULL);
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "PIP_Dust", &PIP_Dust_i, 0, 1, 0, NULL, NULL);
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Dust", &Dust_i, 0, 1, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "Pads_r", &Pads_r_i, 0, 1, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "r_immob_PIP", &r_immob_PIP_i, 0, 1, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "DIP", &DIP_i, 0, 1, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "EFI", &EFI_i, 0, 1, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "PIP", &PIP_i, 0, 1, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "PIPI", &PIPI_i, 0, 1, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "TIP", &TIP_i, 0, 1, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "PIP_Dust", &PIP_Dust_i, 0, 1, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "Dust", &Dust_i, 0, 1, 0, NULL, NULL);
         
 	}
 
 	if(bm->track_rugosity_arag == TRUE) {
-		Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Rugosity", &Rugosity_i, 0, 0, 0, NULL, NULL);
-		Add_Phyio_Chem_Tracer(bm, llogfp, i++, "AragoniteSaturation", &AragoniteSat_i, 0, 0, 0, NULL, NULL);
+		Add_Physio_Chem_Tracer(bm, llogfp, i++, "Rugosity", &Rugosity_i, 0, 0, 0, NULL, NULL);
+		Add_Physio_Chem_Tracer(bm, llogfp, i++, "AragoniteSaturation", &AragoniteSat_i, 0, 0, 0, NULL, NULL);
 	}
     
     if (bm->track_wind) {
-        Add_Phyio_Chem_Tracer(bm, llogfp, i++, "Wind", &Wind_i, 0, 0, 0, NULL, NULL);
+        Add_Physio_Chem_Tracer(bm, llogfp, i++, "Wind", &Wind_i, 0, 0, 0, NULL, NULL);
     }
     
 	return;

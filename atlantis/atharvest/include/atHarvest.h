@@ -57,8 +57,7 @@ extern double ***p_fishi, ***Effort_vdistrib, ****p_fish_origi, ***MPAchange, **
 
 extern double ****RegCatch; // From economics library
 
-extern double H2Otemp, tot_dyn_sea_area;
-extern double wcLayerThick, smLayerThick;
+extern double tot_dyn_sea_area;
 
 /*************************************************************************************
  Model  Parameters
@@ -102,8 +101,7 @@ extern int ntsDiscard; /**< Number of discard time series (should match one per 
 extern int tsDiscardtype; /**< Whether to use interpolated or last valid entries from time-series */
 extern int *tsdiscardid; /**< Array matching boxmodel species ids to discard time series entry ids */
 extern FisheryTimeSeries *tsDiscard; /**< List of discard time series (one per box) */
-
-int first_data_done;
+extern int first_data_done;
 
 
 /* Harvest Performance measure variables */

@@ -436,6 +436,12 @@
          location = "group:ateconomic"
          name = "ateconomic">
          <FileRef
+            location = "group:atFishMIP_OSP_PluginAdapter.cpp">
+         </FileRef>
+         <FileRef
+            location = "group:atFishMIP_OSP_Bridge.c">
+         </FileRef>
+         <FileRef
             location = "group:ateconts.c">
          </FileRef>
          <FileRef
@@ -477,6 +483,12 @@
          <Group
             location = "group:include"
             name = "include">
+            <FileRef
+               location = "group:atFishMIP_OSP_Bridge.h">
+            </FileRef>
+            <FileRef
+               location = "group:atFishMIP_OSP_PluginAdapter.h">
+            </FileRef>
             <FileRef
                location = "group:atEconomicLib.h">
             </FileRef>

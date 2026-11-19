@@ -572,7 +572,7 @@ int Util_Read_Functional_Group_XML(MSEBoxModel *bm, char *fileName, FILE *llogfp
 			//}
 		}
 	}
-
+    
 	/* Set the additional flags */
 	for (guild = 0; guild < bm->K_num_tot_sp; guild++) {
 		FunctGroupArray[guild].isInfauna = FALSE;
@@ -804,7 +804,7 @@ int Util_Read_Functional_Group_XML(MSEBoxModel *bm, char *fileName, FILE *llogfp
 		FunctGroupArray[i].scaled_mum = Util_Alloc_Init_1D_Double(FunctGroupArray[i].numCohortsXnumGenes, 0.0);
 		FunctGroupArray[i].mum_per_day = Util_Alloc_Init_1D_Double(FunctGroupArray[i].numCohortsXnumGenes, 0.0);
 		FunctGroupArray[i].CLEAR = Util_Alloc_Init_1D_Double(FunctGroupArray[i].numCohortsXnumGenes, 0.0);
-
+        
         FunctGroupArray[i].needed_for_age_away = Util_Alloc_Init_1D_Int(FunctGroupArray[i].numCohortsXnumGenes, 0.0);
 
         if(bm->track_contaminants) {

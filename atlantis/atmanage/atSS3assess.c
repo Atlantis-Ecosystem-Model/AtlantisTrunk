@@ -197,7 +197,7 @@ void Run_SS3(MSEBoxModel *bm, char *run_dir) {
 
     // go back to previous directory
     chdir(cwd);
-    free(ss3_abs);
+    // Nov 2026: ss3_abs points to the local buffer buf (realpath was given buf) so must not be freed
     //free(cwd);  // TODO: This correct or cause dump?
 
 } // Run_SS3

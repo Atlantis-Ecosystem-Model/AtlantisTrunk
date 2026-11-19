@@ -40,10 +40,12 @@ Tier 	Description																		Coded
 
 /* Prototypes */
 void Averaged_RBC(MSEBoxModel *bm, int species, int year, FILE *llogfp);
+void Ratpack_Averaged_RBC(MSEBoxModel *bm, int species, int year, FILE *llogfp);
+double Apply_MYTAC_Decay(MSEBoxModel *bm, int species, int year, double TACbase, FILE *llogfp);
 void getF20_40_48(MSEBoxModel *bm, int species, double *agesel, double *wt, double *mat, double natM, double hsteep, FILE *llogfp);
 void get_T5_F20_40_48(MSEBoxModel *bm, int species, double bstart, double k, double r, FILE *llogfp);
 void newTier3Rule(MSEBoxModel *bm, int species, int year, double current_catch, FILE *llogfp, FILE *fid);
-void newTierFour (MSEBoxModel *bm, int species, int year, double current_catch, FILE *llogfp);
+void newTierFour(MSEBoxModel *bm, int species, int year, double current_catch, FILE *llogfp);
 void Tier_averages(MSEBoxModel *bm, int species, int year, int tier, double *current_catch, double *discard_rate, FILE *llogfp);
 void TierOne(MSEBoxModel *bm, int species, int year, FILE *llogfp);
 void TierOneMimic(MSEBoxModel *bm, int species, int year, FILE *llogfp);
@@ -57,10 +59,15 @@ void TierFiveDCAC(MSEBoxModel *bm, int species, int year, double current_catch, 
 void TierFiveSAFE(MSEBoxModel *bm, int species, int year, double current_catch, FILE *llogfp);
 void TierSixRUSS(MSEBoxModel *bm, int species, int year, FILE *llogfp);
 void TierSevenRUSS(MSEBoxModel *bm, int species, int year, FILE *llogfp);
-void Apply_RBC_Buffers(MSEBoxModel *bm, int species, int year, FILE *llogfp);
+double Apply_RBC_Buffers(MSEBoxModel *bm, int species, int year, int tier, double TACbase, FILE *llogfp);
 
 void DynamicTier4Assessment(MSEBoxModel *bm, int species, int year, FILE *llogfp);
 void RDynamicTier4Assessment(MSEBoxModel *bm, int species, int year, FILE *llogfp);
+void RatpackDynTier4Assessment(MSEBoxModel *bm, int species, int year, FILE *llogfp);
+double Ratpack_Staleness_Buffer(MSEBoxModel *bm, int species, int year, FILE *llogfp);
+double ACLIM_HCR(int type, double B2B0, double alpha, double gamma, double theta, double omega1, double omega2, double omega3, double cov,
+                 double B2B0_lim, double B2B0_target, double Flim);
+double Calc_ACLIM_Fmult(MSEBoxModel *bm, int species, double depletion, FILE *llogfp);
 void WriteCPUE(MSEBoxModel *bm, int species, int region, int year, FILE *fid);
 void WriteResults(MSEBoxModel *bm, int species, int region, int year, FILE *llogfp, FILE *fid);
 void YPR(MSEBoxModel *bm, int species, double fval, double natM, double *spbpr, double *wt, double *mat, double *sel, FILE *llogfp);
@@ -141,6 +148,7 @@ void CallTierAssessment(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
 		bm->RBCestimation.RBCspeciesParam[species][TACpost_id] = TAC;
 		bm->RBCestimation.RBCspeciesParam[species][TACest_id] = TAC;
         bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year] = RBC;
+        bm->RBCestimation.RBCspeciesArray[species].TAC_by_year[year] = TAC;
         
         
         printf("Finished data collection\n");
@@ -185,8 +193,8 @@ void DoTierAssessment(MSEBoxModel *bm, int species, int year, FILE *llogfp){
     
     double current_catch = 0, tac_change, cpue_ratio;
 	double maxprop, tacAss, tacPost = 0, TAC, RBC, minCatch, lastHistCatch;
-	double TAC_old, TACnf, RBCnf;
-	double discard_rate = FunctGroupArray[species].speciesParams[est_discard_rate_id];
+	double TAC_old, TACnf, RBCnf, TACbase, staleTACbase = -1.0;
+	double discard_rate = bm->RBCestimation.RBCspeciesParam[species][est_discard_rate_id];   // Nov 2026: was read from speciesParams
 	double inc_check = (bm->prop_incTAC - 1.0);
 	double dec_check = (1.0 - bm->prop_decTAC);
     
@@ -251,6 +259,10 @@ void DoTierAssessment(MSEBoxModel *bm, int species, int year, FILE *llogfp){
     if (tier > tier0)
         Tier_averages(bm, species, year, tier, &current_catch, &discard_rate, llogfp);
 
+    /** Nov 2026: first year the new RBC applies (data year + 1), updated every year as in Ratpack mgt.rbcYear
+        (set before the trigger check as that uses the catch in mgt_rbcYear - 1, i.e. the latest data year) **/
+    bm->RBCestimation.RBCspeciesArray[species].mgt_rbcYear = year + 1;
+
     /** Check for indicator species status */
     if(bm->RBCestimation.UseTriggerMgmt && (year > bm->RBCestimation.RBCspeciesParam[species][AssessStart_id])) {
         
@@ -277,11 +289,15 @@ void DoTierAssessment(MSEBoxModel *bm, int species, int year, FILE *llogfp){
         tier = sp_rollover;
     } else {
         // Update timeline so ready for next time
-        bm->RBCestimation.RBCspeciesParam[species][myTACend_id] = year + bm->RBCestimation.myTACperiod;
+        bm->RBCestimation.RBCspeciesParam[species][myTACend_id] = year + bm->RBCestimation.RBCspeciesParam[species][myTACperiod_sp_id];
     }
+
     
     printf("Doing Tiered Assessment - start assessment of species %s with tier: %d\n", FunctGroupArray[species].groupCode, tier);
-    
+
+    // Nov 2026: clear any RBC projection from the last assessment (only dynamic Tier 4 and SS3 fill it - review item 27)
+    bm->RBCestimation.RBCspeciesArray[species].nRBC_proj = 0;
+
     /******* Do the tier analyses *******/
 	switch (tier){
 	case tier0: /* ----------- No future catches ---------- */
@@ -347,9 +363,14 @@ void DoTierAssessment(MSEBoxModel *bm, int species, int year, FILE *llogfp){
     case dyntier4: // -----------  dynamic tier 4 --------------------
         if (tiertype == orig_tier_rule) {
             RDynamicTier4Assessment(bm, species, year, llogfp);
+        } else if (tiertype == ratpack_tier_rule) {
+            RatpackDynTier4Assessment(bm, species, year, llogfp);   // Native C version of Ratpack dynamic Tier 4
         } else {
             DynamicTier4Assessment(bm, species, year, llogfp);
         }
+        break;
+    case tier14: // ------- perfect information + error with ACLIM harvest control rule (Ratpack Tier_5) --------
+        TierOneMimic(bm, species, year, llogfp);
         break;
     case tier5: //  ---------------- tier 5 --------------------
             
@@ -371,7 +392,15 @@ void DoTierAssessment(MSEBoxModel *bm, int species, int year, FILE *llogfp){
         TierSevenRUSS(bm, species, year, llogfp);
         break;
     case sp_rollover: // whether indicator spp or MYTAC rollover last year's value
-        bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = TAC_old; // Roll over last year's values
+        /* Nov 2026 (review item 31): the RBC is the RBC from the last successful assessment (it used to be set to
+           last year's TAC, which already has the buffers in it). Last year's TAC is rolled over on the TAC path below.
+           If there has been no successful assessment yet, carry forward last year's RBC. */
+        if (bm->RBCestimation.RBCspeciesArray[species].lastAssessRBC > 0.0)
+            bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = bm->RBCestimation.RBCspeciesArray[species].lastAssessRBC;
+        else if (year > 0)
+            bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year - 1];
+        else
+            bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = TAC_old;
         break;
     case tier8:  // US method
     case tier9:  // Norwegian method
@@ -384,18 +413,70 @@ void DoTierAssessment(MSEBoxModel *bm, int species, int year, FILE *llogfp){
 		break;
 
 	}
-    
-    /** Replace RBC by average over a period if using RBC averaging - as in ratpack **/
-    if (bm->RBCestimation.RBCspeciesParam[species][UseRBCAveraging_id]) {
-        Averaged_RBC(bm, species, year, llogfp);
+
+    /** Ratpack staleness buffer in rollover years - relative to the last successful assessment.
+        Nov 2026 (review item 31): applied to both (b) the RBC (last assessed RBC, stored in RBC_by_year) and
+        (a) the TAC path (last assessment's buffered value, stored below once the buffers have been applied).
+        Returns the TAC path value, or -1 if there has been no successful assessment yet. **/
+    if ((tier == sp_rollover) && (bm->RBCestimation.RBCspeciesParam[species][Buffer_stale_rate_id] > 0.0)) {
+        staleTACbase = Ratpack_Staleness_Buffer(bm, species, year, llogfp);
     }
-    
-    // Assign RBC for future modifications and conversion to TAC
+
+    /** Replace RBC by average over a period if using RBC averaging (Nov 2026: only for actual assessments).
+        Review item 27: UseRBCAveraging 1 = Atlantis moving average of this and previous RBCs,
+        2 = Ratpack average over the first nRBCaverage years of this assessment's projected RBCs **/
+    if (tier != sp_rollover) {
+        switch ((int)(bm->RBCestimation.RBCspeciesParam[species][UseRBCAveraging_id])) {
+        case no_RBC_avg:
+            break;
+        case moving_RBC_avg:
+            Averaged_RBC(bm, species, year, llogfp);
+            break;
+        case ratpack_RBC_avg:
+            Ratpack_Averaged_RBC(bm, species, year, llogfp);
+            break;
+        default:
+            quit("DoTierAssessment: UseRBCAveraging for %s must be 0, 1 or 2 (currently %d)\n", FunctGroupArray[species].groupCode,
+                 (int)(bm->RBCestimation.RBCspeciesParam[species][UseRBCAveraging_id]));
+            break;
+        }
+    }
+
+    // The RBC is the estimate from the assessment (after any averaging). It is not changed by the buffers below.
 	RBC = bm->RBCestimation.RBCspeciesParam[species][RBCest_id];
-    
-    /******* Apply US rules to get to RBC ******/
+
+    /** Nov 2026 (review item 31): buffers are applied after the RBC is calculated, on the way to the TAC.
+        TACbase starts as the RBC and the buffers act on it; the TAC is then calculated from TACbase.
+        (Previously the buffers overwrote RBCest - so the reported RBC was buffered - while the TAC was calculated
+        from the unbuffered RBC, so the buffers never reached the TAC.) **/
+    TACbase = RBC;
+
+    /** Rollover years: the TAC path starts from the staleness-buffered value if using the Ratpack staleness
+        buffer, otherwise from last year's TAC (which already has the buffers in it).
+        Nov 2026 (review item 29): multi-year TAC decay - one more year of (1 - myTACbuffer) on last year's TAC in
+        rollover years within a multi-year TAC. Now applied whether or not UseTierBuffers is set (it used to be
+        inside Apply_RBC_Buffers so only worked with the tier buffers on). Not applied if using the Ratpack
+        staleness buffer. **/
+    if (tier == sp_rollover) {
+        if (staleTACbase >= 0.0) {
+            TACbase = staleTACbase;
+        } else {
+            TACbase = TAC_old;
+            TACbase = Apply_MYTAC_Decay(bm, species, year, TACbase, llogfp);
+        }
+    }
+
+    /******* Apply US style tier buffers (OFL to ABC, i.e. RBC towards TAC) ******/
     if (bm->RBCestimation.UseTierBuffers) {
-        Apply_RBC_Buffers(bm, species, year, llogfp);
+        TACbase = Apply_RBC_Buffers(bm, species, year, tier, TACbase, llogfp);   // Nov 2026: pass effective tier so rollover years are recognised
+    }
+
+    /** Store the buffered value (after averaging and buffers) from an actual, successful assessment so the Ratpack
+        staleness buffer in later rollover years starts from the same value as this year's TAC (discards are removed
+        from both below) **/
+    if ((tier != sp_rollover) && !bm->RBCestimation.RBCspeciesParam[species][AssessFail_id]) {
+        bm->RBCestimation.RBCspeciesParam[species][Ratpack_baseRBC_id] = TACbase;
+        bm->RBCestimation.RBCspeciesArray[species].lastAssessRBC = RBC;   // unbuffered RBC, carried through rollover years
     }
     
 	/******* Now calculate TAC from RBC *******/
@@ -438,10 +519,12 @@ void DoTierAssessment(MSEBoxModel *bm, int species, int year, FILE *llogfp){
             
 		} else {
 			// remove discards (unless using Tier 1 perfect info 25/3/09 or Tier 1 SS as RBC is retained)
-			if (tier == tier1 )
-				bm->RBCestimation.RBCspeciesParam[species][TACdisc_id] = RBC;
+			// Nov 2026: also not in rollover years, as the rolled over value is last year's (retained) TAC.
+			// The exception is the Ratpack staleness buffer, which is based on the last assessed RBC so still has discards in it.
+			if ((tier == tier1) || ((tier == sp_rollover) && !(staleTACbase >= 0.0)))
+				bm->RBCestimation.RBCspeciesParam[species][TACdisc_id] = TACbase;   // Nov 2026 (item 31): buffered value, was RBC
 			else
-				bm->RBCestimation.RBCspeciesParam[species][TACdisc_id] = RBC - discard_rate * RBC;
+				bm->RBCestimation.RBCspeciesParam[species][TACdisc_id] = TACbase - discard_rate * TACbase;
 
 			// apply post-assessment CPUE indicator rule, use CPUE from next year of data
 			if (bm->RBCestimation.RBCspeciesParam[species][PostRule_id] > 0) {
@@ -464,7 +547,8 @@ void DoTierAssessment(MSEBoxModel *bm, int species, int year, FILE *llogfp){
                     index2 = year;
                 }
                 
-				cpue_ratio = bm->RBCestimation.RBCspeciesArray[species].CPUEgen[CPUEfleet][0][index2] / bm->RBCestimation.RBCspeciesArray[species].CPUEgen[CPUEfleet][0][index1];
+				// Nov 2026: all-region CPUE (index Nregions) - was region 0 only
+				cpue_ratio = bm->RBCestimation.RBCspeciesArray[species].CPUEgen[CPUEfleet][Nregions][index2] / bm->RBCestimation.RBCspeciesArray[species].CPUEgen[CPUEfleet][Nregions][index1];
 
 				if (bm->RBCestimation.RBCspeciesParam[species][PostRule_id] == 1)
 					tacPost = tacAss * (1.0 + bm->RBCestimation.RBCspeciesParam[species][CPUEmult_id] * (cpue_ratio - 1));
@@ -484,28 +568,41 @@ void DoTierAssessment(MSEBoxModel *bm, int species, int year, FILE *llogfp){
             }
 
 			//  implement +/- constraints on TAC change (was 50% in sally code)
-			tac_change = (TAC_old - bm->RBCestimation.RBCspeciesParam[species][TACpost_id]) / TAC_old;
+			//  Nov 2026: corrected so tac_change is positive for an increase and the increase (decrease)
+			//  limit is applied to increases (decreases) - as in Ratpack _CalculateTAC. Previously a
+			//  recommended decrease triggered an increase and vice versa.
+			if (TAC_old > 0.0) {
+				tac_change = (bm->RBCestimation.RBCspeciesParam[species][TACpost_id] - TAC_old) / TAC_old;
 
-			if (tac_change > inc_check)
-				TAC = TAC_old + inc_check * TAC_old;
-			else if (tac_change < bm->prop_decTAC)
-				TAC = TAC_old - dec_check * TAC_old;
-			else
+				if (tac_change > inc_check)
+					TAC = TAC_old * (1.0 + inc_check);
+				else if (tac_change < -dec_check)
+					TAC = TAC_old * (1.0 - dec_check);
+				else
+					TAC = bm->RBCestimation.RBCspeciesParam[species][TACpost_id];
+			} else {
+				tac_change = 0.0;
 				TAC = bm->RBCestimation.RBCspeciesParam[species][TACpost_id];
+			}
 
 			// implement no change if TAC differs by less than min threshold (set to 10% in Sally code)
-			if (fabs(tac_change) < bm->RBCestimation.min_TACchange)
-				TAC = TAC_old;
+			// (only when there is a previous TAC to compare to - as in Ratpack)
+			// Nov 2026 (review item 28): not in rollover years, as otherwise a yearly multi-year TAC decay
+			// (myTACbuffer or staleness rate) smaller than min_TACchange is cancelled and the TAC stays flat
+            if ((tier != sp_rollover) && (TAC_old > 0.0) && (fabs(tac_change) < bm->RBCestimation.min_TACchange)) {
+                TAC = TAC_old;
+            }
 
 			// TAC = TACpost;   // only if want no constraints
-			minCatch = FunctGroupArray[species].speciesParams[MinCatch_id] * lastHistCatch;
-			if (TAC < minCatch)
-				TAC = FunctGroupArray[species].speciesParams[MinCatch_id];   //	MinCatch set to 5% of final year historic catch
+			minCatch = bm->RBCestimation.RBCspeciesParam[species][MinCatch_id] * lastHistCatch;   // Nov 2026: was read from speciesParams
+            if (TAC < minCatch) {
+                TAC = minCatch;   //	minCatch set to 5% of final year historic catch
+            }
             
             /*
             if (do_debug) {
                 fprintf(llogfp, "Time: %e, %s, year: %d TAC: %e tac_change: %e TAC_old: %e TACpost: %e  min_TACchange %e minCatch: %e MinCatch: %e lastHistCatch: %e inc_check: %e dec_check: %e prop_decTAC: %e min_TACchange: %e\n",
-                        bm->dayt, FunctGroupArray[species].groupCode, year, TAC, tac_change, TAC_old, bm->RBCestimation.RBCspeciesParam[species][TACpost_id], bm->RBCestimation.min_TACchange, minCatch, FunctGroupArray[species].speciesParams[MinCatch_id], lastHistCatch, inc_check, dec_check, bm->prop_decTAC, bm->RBCestimation.min_TACchange);
+                        bm->dayt, FunctGroupArray[species].groupCode, year, TAC, tac_change, TAC_old, bm->RBCestimation.RBCspeciesParam[species][TACpost_id], bm->RBCestimation.min_TACchange, minCatch, bm->RBCestimation.RBCspeciesParam[species][MinCatch_id], lastHistCatch, inc_check, dec_check, bm->prop_decTAC, bm->RBCestimation.min_TACchange);
             }
             */
 		}
@@ -516,7 +613,12 @@ void DoTierAssessment(MSEBoxModel *bm, int species, int year, FILE *llogfp){
         bm->RBCestimation.RBCspeciesParam[species][TACest_id] = bm->discardTAC;
     }
     
-    bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year] = TAC;
+    /* Nov 2026: RBC_by_year now holds the RBC (it used to be given the TAC) and the TAC is stored in TAC_by_year.
+       The RBC stored is the one from the assessment (after any averaging, before buffers and TAC meta-rules).
+       In rollover years (multi-year TAC or trigger) it is the RBC from the last assessment, times the
+       staleness buffer if that is being used (review item 31). */
+    bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year] = RBC;
+    bm->RBCestimation.RBCspeciesArray[species].TAC_by_year[year] = TAC;
 
 	// allocate retained catch to fleets and regions, based on previous relative allocation - for commercial fisheries only (for now)
 	for (nfishery = 0; nfishery < bm->K_num_fisheries; nfishery++) {
@@ -532,8 +634,8 @@ void DoTierAssessment(MSEBoxModel *bm, int species, int year, FILE *llogfp){
             bm->TACamt[species][nfishery][now_id] = TACnf;
             bm->TACamt[species][nfishery][RBCnow_id] = RBCnf;
             
-            if (bm->TACamt[species][nf][now_id] > no_quota)
-                bm->TACamt[species][nf][now_id] = no_quota;
+            if (bm->TACamt[species][nfishery][now_id] > no_quota)
+                bm->TACamt[species][nfishery][now_id] = no_quota;
             
             fprintf(llogfp, "Time: %e %s fishery %d TAC %e (RBC %e) TAC_old: %e, RBC_old: %e\n",
                     bm->dayt, FunctGroupArray[species].groupCode, nfishery, TACnf, RBCnf, TAC_old, bm->TACamt[species][nfishery][RBCold_id]);
@@ -652,7 +754,9 @@ void Tier_averages(MSEBoxModel *bm, int species, int year, int tier, double *cur
 	case tier1:
 	case tier2:
     case tier6:
-    case tier7:  /* nothing to do */
+    case tier7:
+    case dyntier4:
+    case tier14:  /* nothing to do */
 		MinCyr = year - 4;  // ***** was year
 		MaxCyr = year;
 		break;
@@ -886,6 +990,9 @@ void TierOne(MSEBoxModel *bm, int species, int year, FILE *llogfp)
 void TierOneMimic(MSEBoxModel *bm, int species, int year, FILE *llogfp)
 {
     double sb0, depletion, sigma, norm, depgen, fmax, yield, Hsteep, ftarg, natm, sf;
+    double hcr_lim, hcr_brk, fref;
+    int tier = (int) (FunctGroupArray[species].speciesParams[tier_id]);
+    int hcr_option = (int)(bm->RBCestimation.RBCspeciesParam[species][Tier1_HCRoption_id]);
     int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[species][NumRegions_id]);
     int Nstocks = FunctGroupArray[species].numStocks;
     double totcount = 0.0;
@@ -976,13 +1083,45 @@ void TierOneMimic(MSEBoxModel *bm, int species, int year, FILE *llogfp)
 	Hsteep = bm->RBCestimation.RBCspeciesParam[species][Hsteep_id];  // was Hsteep[1] in Sally's code
 	getF20_40_48(bm, species, bm->RBCestimation.RBCspeciesArray[species].agesel, bm->RBCestimation.RBCspeciesArray[species].wt, bm->RBCestimation.RBCspeciesArray[species].mat, bm->RBCestimation.RBCspeciesArray[species].Mnat[0][0][0][0][year], Hsteep, llogfp);
     
-	// now apply the 20:35:48 harvest control rule
-	if (depgen < 0.2)
-		ftarg = 0.0;
-	else if (depgen < 0.35)
-		ftarg = bm->RBCestimation.RBCspeciesParam[species][F40_id] * (depgen/0.2 - 1.0);
-	else
-		ftarg = bm->RBCestimation.RBCspeciesParam[species][F48_id];
+	// now apply the harvest control rule
+    if (tier == tier14)
+        hcr_option = aclim_T1_hcr;   // Ratpack Tier_5 style perfect information assessment always uses the ACLIM rules
+
+    switch (hcr_option) {
+    case orig_T1_hcr:
+        // Original 20:35:48 harvest control rule
+        if (depgen < 0.2)
+            ftarg = 0.0;
+        else if (depgen < 0.35)
+            ftarg = bm->RBCestimation.RBCspeciesParam[species][F40_id] * (depgen/0.2 - 1.0);
+        else
+            ftarg = bm->RBCestimation.RBCspeciesParam[species][F48_id];
+        break;
+    case ramp_T1_hcr:
+        // Continuous ramp from zero at the limit to F at the target reference point (F48) at the break point
+        hcr_lim = bm->RBCestimation.RBCspeciesParam[species][mgt_HCRlimit_id];
+        hcr_brk = bm->RBCestimation.RBCspeciesParam[species][mgt_HCRbreak_id];
+        if (hcr_brk <= hcr_lim)
+            quit("TierOneMimic: for Tier1_HCRoption 1 the break point (BrefB = %e) must be greater than the limit (Blim = %e) for %s\n", hcr_brk, hcr_lim, FunctGroupArray[species].groupCode);
+        if (depgen < hcr_lim)
+            ftarg = 0.0;
+        else if (depgen < hcr_brk)
+            ftarg = bm->RBCestimation.RBCspeciesParam[species][F48_id] * (depgen - hcr_lim) / (hcr_brk - hcr_lim);
+        else
+            ftarg = bm->RBCestimation.RBCspeciesParam[species][F48_id];
+        break;
+    case aclim_T1_hcr:
+        // ACLIM harvest control rule applied to the reference F
+        if ((int)(bm->RBCestimation.RBCspeciesParam[species][HCR_Fref_id]) == 2)
+            fref = bm->RBCestimation.RBCspeciesParam[species][F48_id];
+        else
+            fref = bm->RBCestimation.RBCspeciesParam[species][F40_id];
+        ftarg = fref * Calc_ACLIM_Fmult(bm, species, depgen, llogfp);
+        break;
+    default:
+        quit("TierOneMimic: Tier1_HCRoption %d not recognised for %s\n", hcr_option, FunctGroupArray[species].groupCode);
+        break;
+    }
 
     /*
     if(do_debug) {
@@ -1262,7 +1401,7 @@ double getSlope(double *x, double *y, int n, FILE *llogfp){
 //******************************************************************************
 void TierThree_CCsel(MSEBoxModel *bm, int species, int year, FILE *llogfp){
 
-	int s, a, iy, i, j, nF, nf, NCA = 0;
+	int s, a, iy, i, j, nF, nf, nFit, NCA = 0;
 	int iter = bm->RBCestimation.Tier_Max_Int;
 	double sumage, init_S95, init_S50, step1;
 	double ftol;
@@ -1432,7 +1571,7 @@ void TierThree_CCsel(MSEBoxModel *bm, int species, int year, FILE *llogfp){
 
 				downhill_simplex(bm, EquilF_Funk_model, species, bm->RBCestimation.RBCspeciesArray[species].simplex, bm->RBCestimation.RBCspeciesArray[species].func, npar, ftol, iter, &ok, llogfp, bm->RBCestimation.RBCspeciesArray[species].xpar);
 
-				bm->RBCestimation.RBCspeciesArray[species].fvalF[nF] = UnTransform(bm->RBCestimation.RBCspeciesArray[species].simplex[1][1], 0.01);
+				bm->RBCestimation.RBCspeciesArray[species].fvalF[nF] = UnTransform(bm->RBCestimation.RBCspeciesArray[species].simplex[0][0], 0.01);   // Nov 2026: was simplex[1][1] (S95 of a non-best vertex)
  
 			}
 
@@ -1453,10 +1592,13 @@ void TierThree_CCsel(MSEBoxModel *bm, int species, int year, FILE *llogfp){
     
     // average F values over  fleets that have agecomp data (because each F is estimating same thing)
     
+    // Nov 2026: nF is the index of the last fleet fitted (starts at -1), so the number of fleets fitted is nF + 1.
+    // Previously looped i < nF and divided by nF, so the last fleet was left out (and Fcurr = 0 with one fleet)
+    nFit = nF + 1;
     if(nF < 0) nF = 0;  // reset here to make sense for following calculations, a -1 is not useful and a 0 means a "nothing happened" response here
 	sumF = 0.0;
 	sumchi = 0.0;
-	for (i = 0; i < nF; i++){
+	for (i = 0; i < nFit; i++){
 		sumF += bm->RBCestimation.RBCspeciesArray[species].fvalF[i];
 		sumchi += bm->RBCestimation.RBCspeciesArray[species].chi[i];
         
@@ -1469,17 +1611,17 @@ void TierThree_CCsel(MSEBoxModel *bm, int species, int year, FILE *llogfp){
         }
         */
 	}
-	bm->RBCestimation.RBCspeciesParam[species][Fcurr_id] = sumF/(nF + small_num);
+	bm->RBCestimation.RBCspeciesParam[species][Fcurr_id] = sumF/(nFit + small_num);
     
-    fprintf(llogfp, "Time %e %s year: %d Fcurr: %e sumF: %e nF: %d\n",
-            bm->dayt, FunctGroupArray[species].groupCode, year, bm->RBCestimation.RBCspeciesParam[species][Fcurr_id], sumF, nF);
+    fprintf(llogfp, "Time %e %s year: %d Fcurr: %e sumF: %e nFit: %d\n",
+            bm->dayt, FunctGroupArray[species].groupCode, year, bm->RBCestimation.RBCspeciesParam[species][Fcurr_id], sumF, nFit);
 
     // combine selectivity vectors over fleets
-	for (i = 0; i < nF; i++){
+	for (i = 0; i < nFit; i++){
 		bm->RBCestimation.RBCspeciesArray[species].chi[i] = bm->RBCestimation.RBCspeciesArray[species].chi[i] / (sumchi + small_num);
 	}
 	for (a = 0; a < bm->RBCestimation.RBCspeciesParam[species][Tier3_maxage_id]; a++){
-		for (i = 0; i < nF; i++){
+		for (i = 0; i < nFit; i++){
 			bm->RBCestimation.RBCspeciesArray[species].agesel[a] += bm->RBCestimation.RBCspeciesArray[species].chi[i] * bm->RBCestimation.RBCspeciesArray[species].sel[i][a];
             
             /*
@@ -1734,10 +1876,17 @@ void newTier3Rule(MSEBoxModel *bm, int species, int year, double current_catch, 
 		frbc = 0.0;
 	else if (bm->RBCestimation.RBCspeciesParam[species][Fcurr_id] <= bm->RBCestimation.RBCspeciesParam[species][F40_id])
 		frbc = bm->RBCestimation.RBCspeciesParam[species][F48_id];
-	else {
+	else if (bm->RBCestimation.RBCspeciesParam[species][Tier3_replicate_old_id] > 0) {
+		// Original equation - kept so old simulations can be replicated (Tier3_replicate_old_XXX = 1).
+		// Note it is not a ramp (units of 1/F), e.g. F20 = 0.4, F40 = 0.2, F48 = 0.15, Fcurr = 0.3 gives frbc = 7.5
 		step1 = (bm->RBCestimation.RBCspeciesParam[species][F40_id] - bm->RBCestimation.RBCspeciesParam[species][F20_id])
 				* (bm->RBCestimation.RBCspeciesParam[species][Fcurr_id] - bm->RBCestimation.RBCspeciesParam[species][F20_id]);
 		frbc = bm->RBCestimation.RBCspeciesParam[species][F48_id] / step1;
+	} else {
+		// Nov 2026: SESSF Tier 3 ramp - linear from F48 at Fcurr = F40 down to zero at Fcurr = F20
+		frbc = bm->RBCestimation.RBCspeciesParam[species][F48_id]
+				* (bm->RBCestimation.RBCspeciesParam[species][F20_id] - bm->RBCestimation.RBCspeciesParam[species][Fcurr_id])
+				/ (bm->RBCestimation.RBCspeciesParam[species][F20_id] - bm->RBCestimation.RBCspeciesParam[species][F40_id] + small_num);
 	}
 
 	bm->RBCestimation.RBCspeciesParam[species][Tier3_mult_id] = (1.0-exp(-frbc)) / (1.0-exp(-bm->RBCestimation.RBCspeciesParam[species][Fcurr_id]));
@@ -1956,6 +2105,7 @@ void TierFour (MSEBoxModel *bm, int species, int year, double current_catch, FIL
 	double slope, maxprop;
 	//int do_debug = 0;
 	int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[species][NumFisheries_id]);
+	int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[species][NumRegions_id]);   // Index Nregions holds the catch weighted all-region CPUE
 
     Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[species].xyear, 4, 0.0);
     Util_Init_1D_Double(bm->RBCestimation.RBCspeciesArray[species].ycpue, 4, 0.0);
@@ -1981,7 +2131,7 @@ void TierFour (MSEBoxModel *bm, int species, int year, double current_catch, FIL
 	for (iy = year-3; iy <= year; iy++){
 		ii++;
 		bm->RBCestimation.RBCspeciesArray[species].xyear[ii] = ii;
-		bm->RBCestimation.RBCspeciesArray[species].ycpue[ii] = bm->RBCestimation.RBCspeciesArray[species].CPUEgen[maxfleet][0][iy];
+		bm->RBCestimation.RBCspeciesArray[species].ycpue[ii] = bm->RBCestimation.RBCspeciesArray[species].CPUEgen[maxfleet][Nregions][iy];   // Nov 2026: was region 0
 	}
 	slope = getSlope(bm->RBCestimation.RBCspeciesArray[species].xyear, bm->RBCestimation.RBCspeciesArray[species].ycpue, 4, llogfp);
 
@@ -2011,7 +2161,7 @@ void TierFour (MSEBoxModel *bm, int species, int year, double current_catch, FIL
 //
 //******************************************************************************
 void newTierFour (MSEBoxModel *bm, int species, int year, double current_catch, FILE *llogfp){
-	int iy, region, r, nf, MinCyr, MaxCyr;
+	int iy, region, r, nf, MinCyr, MaxCyr, nsum;
 	double cpuesum, maxprop, mult, step1, denom;
 	int fleetid, startyear;
 	int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[species][NumRegions_id]);
@@ -2024,7 +2174,7 @@ void newTierFour (MSEBoxModel *bm, int species, int year, double current_catch, 
     }
     */
         
-	region = 0;   // weighted sum over regions, assessment doesn't know about regions
+	region = Nregions;   // weighted sum over regions (stored at index Nregions), assessment doesn't know about regions - Nov 2026: was 0 (i.e. region 0 only)
 	// which fleet has highest proportion of catch (av over last 5 years) ?
 	// 22.3.2011 only do this at start of projection
 	if (year == (bm->RBCestimation.RBCspeciesParam[species][HistYrMax_id] - 1)){
@@ -2049,8 +2199,10 @@ void newTierFour (MSEBoxModel *bm, int species, int year, double current_catch, 
     if (MinCyr < 1) MinCyr = 1;
     if (MinCyr > MaxCyr) MaxCyr = MinCyr;
 
-	for (iy = MinCyr; iy < MaxCyr; iy++){
+    nsum = 0;
+	for (iy = MinCyr; iy < MaxCyr + 1; iy++){   // Nov 2026: now includes MaxCyr (was iy < MaxCyr but divided by the full number of years)
 		cpuesum += bm->RBCestimation.RBCspeciesArray[species].CPUEgen[fleetid][region][iy];
+        nsum++;
         
         /**/
         //if (do_debug) {
@@ -2059,7 +2211,7 @@ void newTierFour (MSEBoxModel *bm, int species, int year, double current_catch, 
         //}
         /**/
 	}
-	step1 = bm->RBCestimation.RBCspeciesParam[species][Tier4_CPUEyrmax_id] - bm->RBCestimation.RBCspeciesParam[species][Tier4_CPUEyrmin_id] + 1.0;
+	step1 = (double)nsum;   // Number of years actually summed
 	bm->RBCestimation.RBCspeciesParam[species][CPUEtarg_id] = bm->RBCestimation.RBCspeciesParam[species][Tier4_Bo_correct_id] * cpuesum / (step1 + small_num);
 
 	bm->RBCestimation.RBCspeciesParam[species][CPUElim_id] = bm->RBCestimation.CPUElim * bm->RBCestimation.RBCspeciesParam[species][CPUEtarg_id];
@@ -2075,9 +2227,9 @@ void newTierFour (MSEBoxModel *bm, int species, int year, double current_catch, 
 
 	// calculate average CPUE over last m years
 	cpuesum = 0.0;
-    startyear = year-(int)bm->RBCestimation.RBCspeciesParam[species][Tier4_m_id];   // Used to have +1 on end
+    startyear = year - (int)bm->RBCestimation.RBCspeciesParam[species][Tier4_m_id] + 1;   // Nov 2026: +1 restored so m years are used (was m+1 years divided by m)
     if (startyear < 0) startyear = 0;
-	for (iy=startyear; iy <= year; iy++){
+	for (iy = startyear; iy < year + 1; iy++){
 		cpuesum += bm->RBCestimation.RBCspeciesArray[species].CPUEgen[fleetid][region][iy];
        
         /**/
@@ -2087,10 +2239,7 @@ void newTierFour (MSEBoxModel *bm, int species, int year, double current_catch, 
         //}
         /**/
 	}
-    if ((year - startyear) < (int)(bm->RBCestimation.RBCspeciesParam[species][Tier4_m_id]))
-        denom = (double)(year - startyear);
-    else
-        denom = bm->RBCestimation.RBCspeciesParam[species][Tier4_m_id];
+    denom = (double)(year - startyear + 1);   // Number of years summed
 
     bm->RBCestimation.RBCspeciesParam[species][CPUEav_id] = cpuesum / (denom + small_num);
 
@@ -2104,10 +2253,21 @@ void newTierFour (MSEBoxModel *bm, int species, int year, double current_catch, 
 	}
 
 	bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = current_catch * mult;
-    
+
+    // Optional Ratpack scaling of RBC by the HCR target relative to the default 0.48 (Ratpack _TierFour)
+    if (bm->RBCestimation.RBCspeciesParam[species][Tier4_UseHCRtarget_id] > 0) {
+        bm->RBCestimation.RBCspeciesParam[species][RBCest_id] *= bm->RBCestimation.RBCspeciesParam[species][mgt_HCRtarget_id] / 0.48;
+    }
+
 	if (bm->RBCestimation.RBCspeciesParam[species][RBCest_id] > bm->RBCestimation.RBCspeciesParam[species][Cmax_id])
 		bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = bm->RBCestimation.RBCspeciesParam[species][Cmax_id];
-    
+
+    // Optional Ratpack absolute maximum catch cap (Run_Tier4b Max.catch)
+    if ((bm->RBCestimation.RBCspeciesParam[species][Tier4_UseMaxCatch_id] > 0) &&
+        (bm->RBCestimation.RBCspeciesParam[species][RBCest_id] > bm->RBCestimation.RBCspeciesParam[species][Tier4_MaxCatch_id])) {
+        bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = bm->RBCestimation.RBCspeciesParam[species][Tier4_MaxCatch_id];
+    }
+
     bm->RBCestimation.RBCspeciesParam[species][TACpost_id] = bm->RBCestimation.RBCspeciesParam[species][RBCest_id];
 
     /**/
@@ -2287,12 +2447,14 @@ void TierFive_SP(MSEBoxModel *bm, int species, int year, FILE *llogfp, FILE *fid
 // call simplex to estimate Bstart, K, r
 	downhill_simplex(bm, SurplusProduction_model, species, bm->RBCestimation.RBCspeciesArray[species].simplex, bm->RBCestimation.RBCspeciesArray[species].func, npar, ftol, iter, &ok, llogfp, bm->RBCestimation.RBCspeciesArray[species].xpar);
 
+	/* Nov 2026: K is now its own parameter (simplex[0][1]). Original handling, in case need to switch back:
+	   K was set equal to Bstart, i.e.  k = simplex[0][0]  (and xpar[1] below = simplex[0][0], in_K = xpar[0] in SurplusProduction) */
 	bstart = bm->RBCestimation.RBCspeciesArray[species].simplex[0][0];
-	k = bm->RBCestimation.RBCspeciesArray[species].simplex[0][0];
+	k = bm->RBCestimation.RBCspeciesArray[species].simplex[0][1];
 	r = UnTransform(bm->RBCestimation.RBCspeciesArray[species].simplex[0][2], 0.0);
 
 	bm->RBCestimation.RBCspeciesArray[species].xpar[0] = bm->RBCestimation.RBCspeciesArray[species].simplex[0][0];
-	bm->RBCestimation.RBCspeciesArray[species].xpar[1] = bm->RBCestimation.RBCspeciesArray[species].simplex[0][0];
+	bm->RBCestimation.RBCspeciesArray[species].xpar[1] = bm->RBCestimation.RBCspeciesArray[species].simplex[0][1];   // Nov 2026: was simplex[0][0] (K = Bstart)
 	bm->RBCestimation.RBCspeciesArray[species].xpar[2] = bm->RBCestimation.RBCspeciesArray[species].simplex[0][2];
 	//funcy = SurplusProduction(bm, species, xpar, llogfp);
 
@@ -2385,7 +2547,7 @@ double SurplusProduction(MSEBoxModel *bm, int species, double *xpar, FILE *llogf
 	sigma = 0.0;
 
 	in_Bstart = xpar[0];
-	in_K = xpar[0];
+	in_K = xpar[1];   // Nov 2026: was xpar[0], i.e. K = Bstart (switch back to xpar[0] to replicate the original handling)
 	in_r = UnTransform(xpar[2], 0);
 
 	// can only do this to CurrentYear because only have CPUE up to this year
@@ -2394,8 +2556,12 @@ double SurplusProduction(MSEBoxModel *bm, int species, double *xpar, FILE *llogf
 			bm->RBCestimation.RBCspeciesArray[species].expectB[iy] = in_Bstart;
 		else {
 			bt = bm->RBCestimation.RBCspeciesArray[species].expectB[iy-1];
-			step1 = (1.0 - exp(bm->RBCestimation.RBCspeciesParam[species][Tier5_p_id] * log(bt/in_K))) - bm->RBCestimation.RBCspeciesArray[species].T5_removal[iy-1];
-			bm->RBCestimation.RBCspeciesArray[species].expectB[iy] = bt + bt * in_r / bm->RBCestimation.RBCspeciesParam[species][Tier5_p_id] * step1;
+			/* Nov 2026: removals now subtracted after the production term (Pella-Tomlinson B + (r/p)B(1-(B/K)^p) - C).
+			   Original handling, in case need to switch back - removals were inside the production term:
+			     step1 = (1.0 - exp(p * log(bt/in_K))) - T5_removal[iy-1];
+			     expectB[iy] = bt + bt * in_r / p * step1;  */
+			step1 = 1.0 - exp(bm->RBCestimation.RBCspeciesParam[species][Tier5_p_id] * log(bt/in_K));
+			bm->RBCestimation.RBCspeciesArray[species].expectB[iy] = bt + bt * in_r / bm->RBCestimation.RBCspeciesParam[species][Tier5_p_id] * step1 - bm->RBCestimation.RBCspeciesArray[species].T5_removal[iy-1];
 			if (bm->RBCestimation.RBCspeciesArray[species].expectB[iy] < 75.0) bm->RBCestimation.RBCspeciesArray[species].expectB[iy] = 75.0;
 		}
 		// if there is a cpue for this year
@@ -2935,7 +3101,8 @@ double DoCPUE(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
 	int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[species][NumRegions_id]);
     
 	// Calculate CPUE for the last x years, beginning with latest non-zero effort year
-	for(iy = year-1; iy >= 0; iy++) { // establish most recent non-zero effort year
+	// Nov 2026: loop now counts back (was iy++ so ran forward off the end of the arrays) and j is the year found
+	for(iy = year-1; iy >= 0; iy--) { // establish most recent non-zero effort year
         for (f = 0; f < Nfleets; f++) {
             if (bm->RBCestimation.RBCspeciesArray[species].EffortData[f][Nregions][iy] > 0.0) {
                 is_done = 1;
@@ -2943,9 +3110,8 @@ double DoCPUE(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
             }
         }
         if (is_done) {
-            break;
-        } else {
             j = iy;
+            break;
         }
 	}
     
@@ -3240,7 +3406,7 @@ void Evaluation(MSEBoxModel *bm, int species, int year, FILE *llogfp, FILE *fid)
 	int  r;
 	double sb0;
 	int tier = (int) (FunctGroupArray[species].speciesParams[tier_id]);
-	int tiertype = (int) (FunctGroupArray[species].speciesParams[tiertype_id]);
+	int tiertype = (int) (bm->RBCestimation.RBCspeciesParam[species][tiertype_id]);   // Nov 2026: was read from speciesParams
 	double step1;
 	int fleetid = (int)(bm->RBCestimation.RBCspeciesParam[species][CPUEfleet_id]);
 	int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[species][NumRegions_id]);
@@ -3313,7 +3479,28 @@ void Evaluation(MSEBoxModel *bm, int species, int year, FILE *llogfp, FILE *fid)
     case tier7:
         fprintf(llogfp, "Time: %e %s year: %d trigeached: %e\n",
 					bm->dayt, FunctGroupArray[species].groupCode, year, bm->RBCestimation.RBCspeciesParam[species][TriggerReached_id]);
-            
+
+        break;
+    case dyntier4: /* ------------ Dynamic Tier 4 --------------------- */
+        fprintf(llogfp, "Time: %e %s year: %d sb0: %e SpawnBio: %e relSpawnBio: %e EstB0: %e EstBcurr: %e EstDepletion: %e r: %e K: %e z: %e MSY: %e BMSY: %e nll: %e maxgrad: %e RBC: %e\n",
+                bm->dayt, FunctGroupArray[species].groupCode, year, sb0,
+                bm->RBCestimation.RBCspeciesArray[species].SpawnBio[Nstocks][Nregions][year],
+                bm->RBCestimation.RBCspeciesArray[species].SpawnBio[Nstocks][Nregions][year] / sb0,
+                bm->RBCestimation.RBCspeciesParam[species][EstB0_id], bm->RBCestimation.RBCspeciesParam[species][EstBcurr_id],
+                bm->RBCestimation.RBCspeciesParam[species][EstDepletion_id], bm->RBCestimation.RBCspeciesParam[species][DT4_r_id],
+                bm->RBCestimation.RBCspeciesParam[species][DT4_K_id], bm->RBCestimation.RBCspeciesParam[species][DT4_z_id],
+                bm->RBCestimation.RBCspeciesParam[species][DT4_MSY_id], bm->RBCestimation.RBCspeciesParam[species][DT4_BMSY_id],
+                bm->RBCestimation.RBCspeciesParam[species][DT4_nll_id], bm->RBCestimation.RBCspeciesParam[species][DT4_maxgrad_id],
+                bm->RBCestimation.RBCspeciesParam[species][RBCest_id]);
+        break;
+    case tier14: /* ------------ Perfect information ACLIM --------------------- */
+        fprintf(llogfp, "Time: %e %s year: %d sb0: %e SpawnBio: %e relSpawnBio: %e HCRtype: %e rebuilding: %e F40: %e F48: %e RBC: %e\n",
+                bm->dayt, FunctGroupArray[species].groupCode, year, sb0,
+                bm->RBCestimation.RBCspeciesArray[species].SpawnBio[Nstocks][Nregions][year],
+                bm->RBCestimation.RBCspeciesArray[species].SpawnBio[Nstocks][Nregions][year] / sb0,
+                bm->RBCestimation.RBCspeciesParam[species][HCRtype_id], bm->RBCestimation.RBCspeciesParam[species][HCR_rebuilding_id],
+                bm->RBCestimation.RBCspeciesParam[species][F40_id], bm->RBCestimation.RBCspeciesParam[species][F48_id],
+                bm->RBCestimation.RBCspeciesParam[species][RBCest_id]);
         break;
 	default:
 		printf("No such tier (%d)\n", tier);
@@ -3388,6 +3575,12 @@ void WriteResults(MSEBoxModel *bm, int species, int region, int year, FILE *llog
 
 /*********************************************************************************
  * Calls amoeba search (also known as downhill_simplex) - from numerical recipes
+ *
+ * Nov 2026: Amoeba() now uses all npar+1 vertices and returns the best point in row 0.
+ * On return:
+ *   - simplex[0] holds the best point and func[0] its objective value
+ *   - xpar is left at the best point (and the objective evaluated there)
+ *   - ok is TRUE if converged within iter function evaluations, FALSE otherwise
 *********************************************************************************/
 void downhill_simplex(MSEBoxModel *bm, int funkflag, int species, double **simplex, double *func, int npar,
 		double ftol, int iter, int *ok, FILE *llogfp, double *xpar) {
@@ -3400,6 +3593,15 @@ void downhill_simplex(MSEBoxModel *bm, int funkflag, int species, double **simpl
 	Amoeba(bm, 0, species, bm->dayt, FunctGroupArray[species].groupCode, simplex, func, npar, ftol, iter, funkflag,
 			FunctGroupArray[species].numCohorts, nyears, 0, &nfunk, &Ilow, llogfp, xpar);
 
+	if (nfunk < iter)
+		*ok = TRUE;
+	else
+		*ok = FALSE;
+
+	/* Leave xpar (and any model state set by the objective function) at the best point */
+	func[0] = Funk(bm, funkflag, species, FunctGroupArray[species].numCohorts, npar, nyears, 0, simplex[0], llogfp, xpar);
+
+	return;
 }
 
 
@@ -3501,31 +3703,32 @@ static FILE * Init_tier5_File(MSEBoxModel *bm) {
 
 /*************************************************************************************
  *	\brief Routines to implement US style tier buffering between OFL (RBC) and ABC/AFL (TAC)
- *  Updates the RBC calculated by the tier assessment (so don't need to change the other code)
+ *  Nov 2026 (review item 31): returns the buffered value used to calculate the TAC; the RBC (RBCest) is left unchanged
+ *
+ *  Nov 2026: tier is now the effective tier passed in from DoTierAssessment (so rollover years
+ *  are recognised rather than re-applying the tier buffer to last year's TAC), and the buffer
+ *  scalars are read from RBCspeciesParam (were read from the biological speciesParams array).
  */
-void Apply_RBC_Buffers(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
-    int tier = (int) (FunctGroupArray[species].speciesParams[tier_id]);
-    double sig1 = FunctGroupArray[species].speciesParams[Tier1Sig_id];
-    double sig2 = FunctGroupArray[species].speciesParams[Tier2Sig_id];
-    double sig3 = FunctGroupArray[species].speciesParams[Tier3Sig_id];
-    double RBC = bm->RBCestimation.RBCspeciesParam[species][RBCest_id];
-    int endyr = (int)(bm->RBCestimation.RBCspeciesParam[species][myTACend_id]);
-    double buff_yr = (double)(bm->RBCestimation.myTACperiod - (endyr - year));
-    
+double Apply_RBC_Buffers(MSEBoxModel *bm, int species, int year, int tier, double TACbase, FILE *llogfp) {
+    double sig1 = bm->RBCestimation.RBCspeciesParam[species][Tier1Sig_id];
+    double sig2 = bm->RBCestimation.RBCspeciesParam[species][Tier2Sig_id];
+    double sig3 = bm->RBCestimation.RBCspeciesParam[species][Tier3Sig_id];
+    double RBC = TACbase;
+
 	switch (tier){
         case tier1: /* ----------- Tier 1 --------------------- */
         case dyntier1B0:
-            RBC = sig1 * bm->RBCestimation.RBCspeciesParam[species][RBCest_id];
+            RBC = sig1 * TACbase;
             break;
         case tier2: /* ----------- Tier 2 --------------------- */
-            RBC = sig2 * bm->RBCestimation.RBCspeciesParam[species][RBCest_id];
+            RBC = sig2 * TACbase;
             break;
         case tier3: /* ------------ Tier 3 --------------------- */
-            RBC = sig3 * bm->RBCestimation.RBCspeciesParam[species][RBCest_id];
+            RBC = sig3 * TACbase;
             break;
         case tier4: // ----------------  tier 4 --------------------
         case dyntier4:
-            RBC = sig3 * bm->RBCestimation.RBCspeciesParam[species][RBCest_id];
+            RBC = sig3 * TACbase;
             break;
         case tier0: /* ----------- No future catches ---------- */
         case tier5: //  ---------------- tier 5 --------------------
@@ -3534,14 +3737,13 @@ void Apply_RBC_Buffers(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
         case tier8: //  ---------------- tier 8 --------------------
         case tier9: //  ---------------- tier 9 --------------------
         case tier13: //  ---------------- tier 13 Iceland escapement --------------------
+        case tier14: //  ---------------- tier 14 perfect information ACLIM --------------------
             // Nothing to do for these cases as yet
             break;
         case sp_rollover:
-            if (buff_yr > 0) {
-                RBC = pow((1.0 - bm->RBCestimation.myTACbuffer), buff_yr) * bm->RBCestimation.RBCspeciesParam[species][RBCest_id];
-            } else {
-                RBC = bm->RBCestimation.RBCspeciesParam[species][RBCest_id];
-            }
+            // Nov 2026 (review item 29): the multi-year TAC decay (myTACbuffer) is now applied in Apply_MYTAC_Decay,
+            // called from DoTierAssessment whether or not UseTierBuffers is set, so nothing to do here.
+            break;
         default:
             printf("No such tier (%d)\n", tier);
             fprintf(llogfp,"No such tier (%d)\n", tier);
@@ -3549,9 +3751,85 @@ void Apply_RBC_Buffers(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
             break;
             
 	}
-    bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = RBC;
-    
-    return;
+    if (RBC != TACbase) {
+        fprintf(llogfp, "Time: %e %s year: %d tier buffer applied (tier %d): RBC %e becomes %e on the way to the TAC\n",
+                bm->dayt, FunctGroupArray[species].groupCode, year, tier, TACbase, RBC);
+    }
+
+    // Nov 2026 (review item 31): returned rather than overwriting RBCest, so the RBC stays the assessment estimate
+    return RBC;
+}
+
+/*************************************************************************************
+ *	\brief Multi-year TAC decay in rollover years (Nov 2026, review item 29)
+ *  RBCest is last year's TAC, which already includes the decay for earlier rollover years,
+ *  so apply one more year of the MYTAC buffer (giving (1 - myTACbuffer)^years since assessment overall).
+ *  Acts on (and returns) the value used to calculate the TAC; the RBC is not changed.
+ *  Only within a multi-year TAC (buff_yr > 0) - trigger rollovers outside a multi-year TAC are not decayed.
+ *  Not applied if the Ratpack staleness buffer is being used instead (already applied to RBCest).
+ *  Used to be part of Apply_RBC_Buffers, so only happened when UseTierBuffers was set.
+ */
+double Apply_MYTAC_Decay(MSEBoxModel *bm, int species, int year, double TACbase, FILE *llogfp) {
+    int endyr = (int)(bm->RBCestimation.RBCspeciesParam[species][myTACend_id]);
+    double buff_yr = (double)(bm->RBCestimation.RBCspeciesParam[species][myTACperiod_sp_id] - (endyr - year));
+    double newTACbase;
+
+    if (bm->RBCestimation.myTACbuffer <= 0.0)
+        return TACbase;
+    if (bm->RBCestimation.RBCspeciesParam[species][Buffer_stale_rate_id] > 0.0)
+        return TACbase;
+    if (buff_yr <= 0)
+        return TACbase;
+
+    newTACbase = (1.0 - bm->RBCestimation.myTACbuffer) * TACbase;
+
+    fprintf(llogfp, "Time: %e %s year: %d multi-year TAC decay (1 - myTACbuffer): %e (years since assessment: %e) %e becomes %e on the way to the TAC\n",
+            bm->dayt, FunctGroupArray[species].groupCode, year, (1.0 - bm->RBCestimation.myTACbuffer), buff_yr, TACbase, newTACbase);
+
+    return newTACbase;
+}
+
+/*************************************************************************************
+ *	\brief Ratpack staleness buffer (SetBuffer in Ratpack RatpackR.R)
+ *  During multi-year TAC (or trigger) rollover years the staleness buffer
+ *  max(Buffer_min, 1 - (years since assessment) * Buffer_stale_rate) is applied relative to the last
+ *  successful assessment. Only called when Buffer_stale_rate > 0 and the species is in a rollover year.
+ *  Nov 2026 (review item 31): applied to both
+ *   (b) the RBC: RBCest = buffer * RBC from the last assessment (unbuffered estimate, stored in RBC_by_year)
+ *   (a) the TAC path: returns buffer * the last assessment's buffered value (Ratpack_baseRBC), from which the
+ *       new TAC is calculated. Since the tier buffers are multipliers this is the same as re-applying them
+ *       to the staleness adjusted RBC.
+ *  Returns -1 if there has been no successful assessment yet (TAC path then rolls over last year's TAC).
+ */
+double Ratpack_Staleness_Buffer(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
+    int endyr = (int)(bm->RBCestimation.RBCspeciesParam[species][myTACend_id]);
+    double buff_yr = (double)(bm->RBCestimation.RBCspeciesParam[species][myTACperiod_sp_id] - (endyr - year));
+    double stale_rate = bm->RBCestimation.RBCspeciesParam[species][Buffer_stale_rate_id];
+    double stale_buffer;
+
+    if (buff_yr < 0.0)
+        buff_yr = 0.0;
+
+    stale_buffer = 1.0 - buff_yr * stale_rate;
+    if (stale_buffer < bm->RBCestimation.RBCspeciesParam[species][Buffer_min_id])
+        stale_buffer = bm->RBCestimation.RBCspeciesParam[species][Buffer_min_id];
+
+    if (!(bm->RBCestimation.RBCspeciesArray[species].lastAssessRBC > 0.0) || !(bm->RBCestimation.RBCspeciesParam[species][Ratpack_baseRBC_id] > 0.0)) {
+        fprintf(llogfp, "Time: %e %s year: %d WARNING - no successful assessment yet so Ratpack staleness buffer not applied (last year's TAC rolled over)\n",
+                bm->dayt, FunctGroupArray[species].groupCode, year);
+        return -1.0;
+    }
+
+    // (b) the RBC
+    bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = stale_buffer * bm->RBCestimation.RBCspeciesArray[species].lastAssessRBC;
+
+    fprintf(llogfp, "Time: %e %s year: %d Ratpack staleness buffer: %e (years since assessment: %e) last assessed RBC: %e RBC: %e buffered base: %e TAC base: %e\n",
+            bm->dayt, FunctGroupArray[species].groupCode, year, stale_buffer, buff_yr,
+            bm->RBCestimation.RBCspeciesArray[species].lastAssessRBC, bm->RBCestimation.RBCspeciesParam[species][RBCest_id],
+            bm->RBCestimation.RBCspeciesParam[species][Ratpack_baseRBC_id], stale_buffer * bm->RBCestimation.RBCspeciesParam[species][Ratpack_baseRBC_id]);
+
+    // (a) the TAC path
+    return stale_buffer * bm->RBCestimation.RBCspeciesParam[species][Ratpack_baseRBC_id];
 }
 
 /********************************************************************************************************
@@ -3680,12 +3958,13 @@ int trigger_species_breakout(MSEBoxModel *bm, int sp, int this_year){
     }
     
     // it is more than likely that this test will be triggered.
-    if (lastC > (bm->RBCestimation.RBCspeciesParam[sp][trigger_threshold_id] * bm->RBCestimation.RBCspeciesArray[sp].RBC_by_year[this_year - 1])) {
+    // Nov 2026: compared to last year's TAC (TAC_by_year), as in Ratpack, since RBC_by_year now holds RBCs
+    if (lastC > (bm->RBCestimation.RBCspeciesParam[sp][trigger_threshold_id] * bm->RBCestimation.RBCspeciesArray[sp].TAC_by_year[this_year - 1])) {
         TACcaptured = TRUE;
     }
 
-    fprintf(bm->logFile, "Time: %e %s CATCH TRIGGER %f %f\n", bm->dayt, FunctGroupArray[sp].groupCode, lastC, bm->RBCestimation.RBCspeciesArray[sp].RBC_by_year[this_year - 1]);
-    fprintf(bm->logFile, "Time: %e %s TRIGGER species: last catch: %f threshold * last RBC: %f  TACcaptured: %d\n", bm->dayt, FunctGroupArray[sp].groupCode, lastC, bm->RBCestimation.RBCspeciesParam[sp][trigger_threshold_id] * bm->RBCestimation.RBCspeciesArray[sp].RBC_by_year[this_year - 1], TACcaptured);
+    fprintf(bm->logFile, "Time: %e %s CATCH TRIGGER %f %f\n", bm->dayt, FunctGroupArray[sp].groupCode, lastC, bm->RBCestimation.RBCspeciesArray[sp].TAC_by_year[this_year - 1]);
+    fprintf(bm->logFile, "Time: %e %s TRIGGER species: last catch: %f threshold * last TAC: %f  TACcaptured: %d\n", bm->dayt, FunctGroupArray[sp].groupCode, lastC, bm->RBCestimation.RBCspeciesParam[sp][trigger_threshold_id] * bm->RBCestimation.RBCspeciesArray[sp].TAC_by_year[this_year - 1], TACcaptured);
 
     if (TACcaptured) {
         fprintf(bm->logFile, "Time: %e %s TRIGGER species BREAKOUT: CATCH / MARKET test\n", bm->dayt, FunctGroupArray[sp].groupCode);
@@ -4123,8 +4402,787 @@ Dynamic Tuer 4 routines
 //******************************************************************************
 void DynamicTier4Assessment(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
 
-    
-    
+
+
+    return;
+}
+
+/*********************************************************************************************************************************
+ Ratpack (PuntRatpackR) routines - ACLIM harvest control rules and native C dynamic Tier 4
+ ********************************************************************************************************************************/
+
+//******************************************************************************
+//
+// Name:  ACLIM_HCR
+// Description: ACLIM / GOA-CLIM alternative harvest control rules (types 1-10).
+//              Direct port of ACLIM_HCR() in PuntRatpackR "MISC HCR/'HCR_ACLIM.R"
+//              (K. Holsman, June 2025). Returns maxFabc, which is an F multiplier when Flim = 1.
+//
+//              Differences from the R version:
+//              - gamma and theta are passed on the natural scale (R takes log_gamma and log_theta)
+//              - inv.logit(x) is coded as 1/(1+exp(-x))
+//
+//  B2B0 = current depletion (B/B0)
+//  alpha = B/Btarget at which F reaches zero on the ramp
+//  gamma = sensitivity parameter (types 5, 6, 9 and 10)
+//  theta = scalar on SSB (type 8)
+//  omega1-3 = covariate effects on F, Btarget and Blim (type 7)
+//  cov = scaled covariate (types 7 and 9)
+//  B2B0_lim, B2B0_target = limit and target depletion
+//  Flim = F to which the multiplier is applied
+//
+// called by : Calc_ACLIM_Fmult
+// created  : Nov 2026 Beth Fulton (ported from Ratpack)
+//
+//******************************************************************************
+double ACLIM_HCR(int type, double B2B0, double alpha, double gamma, double theta, double omega1, double omega2, double omega3, double cov,
+                 double B2B0_lim, double B2B0_target, double Flim) {
+    double B2B40 = 0.0;
+    double maxFabc = 0.0;
+    double invlogit;
+
+    switch (type) {
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+            B2B40 = B2B0 / B2B0_target;
+            if (B2B40 > 1.0) {
+                maxFabc = Flim;
+            } else {
+                if (alpha < B2B40)
+                    maxFabc = Flim * ((B2B40 - alpha) / (1.0 - alpha));
+                else
+                    maxFabc = 0.0;
+            }
+            break;
+        case 5:
+        case 6:
+            B2B40 = B2B0 / B2B0_target;
+            if (B2B40 > 1.0) {
+                maxFabc = Flim * exp(-gamma * (B2B40 - 1.0));
+            } else {
+                if (alpha < B2B40)
+                    maxFabc = Flim * ((B2B40 - alpha) / (1.0 - alpha));
+                else
+                    maxFabc = 0.0;
+            }
+            break;
+        case 7:
+            // omega 1 and 2 are environmental effect parameters, cov is the scaled covariate
+            B2B0_target = B2B0_target * exp(-1.0 * omega2 * cov);
+            B2B0_lim = B2B0_lim * exp(-1.0 * omega3 * cov);
+            B2B40 = B2B0 / B2B0_target;
+            if (B2B40 > 1.0) {
+                maxFabc = Flim;
+            } else {
+                if (alpha < B2B40)
+                    maxFabc = Flim * ((B2B40 - alpha) / (1.0 - alpha));
+                else
+                    maxFabc = 0.0;
+            }
+            maxFabc = maxFabc * exp(omega1 * cov);
+            break;
+        case 8:
+            B2B40 = (theta * B2B0) / B2B0_target;
+            if (B2B40 > 1.0) {
+                maxFabc = Flim;
+            } else {
+                if (alpha < B2B40)
+                    maxFabc = Flim * ((B2B40 - alpha) / (1.0 - alpha));
+                else
+                    maxFabc = 0.0;
+            }
+            break;
+        case 9:
+            B2B40 = B2B0 / B2B0_target;
+            if (B2B40 > 1.0) {
+                invlogit = 1.0 / (1.0 + exp(cov));   // inv.logit(-1 * cov)
+                maxFabc = Flim * exp(-gamma * (invlogit / 0.5) * (B2B40 - 1.0));
+            } else {
+                if (alpha < B2B40)
+                    maxFabc = Flim * ((B2B40 - alpha) / (1.0 - alpha));
+                else
+                    maxFabc = 0.0;
+            }
+            break;
+        case 10:
+            // decay inverse to SSB/Btarget above 1 + gamma
+            B2B40 = B2B0 / B2B0_target;
+            if (B2B40 > 1.0) {
+                maxFabc = Flim;
+                if (B2B40 >= (1.0 + gamma)) {
+                    maxFabc = Flim / (B2B40 / (1.0 + gamma));
+                }
+            } else {
+                if (alpha < B2B40)
+                    maxFabc = Flim * ((B2B40 - alpha) / (1.0 - alpha));
+                else
+                    maxFabc = 0.0;
+            }
+            break;
+        default:
+            quit("ACLIM_HCR: HCR type %d not recognised - must be an integer between 1 and 10\n", type);
+            break;
+    }
+
+    // Hard limit
+    if (B2B40 <= (B2B0_lim / B2B0_target))
+        maxFabc = 0.0;
+
+    return maxFabc;
+}
+
+//******************************************************************************
+//
+// Name:  Calc_ACLIM_Fmult
+// Description: Collects the species' ACLIM HCR parameters and returns the F multiplier
+//              for the given depletion level.
+//
+//              HCR 2 (lagged recovery): once depletion falls below HCR_Blim the stock is
+//              flagged as rebuilding until depletion exceeds HCR_Btarget. While rebuilding
+//              HCR_alpha is used (ACLIM white paper value 0.30); otherwise the standard
+//              ACLIM alpha of 0.05 is used.
+//              HCR 4 (marine heatwave): alpha = HCR_alpha + 0.09 * MHW category, where the
+//              category is given by HCR_cov (ACLIM white paper).
+//
+// called by : TierOneMimic, RatpackDynTier4Assessment
+// created  : Nov 2026 Beth Fulton (ported from Ratpack)
+//
+//******************************************************************************
+double Calc_ACLIM_Fmult(MSEBoxModel *bm, int species, double depletion, FILE *llogfp) {
+    int type = (int)(bm->RBCestimation.RBCspeciesParam[species][HCRtype_id]);
+    double alpha = bm->RBCestimation.RBCspeciesParam[species][HCR_alpha_id];
+    double gamma = bm->RBCestimation.RBCspeciesParam[species][HCR_gamma_id];
+    double theta = bm->RBCestimation.RBCspeciesParam[species][HCR_theta_id];
+    double omega1 = bm->RBCestimation.RBCspeciesParam[species][HCR_omega1_id];
+    double omega2 = bm->RBCestimation.RBCspeciesParam[species][HCR_omega2_id];
+    double omega3 = bm->RBCestimation.RBCspeciesParam[species][HCR_omega3_id];
+    double cov = bm->RBCestimation.RBCspeciesParam[species][HCR_cov_id];
+    double Blim = bm->RBCestimation.RBCspeciesParam[species][HCR_Blim_id];
+    double Btarget = bm->RBCestimation.RBCspeciesParam[species][HCR_Btarget_id];
+    double Fmult;
+
+    if (Btarget <= 0.0)
+        quit("Calc_ACLIM_Fmult: HCR_Btarget for %s must be > 0\n", FunctGroupArray[species].groupCode);
+
+    switch (type) {
+        case 2:  // Lagged recovery
+            if (depletion < Blim) {
+                bm->RBCestimation.RBCspeciesParam[species][HCR_rebuilding_id] = 1;
+            } else if (depletion > Btarget) {
+                bm->RBCestimation.RBCspeciesParam[species][HCR_rebuilding_id] = 0;
+            }
+            if (!bm->RBCestimation.RBCspeciesParam[species][HCR_rebuilding_id])
+                alpha = 0.05;   // Standard ACLIM alpha when not rebuilding
+            break;
+        case 4:  // Marine heatwave category adjusts the slope
+            alpha = alpha + 0.09 * cov;
+            break;
+        default:
+            // Nothing extra to do
+            break;
+    }
+
+    Fmult = ACLIM_HCR(type, depletion, alpha, gamma, theta, omega1, omega2, omega3, cov, Blim, Btarget, 1.0);
+
+    fprintf(llogfp, "Time: %e %s ACLIM HCR type: %d depletion: %e alpha: %e Blim: %e Btarget: %e rebuilding: %e Fmult: %e\n",
+            bm->dayt, FunctGroupArray[species].groupCode, type, depletion, alpha, Blim, Btarget,
+            bm->RBCestimation.RBCspeciesParam[species][HCR_rebuilding_id], Fmult);
+
+    return Fmult;
+}
+
+/* Data and settings passed to the Ratpack dynamic Tier 4 objective function */
+typedef struct {
+    int nyr;               // Number of data years
+    int nidx;              // Number of CPUE series
+    int EstR;              // Estimate r (1) or derive it from median catch (0)
+    int EstZ;              // Estimate z (1) or derive it from MSYL (0)
+    int ProcessError;      // 0 = no process error, 1 = penalised deviations
+    int MSYRY1;            // First year index of period assumed to be at BMSY
+    int MSYRY2;            // Last year index of period assumed to be at BMSY
+    int npar;              // Number of estimated parameters
+    double MSYINPUT;       // Median catch used to derive r when not estimated
+    double MSYL;           // Input MSYL
+    double z;              // Shape parameter derived from MSYL
+    double CVMSYL;         // CV of MSYL penalty
+    double PriorMeanR;     // Prior mean r
+    double PriorSDr;       // Prior sd r
+    double SigmaR;         // Process error sd (fixed)
+    double *catch_obs;     // Total removals by year [nyr]
+    double **cpue;         // CPUE by series and year [nidx][nyr] (<= 0 means missing)
+    double *B;             // Biomass at the start of each year [nyr+1]
+} DT4DataStruct;
+
+//******************************************************************************
+//
+// Name:  DT4_FindZ
+// Description: Find the Pella-Tomlinson shape parameter z that gives the requested MSYL,
+//              i.e. solve 1 - (z+1)*MSYL^z = 0 by bisection on [0.0001, 10]
+//              (uniroot(FindZ) in Ratpack Assessment.R)
+//
+//******************************************************************************
+static double DT4_FindZ(double msyl) {
+    double zlo = 0.0001, zhi = 10.0, zmid = 1.0, flo, fmid;
+    int i;
+
+    flo = 1.0 - (zlo + 1.0) * pow(msyl, zlo);
+    for (i = 0; i < 200; i++) {
+        zmid = 0.5 * (zlo + zhi);
+        fmid = 1.0 - (zmid + 1.0) * pow(msyl, zmid);
+        if ((fmid > 0.0) == (flo > 0.0)) {
+            zlo = zmid;
+            flo = fmid;
+        } else {
+            zhi = zmid;
+        }
+        if ((zhi - zlo) < 1.0e-10)
+            break;
+    }
+    return zmid;
+}
+
+//******************************************************************************
+//
+// Name:  DT4_Derived
+// Description: Get K, r, z, MSYL and BMSY from the parameter vector
+//              x[0] = log(K), then log(r) if EstR, then log(z) if EstZ, then process deviations
+//
+//******************************************************************************
+static void DT4_Derived(DT4DataStruct *d, double *x, double *K, double *r, double *z, double *MSYLout, double *BMSY) {
+    int ip = 1;
+    double logR = 0.0;
+
+    *K = exp(x[0]);
+    if (d->EstR) {
+        logR = x[ip];
+        ip++;
+    }
+    if (d->EstZ) {
+        *z = exp(x[ip]);
+        *MSYLout = pow(1.0 / (*z + 1.0), 1.0 / *z);
+    } else {
+        *z = d->z;
+        *MSYLout = d->MSYL;
+    }
+    *BMSY = (*MSYLout) * (*K);
+    if (d->EstR)
+        *r = exp(logR);
+    else
+        *r = d->MSYINPUT / ((*BMSY) * (1.0 - pow(*MSYLout, *z)));
+
+    return;
+}
+
+//******************************************************************************
+//
+// Name:  DT4_Objective
+// Description: Negative log-likelihood for the Ratpack dynamic Tier 4 Pella-Tomlinson model
+//              (dynTier4.cpp / f2() in Ratpack Assessment.R)
+//
+//  Differences to the Ratpack version:
+//  - catch is conditioned on (exploitation rate = C/B) rather than estimating an exploitation
+//    rate for every year and fitting catch with sd = 0.05. If C/B exceeds 0.95 the exploitation
+//    rate is capped and the Ratpack catch likelihood (sd = 0.05) is applied to the shortfall.
+//  - catchability and sigma of each CPUE series are concentrated out (analytical MLEs)
+//
+//******************************************************************************
+static double DT4_Objective(DT4DataStruct *d, double *x) {
+    int t, i, n, ndev;
+    double K, r, z, MSYLout, BMSY, Bt, Bnext, expl, dev, nll = 0.0, pen = 0.0;
+    double resid, sumresid, sumsq, logq, sigma2, bioave, minB;
+
+    DT4_Derived(d, x, &K, &r, &z, &MSYLout, &BMSY);
+    if (!isfinite(K) || !isfinite(r) || !isfinite(z) || (K <= 0.0) || (r <= 0.0) || (z <= 0.0))
+        return 1.0e20;
+
+    ndev = d->npar - d->nyr;   // index of first process deviation (only used if ProcessError)
+    minB = 1.0e-6 * K;
+
+    // Population dynamics
+    d->B[0] = K;
+    for (t = 0; t < d->nyr; t++) {
+        Bt = d->B[t];
+        expl = d->catch_obs[t] / Bt;
+        if (expl > 0.95) {
+            pen += (log(d->catch_obs[t]) - log(0.95 * Bt)) * (log(d->catch_obs[t]) - log(0.95 * Bt)) / (2.0 * 0.05 * 0.05);
+            expl = 0.95;
+        }
+        Bnext = Bt + r * Bt * (1.0 - pow(Bt / K, z)) - expl * Bt;
+        if (d->ProcessError) {
+            dev = x[ndev + t];
+            Bnext = Bnext * exp(dev * d->SigmaR - 0.5 * d->SigmaR * d->SigmaR);
+            nll += 0.5 * dev * dev;
+        }
+        if (Bnext < minB) {
+            pen += 1000.0 * ((minB - Bnext) / K) * ((minB - Bnext) / K);
+            Bnext = minB;
+        }
+        d->B[t + 1] = Bnext;
+    }
+
+    // CPUE likelihood - lognormal with concentrated q and sigma per series
+    for (i = 0; i < d->nidx; i++) {
+        n = 0;
+        sumresid = 0.0;
+        for (t = 0; t < d->nyr; t++) {
+            if (d->cpue[i][t] > 0.0) {
+                sumresid += log(d->cpue[i][t]) - log(0.5 * (d->B[t] + d->B[t + 1]));
+                n++;
+            }
+        }
+        if (n < 2)
+            continue;
+        logq = sumresid / (double)n;
+        sumsq = 0.0;
+        for (t = 0; t < d->nyr; t++) {
+            if (d->cpue[i][t] > 0.0) {
+                resid = log(d->cpue[i][t]) - log(0.5 * (d->B[t] + d->B[t + 1])) - logq;
+                sumsq += resid * resid;
+            }
+        }
+        sigma2 = sumsq / (double)n;
+        if (sigma2 < 1.0e-6)
+            sigma2 = 1.0e-6;
+        nll += 0.5 * (double)n * log(sigma2) + 0.5 * (double)n;
+    }
+
+    // MSYL penalty - biomass over the specified period assumed to be around BMSY
+    if ((d->CVMSYL > 0.0) && (d->MSYRY2 >= d->MSYRY1) && (d->MSYRY1 >= 0) && (d->MSYRY2 < (d->nyr + 1))) {
+        bioave = 0.0;
+        for (t = d->MSYRY1; t < (d->MSYRY2 + 1); t++)
+            bioave += d->B[t];
+        bioave /= (double)(d->MSYRY2 - d->MSYRY1 + 1);
+        nll += (log(bioave) - log(BMSY)) * (log(bioave) - log(BMSY)) / (d->CVMSYL * d->CVMSYL);
+    }
+
+    // Normal prior on r
+    if (d->PriorSDr > 0.0)
+        nll += 0.5 * ((r - d->PriorMeanR) / d->PriorSDr) * ((r - d->PriorMeanR) / d->PriorSDr);
+
+    nll += pen;
+    if (!isfinite(nll))
+        return 1.0e20;
+
+    return nll;
+}
+
+//******************************************************************************
+//
+// Name:  DT4_Gradient
+// Description: Central difference gradient of DT4_Objective
+//
+//******************************************************************************
+static void DT4_Gradient(DT4DataStruct *d, double *x, double *grad) {
+    int i;
+    double h, xsave, fplus, fminus;
+
+    for (i = 0; i < d->npar; i++) {
+        xsave = x[i];
+        h = 1.0e-5 * (1.0 + fabs(xsave));
+        x[i] = xsave + h;
+        fplus = DT4_Objective(d, x);
+        x[i] = xsave - h;
+        fminus = DT4_Objective(d, x);
+        x[i] = xsave;
+        grad[i] = (fplus - fminus) / (2.0 * h);
+    }
+    return;
+}
+
+//******************************************************************************
+//
+// Name:  DT4_Minimise
+// Description: Quasi-Newton (BFGS) minimisation of DT4_Objective with numerical gradients
+//              and a backtracking line search. Restarts (from the best point so far) up to
+//              8 times, mirroring the nlminb restarts used in Ratpack.
+//              Returns the minimum objective value; x holds the best parameters and
+//              maxgrad the largest absolute gradient component at the solution.
+//
+//******************************************************************************
+static double DT4_Minimise(DT4DataStruct *d, double *x, int maxit, double *maxgrad) {
+    int npar = d->npar;
+    int i, j, it, irestart, nhalf;
+    double f, fnew, fstart, step, slope, sy, rho, pmax, hy, yhy;
+    double *g = Util_Alloc_Init_1D_Double(npar, 0.0);
+    double *gnew = Util_Alloc_Init_1D_Double(npar, 0.0);
+    double *p = Util_Alloc_Init_1D_Double(npar, 0.0);
+    double *s = Util_Alloc_Init_1D_Double(npar, 0.0);
+    double *y = Util_Alloc_Init_1D_Double(npar, 0.0);
+    double *xnew = Util_Alloc_Init_1D_Double(npar, 0.0);
+    double *Hy = Util_Alloc_Init_1D_Double(npar, 0.0);
+    double **H = Util_Alloc_Init_2D_Double(npar, npar, 0.0);
+
+    f = DT4_Objective(d, x);
+
+    for (irestart = 0; irestart < 9; irestart++) {
+        fstart = f;
+
+        // Reset the inverse Hessian approximation to the identity
+        for (i = 0; i < npar; i++) {
+            for (j = 0; j < npar; j++)
+                H[i][j] = 0.0;
+            H[i][i] = 1.0;
+        }
+        DT4_Gradient(d, x, g);
+
+        for (it = 0; it < maxit; it++) {
+            // Search direction
+            slope = 0.0;
+            for (i = 0; i < npar; i++) {
+                p[i] = 0.0;
+                for (j = 0; j < npar; j++)
+                    p[i] -= H[i][j] * g[j];
+                slope += p[i] * g[i];
+            }
+            if (slope >= 0.0) {
+                // Not a descent direction so use steepest descent
+                for (i = 0; i < npar; i++) {
+                    for (j = 0; j < npar; j++)
+                        H[i][j] = 0.0;
+                    H[i][i] = 1.0;
+                    p[i] = -g[i];
+                }
+                slope = 0.0;
+                for (i = 0; i < npar; i++)
+                    slope += p[i] * g[i];
+            }
+
+            // Limit step size (parameters are on log scale or are N(0,1) deviations)
+            pmax = 0.0;
+            for (i = 0; i < npar; i++) {
+                if (fabs(p[i]) > pmax)
+                    pmax = fabs(p[i]);
+            }
+            step = 1.0;
+            if (pmax * step > 2.0)
+                step = 2.0 / pmax;
+
+            // Backtracking line search (Armijo condition)
+            fnew = f;
+            for (nhalf = 0; nhalf < 40; nhalf++) {
+                for (i = 0; i < npar; i++)
+                    xnew[i] = x[i] + step * p[i];
+                fnew = DT4_Objective(d, xnew);
+                if (fnew <= (f + 1.0e-4 * step * slope))
+                    break;
+                step *= 0.5;
+            }
+            if (!(fnew < f))
+                break;   // No improvement possible along this direction
+
+            DT4_Gradient(d, xnew, gnew);
+
+            // BFGS update of inverse Hessian
+            sy = 0.0;
+            for (i = 0; i < npar; i++) {
+                s[i] = xnew[i] - x[i];
+                y[i] = gnew[i] - g[i];
+                sy += s[i] * y[i];
+            }
+            if (sy > 1.0e-12) {
+                rho = 1.0 / sy;
+                yhy = 0.0;
+                for (i = 0; i < npar; i++) {
+                    hy = 0.0;
+                    for (j = 0; j < npar; j++)
+                        hy += H[i][j] * y[j];
+                    Hy[i] = hy;
+                    yhy += y[i] * hy;
+                }
+                for (i = 0; i < npar; i++) {
+                    for (j = 0; j < npar; j++) {
+                        H[i][j] += (1.0 + rho * yhy) * rho * s[i] * s[j] - rho * (Hy[i] * s[j] + s[i] * Hy[j]);
+                    }
+                }
+            }
+
+            for (i = 0; i < npar; i++) {
+                x[i] = xnew[i];
+                g[i] = gnew[i];
+            }
+
+            if (fabs(f - fnew) < 1.0e-12 * (1.0 + fabs(f))) {
+                f = fnew;
+                break;
+            }
+            f = fnew;
+
+            *maxgrad = 0.0;
+            for (i = 0; i < npar; i++) {
+                if (fabs(g[i]) > *maxgrad)
+                    *maxgrad = fabs(g[i]);
+            }
+            if (*maxgrad < 1.0e-6)
+                break;
+        }
+
+        // Stop restarting if the last restart gave no real improvement
+        if ((irestart > 0) && (fabs(fstart - f) < 1.0e-8 * (1.0 + fabs(f))))
+            break;
+    }
+
+    DT4_Gradient(d, x, g);
+    *maxgrad = 0.0;
+    for (i = 0; i < npar; i++) {
+        if (fabs(g[i]) > *maxgrad)
+            *maxgrad = fabs(g[i]);
+    }
+
+    free1d(g);
+    free1d(gnew);
+    free1d(p);
+    free1d(s);
+    free1d(y);
+    free1d(xnew);
+    free1d(Hy);
+    free2d(H);
+
+    return f;
+}
+
+//******************************************************************************
+//
+// Name:  RatpackDynTier4Assessment
+// Description: Native C version of the Ratpack (PuntRatpackR) dynamic Tier 4 assessment
+//              (Run_Tier4a in Ratpack Assessment.R; dynTier4.cpp in MISC HCR).
+//              Fits a Pella-Tomlinson production model to total removals and CPUE then
+//              projects forward using the hockey stick control rule (or an ACLIM rule if
+//              HCRtype > 0), or a constant harvest rate, to give the RBC.
+//
+//              Selected with tier = dyntier4 (10) and tiertype = ratpack_tier_rule (5).
+//              Year indices used by the parameters are data year indices (0 = first data year),
+//              biomass B[t] is biomass at the start of data year t.
+//
+// called by : DoTierAssessment
+// created  : Nov 2026 Beth Fulton (ported from Ratpack)
+//
+//******************************************************************************
+void RatpackDynTier4Assessment(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
+    DT4DataStruct d;
+    int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[species][NumFisheries_id]);
+    int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[species][NumRegions_id]);
+    int Nstocks = FunctGroupArray[species].numStocks;
+    int CPUEfleet = (int)(bm->RBCestimation.RBCspeciesParam[species][DT4_CPUEfleet_id]);
+    int ABCoption = (int)(bm->RBCestimation.RBCspeciesParam[species][DT4_ABCoption_id]);
+    int HCRtype = (int)(bm->RBCestimation.RBCspeciesParam[species][HCRtype_id]);
+    int MSYPriorY1 = (int)(bm->RBCestimation.RBCspeciesParam[species][DT4_MSYPriorY1_id]);
+    int MSYPriorY2 = (int)(bm->RBCestimation.RBCspeciesParam[species][DT4_MSYPriorY2_id]);
+    double DT4alpha = bm->RBCestimation.RBCspeciesParam[species][DT4_alpha_id];
+    double DT4beta = bm->RBCestimation.RBCspeciesParam[species][DT4_beta_id];
+    double DT4target = bm->RBCestimation.RBCspeciesParam[species][DT4_target_id];
+    double PGMSYlimit = bm->RBCestimation.RBCspeciesParam[species][DT4_PGMSYlimit_id];
+    double K_init_mult = bm->RBCestimation.RBCspeciesParam[species][DT4_K_init_mult_id];
+    int nf, iy, i, j, nyr, nidx, ipar, nmedian;
+    int AssessFail = FALSE;
+    double catchy, discy, nll, maxgrad = 0.0, K, r, z, MSYLout, BMSY, MSY, Bproj, Depl, Ftarg, Fval, RBC = 0.0, Kinit, sb0;
+    double *medcatch, *x;
+    int *fleetidx;
+
+    nyr = year + 1;   // data years 0 .. year (year is the final year of data after any assessment delay)
+    if (nyr < 2)
+        quit("RatpackDynTier4Assessment: not enough years of data for %s (year %d)\n", FunctGroupArray[species].groupCode, year);
+
+    if (bm->RBCestimation.RBCspeciesParam[species][DT4_ProcessError_id] > 1) {
+        fprintf(llogfp, "Time: %e %s WARNING: DT4_ProcessError 2 (random effects) is only available in the R version (tiertype 1). Using penalised process deviations (option 1) instead\n",
+                bm->dayt, FunctGroupArray[species].groupCode);
+        warn("RatpackDynTier4Assessment: DT4_ProcessError 2 (random effects) is only available in the R version - using option 1 for %s\n", FunctGroupArray[species].groupCode);
+    }
+
+    /* Which fleets supply CPUE indices */
+    fleetidx = (int *)i_alloc1d(Nfleets);
+    nidx = 0;
+    for (nf = 0; nf < Nfleets; nf++) {
+        if ((CPUEfleet < 0) || (CPUEfleet == nf)) {
+            fleetidx[nidx] = nf;
+            nidx++;
+        }
+    }
+    if (nidx < 1)
+        quit("RatpackDynTier4Assessment: DT4_CPUEfleet (%d) for %s does not match any assessment fleet\n", CPUEfleet, FunctGroupArray[species].groupCode);
+
+    /* Set up the data */
+    d.nyr = nyr;
+    d.nidx = nidx;
+    d.EstR = (int)(bm->RBCestimation.RBCspeciesParam[species][DT4_EstR_id]);
+    d.EstZ = (int)(bm->RBCestimation.RBCspeciesParam[species][DT4_EstZ_id]);
+    d.ProcessError = (bm->RBCestimation.RBCspeciesParam[species][DT4_ProcessError_id] > 0) ? 1 : 0;
+    d.MSYRY1 = (int)(bm->RBCestimation.RBCspeciesParam[species][DT4_MSYRY1_id]);
+    d.MSYRY2 = (int)(bm->RBCestimation.RBCspeciesParam[species][DT4_MSYRY2_id]);
+    d.MSYL = bm->RBCestimation.RBCspeciesParam[species][DT4_MSYL_id];
+    d.CVMSYL = bm->RBCestimation.RBCspeciesParam[species][DT4_CVMSYL_id];
+    d.PriorMeanR = bm->RBCestimation.RBCspeciesParam[species][DT4_PriorMeanR_id];
+    d.PriorSDr = bm->RBCestimation.RBCspeciesParam[species][DT4_PriorSDr_id];
+    d.SigmaR = 0.1;   // Fixed as in Ratpack for penalised deviations
+    d.catch_obs = Util_Alloc_Init_1D_Double(nyr, 0.0);
+    d.B = Util_Alloc_Init_1D_Double(nyr + 1, 0.0);
+    d.cpue = Util_Alloc_Init_2D_Double(nyr, nidx, 0.0);
+
+    if ((d.MSYL <= 0.0) || (d.MSYL >= 1.0))
+        quit("RatpackDynTier4Assessment: DT4_MSYL for %s must be between 0 and 1 (currently %e)\n", FunctGroupArray[species].groupCode, d.MSYL);
+    d.z = DT4_FindZ(d.MSYL);
+    d.MSYL = pow(1.0 / (d.z + 1.0), 1.0 / d.z);
+
+    // Total removals (retained catch plus discards - so RBC is on the same basis as other tiers) and CPUE
+    for (iy = 0; iy < nyr; iy++) {
+        catchy = 0.0;
+        discy = 0.0;
+        for (nf = 0; nf < Nfleets; nf++) {
+            if (bm->RBCestimation.RBCspeciesParam[species][DiscType_id] == 1)      // discard data is biomass
+                discy += bm->RBCestimation.RBCspeciesArray[species].DiscData[nf][Nregions][iy];
+            else if (bm->RBCestimation.RBCspeciesParam[species][DiscType_id] == 2)  // discard data is rate
+                discy += bm->RBCestimation.RBCspeciesArray[species].DiscData[nf][Nregions][iy] * bm->RBCestimation.RBCspeciesArray[species].CatchData[nf][Nregions][iy] / (1.0 - bm->RBCestimation.RBCspeciesArray[species].DiscData[nf][Nregions][iy] + small_num);
+            catchy += bm->RBCestimation.RBCspeciesArray[species].CatchData[nf][Nregions][iy];
+        }
+        d.catch_obs[iy] = catchy + discy;
+        for (i = 0; i < nidx; i++)
+            d.cpue[i][iy] = bm->RBCestimation.RBCspeciesArray[species].CPUEgen[fleetidx[i]][Nregions][iy];   // Nregions index holds the all-region value
+    }
+
+    // Median catch for MSY input (used when r is not estimated)
+    if ((MSYPriorY2 < 1) || (MSYPriorY2 > (nyr - 1)))
+        MSYPriorY2 = nyr - 1;
+    if ((MSYPriorY1 < 0) || (MSYPriorY1 > MSYPriorY2))
+        MSYPriorY1 = 0;
+    nmedian = MSYPriorY2 - MSYPriorY1 + 1;
+    medcatch = Util_Alloc_Init_1D_Double(nmedian, 0.0);
+    for (iy = MSYPriorY1; iy < (MSYPriorY2 + 1); iy++)
+        medcatch[iy - MSYPriorY1] = d.catch_obs[iy];
+    for (i = 1; i < nmedian; i++) {   // insertion sort
+        catchy = medcatch[i];
+        j = i - 1;
+        while ((j >= 0) && (medcatch[j] > catchy)) {
+            medcatch[j + 1] = medcatch[j];
+            j--;
+        }
+        medcatch[j + 1] = catchy;
+    }
+    if (nmedian % 2)
+        d.MSYINPUT = medcatch[nmedian / 2];
+    else
+        d.MSYINPUT = 0.5 * (medcatch[nmedian / 2 - 1] + medcatch[nmedian / 2]);
+    free1d(medcatch);
+
+    /* Parameters: log(K), log(r) if EstR, log(z) if EstZ, process deviations if ProcessError */
+    d.npar = 1 + d.EstR + d.EstZ + d.ProcessError * nyr;
+    x = Util_Alloc_Init_1D_Double(d.npar, 0.0);
+
+    // Initial values - K from true SB0 if K_init_mult > 0 (as in Ratpack), otherwise from catch (as in standalone dynTier4)
+    if ((bm->RBCestimation.RBCspeciesParam[species][Regime_year_id] > 0) && (year >= bm->RBCestimation.RBCspeciesParam[species][Regime_year_id]))
+        sb0 = bm->RBCestimation.RBCspeciesArray[species].SBioZero_shift[Nstocks][Nregions];
+    else
+        sb0 = bm->RBCestimation.RBCspeciesArray[species].SBioZero[Nstocks][Nregions];
+    r = exp(bm->RBCestimation.RBCspeciesParam[species][DT4_logr_init_id]);
+    if ((K_init_mult > 0.0) && (sb0 > 0.0))
+        Kinit = sb0 * K_init_mult;
+    else
+        Kinit = (d.MSYINPUT + small_num) / (r * d.MSYL * (1.0 - pow(d.MSYL, d.z)));
+    if (!(Kinit > 0.0))
+        quit("RatpackDynTier4Assessment: could not set an initial value of K for %s - check catch data and DT4_K_init_mult\n", FunctGroupArray[species].groupCode);
+
+    ipar = 0;
+    x[ipar] = log(Kinit);
+    ipar++;
+    if (d.EstR) {
+        x[ipar] = bm->RBCestimation.RBCspeciesParam[species][DT4_logr_init_id];
+        ipar++;
+    }
+    if (d.EstZ) {
+        x[ipar] = log(d.z);
+        ipar++;
+    }
+    // Process deviations start at zero
+
+    /* Fit the model */
+    nll = DT4_Minimise(&d, x, 500, &maxgrad);
+    DT4_Derived(&d, x, &K, &r, &z, &MSYLout, &BMSY);
+    nll = DT4_Objective(&d, x);   // Refill biomass trajectory for the best parameters
+    MSY = r * BMSY * (1.0 - pow(MSYLout, z));
+
+    if (!isfinite(nll) || (nll >= 1.0e19) || !isfinite(K) || !isfinite(r) || (K <= 0.0) || (r <= 0.0))
+        AssessFail = TRUE;
+
+    /* Harvest control rule to get the RBC (ABC in Ratpack). Ratpack projects 50 years to give a
+       vector of future TACs. The first projection year is the RBC (multi-year TACs are handled by the
+       Atlantis rollover code). Nov 2026 (review item 27): if using Ratpack style RBC averaging
+       (UseRBCAveraging = 2) the projection is continued for nRBCaverage years and stored in RBC_proj
+       so the average can be taken over the projected RBCs, as in Ratpack */
+    if (!AssessFail) {
+        int iproj, nproj = 1;
+        double RBCproj;
+
+        if (((int)(bm->RBCestimation.RBCspeciesParam[species][UseRBCAveraging_id]) == ratpack_RBC_avg) && (bm->RBCestimation.nRBCaverage > 1)) {
+            nproj = bm->RBCestimation.nRBCaverage;
+            if (nproj > MAX_RBC_PROJ)
+                nproj = MAX_RBC_PROJ;
+        }
+
+        Bproj = d.B[nyr];
+        for (iproj = 0; iproj < nproj; iproj++) {
+            Depl = Bproj / K;
+            if (ABCoption == DT4_constF_abc) {
+                Ftarg = r * (1.0 - pow(PGMSYlimit, z));
+                Fval = Ftarg;
+            } else {
+                Ftarg = r * (1.0 - pow(DT4target, z));   // Exploitation rate whose equilibrium depletion is DT4target
+                if (HCRtype > 0) {
+                    Fval = Ftarg * Calc_ACLIM_Fmult(bm, species, Depl, llogfp);
+                } else {
+                    // Hockey stick (hard version of the logistic-smoothed rule in Ratpack)
+                    if (Depl <= DT4alpha)
+                        Fval = 0.0;
+                    else if (Depl < DT4beta)
+                        Fval = Ftarg * (Depl - DT4alpha) / (DT4beta - DT4alpha);
+                    else
+                        Fval = Ftarg;
+                }
+            }
+            RBCproj = Bproj * Fval;
+            if (!isfinite(RBCproj) || (RBCproj < 0.0))
+                RBCproj = 0.0;
+            if (iproj == 0)
+                RBC = RBCproj;
+            bm->RBCestimation.RBCspeciesArray[species].RBC_proj[iproj] = RBCproj;
+
+            // Project forward (as in Ratpack runDynTier4: catch = RBC, biomass floored at 1)
+            Bproj = Bproj + r * Bproj * (1.0 - pow(Bproj / K, z)) - RBCproj;
+            if (Bproj < 1.0)
+                Bproj = 1.0;
+        }
+        bm->RBCestimation.RBCspeciesArray[species].nRBC_proj = nproj;
+    }
+
+    /* Store results */
+    bm->RBCestimation.RBCspeciesParam[species][AssessFail_id] = AssessFail;
+    if (!AssessFail) {
+        bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = RBC;
+        bm->RBCestimation.RBCspeciesParam[species][EstB0_id] = K;
+        bm->RBCestimation.RBCspeciesParam[species][EstBcurr_id] = d.B[nyr];
+        bm->RBCestimation.RBCspeciesParam[species][EstDepletion_id] = d.B[nyr] / K;
+    }
+    bm->RBCestimation.RBCspeciesParam[species][DT4_r_id] = r;
+    bm->RBCestimation.RBCspeciesParam[species][DT4_K_id] = K;
+    bm->RBCestimation.RBCspeciesParam[species][DT4_z_id] = z;
+    bm->RBCestimation.RBCspeciesParam[species][DT4_MSY_id] = MSY;
+    bm->RBCestimation.RBCspeciesParam[species][DT4_BMSY_id] = BMSY;
+    bm->RBCestimation.RBCspeciesParam[species][DT4_nll_id] = nll;
+    bm->RBCestimation.RBCspeciesParam[species][DT4_maxgrad_id] = maxgrad;
+
+    fprintf(llogfp, "Time: %e %s Ratpack dynamic Tier 4 year: %d nyr: %d nidx: %d npar: %d nll: %e maxgrad: %e r: %e K: %e z: %e MSYL: %e BMSY: %e MSY: %e MSYINPUT: %e Bcurr: %e depletion: %e RBC: %e AssessFail: %d\n",
+            bm->dayt, FunctGroupArray[species].groupCode, year, nyr, nidx, d.npar, nll, maxgrad, r, K, z, MSYLout, BMSY, MSY, d.MSYINPUT,
+            d.B[nyr], d.B[nyr] / K, RBC, AssessFail);
+    for (iy = 0; iy < (nyr + 1); iy++) {
+        fprintf(llogfp, "Time: %e %s Ratpack dynamic Tier 4 trajectory year: %d B: %e catch: %e\n",
+                bm->dayt, FunctGroupArray[species].groupCode, iy, d.B[iy], (iy < nyr) ? d.catch_obs[iy] : 0.0);
+    }
+
+    free1d(x);
+    free1d(d.catch_obs);
+    free1d(d.B);
+    free2d(d.cpue);
+    i_free1d(fleetidx);
+
     return;
 }
 
@@ -4143,9 +5201,30 @@ void DynamicTier4Assessment(MSEBoxModel *bm, int species, int year, FILE *llogfp
 
 void RDynamicTier4Assessment(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
     char dirname[STRLEN];
-    char R_ScriptName[150];
+    char R_ScriptName[STRLEN * 3];
+    char scriptName[STRLEN * 2];
+    int THIS_PATH_MAX = 1024; // Needed as linux doesn't have PATH_MAX defined like Mac does
+    char cwd[THIS_PATH_MAX];
     int ret = 0;
     int idR = 1;
+
+    /* Nov 2026: remember the current directory so can change back after the assessment (previously never changed back) */
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        // Do nothing has have remembered current directory
+    } else {
+        quit("RDynamicTier4Assessment: getcwd() error\n");
+    }
+
+    /* Nov 2026: R script name - use RAssessRscriptName1 if given, otherwise runDynTier4onRTMB.R in the run directory
+       (RAssessRscriptName is only read in for multispecies assessments). Relative names are relative to the run directory. */
+    if ((bm->RAssessRscriptName != NULL) && (bm->NumRAssessScriptNames > idR)) {
+        if (bm->RAssessRscriptName[idR][0] == '/')
+            snprintf(scriptName, sizeof(scriptName), "%s", bm->RAssessRscriptName[idR]);
+        else
+            snprintf(scriptName, sizeof(scriptName), "%s/%s", cwd, bm->RAssessRscriptName[idR]);
+    } else {
+        snprintf(scriptName, sizeof(scriptName), "%s/%s", cwd, "runDynTier4onRTMB.R");
+    }
 
     /* Create directory */
     snprintf(dirname, sizeof(dirname), "DynTier4_sim_%d_year_%d", bm->RBCestimation.sim, year);
@@ -4160,23 +5239,30 @@ void RDynamicTier4Assessment(MSEBoxModel *bm, int species, int year, FILE *llogf
     else
         printf("runDynamicTier4Assessment: chdir change of directory to %s successful", dirname);
     
-    /* Create and run bat files */
-    if(!bm->Dyn4File) {
-        bm->Dyn4File = initDynTier4File(bm);
-    }
-    if(!bm->Dyn4CTLFile) {
-        bm->Dyn4CTLFile = initDynTier4CTLFile(bm);
-    }
+    /* Create and run bat files - Nov 2026: new files each time as each assessment is in its own directory
+       (previously the file pointers were closed but not reset so later assessments wrote to closed files) */
+    bm->Dyn4File = initDynTier4File(bm);
+    bm->Dyn4CTLFile = initDynTier4CTLFile(bm);
     writeDynTier4inputfile(bm, species, year, bm->Dyn4File, bm->Dyn4CTLFile);
     Util_Close_Output_File(bm->Dyn4File);
     Util_Close_Output_File(bm->Dyn4CTLFile);
+    bm->Dyn4File = NULL;
+    bm->Dyn4CTLFile = NULL;
     
     /* Commands to run the assessment */
-    printf("Running runDynTier4.R\n");
-    snprintf(R_ScriptName, sizeof(R_ScriptName), "Rscript %s", bm->RAssessRscriptName[idR]);
-    system(R_ScriptName);
+    printf("Running %s\n", scriptName);
+    snprintf(R_ScriptName, sizeof(R_ScriptName), "Rscript \"%s\" > dynTier4_R.log 2>&1", scriptName);
+    ret = system(R_ScriptName);
+    if (ret != 0) {
+        fprintf(llogfp, "Time: %e %s Rscript return code: %d - possibly an error? See %s/dynTier4_R.log\n", bm->dayt, FunctGroupArray[species].groupCode, ret, dirname);
+    }
 
     setRBC(bm, species, year, llogfp);
+
+    /* go back to previous directory */
+    ret = chdir(cwd);
+    if (ret < 0)
+        quit("RDynamicTier4Assessment: chdir change of directory back to %s not successful\n", cwd);
 
     return;
 
@@ -4225,60 +5311,73 @@ FILE * initDynTier4CTLFile(MSEBoxModel *bm) {
 //
 //******************************************************************************
 void writeDynTier4inputfile(MSEBoxModel *bm, int sp, int year, FILE *datfid, FILE *ctlfid) {
-    int t = 0, iy, nf;
+    int iy, nf;
     int Nregions = (int)(bm->RBCestimation.RBCspeciesParam[sp][NumRegions_id]);
     int sumregion = Nregions;  // sum over regions
     int Nfleets = (int)(bm->RBCestimation.RBCspeciesParam[sp][NumFisheries_id]);
+    int CPUEfleet = (int)(bm->RBCestimation.RBCspeciesParam[sp][DT4_CPUEfleet_id]);
+    double catchy, discy, cpue;
 
-    if (bm->RBCestimation.RBCspeciesArray[sp].CPUEfleet == 0){
-        printf(" -------- Error --------\n");
-        quit(" -------- Tier4 Fleet equals 0 --------\n");
-    }
+    /* Nov 2026: the control values now come from the DT4_ parameters (the mgt_tier4_ values were never set),
+       the CPUE is written (previously the catch was written twice), and the year column is the data year
+       index 0..year so the year based settings match the native C version (tiertype 5). Removals are
+       catch plus discards, as for the C version. */
     
     // First write the content of the CTL file
     fprintf(ctlfid, "# MSYL\n");
-    fprintf(ctlfid, "%e\n", bm->RBCestimation.RBCspeciesArray[sp].mgt_tier4_MSYL);
+    fprintf(ctlfid, "%e\n", bm->RBCestimation.RBCspeciesParam[sp][DT4_MSYL_id]);
     fprintf(ctlfid, "# EstR\n");
-    fprintf(ctlfid, "%e\n", bm->RBCestimation.RBCspeciesArray[sp].mgt_tier4_estR);
+    fprintf(ctlfid, "%d\n", (int)(bm->RBCestimation.RBCspeciesParam[sp][DT4_EstR_id]));
     fprintf(ctlfid, "# EstZ\n");
-    fprintf(ctlfid, "%e\n", bm->RBCestimation.RBCspeciesArray[sp].mgt_tier4_estZ);
+    fprintf(ctlfid, "%d\n", (int)(bm->RBCestimation.RBCspeciesParam[sp][DT4_EstZ_id]));
     fprintf(ctlfid, "# BMSY Year range\n");
-    fprintf(ctlfid, "%e %e\n", bm->RBCestimation.RBCspeciesArray[sp].mgt_tier4_MSYRY1, bm->RBCestimation.RBCspeciesArray[sp].mgt_tier4_MSYRY2);
+    fprintf(ctlfid, "%d %d\n", (int)(bm->RBCestimation.RBCspeciesParam[sp][DT4_MSYRY1_id]), (int)(bm->RBCestimation.RBCspeciesParam[sp][DT4_MSYRY2_id]));
     fprintf(ctlfid, "# Target depletion\n");
-    fprintf(ctlfid, "%e\n", bm->RBCestimation.RBCspeciesArray[sp].mgt_tier4_BtargtTier4);
+    fprintf(ctlfid, "%e\n", bm->RBCestimation.RBCspeciesParam[sp][DT4_target_id]);
     fprintf(ctlfid, "# MSY Year range\n");
-    fprintf(ctlfid, "%e %e\n", bm->RBCestimation.RBCspeciesArray[sp].mgt_tier4_MSYPriorY1, bm->RBCestimation.RBCspeciesArray[sp].mgt_tier4_MSYPriorY2);
+    fprintf(ctlfid, "%d %d\n", (int)(bm->RBCestimation.RBCspeciesParam[sp][DT4_MSYPriorY1_id]), (int)(bm->RBCestimation.RBCspeciesParam[sp][DT4_MSYPriorY2_id]));
     fprintf(ctlfid, "# CV(MSYL)\n");
-    fprintf(ctlfid, "%e\n", bm->RBCestimation.RBCspeciesArray[sp].mgt_tier4_CVMSYL);
+    fprintf(ctlfid, "%e\n", bm->RBCestimation.RBCspeciesParam[sp][DT4_CVMSYL_id]);
     fprintf(ctlfid, "# R(prior)\n");
-    fprintf(ctlfid, "%e %e\n", bm->RBCestimation.RBCspeciesArray[sp].mgt_tier4_PriorMeanR,bm->RBCestimation.RBCspeciesArray[sp].mgt_tier4_PriorSDr);
+    fprintf(ctlfid, "%e %e\n", bm->RBCestimation.RBCspeciesParam[sp][DT4_PriorMeanR_id], bm->RBCestimation.RBCspeciesParam[sp][DT4_PriorSDr_id]);
+    fprintf(ctlfid, "# Process error\n");
+    fprintf(ctlfid, "%d\n", (int)(bm->RBCestimation.RBCspeciesParam[sp][DT4_ProcessError_id]));
+    fprintf(ctlfid, "# Hockey stick alpha beta\n");
+    fprintf(ctlfid, "%e %e\n", bm->RBCestimation.RBCspeciesParam[sp][DT4_alpha_id], bm->RBCestimation.RBCspeciesParam[sp][DT4_beta_id]);
     
     // Now the dat file
     fprintf(datfid, "# assessment using Tier 4 of %s\n", FunctGroupArray[sp].name);
     fprintf(datfid, "# Rlibrary path\n");
-    fprintf(datfid, "%s\n", bm->RBCestimation.Rlibpath);
+    if (strlen(bm->RBCestimation.Rlibpath) > 0)
+        fprintf(datfid, "%s\n", bm->RBCestimation.Rlibpath);
+    else
+        fprintf(datfid, "none\n");
     fprintf(datfid, "# Number of fleets\n");
     fprintf(datfid, "%d\n", Nfleets);
     fprintf(datfid, "# Range of years\n");
-    fprintf(datfid, "%d %d\n", bm->RBCestimation.HistYrMin, year);
+    fprintf(datfid, "%d %d\n", 0, year);
 
     fprintf(datfid,  "# Year, Catch and CPUE\n");
-    for (iy = bm->RBCestimation.RBCspeciesParam[sp][HistYrMin_id]; iy < year; iy++) {
+    for (iy = 0; iy < year + 1; iy++) {
         fprintf(datfid,  "%d ", iy);
-    
-        if (bm->RBCestimation.RBCspeciesArray[sp].mgt_Retro_catch && (bm->RBCestimation.RBCspeciesArray[sp].PropClosed > 0) && (t <= bm->RBCestimation.HistYrMax)) {
-            // Allocate historic catches to open area by proportion open
-            for (nf = 0; nf < Nfleets; nf++) {
-                fprintf(datfid,"%e ", ((1.0 - bm->RBCestimation.RBCspeciesArray[sp].PropClosed) * bm->RBCestimation.RBCspeciesArray[sp].CatchData[nf][sumregion][iy]));
-            }
-        } else {
-            for (nf = 0; nf < Nfleets; nf++) {
-                fprintf(datfid,"%e ", bm->RBCestimation.RBCspeciesArray[sp].CatchData[nf][sumregion][iy]);
-            }
-        }
-        
+
+        // Removals by fleet
         for (nf = 0; nf < Nfleets; nf++) {
-             fprintf(datfid,"%e ", bm->RBCestimation.RBCspeciesArray[sp].CatchData[nf][sumregion][iy]);
+            catchy = bm->RBCestimation.RBCspeciesArray[sp].CatchData[nf][sumregion][iy];
+            discy = 0.0;
+            if (bm->RBCestimation.RBCspeciesParam[sp][DiscType_id] == 1)      // discard data is biomass
+                discy = bm->RBCestimation.RBCspeciesArray[sp].DiscData[nf][sumregion][iy];
+            else if (bm->RBCestimation.RBCspeciesParam[sp][DiscType_id] == 2)  // discard data is rate
+                discy = bm->RBCestimation.RBCspeciesArray[sp].DiscData[nf][sumregion][iy] * catchy / (1.0 - bm->RBCestimation.RBCspeciesArray[sp].DiscData[nf][sumregion][iy] + small_num);
+            fprintf(datfid,"%e ", catchy + discy);
+        }
+
+        // CPUE by fleet (all-region value), -1 = missing or fleet not used
+        for (nf = 0; nf < Nfleets; nf++) {
+            cpue = bm->RBCestimation.RBCspeciesArray[sp].CPUEgen[nf][sumregion][iy];
+            if ((cpue <= 0.0) || ((CPUEfleet >= 0) && (CPUEfleet != nf)))
+                cpue = -1.0;
+            fprintf(datfid,"%e ", cpue);
         }
         fprintf(datfid, "\n");
     }
@@ -4302,7 +5401,6 @@ void setRBC(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
     char const *outname = "dynTier4.rep";
     //char str[1000];
     char *str = NULL;
-    int yy;
     double d0;
     int count = 0;
     //char *line_buf = NULL;
@@ -4431,20 +5529,42 @@ void setRBC(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
             printf("str **** %s \n", str);
             ret = strrchr(str, '\"'); // get everything after last  ' " '
             printf("%s\n", str);
-            for (yy = bm->RBCestimation.RBCspeciesArray[species].mgt_rbcYear; yy < bm->RBCestimation.RBCspeciesParam[species][MaxYr_id]+2; yy++) {
-                
-                //parfile >> d0;
-                // #TODO: Read in d0 once
-                // Do I need to use something like what is in PGMSY read
-                //for (tok = strtok(line, seps); tok && *tok; j++, tok = strtok(NULL, "\n")) {
-                //    values[j] = atof(tok);
-                    //fprintf(bm->logFile, "%f\t", values[j]);
-                //}
-                //bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year][yy] = d0;
-                d0 = 0;  // #TODO REPLACE THIS
-                bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year] = d0;
-                
+            // Nov 2026: read the RBC (was hard set to 0). Only the first projection year is used as multi-year
+            // TACs are handled by the Atlantis rollover code
+            d0 = atof((ret+2)); // +2 to skip the ' " ' and the space.
+            bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year] = d0;
+            bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = d0;
+        }
+
+        /* Nov 2026 (review item 27): if using Ratpack style RBC averaging read the projected RBCs
+           (the "Catch projection" block written by runDynTier4onRTMB.R, one value per line) */
+        if (((int)(bm->RBCestimation.RBCspeciesParam[species][UseRBCAveraging_id]) == ratpack_RBC_avg) && (bm->RBCestimation.nRBCaverage > 1)) {
+            int nproj_max = bm->RBCestimation.nRBCaverage;
+            int nproj = 0;
+            char *endp;
+
+            if (nproj_max > MAX_RBC_PROJ)
+                nproj_max = MAX_RBC_PROJ;
+
+            fseek(fp, 0, SEEK_SET);
+            count = 0;
+            line_size = getline(&str, &line_buf_size, fp);
+            while ((line_size > 0) && (strstr(str, "Catch projection") == NULL) && (count < 1000)) {
+                count++;
+                line_size = getline(&str, &line_buf_size, fp);
             }
+            if ((line_size > 0) && (count < 1000)) {
+                while ((nproj < nproj_max) && ((line_size = getline(&str, &line_buf_size, fp)) > 0)) {
+                    d0 = strtod(str, &endp);
+                    if (endp == str)
+                        break;   // Not a number so end of the projection block
+                    bm->RBCestimation.RBCspeciesArray[species].RBC_proj[nproj] = d0;
+                    nproj++;
+                }
+            } else {
+                fprintf(llogfp, "Time %e %s WARNING - setRBC: no Catch projection in %s so no Ratpack style RBC averaging this year\n", bm->dayt, FunctGroupArray[species].groupCode, outname);
+            }
+            bm->RBCestimation.RBCspeciesArray[species].nRBC_proj = nproj;
         }
     }
     fclose(fp);
@@ -4474,22 +5594,70 @@ void setRBC(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
 
 /* Needed if using ratpack style RBC averaging over years */
 void Averaged_RBC(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
-    int yr;
+    int yr, startyr, nyr = 0;
     double AveRBC = 0;
-    
-    // Calculate the average RBC
-    for (yr = bm->RBCestimation.RBCspeciesArray[species].mgt_rbcYear; yr < bm->RBCestimation.RBCspeciesArray[species].mgt_rbcYear + bm->RBCestimation.nRBCaverage - 1; yr++) {
-        AveRBC += bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[yr];
-    }
-    AveRBC /= ((float)(bm->RBCestimation.nRBCaverage));
 
-    // Replace the RBCs
-    for (yr = bm->RBCestimation.RBCspeciesArray[species].mgt_rbcYear; yr < bm->RBCestimation.RBCspeciesArray[species].mgt_rbcYear + bm->RBCestimation.nRBCaverage - 1; yr++) {
-        bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year] = AveRBC;
-        bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = AveRBC;
+    /* Nov 2026: average the most recent nRBCaverage RBCs ending with the current assessment.
+       Previously summed nRBCaverage-1 values starting at the (never set) mgt_rbcYear, divided by
+       nRBCaverage and wrote to RBC_by_year[year] on every loop pass. */
+
+    // Store the current RBC so it is included in the average
+    bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year] = bm->RBCestimation.RBCspeciesParam[species][RBCest_id];
+
+    startyr = year - bm->RBCestimation.nRBCaverage + 1;
+    if (startyr < 0)
+        startyr = 0;
+
+    // Calculate the average RBC
+    for (yr = startyr; yr < year + 1; yr++) {
+        AveRBC += bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[yr];
+        nyr++;
     }
-    
-    //fprintf(llogfp, "Time: %e (Year: %d) %s Revised after averaging RBC_by_year: %e\n", bm->dayt, year, FunctGroupArray[species].groupCode, bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year]);
-    
+    if (nyr > 0)
+        AveRBC /= (double)nyr;
+
+    // Replace the RBC
+    bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year] = AveRBC;
+    bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = AveRBC;
+
+    fprintf(llogfp, "Time: %e (Year: %d) %s RBC averaged over %d years (%d to %d): %e\n", bm->dayt, year, FunctGroupArray[species].groupCode, nyr, startyr, year, AveRBC);
+
+    return;
+}
+
+/* Nov 2026 (review item 27): Ratpack style RBC averaging (UseRBCAveraging = 2), as in ratpackmse Assessment.cpp
+   DoAssessment. The RBC is replaced by the average of the first nRBCaverage years of this assessment's projected
+   RBCs (RBC_proj, index 0 = first year the RBC applies). Only dynamic Tier 4 (tiertypes 1 and 5) and SS3 give a
+   projection. Other tiers give a single RBC, which Ratpack would treat as a constant projection, so it is unchanged.
+   Ratpack uses the average for each of the nRBCaverage years; in Atlantis the next assessment (or the multi-year TAC
+   rollover) takes over from there. */
+void Ratpack_Averaged_RBC(MSEBoxModel *bm, int species, int year, FILE *llogfp) {
+    int yr, nyr = bm->RBCestimation.RBCspeciesArray[species].nRBC_proj;
+    double AveRBC = 0;
+
+    if (bm->RBCestimation.RBCspeciesParam[species][AssessFail_id])
+        return;
+    if (nyr < 1)
+        return;   // Single RBC from this tier, so nothing to average
+    if (nyr > bm->RBCestimation.nRBCaverage)
+        nyr = bm->RBCestimation.nRBCaverage;
+    if (nyr < 1)
+        return;
+
+    for (yr = 0; yr < nyr; yr++)
+        AveRBC += bm->RBCestimation.RBCspeciesArray[species].RBC_proj[yr];
+    AveRBC /= (double)nyr;
+
+    if (nyr < bm->RBCestimation.nRBCaverage) {
+        fprintf(llogfp, "Time: %e (Year: %d) %s WARNING - only %d projected RBCs available for Ratpack RBC averaging (nRBCaverage %d)\n",
+                bm->dayt, year, FunctGroupArray[species].groupCode, nyr, bm->RBCestimation.nRBCaverage);
+    }
+
+    // Replace the RBC
+    bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year] = AveRBC;
+    bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = AveRBC;
+
+    fprintf(llogfp, "Time: %e (Year: %d) %s Ratpack RBC averaging over the first %d projected years: %e\n", bm->dayt, year, FunctGroupArray[species].groupCode, nyr, AveRBC);
+
     return;
 }

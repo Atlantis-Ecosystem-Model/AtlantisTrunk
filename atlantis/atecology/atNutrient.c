@@ -397,7 +397,7 @@ void Ammonium_ROC(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int 
 		boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][WC][gain_id] = gain + (double)boxLayerInfo->NutsProd[WC][NH_id];
 		boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][WC][loss_id] = loss + (double)boxLayerInfo->NutsLost[WC][NH_id];
 
-        /*
+        /**/
         if(bm->current_box == bm->checkbox){
             fprintf(bm->logFile, "Time: %e box %d-%d NH flux %e boxLayerInfo->DONremin = %e ", bm->dayt, bm->current_box, bm->current_layer,
                     boxLayerInfo->localWCFlux[*PhysioChemArray[index].tracerIndex], boxLayerInfo->DONremin);
@@ -409,7 +409,7 @@ void Ammonium_ROC(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int 
             fprintf(bm->logFile, "boxLayerInfo->NutsLost[WC][NH_id] = %Le\n", boxLayerInfo->NutsLost[WC][NH_id]);
                 
         }
-        */
+        /**/
             
 		break;
 	case SED:
@@ -506,10 +506,12 @@ void Ammonium_ROC(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int 
                 if (bm->include_outgas) {
                     if (boxLayerInfo->localWCTracers[NH3_i] > (bm->outgas_prop * 12500.0)) { // Where 12500.0 is the saturation point
                         boxLayerInfo->localWCFlux[*PhysioChemArray[index].tracerIndex] -= (bm->outgas_NH / dzz) / numsec;
-                        boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][WC][loss_id] -= (bm->atmospheric_NH / dzz) / numsec;
+                        boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][WC][loss_id] += (bm->atmospheric_NH / dzz) / numsec;
                         
-                       //if ((bm->current_box == 165) && bm->newmonth)
-                       //     fprintf(llogfp,"Time: %e box%d-%d outgassed\n", bm->dayt, bm->current_box, bm->current_layer);
+                        //if ((bm->current_box == 142) && bm->newmonth){
+                        if (bm->newmonth){
+                            fprintf(llogfp,"Time: %e box%d-%d outgassed\n", bm->dayt, bm->current_box, bm->current_layer);
+                        }
                     }
                 }
             }
@@ -840,7 +842,6 @@ void DON_ROC(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int index
 		boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][SED][gain_id] = FunctGroupArray[LabDetIndex].solDON
 				+ FunctGroupArray[RefDetIndex].solDON + FunctGroupArray[SedBactIndex].prodnDON;
 		boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][SED][loss_id] = boxLayerInfo->DONremin;
-
 		break;
 	case EPIFAUNA:
 		/* Do nothing */
@@ -851,7 +852,6 @@ void DON_ROC(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int index
 		boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][ICE_BASED][gain_id] = FunctGroupArray[LabDetIndex].solDON
 				+ FunctGroupArray[RefDetIndex].solDON + FunctGroupArray[IceBactIndex].prodnDON;
 		boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][ICE_BASED][loss_id] = boxLayerInfo->DONremin;
-
 		break;
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
@@ -894,10 +894,6 @@ void Oxygen_ROC(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int in
 
 	case ICE_BASED:
 		boxLayerInfo->localICEFlux[Oxygen_i] = -bm->X_ON * (FunctGroupArray[LabDetIndex].solDON + FunctGroupArray[RefDetIndex].solDON - boxLayerInfo->DONremin + FunctGroupArray[IceBactIndex].prodnDON);
-
-		boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][ICE_BASED][gain_id] = FunctGroupArray[LabDetIndex].solDON
-				+ FunctGroupArray[RefDetIndex].solDON + FunctGroupArray[IceBactIndex].prodnDON;
-		boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][ICE_BASED][loss_id] = boxLayerInfo->DONremin;
 		break;
     case MIXED:
         quit("How did we get here as should come through a primary habitat\n");
@@ -922,7 +918,7 @@ void Oxygen_ROC(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int in
                 if (bm->include_outgas) {
                     if (boxLayerInfo->localWCTracers[Oxygen_i] > (bm->outgas_prop * 8000.0)) { // Where 8000.0 is the saturation point
                         boxLayerInfo->localWCFlux[*PhysioChemArray[index].tracerIndex] -= (bm->outgas_O2 / dzz) / numsec;
-                        boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][WC][loss_id] -= (bm->atmospheric_O2 / dzz) / numsec;
+                        boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][WC][loss_id] += (bm->atmospheric_O2 / dzz) / numsec;
                     }
                 }
 
@@ -1045,7 +1041,7 @@ void Carbon_ROC(MSEBoxModel *bm, FILE *llogfp, HABITAT_TYPES habitatType, int in
                 if (bm->include_outgas) { /* TODO: Check what saturation point of CO2 is */
                     if (boxLayerInfo->localWCTracers[CO2_i] > (bm->outgas_prop * 15000.0)) { // Where 15000.0 is the saturation point
                         boxLayerInfo->localWCFlux[*PhysioChemArray[index].tracerIndex] -= (bm->outgas_CO2 / dzz) / numsec;
-                        boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][WC][loss_id] -= (bm->atmospheric_CO2 / dzz) / numsec;
+                        boxLayerInfo->DebugFluxInfo[PhysioChemArray[index].debugIndex][WC][loss_id] += (bm->atmospheric_CO2 / dzz) / numsec;
                     }
                 }
                 

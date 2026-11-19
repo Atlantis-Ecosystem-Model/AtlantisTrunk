@@ -675,7 +675,7 @@ void AssessSexXMLFunction(MSEBoxModel *bm, char *fileName, xmlNodePtr parent, ch
  */
 void TierAssessmentXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc, xmlNodePtr rootnode) {
 	xmlNodePtr groupingNode, childGroupingNode;
-    int nf;
+    int nf, useSS;
     char nameString[BMSLEN];
 
 	if (bm->useRBCTiers == FALSE)
@@ -695,6 +695,7 @@ void TierAssessmentXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc,
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "UseTierBuffers", "Flag indicating whether using US tier scalars (1) or not (0)", "", XML_TYPE_BOOLEAN, "0");
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "myTACbuffer", "Scalar applied to RBC in subsequent years of MYTAC multiyear TAC", "", XML_TYPE_FLOAT, "0");
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "myTACperiod", "How long MYTAC multiyear TAC lasts", "", XML_TYPE_INTEGER, "0");
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "myTACperiod_MCT", "How long MYTAC multiyear TAC lasts for byproduct species - MCT associated", "", XML_TYPE_INTEGER, "0");
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "sexratio_cv", "sexratio female component", "", XML_TYPE_FLOAT, "0");
     
     childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Seeds", "Seeds", "", "");
@@ -764,9 +765,13 @@ void TierAssessmentXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc,
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "MaxCritConvergeValue", "Convergence criterion", "", XML_TYPE_FLOAT, "0.1");
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "ConvergeThresh", "Convergence threshold", "", XML_TYPE_FLOAT, "0.01");
     
-    if (bm->useMultispAssess) {
-        
+    // Nov 2026: ss3Name now also needed when using SS for Tier 1 (was only read for multispecies assessments)
+    useSS = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseSS");
+    if (bm->useMultispAssess || useSS) {
         Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "ss3Name", "ss3 executable name", "", XML_TYPE_STRING, "");
+    }
+
+    if (bm->useMultispAssess) {
         
         Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "NumRAssessScriptNames", "Number of R scripts being used in R MSHS calls", "", XML_TYPE_BOOLEAN,"0");
         bm->NumRAssessScriptNames = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, integer_check, "NumRAssessScriptNames");
@@ -1034,7 +1039,53 @@ void TierAssessmentXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc,
 
     Create_RBC_Species_ParamXML(bm, fileName, fp, childGroupingNode, isTriggerSpecies_id, "is a Trigger species for the multispecies rules", "", XML_TYPE_INTEGER, "0");
     Create_RBC_Species_ParamXML(bm, fileName, fp, childGroupingNode, trigger_threshold_id, "Change taht triggers a nreakout for the trigger based assessments", "", XML_TYPE_FLOAT, "0");
-    Create_RBC_Species_ParamXML(bm, fileName, fp, childGroupingNode, UseRBCAveraging_id, "flag tp indicate RBC averaging", "", XML_TYPE_INTEGER, "0");
+    Create_RBC_Species_ParamXML(bm, fileName, fp, childGroupingNode, UseRBCAveraging_id, "RBC averaging: 0 = none, 1 = moving average of this and the previous nRBCaverage-1 RBCs, 2 = Ratpack style average of the first nRBCaverage projected RBCs (dynamic Tier 4 and SS3 only)", "", XML_TYPE_INTEGER, "0");
+
+    /* Ratpack (PuntRatpackR) options - all optional, defaults switch the options off so older prm files give the same results */
+    childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Ratpack", "Ratpack", "", "");
+
+    // Dynamic Tier 4 (tier 10 with tiertype 5)
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_logr_init_id, "Dynamic Tier 4: initial value of log(r)", "", XML_TYPE_FLOAT, "-1.1");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_K_init_mult_id, "Dynamic Tier 4: initial K as multiple of true SB0 (0 = use catch-based initial value)", "", XML_TYPE_FLOAT, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_alpha_id, "Dynamic Tier 4: depletion at which hockey stick F hits zero", "", XML_TYPE_FLOAT, "0.2");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_beta_id, "Dynamic Tier 4: depletion at which hockey stick reaches target F", "", XML_TYPE_FLOAT, "0.35");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_target_id, "Dynamic Tier 4: target depletion (sets target harvest rate r(1-target^z))", "", XML_TYPE_FLOAT, "0.48");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_MSYPriorY1_id, "Dynamic Tier 4: first data year index used for median catch MSY input", "", XML_TYPE_INTEGER, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_MSYPriorY2_id, "Dynamic Tier 4: last data year index used for median catch MSY input (0 = last data year)", "", XML_TYPE_INTEGER, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_MSYL_id, "Dynamic Tier 4: MSYL (BMSY/K) used to set shape parameter z", "", XML_TYPE_FLOAT, "0.4");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_MSYRY1_id, "Dynamic Tier 4: first data year index of period assumed to be at BMSY", "", XML_TYPE_INTEGER, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_MSYRY2_id, "Dynamic Tier 4: last data year index of period assumed to be at BMSY", "", XML_TYPE_INTEGER, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_EstR_id, "Dynamic Tier 4: estimate r (1) or derive it from median catch (0)", "", XML_TYPE_INTEGER, "1");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_EstZ_id, "Dynamic Tier 4: estimate shape z (1) or derive it from MSYL (0)", "", XML_TYPE_INTEGER, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_ProcessError_id, "Dynamic Tier 4: process error 0 = none, 1 = penalised deviations (2 = random effects only in R version)", "", XML_TYPE_INTEGER, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_CVMSYL_id, "Dynamic Tier 4: CV of MSYL penalty (0 = no penalty)", "", XML_TYPE_FLOAT, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_PriorMeanR_id, "Dynamic Tier 4: mean of normal prior on r", "", XML_TYPE_FLOAT, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_PriorSDr_id, "Dynamic Tier 4: sd of normal prior on r (0 = no prior)", "", XML_TYPE_FLOAT, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_ABCoption_id, "Dynamic Tier 4: 1 = hockey stick (or ACLIM if HCRtype > 0), 2 = constant harvest rate from PGMSY limit", "", XML_TYPE_INTEGER, "1");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_PGMSYlimit_id, "Dynamic Tier 4: depletion limit used for constant harvest rate option", "", XML_TYPE_FLOAT, "0.25");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, DT4_CPUEfleet_id, "Dynamic Tier 4: assessment fleet whose CPUE is used (-1 = all fleets, each as a separate index)", "", XML_TYPE_INTEGER, "-1");
+
+    // ACLIM harvest control rules
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, HCRtype_id, "ACLIM harvest control rule type 1-10 (0 = not used)", "", XML_TYPE_INTEGER, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, HCR_alpha_id, "ACLIM HCR alpha - B/Btarget at which F reaches zero on the ramp", "", XML_TYPE_FLOAT, "0.05");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, HCR_gamma_id, "ACLIM HCR gamma (natural scale) for types 5, 6, 9 and 10", "", XML_TYPE_FLOAT, "0.1");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, HCR_theta_id, "ACLIM HCR theta (natural scale) for type 8", "", XML_TYPE_FLOAT, "1.0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, HCR_omega1_id, "ACLIM HCR omega1 - covariate effect on F (type 7)", "", XML_TYPE_FLOAT, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, HCR_omega2_id, "ACLIM HCR omega2 - covariate effect on Btarget (type 7)", "", XML_TYPE_FLOAT, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, HCR_omega3_id, "ACLIM HCR omega3 - covariate effect on Blim (type 7)", "", XML_TYPE_FLOAT, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, HCR_cov_id, "ACLIM HCR scaled covariate value (types 7 and 9) or MHW category (type 4)", "", XML_TYPE_FLOAT, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, HCR_Blim_id, "ACLIM HCR limit depletion (B/B0) below which F = 0", "", XML_TYPE_FLOAT, "0.2");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, HCR_Btarget_id, "ACLIM HCR target depletion (B/B0)", "", XML_TYPE_FLOAT, "0.4");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, HCR_Fref_id, "ACLIM HCR reference F for perfect information tiers: 1 = F at BrefB (F40), 2 = F at BrefA (F48)", "", XML_TYPE_INTEGER, "1");
+
+    // Ratpack options for existing tiers and meta-rules
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, Tier1_HCRoption_id, "Tier 1 mimic HCR: 0 = original rule, 1 = continuous ramp using HCR limit/break/target, 2 = ACLIM HCR", "", XML_TYPE_INTEGER, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, Tier4_UseHCRtarget_id, "Tier 4 (new rule): multiply RBC by mgt_HCRtarget/0.48 as in Ratpack (1) or not (0)", "", XML_TYPE_INTEGER, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, Tier4_UseMaxCatch_id, "Tier 4 (new rule): apply absolute maximum catch cap as in Ratpack (1) or not (0)", "", XML_TYPE_INTEGER, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, Tier4_MaxCatch_id, "Tier 4 (new rule): absolute maximum catch cap (same units as RBC)", "", XML_TYPE_FLOAT, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, Buffer_stale_rate_id, "Ratpack staleness buffer: annual reduction in RBC per year since assessment during multi-year TACs (0 = use myTACbuffer instead)", "", XML_TYPE_FLOAT, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, Buffer_min_id, "Ratpack staleness buffer: minimum buffer multiplier", "", XML_TYPE_FLOAT, "0");
+    Create_RBC_Species_ParamXML_Optional(bm, fileName, fp, childGroupingNode, Tier3_replicate_old_id, "New Tier 3 rule: 1 = use the original (pre Nov 2026) F ramp equation to replicate old simulations, 0 = corrected SESSF ramp", "", XML_TYPE_INTEGER, "0");
 
     printf("Leaving create\n");
 }

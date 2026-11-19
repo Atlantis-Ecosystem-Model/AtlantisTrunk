@@ -156,7 +156,7 @@ void init_from_meco_dump(char* fname, tr2ex* e)
 	mpFree(mp_bm);
     }
 
-    /* create mapping bm -> meco */
+    /* create mapping bm->meco */
     /* count cells */
     for (k = 0, xyz_index = 0; k < nk; ++k) {
         for (j = 0, xy_index = 0; j < nj; ++j) {

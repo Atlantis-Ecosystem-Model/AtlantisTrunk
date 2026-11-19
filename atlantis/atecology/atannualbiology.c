@@ -986,6 +986,7 @@ void Scale_Group_Size(MSEBoxModel *bm, FILE *llogfp){
 
 	if(verbose > 2)
 		printf("Scaling group size\n");
+    
 	for(sp = 0; sp < bm->K_num_tot_sp; sp++){
 		if(FunctGroupArray[sp].isVertebrate == TRUE){
 
@@ -1066,7 +1067,7 @@ static double Get_Init_Embryos(MSEBoxModel *bm, int species, int ngene, int stoc
     double amt = 0.0;
     double this_t, this_larvae;
     double this_stock = 0.0;
-    double prod_alpha, dd_beta1, dd_beta2, temp_coefft, rate_coefft, wind_coefft, recruit_var, current_ICE;
+    double prod_alpha, dd_beta1, dd_beta2, temp_coefft, rate_coefft, wind_coefft, recruit_var, current_ICE, init_yoy = 0.0;
     
     int maxstock_id = FunctGroupArray[species].numStocks;
     int recruit_sp = (int) (FunctGroupArray[species].speciesParams[flagrecruit_id]);
@@ -1079,6 +1080,7 @@ static double Get_Init_Embryos(MSEBoxModel *bm, int species, int ngene, int stoc
     RSprop_sp = FunctGroupArray[species].speciesParams[RSprop_id];
     for(bcohort = 0; bcohort < FunctGroupArray[species].numCohorts; bcohort++){
         cohort = (FunctGroupArray[species].numGeneTypes * bcohort) + ngene;
+        
         SN = initVERTinfo[species][cohort][SN_id];
         RN = initVERTinfo[species][cohort][RN_id];
         DEN = initVERTinfo[species][cohort][DEN_id];
@@ -1087,7 +1089,10 @@ static double Get_Init_Embryos(MSEBoxModel *bm, int species, int ngene, int stoc
         thisSSB = (RN + SN) * DEN * FunctGroupArray[species].scaled_FSPB[cohort];   // This was originally incorrectly += likely only an issue for first round of spawning ?
         bm->tot_SSB[species] += thisSSB;
         EMBRYO[species].TotSpawn[ngene] += (FunctGroupArray[species].scaled_FSPB[cohort] * IndSpawn * DEN);
-        
+
+        if(!cohort) {
+            init_yoy = DEN;
+        }
         //fprintf(bm->logFile, "%s-%d (bcohort: %d) SN: %e RN: %e IndSpawn: %e, thisSSB: %e DEN: %e FSPB: %e TotSpawn: %e\n", FunctGroupArray[species].groupCode, cohort, bcohort, SN, RN, IndSpawn, thisSSB, DEN, FunctGroupArray[species].scaled_FSPB[cohort], EMBRYO[species].TotSpawn[ngene]);
     }
 
@@ -1270,6 +1275,10 @@ static double Get_Init_Embryos(MSEBoxModel *bm, int species, int ngene, int stoc
         temprec = Util_Normx_Result(step1, norm_sigma);
     }
 
+    if ( FunctGroupArray[species].speciesParams[flag_flatinitrecruit_id] > 0) {
+        temprec = init_yoy;
+    }
+    
     ans = temprec;
     
     /**

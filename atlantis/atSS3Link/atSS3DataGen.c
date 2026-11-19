@@ -596,7 +596,7 @@ void GetCatch_n_DiscardData(MSEBoxModel *bm, int groupIndex, int iyr) {
  *
  ******************************************************************************/
 void GetFishCPUEData(MSEBoxModel *bm, int groupIndex, int iyr) {
-	double norm, sigma, actualCPUE, catch, totcatch, this_Effort, cpue_dev;
+	double norm, sigma, actualCPUE, catch, totcatch, this_Effort, cpue_dev, lastdev;
 	int f, r;
 	int Nfleets = (int) (bm->RBCestimation.RBCspeciesParam[groupIndex][NumFisheries_id]);
 	int Nregions = (int) (bm->RBCestimation.RBCspeciesParam[groupIndex][NumRegions_id]);
@@ -611,8 +611,13 @@ void GetFishCPUEData(MSEBoxModel *bm, int groupIndex, int iyr) {
 				// random walk component
 				sigma = sqrt(bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEvar[f]);
 				norm = Util_xnorm(0.0, sigma, &bm->RBCestimation.Iseedz);
+				// Nov 2026: previous deviation taken as 0 in the first year (was reading index -1)
+				if (iyr > 0)
+					lastdev = bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEdevs[f][r][iyr-1];
+				else
+					lastdev = 0.0;
 				bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEdevs[f][r][iyr] = bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEcorr[f]
-				        * bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEdevs[f][r][iyr-1]
+				        * lastdev
 						+ norm * sqrt(1.0 - bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEcorr[f] * bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEcorr[f]);
                 if(!bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEdevs[f][r][iyr])
                     bm->RBCestimation.RBCspeciesArray[groupIndex].CPUEdevs[f][r][iyr] = 1.0;

@@ -100,7 +100,14 @@ void Tracer_Array_Free(MSEBoxModel *bm) {
  */
 
 void Epi_Tracer_Array_Free(MSEBoxModel *bm) {
-    
+	int index;
+
+	/*
+	for (index = 0; index <= bm->nepi; index++) {
+		if (!epinamelist[index].name)
+			free(epinamelist[index].name);
+	}
+	*/
 	free(epinamelist);
 }
 

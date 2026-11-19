@@ -375,13 +375,14 @@ void Assess_Init(MSEBoxModel *bm, FILE *llogfp) {
 	NEst = (double **) alloc2d(nk, nyr);
 	Resu = (double **) alloc2d(nk, nyr);
 	F = (double **) alloc2d(nk, nyr);
-	P = (double **) alloc2d(nk, nk);
+	P = (double **) alloc2d(nk, nk + 1);   // Nov 2026: ndim+1 simplex vertices needed by Amoeba
 	X = (double *) alloc1d(nk);
-	Y = (double *) alloc1d(nk);
+	Y = (double *) alloc1d(nk + 1);
+	PP = (double **) alloc2d(2, 3);   // Nov 2026: simplex for 2 parameter linear regression (was never allocated)
 
 	nkk = (int) floor(ROUNDGUARD + (floor(bm->tstop / 365.0)));
-	if (nkk < 1)
-		nkk = 1;
+	if (nkk < 3)
+		nkk = 3;   // Nov 2026: YY also holds the 3 simplex values for the 2 parameter linear regression (was 1)
 	XX = (double *) alloc1d(nkk);
 	YY = (double *) alloc1d(nkk);
 
@@ -680,6 +681,7 @@ void Assess_Free(MSEBoxModel *bm) {
 	free2d(Resu);
 	free2d(F);
 	free2d(P);
+	free2d(PP);
 	free1d(X);
 	free1d(Y);
     

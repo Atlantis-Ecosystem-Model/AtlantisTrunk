@@ -70,6 +70,7 @@
 #include "atManage.h"
 #include "atHarvestLib.h"
 #include "atAssessLib.h"
+#include "atFishMIP_OSP_Bridge.h"
 
 #ifdef RASSESS_LINK_ENABLED
     #include "atRlink.h"
@@ -250,7 +251,7 @@ void Make_Mgmt_Decisions(MSEBoxModel *bm, FILE *llogfp) {
     
     /* If doing pseudo assessments go do them now */
     do_assessing = 1;
-    if (bm->pseudo_assess || bm->useRBCTiers || bm->do_TACassessing) {
+    if (bm->pseudo_assess || bm->useRBCTiers || bm->do_TACassessing || (bm->flag_OSP_mode > OSP_MODE_ATLANTIS_NATIVE)) {
         do_assessing = 1;
     } else if (!bm->do_TACassessing) {  // used to be "else if (!bm->do_assessing)" but can have the case where want science collection but not TAC setting
         do_assessing = 0;
@@ -298,6 +299,8 @@ void Make_Mgmt_Decisions(MSEBoxModel *bm, FILE *llogfp) {
 #endif
         } else if(bm->useRBCTiers) {
             CallTierAssessment(bm, sp, year, llogfp);
+        } else if (bm->flag_OSP_mode > OSP_MODE_ATLANTIS_NATIVE) {
+            FishMIP_OSP_Bridge_Annual(bm, llogfp, bm->flag_OSP_mode, bm->flag_OSP_FtargetSource, bm->flag_OSP_PriceSource);
         } else {
             AMS_Tiered_Assessment(bm, sp, llogfp);
         }

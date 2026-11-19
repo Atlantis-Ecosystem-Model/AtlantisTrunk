@@ -50,7 +50,7 @@ int Load_Imposed_Recruits(MSEBoxModel *bm, FILE *llogfp) {
 		}
 	}
 
-	/* Load catch time series */
+	/* Load recruit time series */
 	if (flagimposerec) {
 		tsRecruitswarned = 0;
 		Harvest_Read_Time_Series(bm->inputFolder, bm->forceIfname, "MultRec", bm->t_units, &tsRecruits, &ntsRecruits, &tsRecruitstype); // Reuse this as populates a list of time series
@@ -86,7 +86,7 @@ int Load_Imposed_Recruits(MSEBoxModel *bm, FILE *llogfp) {
 	} else {
 		tsRecruits = NULL;
 
-		/* Set to -1 all round so that don't accidently try and use it even if no catch imposed */
+		/* Set to -1 all round so that don't accidently try and use it even if no recruitment imposed */
 		 for ( b=0; b<bm->nbox; b++ ){
 			 bm->BoxKeyMap[b][rects_key_id] = -1;
 		 }
@@ -98,7 +98,7 @@ int Load_Imposed_Recruits(MSEBoxModel *bm, FILE *llogfp) {
 /**
  * \brief Get the imposed recruits
  *
- * This is used when there is set of time series catch data.
+ * This is used when there is set of time series recruitment data.
  *
  *
  */
@@ -113,7 +113,7 @@ double Get_Imposed_MultRecruits(MSEBoxModel *bm, int guildcase, int do_debug, in
 
 	} else {
 		if (!tsRecruitswarned) {
-			fprintf(llogfp, "expecting imposed recruits in box %d (and maybe others), but never got it - check catch timeseries definitions\n", bm->current_box);
+			fprintf(llogfp, "expecting imposed recruits in box %d (and maybe others), but never got it - check recruit timeseries definitions\n", bm->current_box);
 			tsRecruitswarned++;
 		}
 		loadFC = 0;
@@ -145,7 +145,5 @@ void Free_Imposed_Recruits(MSEBoxModel *bm){
 
 	if(tsRecruits){
 		Harvest_Free_Time_Series(tsRecruits, ntsRecruits);
-
-
 	}
 }

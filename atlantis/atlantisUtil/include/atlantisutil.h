@@ -176,7 +176,7 @@ typedef struct {
 	int diagFlux;					/**< flag of diagonostic variable, 1=yes, 0=no */
 	int diagBiol;					/**< flag indicating whether flag_id sensitive, 1=yes, 0=no */
 	int debugIndex;					/**< The index of this tracer in the debugFluxInfo array
-									 * This is set in Add_Phyio_Chem_Tracer.
+									 * This is set in Add_Physio_Chem_Tracer.
 									 */
 
 

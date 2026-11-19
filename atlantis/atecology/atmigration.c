@@ -100,7 +100,7 @@ void Init_Migration(MSEBoxModel *bm, FILE *llogfp, int do_debug, int sp) {
                 if (sp_Migrate_Time_chk > sp_Migrate_Return_chk)
                     sp_Migrate_Return_chk += 365;
                 
-                fprintf(llogfp, "%s stage %d migrationID %d sp_Migrate_Time %d sp_Migrate_Return %d (orig %d) num_mig: %d migID: %d sp_Migrate_Time_chk: %d sp_Migrate_Return_chk: %d checkLHS: %d checkRHS: %d\n", FunctGroupArray[sp].groupCode, stage, migrationID, sp_Migrate_Time, sp_Migrate_Return, (int)(MIGRATION[sp].EndDay_Prm[stage][migrationID]), FunctGroupArray[sp].num_migrate, migID, sp_Migrate_Time_chk, sp_Migrate_Return_chk, (sp_Migrate_Time_orig && sp_Migrate_Time), sp_Migrate_Return_chk);
+                //fprintf(llogfp, "%s stage %d migrationID %d sp_Migrate_Time %d sp_Migrate_Return %d (orig %d) num_mig: %d migID: %d sp_Migrate_Time_chk: %d sp_Migrate_Return_chk: %d\n", FunctGroupArray[sp].groupCode, stage, migrationID, sp_Migrate_Time, sp_Migrate_Return, (int)(MIGRATION[sp].EndDay_Prm[stage][migrationID]), FunctGroupArray[sp].num_migrate, migID, sp_Migrate_Time_chk, sp_Migrate_Return_chk);
                 
                 
                 // Now check each case
@@ -390,8 +390,8 @@ void Init_Migration(MSEBoxModel *bm, FILE *llogfp, int do_debug, int sp) {
                             time_return = (int)(365 * floor(potential_end_time/365)) + sp_Migrate_Return + VarTime4;  // So get year return and then add on the return day of year to get the final return date
                             
                         } else {
-                            //time_return = sp_Migrate_Time + VarTime3 + yr * 365 + real_mig_length; // Annual migrations so its start time + period away
-                            time_return = sp_Migrate_Return + VarTime3 + yr * 365;
+                            //time_return = sp_Migrate_Time + VarTime4 + yr * 365 + real_mig_length; // Annual migrations so its start time + period away
+                            time_return = sp_Migrate_Return + VarTime4 + yr * 365;
                         }
                         MIGRATION[sp].Return_Now[this_currentID] = time_return;
 
@@ -591,7 +591,7 @@ void Check_Migration(MSEBoxModel *bm){
                         max_years = 1;
                     }
                 }
-                if (max_years < MAXINT) {
+                if (max_years < 0) {
                     max_years = 1;
                 }
                 num_away *= max_years;
@@ -779,7 +779,7 @@ void Init_Migration_Age_Check(MSEBoxModel *bm, FILE *llogfp, int do_debug, int s
 
                 if((MIGRATION[sp].DEN[nextcid][qid] > 0) && (isnan(MIGRATION[sp].SN[nextcid][qid]) || isnan(MIGRATION[sp].RN[nextcid][qid]))) {
                     fprintf(bm->logFile, "Init_Migration_Age_Check Error: %s-%d qid %d now has MIGden: %e MIGsn: %e, MIGrn: %e please supply size values in KMIG arrays for sn and rn due to aging of migrants that occurs prior to the model start\n", FunctGroupArray[sp].groupCode, nextcid, qid, MIGRATION[sp].DEN[nextcid][qid], MIGRATION[sp].SN[nextcid][qid], MIGRATION[sp].RN[nextcid][qid]);
-                    quit("Init_Migration_Age_Check Error: %s-%d qid %d now has NAN for SN ro RN after pre-model aging\n", FunctGroupArray[sp].groupCode, nextcid, qid);
+                    quit("Init_Migration_Age_Check Error: %s-%d qid %d now has NAN for SN or RN after pre-model aging\n", FunctGroupArray[sp].groupCode, nextcid, qid);
                 }
                 
             }

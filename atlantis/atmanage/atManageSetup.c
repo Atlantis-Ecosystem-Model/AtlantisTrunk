@@ -816,13 +816,13 @@ void Manage_Init(MSEBoxModel *bm, FILE *llogfp) {
             }
             
             
-    /* Also check to see if shot-by-shot CPUE is needed */
+        /* Also check to see if shot-by-shot CPUE is needed */
             max_F = 0.0;
 			for (fishery_id = 0; fishery_id < bm->K_num_fisheries; fishery_id++) {
                 if (bm->SP_FISHERYprms[sp][fishery_id][q_id] && bm->SP_FISHERYprms[sp][fishery_id][flagPerShotCPUE_id]) {
                     bm->FISHERYprms[fishery_id][flagneed_shots_id] = 1;
                 }
-    /* And what the maximum starting F is */
+        /* And what the maximum starting F is */
                 if (!bm->maxF_aggregate) {
                     if (bm->SP_FISHERYprms[sp][fishery_id][mFC_id] > max_F) {
                         max_F = bm->SP_FISHERYprms[sp][fishery_id][mFC_id];
@@ -834,8 +834,7 @@ void Manage_Init(MSEBoxModel *bm, FILE *llogfp) {
             }
             FunctGroupArray[sp].speciesParams[maxmFC_id] = max_F;
 
-		}
-
+		}        
 	}
 
 	/* Check to see which (if any) stock based management routines are in play */
@@ -1193,7 +1192,7 @@ void Allocate_Arrays_Pre_Load(MSEBoxModel *bm) {
 	/* These are always allocated even if the management option is off */
 	bm->reg_season = (int *) i_alloc1d(bm->K_num_reg);
 	bm->phased_out = Util_Alloc_Init_2D_Double(nfleets, bm->K_num_tot_sp, 1.0);
-	bm->BiTAC_sp = (double ****) alloc4d(2, bm->K_num_tot_sp, totalreg_id + 1, 6);
+	bm->BiTAC_sp = Util_Alloc_Init_4D_Double(2, bm->K_num_tot_sp, totalreg_id + 1, 6, 0.0);
 	bm->BiTACamt = Util_Alloc_Init_4D_Double(2, nfleets, bm->K_num_tot_sp, 6, 0.0);
 	bm->TACamt = Util_Alloc_Init_3D_Double(K_num_TAC_entries, nfleets, bm->K_num_tot_sp, 0.0);
 	bm->TripCatch = Util_Alloc_Init_2D_Double(nfleets, bm->K_num_tot_sp, 0.0);

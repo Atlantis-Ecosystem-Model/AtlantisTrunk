@@ -653,8 +653,15 @@ ac_func_c_list=
 ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
+OS_FREEBSD_FALSE
+OS_FREEBSD_TRUE
+OS_MACOS_FALSE
+OS_MACOS_TRUE
+OS_LINUX_FALSE
+OS_LINUX_TRUE
 GCC_GE_730_FALSE
 GCC_GE_730_TRUE
+RELEASE_VERSION
 LIBOBJS
 host_os
 host_vendor
@@ -6665,11 +6672,11 @@ if test x$ac_prog_cxx_stdcxx = xno
 then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $CXX option to enable C++11 features" >&5
 printf %s "checking for $CXX option to enable C++11 features... " >&6; }
-if test ${ac_cv_prog_cxx_cxx11+y}
+if test ${ac_cv_prog_cxx_11+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
-  ac_cv_prog_cxx_cxx11=no
+  ac_cv_prog_cxx_11=no
 ac_save_CXX=$CXX
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -6711,11 +6718,11 @@ if test x$ac_prog_cxx_stdcxx = xno
 then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $CXX option to enable C++98 features" >&5
 printf %s "checking for $CXX option to enable C++98 features... " >&6; }
-if test ${ac_cv_prog_cxx_cxx98+y}
+if test ${ac_cv_prog_cxx_98+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
-  ac_cv_prog_cxx_cxx98=no
+  ac_cv_prog_cxx_98=no
 ac_save_CXX=$CXX
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -7303,6 +7310,103 @@ then :
 fi
 
 
+#fetching release tag from git
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for release version" >&5
+printf %s "checking for release version... " >&6; }
+RELEASE_VERSION=$(git describe --tags 2>/dev/null || echo "unknown")
+#RELEASE_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "unknown")
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $RELEASE_VERSION" >&5
+printf "%s\n" "$RELEASE_VERSION" >&6; }
+
+printf "%s\n" "#define RELEASE_VERSION \"$RELEASE_VERSION\"" >>confdefs.h
+
+
+
+if test "x$ac_cv_func_vprintf" = xno
+then :
+  ac_fn_c_check_func "$LINENO" "_doprnt" "ac_cv_func__doprnt"
+if test "x$ac_cv_func__doprnt" = xyes
+then :
+
+printf "%s\n" "#define HAVE_DOPRNT 1" >>confdefs.h
+
+fi
+
+fi
+ac_fn_c_check_func "$LINENO" "floor" "ac_cv_func_floor"
+if test "x$ac_cv_func_floor" = xyes
+then :
+  printf "%s\n" "#define HAVE_FLOOR 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "localtime_r" "ac_cv_func_localtime_r"
+if test "x$ac_cv_func_localtime_r" = xyes
+then :
+  printf "%s\n" "#define HAVE_LOCALTIME_R 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "memset" "ac_cv_func_memset"
+if test "x$ac_cv_func_memset" = xyes
+then :
+  printf "%s\n" "#define HAVE_MEMSET 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "pow" "ac_cv_func_pow"
+if test "x$ac_cv_func_pow" = xyes
+then :
+  printf "%s\n" "#define HAVE_POW 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "regcomp" "ac_cv_func_regcomp"
+if test "x$ac_cv_func_regcomp" = xyes
+then :
+  printf "%s\n" "#define HAVE_REGCOMP 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "sqrt" "ac_cv_func_sqrt"
+if test "x$ac_cv_func_sqrt" = xyes
+then :
+  printf "%s\n" "#define HAVE_SQRT 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "strcasecmp" "ac_cv_func_strcasecmp"
+if test "x$ac_cv_func_strcasecmp" = xyes
+then :
+  printf "%s\n" "#define HAVE_STRCASECMP 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "strchr" "ac_cv_func_strchr"
+if test "x$ac_cv_func_strchr" = xyes
+then :
+  printf "%s\n" "#define HAVE_STRCHR 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "strdup" "ac_cv_func_strdup"
+if test "x$ac_cv_func_strdup" = xyes
+then :
+  printf "%s\n" "#define HAVE_STRDUP 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "strerror" "ac_cv_func_strerror"
+if test "x$ac_cv_func_strerror" = xyes
+then :
+  printf "%s\n" "#define HAVE_STRERROR 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "strncasecmp" "ac_cv_func_strncasecmp"
+if test "x$ac_cv_func_strncasecmp" = xyes
+then :
+  printf "%s\n" "#define HAVE_STRNCASECMP 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "strstr" "ac_cv_func_strstr"
+if test "x$ac_cv_func_strstr" = xyes
+then :
+  printf "%s\n" "#define HAVE_STRSTR 1" >>confdefs.h
+
+fi
+
+#
 
 
  if test `gcc -dumpversion | gawk '{print $1>=7?"1":"0"}'` = 1; then
@@ -7312,6 +7416,41 @@ else
   GCC_GE_730_TRUE='#'
   GCC_GE_730_FALSE=
 fi
+
+
+# identify the OS and the chip
+# This macro sets several shell variables, most importantly $host_os,
+# which contains a canonical name for the OS (e.g., linux-gnu, darwin, freebsd).
+
+# Define a conditional flag for Linux
+ if case "$host_os" in *linux*) true ;; *) false ;; esac; then
+  OS_LINUX_TRUE=
+  OS_LINUX_FALSE='#'
+else
+  OS_LINUX_TRUE='#'
+  OS_LINUX_FALSE=
+fi
+
+
+# Define a conditional flag for macOS (Darwin)
+ if case "$host_os" in *darwin*) true ;; *) false ;; esac; then
+  OS_MACOS_TRUE=
+  OS_MACOS_FALSE='#'
+else
+  OS_MACOS_TRUE='#'
+  OS_MACOS_FALSE=
+fi
+
+
+# Define a conditional flag for FreeBSD
+ if case "$host_os" in *freebsd*) true ;; *) false ;; esac; then
+  OS_FREEBSD_TRUE=
+  OS_FREEBSD_FALSE='#'
+else
+  OS_FREEBSD_TRUE='#'
+  OS_FREEBSD_FALSE=
+fi
+
 
 
 
@@ -7489,6 +7628,18 @@ printf %s "checking that generated files are newer than configure... " >&6; }
 printf "%s\n" "done" >&6; }
 if test -z "${GCC_GE_730_TRUE}" && test -z "${GCC_GE_730_FALSE}"; then
   as_fn_error $? "conditional \"GCC_GE_730\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${OS_LINUX_TRUE}" && test -z "${OS_LINUX_FALSE}"; then
+  as_fn_error $? "conditional \"OS_LINUX\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${OS_MACOS_TRUE}" && test -z "${OS_MACOS_FALSE}"; then
+  as_fn_error $? "conditional \"OS_MACOS\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${OS_FREEBSD_TRUE}" && test -z "${OS_FREEBSD_FALSE}"; then
+  as_fn_error $? "conditional \"OS_FREEBSD\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

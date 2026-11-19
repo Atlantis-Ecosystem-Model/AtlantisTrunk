@@ -116,6 +116,7 @@
 
  *********************************************************************/
 
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -134,7 +135,9 @@
 #include <atImplementationLib.h>
 #include <atAssessLib.h>
 #include <atEconomicLib.h>
+#include <atFishMIP_OSP_Bridge.h>
 #include <atSS3LinkLib.h>
+#include <stdio.h>
 #ifdef LINK_ENABLED
 #include <atComms.h>
 #endif
@@ -144,6 +147,10 @@
 
 #ifdef CLAM_LINK_ENABLED
 #include "atCLAMLinkLib.h"
+#endif
+
+#ifdef _OPENMP
+#include <omp.h>
 #endif
 
 #ifdef _WIN32
@@ -204,7 +211,7 @@ int do_BrokerLinkage = 0;	/* Link with the broker */
 int lots_warn = 0;
 double track_warn = 0;
 
-FunctionalGroupStruct *FunctGroupArray;
+BOX_THREAD_LOCAL FunctionalGroupStruct *FunctGroupArray;
 DemographicStruct *EMBRYO;
 MigrationStruct *MIGRATION;
 EvolutionStruct *DNA;
@@ -212,19 +219,78 @@ CoralStruct *CORALREEF;
 PhysioChemStruct *PhysioChemArray;
 FisheryStruct *FisheryArray;
 AssessProjectionStruct *ASSESS_PROJECTION;
+OSPStruct *OSP_PARAMS;
+EffortHistoryRecord *g_catch_n_effort_History;
+int g_effortHistoryCount;
 
-int it_count, waterboundary;
+BOX_THREAD_LOCAL int it_count, waterboundary;
 int sp;
+
+/* Sum of time spent in the per-box biology loop, and in the rest of each timestep.
+ * Printed once at the end of the run. Does not change the equations. */
+static double box_loop_seconds = 0.0;
+static double timestep_rest_seconds = 0.0;
+
+static double monotonic_seconds(void)
+{
+	struct timespec now;
+
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	return (double) now.tv_sec + (double) now.tv_nsec * 1.0e-9;
+}
 
 double **dvol, ***dtr;
 double **CatchSum;
 int **FisherySpeciesCatchFlags; /* Array to hold a flag for each fishery/species combinations to indicate which species are fished by which fisheries */
 double ****mFCchange;
 
+/* Biology for one box. Kept separate so the box loop can hand boxes to threads. */
+static void runBoxBiology(MSEBoxModel *bm, int b)
+{
+	char box_check_name[BMSLEN];
+
+	if (bm->boxes[b].type == LAND) {
+
+		/* Do the land stuff */
+		/* Just want to allow groups that are present in the land to reproduce */
+
+		Ecology_Land_Biology_Process(bm, &bm->boxes[b]);
+
+	} else if (bm->boxes[b].type != BOUNDARY) {
+
+		/* Update overlap between group and fisheries distributions */
+		if (bm->flag_fisheries_on ) {
+			Harvest_Update_Habitat_Overlap(bm, bm->boxes[b].n);
+		}
+
+		Ecology_Box_Biology(bm, &bm->boxes[b], bm->dt, logfp);
+
+		/* Check fish abundance */
+		if (fishtest && bm->checkbox) {
+			snprintf(box_check_name, sizeof(box_check_name), "After box %d ecology", b);
+			Ecology_Test_Fish_Total(bm, newwctr, newlandtr, use_tr, box_check_name, logfp);
+		}
+	} else {
+		/** Call external vertebrates code by Marie Savina **/
+
+		/* The following will only be true if the bm->external_box value is set to true. Otherwse there is no way the
+		 * boundarytype could be anything other than NORMAL_BOUND
+		 *
+		 * Only execute once so only when b = 0
+		 */
+		if (bm->external_populations && !b) {
+			External_Box_Ecology(bm, b, bm->dt, bm->logFile);
+		}
+	}
+}
+
 int runNextTimeStep(MSEBoxModel *bm){
 	int b, halt = 0;
 	double dtscale = 0;
-	char keystrname[BMSLEN];
+	double step_start, box_seconds;
+
+	step_start = monotonic_seconds();
+	box_seconds = 0.0;
 
 	if (verbose > 1)
 		printf("Call checking time\n");
@@ -485,32 +551,37 @@ int runNextTimeStep(MSEBoxModel *bm){
 
         if (verbose > 1) {
             printf("Call ecology\n");
+            fflush(stdout);
+            fflush(stderr);
         }
         
         fflush(stdout);
         fflush(stderr);
         fflush(bm->logFile);
+        
+        /*** Old single thread version pf the code ***/
+        // TODO: delete pmce sure the threads work 
 
-        /* Do biological processes - step through biology for each box */
+        /* Do biological processes - step through biology for each box *
 		for (b = 0; b < bm->nbox; b++) {
 
             if(bm->boxes[b].type == LAND){
 
 				/* Do the land stuff */
-				/* Just want to allow groups that are present in the land to reproduce */
+				/* Just want to allow groups that are present in the land to reproduce *
 
 				Ecology_Land_Biology_Process(bm, &bm->boxes[b]);
                 
 			} else if (bm->boxes[b].type != BOUNDARY) {
 
-				/* Update overlap between group and fisheries distributions */
+				/* Update overlap between group and fisheries distributions *
 				if (bm->flag_fisheries_on ) {
 					Harvest_Update_Habitat_Overlap(bm, bm->boxes[b].n);
 				}
 
 				Ecology_Box_Biology(bm, &bm->boxes[b], bm->dt, logfp);
 
-				/* Check fish abundance */
+				/* Check fish abundance *
 				if (fishtest && bm->checkbox) {
 					snprintf(keystrname, sizeof(keystrname), "After box %d ecology", b);
 					Ecology_Test_Fish_Total(bm, newwctr, newlandtr, use_tr, keystrname, logfp);
@@ -522,11 +593,62 @@ int runNextTimeStep(MSEBoxModel *bm){
                  * boundarytype could be anything other than NORMAL_BOUND
                  *
                  * Only execute once so only when b = 0
-                 */
+                 *
                 if(bm->external_populations && !b) {
                     External_Box_Ecology(bm, b, bm->dt, bm->logFile);
                 }
             }
+		}
+		***/
+		
+		/* Do biological processes - step through biology for each box */
+		{
+		double box_start = monotonic_seconds();
+#ifdef _OPENMP
+		/* The first and last water boxes trigger whole-model bookkeeping
+		 * (age distributions, recruitment, spawning queues), so they run on
+		 * the main thread. Only the boxes strictly between them run in parallel,
+		 * each thread using its own copies of the box work state. */
+		if (!(fishtest && bm->checkbox) && Box_Biology_Can_Run_In_Parallel(bm)) {
+			int first_parallel_box = bm->first_box + 1;
+			int last_parallel_box = bm->last_box - 1;
+
+			for (b = 0; b < first_parallel_box; b++)
+				runBoxBiology(bm, b);
+
+			Box_Biology_Parallel_Begin(bm);
+#pragma omp parallel
+			{
+				Box_Biology_Thread_Start(bm);
+#pragma omp for schedule(dynamic, 1)
+				for (b = first_parallel_box; b <= last_parallel_box; b++)
+					runBoxBiology(Box_Biology_Thread_Model(bm), b);
+				Box_Biology_Thread_End(bm);
+			}
+			Box_Biology_Parallel_End(bm);
+
+			for (b = last_parallel_box + 1; b < bm->nbox; b++)
+				runBoxBiology(bm, b);
+		} else
+#endif
+#ifdef ATLANTIS_REVERSE_BOX_ORDER_PROBE
+		/* Probe build only: run the middle boxes in reverse order to test whether
+		 * the ecology depends on the order in which boxes are processed. */
+		if (bm->last_box - bm->first_box > 1) {
+			for (b = 0; b <= bm->first_box; b++)
+				runBoxBiology(bm, b);
+			for (b = bm->last_box - 1; b > bm->first_box; b--)
+				runBoxBiology(bm, b);
+			for (b = bm->last_box; b < bm->nbox; b++)
+				runBoxBiology(bm, b);
+		} else
+#endif
+		{
+			for (b = 0; b < bm->nbox; b++)
+				runBoxBiology(bm, b);
+		}
+		box_seconds = monotonic_seconds() - box_start;
+		box_loop_seconds += box_seconds;
 		}
         
 		Ecology_Starve_Notice(bm, logfp);
@@ -610,6 +732,7 @@ int runNextTimeStep(MSEBoxModel *bm){
 	/* Only check netcdf file size every 5 days */
 	if(bm->TofY % 5 == 0)
 		checknetCDFFiles(bm);
+	timestep_rest_seconds += (monotonic_seconds() - step_start) - box_seconds;
 	return halt;
 }
 /****************************************************************************
@@ -628,6 +751,12 @@ int main(int argc, char *argv[]) {
 	//int b, halt;
 	//char keystrname[BMSLEN];
 	int halt;
+
+#ifdef _OPENMP
+	/* Boxes only run on several threads when asked for, e.g. OMP_NUM_THREADS=2 */
+	if (getenv("OMP_NUM_THREADS") == NULL)
+		omp_set_num_threads(1);
+#endif
 
 	/* Set up the model */
 	setupMSEBoxModel(argc, argv, &bm);
@@ -766,12 +895,22 @@ int main(int argc, char *argv[]) {
 	Textfile_Dump(&bm, logfp);
 
 	/* Close the log file */
+	fprintf(logfp, "Atlantis Done \n");
 	fclose(logfp);
 
 	logfp = 0;
 
 	/* Shutdown model */
 	modelshutdown(&bm);
+
+	/* One line for the box-loop timing. Startup and this final write are not included. */
+	printf("BOX_LOOP_SECONDS %.6f\n", box_loop_seconds);
+	printf("TIMESTEP_REST_SECONDS %.6f\n", timestep_rest_seconds);
+	if (box_loop_seconds + timestep_rest_seconds > 0.0) {
+		printf("BOX_LOOP_FRACTION %.6f\n",
+			box_loop_seconds / (box_loop_seconds + timestep_rest_seconds));
+	}
+	fflush(stdout);
 	exit(0);
 }
 
@@ -907,6 +1046,9 @@ void setupMSEBoxModel(int argc, char *argv[], MSEBoxModel *bm) {
 				argc--;
 				break;
 
+			case 'Q': // Silence runtime warnings. Does not change the equations.
+				suppress_runtime_warnings = 1;
+				break;
 			case 'q': // Fisheries config csv file
 				if (argc < 2)
 					Util_Usage(1);
@@ -1475,6 +1617,11 @@ void setupMSEBoxModel(int argc, char *argv[], MSEBoxModel *bm) {
 			/* Initialise economics model */
 			Economic_Init(bm, logfp);
 		}
+        
+        if(bm->flag_OSP_mode){
+            /* Add OSP relatvant strructures - for OSP plug-in-model options */
+            Create_OSP_Arrays(bm, logfp);
+        }
 	}
     
     /* Open the general tracer output file */
@@ -2123,9 +2270,9 @@ FILE * initLogFile(MSEBoxModel *bm) {
 
 	bm->logFile = fp;
 
-	fprintf(fp, "#\n#Atlantis2 Updated to Version %s\n#\n#\n", ATLANTIS_REVISION);
-	fprintf(fp, "#\n#Atlantis path %s\n#\n#\n", ATLANTIS_WCPATH);
-	fprintf(fp, "#\n#Atlantis SVN Last Change Date %s\n\n", ATLANTIS_WCDATE);
+        #ifdef RELEASE_VERSION
+             fprintf(fp,"Git release version: %s\n", RELEASE_VERSION);
+        #endif
 
 
 	/* File title */
@@ -2571,12 +2718,11 @@ void modelshutdown(MSEBoxModel *bm) {
 
 void Util_Usage(int dummy) {
 
-	printf("\nAtlantis SVN Updated to Version %s\n", ATLANTIS_REVISION);
-	printf("Atlantis SVN Path %s\n", ATLANTIS_WCPATH);
-	printf("Atlantis SVN Last Change Date %s\n\n", ATLANTIS_WCDATE);
+  printf("Git release version: %s\n", RELEASE_VERSION);
 
 
-	printf("Util_Usage: atlantis -i input.nc dump -o output.nc -r run.prm -f force.prm -p physics.prm -b biology.prm -m migration.csv -h harvest.prm -a assess.prm -e economics.prm -s functionGroupFile.xml -q fisheries.xml [-d destinationFolder] [-t inputFolder]\n");
+	printf("Util_Usage: atlantis -i input.nc dump -o output.nc -r run.prm -f force.prm -p physics.prm -b biology.prm -m migration.csv -h harvest.prm -a assess.prm -e economics.prm -s functionGroupFile.xml -q fisheries.xml [-d destinationFolder] [-t inputFolder] [-Q]\n");
+	printf("\n-Q  Silence runtime warnings. The ecological calculations are unchanged.\n");
 	printf("\nDestinationFolder - An optional parameter. If provided a new folder with this name will be create and all output files generated by Atlantis will be placed in this folder.\n");
 	printf("\nFurther information about running Atlantis can be found in the Atlantis manual or Atlantis wiki site.\n\n");
 	exit(0);

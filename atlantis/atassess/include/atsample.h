@@ -202,7 +202,7 @@
  *********************************************************************/
 extern int verbose;
 
-extern double ***initVERTinfo;
+extern BOX_THREAD_LOCAL double ***initVERTinfo;
 
 /********************************************************************/
 

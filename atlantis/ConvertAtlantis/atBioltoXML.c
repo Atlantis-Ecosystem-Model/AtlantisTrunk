@@ -1984,6 +1984,8 @@ void createPhysicalLim_n_FLagsXML(MSEBoxModel *bm, FILE *fp, char *fileName, xml
     if(bm->lim_sun_hours)
         warn("lim_sun_hours set >0 so will calculate light rather than rading it in. If you wish to read in solar time series set lim_sun_hours to 0\n");
     
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "force_light", "Whether forcing light from an input file", "", XML_TYPE_BOOLEAN,"1");
+    
     node = Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flagmodeltemp", "The temperature model used.", "", XML_TYPE_LOOKUP, "1");
 	lookupNode = Util_XML_Create_Lookup_Node(node);
 	Util_XML_Create_Lookup_Value_Node(lookupNode, "0", "From Data");
@@ -2018,6 +2020,8 @@ void createPhysicalLim_n_FLagsXML(MSEBoxModel *bm, FILE *fp, char *fileName, xml
 	Util_XML_Create_Lookup_Value_Node(lookupNode, "2", "WQI");
 
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flagmicro", "Nutrient lim by micronutrient.", "", XML_TYPE_BOOLEAN,"0");
+    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flagbayHAB", "Whether want HAB dynamics in specific bays.", "", XML_TYPE_BOOLEAN,"0");
+    bm->flagbayHAB = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "flagbayHAB");
 
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flagtempchange", "Flag to indicate that the mean temperature can change", "", XML_TYPE_BOOLEAN,"0");
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flagsaltchange", "Flag to indicate that the mean salinity can change", "", XML_TYPE_BOOLEAN,"0");
@@ -2075,7 +2079,7 @@ void createPhysicalLim_n_FLagsXML(MSEBoxModel *bm, FILE *fp, char *fileName, xml
     
 	Util_XML_Get_Value_Integer(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseHardFeedingWindow", &bm->UseHardFeedingWindow);
 
-    Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_satiation", "Flag to indicate whether using satiation of feeding functions - especially for standard form of functional responses", "", XML_TYPE_BOOLEAN,"0");
+    //Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_satiation", "Flag to indicate whether using satiation of feeding functions - especially for standard form of functional responses", "", XML_TYPE_BOOLEAN,"0");
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_shrinkfat", "Flag to indicate whether growth of fish allows fish to lose fat (1) or not (0)", "", XML_TYPE_BOOLEAN,"0");
     Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_predratiodepend", "Flag indicating whether using any ratio dependent feeding functions", "", XML_TYPE_BOOLEAN,"0");
     
@@ -2146,6 +2150,8 @@ void createPhysicalLim_n_FLagsXML(MSEBoxModel *bm, FILE *fp, char *fileName, xml
         //Util_XML_Create_Lookup_Value_Node(lookupNode, "3", "Linear");
         //Util_XML_Create_Lookup_Value_Node(lookupNode, "4", "Piecewise");
         
+        Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "pH_min_effect", "Minimum pH effect size", "m", XML_TYPE_FLOAT,"0");
+        
         if (bm->flagmodelpH == ph_regression) {
             Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "pH_surface_depth", "Depth of surface layer", "m", XML_TYPE_FLOAT,"200");
             Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "pH_mid_depth", "Depth of midwater layer", "m", XML_TYPE_FLOAT,"1600");
@@ -2182,8 +2188,8 @@ void createPhysicalLim_n_FLagsXML(MSEBoxModel *bm, FILE *fp, char *fileName, xml
         Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "Pads_r_t0", "P adsorprtion starting r", "", XML_TYPE_FLOAT,"0");
         Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "Pads_K", "P adsorprtion coefficient", "", XML_TYPE_FLOAT,"0");
         Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "Pads_KO", "P adsorprtion base K", "", XML_TYPE_FLOAT,"0");
-        Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "r_immob_PIP_t0", "P immobilisation dtarting point", "", XML_TYPE_FLOAT,"0");
-        
+        Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "r_immob_PIP_t0", "P immobilisation starting point", "", XML_TYPE_FLOAT,"0");
+        Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "flag_adv_P", "Flag indicating whether more advanced representaiton of P cycling is used", "", XML_TYPE_BOOLEAN,"0");
     }
 
 }
@@ -2471,6 +2477,9 @@ void createMortalityXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc
         Create_Species_Cohort_ParamXML(bm, fileName, fp, doc, childGroupingNode, mLext_id, "External linear mortality rate", "d-1", XML_TYPE_FLOATARRAY, "0 - 1.0", SpeciesXMLFunction);
         Create_Species_Cohort_ParamXML(bm, fileName, fp, doc, childGroupingNode, mPext_id, "P external mortality rate", "d-1", XML_TYPE_FLOATARRAY, "0 - 1.0", SpeciesXMLFunction);
     }
+    if(bm->flagbayHAB == TRUE){
+        Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, HAB_mort_scalar_id, "HAB variant mortality scalar", "", XML_TYPE_FLOAT, "1.0");
+    }
     
     if(bm->containsBirds){
 		Parse_File(bm, fp, fileName, childGroupingNode, "ImplicitSeabirdMortalityRate", "^mS_SB",
@@ -2612,6 +2621,7 @@ void createPrimaryProduceXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPt
 		childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "IcePrimaryProduction", "Ice Primary Producer Parameters", "", "");
 		Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, Beta_D_id, "Photoinhibition", "W m-2", XML_TYPE_FLOAT, "0.002");
 		Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, PBmax_D_id, "Photosynthetic efficiency ", " ", XML_TYPE_FLOAT, "0.44");
+        Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, light_a_id, "Photosynthetic light coefficient ", " ", XML_TYPE_FLOAT, "1.0");
 	}
 
 	if(bm->flag_macro_model) {
@@ -2631,6 +2641,17 @@ void createPrimaryProduceXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPt
         Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, sponge_overgrow_id, "Rate overgrowth of sponge", "d-1", XML_TYPE_FLOAT, "");
         Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, sponge_compete_id, "Limitation to sponge growth from corals and macroalgae", " ", XML_TYPE_FLOAT, "");
     }
+    
+    if(bm->flagbayHAB == TRUE){
+        Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, HAB_mum_scalar_id, "HAB variant growth scalar", "W m-2", XML_TYPE_FLOAT, "3 - 65");
+
+        childGroupingNode
+                = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "HAB_Location",
+                        "Arrays to indicate where HABs occur.", "", "");
+        Util_XML_Create_Node_Next_Line(fp, fileName, groupingNode, "HAB_box", "Array indicating HAB cells", "", XML_TYPE_INTEGERARRAY);
+    }
+
+
 }
 
 void createBacteriaXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc, xmlNodePtr groupingNode) {
@@ -2870,8 +2891,7 @@ void createDietXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc, xml
     
     /* Do we have mammals in the model? */
 	if(bm->containsMammals  == TRUE && bm->flag_fisheries_on){
-		childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Catch_Opportunity",
-					"Availability of catch to opportunistic catch grazers (thieves)", "", "");
+		childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Catch_Opportunity", "Availability of catch to opportunistic catch grazers (thieves)", "", "");
 
 		Parse_File(bm, fp, fileName, childGroupingNode, "Catch_Availability", "^pFC[A-Z]", "Availabilty of catch to opportunistic catch grazers (thieves)", "",
 				XML_TYPE_FLOATARRAY, bm->K_num_tot_sp, TRUE, InitCatchGrazersXML, catchGrazersXML);
@@ -2883,15 +2903,13 @@ void createDietXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc, xml
 
 	/* What about corals? */
 	if(bm->containsCoral){
-		childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Rugosity_Feeding",
-				"Feeding effects on rugosity by coral predators", "", "");
+		childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Rugosity_Feeding", "Feeding effects on rugosity by coral predators", "", "");
 		Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, rugFeedScalar_id, "Rugosity feeding scalar", "", XML_TYPE_FLOAT, "0.0 - 1.0");
 	}
 
     /* Aquaculture related */
     if(bm->flag_aquacult_on || bm->flag_import_feed){
-        childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Extra_Feeding",
-                                                 "Feed rates for aquaculture species or species feeding outside the model domain", "", "");
+        childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Extra_Feeding", "Feed rates for aquaculture species or species feeding outside the model domain", "", "");
         Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, extra_feed_id, "Supplemental feed rates for aquaculture or feeding outside the model domain", "proportion of body weight", XML_TYPE_FLOAT, "0.0 - 1.0");
     }
     
@@ -2957,6 +2975,8 @@ void createDietXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc, xml
             "Invertebrate Growth Rate. These are corrected for temperature before use.", "mg N d-1", XML_TYPE_FLOATARRAY, "0.001 - 2.5", TRUE,
             InitNonAgeSpeciesZeroValuesXML, InvertebrateClearanceRateXMLFunction);
 
+    Create_Species_ParamXML(bm, fileName, fp, groupingNode, flag_satiation_id, "Whether the species is satiated when predating (clearance capped)", "", XML_TYPE_INTEGER, "0");
+    
 	Create_Species_ParamXML(bm, fileName, fp, groupingNode, KL_id, "Seed bank/population refuge based on consumer intake if available food below this feeding slows/stops so can't eat out all food. This is used by min-max feeding (predcase 4)",
 			"mg N m-3", XML_TYPE_FLOAT, "0.05 - 4000");
 	Create_Species_ParamXML(bm, fileName, fp, groupingNode, KU_id, "Saturation levels for consumer food intake. This is used by min-max feeding (predcase 4)", "mg N m-3", XML_TYPE_FLOAT, "");
@@ -3001,12 +3021,22 @@ void createDietXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr doc, xml
     /* Read in the li_a and li_b values for inverts */
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "li_a_invert", "Coefficient of allometic length-weight relation for inverts", "", XML_TYPE_FLOAT, "0.01");
 	Util_XML_Parse_Create_Node(fp, fileName, groupingNode, "li_b_invert", "Exponent in allometic length-weight relation for inverts", "", XML_TYPE_FLOAT, "3.0");
+    
+    /* Starvation and shrinking associated with feeding */
+    childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Shrinking related", "Shrinking related values", "", "");
+    Util_XML_Parse_Create_Node(fp, fileName, childGroupingNode, "size_shrinking_type", "Type of shrinking in placy for species", "", XML_TYPE_INTEGER, "0");
 
+    bm->size_shrinking_type = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, childGroupingNode, integer_check, "size_shrinking_type");
+    if (bm->size_shrinking_type > 0){
+        Util_XML_Parse_Create_Node(fp, fileName, childGroupingNode, "shrink_tol", "Tolerated proprtion of a month will starve before shrink", "", XML_TYPE_FLOAT, "0");
+        Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, shrinkStarve_id, "Whether shrink when starving", "", XML_TYPE_FLOAT, "0");
+        Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, shrinkProp_id, "Proportional change in size when shrink", "", XML_TYPE_FLOAT, "0.1");
+    }
+    
 	/* Assimilation_Efficiency parameters */
 	childGroupingNode = Util_XML_Create_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Assimilation_Efficiency", "Assimilation efficiency values", "", "");
 
-	//reateSpeciesParamXML(bm, fp, childGroupingNode, E2_id, "FLAG_EPLANT", "^EPlant_", "Assimilation efficiencies of consumers on plants", "");
-
+	//CreateSpeciesParamXML(bm, fp, childGroupingNode, E2_id, "FLAG_EPLANT", "^EPlant_", "Assimilation efficiencies of consumers on plants", "");
 	Create_Species_ParamXML(bm, fileName, fp, childGroupingNode, E1_id, "Assimilation efficiency of consumers on live food and carrion", "", XML_TYPE_FLOAT, "");
 
 	Util_XML_Create_Node(ATLANTIS_ATTRIBUTE, childGroupingNode, "FLAG_EDL", "Assimilation efficiency of consumers on labile detritus", "", "");
@@ -3206,6 +3236,7 @@ void createReproductionXML(MSEBoxModel *bm, FILE *fp, char *fileName, xmlDocPtr 
 	Create_Species_ParamXML(bm, fileName, fp, groupingNode, log_mult_id, "Log-normal random recruitment", "", XML_TYPE_FLOAT, "");
     Create_Species_ParamXML(bm, fileName, fp, groupingNode, norm_sigma_id, "Sigma for normal random recruitment", "", XML_TYPE_FLOAT, "");
     Create_Species_ParamXML(bm, fileName, fp, groupingNode, flag_recruit_stochastic_id, "Flag indicating whether to add normal random noise to recruitment", "", XML_TYPE_INTEGER, "");
+    Create_Species_ParamXML(bm, fileName, fp, groupingNode, flag_flatinitrecruit_id, "Flag indicating whether to akeep flat initial conditions recruitment", "", XML_TYPE_INTEGER, "");
 
     if(bm->ice_on) {
         Create_Species_ParamXML(bm, fileName, fp, groupingNode, prod_alpha_id, "Productivity scalar in lake recruitment function", "", XML_TYPE_FLOAT, "");

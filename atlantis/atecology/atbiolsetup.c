@@ -549,9 +549,7 @@ void Ecology_Init(MSEBoxModel *bm, FILE *llogfp) {
 		for(cohort = 0; cohort < FunctGroupArray[sp].numCohortsXnumGenes; cohort++){
 			chrt = (int)floor(cohort / FunctGroupArray[sp].numGeneTypes);
 
-			if ((FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED)
-					|| (FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED_BIOMASS)){
-
+			if ((FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED) || (FunctGroupArray[sp].groupAgeType == AGE_STRUCTURED_BIOMASS)){
 				chrtstage = 0;
 				for (pid = 0; pid < FunctGroupArray[sp].numStages; pid++) {
 					if (chrt >= FunctGroupArray[sp].age_mat[pid]){
@@ -2342,6 +2340,7 @@ void Ecology_Free(MSEBoxModel *bm) {
 	free1d(sizeMinMax);
 	free2d(spSTOCKprop);
 	i_free2d(starve_vert);
+    i_free3d(starve_check);
 	free2d(stock_prop);
 	free2d(sumSTOCK);
 	free2d(step1distrib);
@@ -2417,6 +2416,9 @@ void Ecology_Free(MSEBoxModel *bm) {
 	printf("Free coastal degradation and invader arrays\n");
 
 	free1d(Box_degradedi);
+    if(bm->flagbayHAB == TRUE){
+        free1d(HAB_boxi);
+    }
 
 	if (bm->InvadeArray)
 		free2d(bm->InvadeArray);
@@ -2493,6 +2495,7 @@ void Free_Migration(MSEBoxModel *bm) {
             free2d(MIGRATION[sp].aging);
             i_free1d(MIGRATION[sp].Leave_Now);
             i_free1d(MIGRATION[sp].Return_Now);
+            i_free1d(MIGRATION[sp].Checked);
             i_free1d(MIGRATION[sp].Return_Period);
             i_free1d(MIGRATION[sp].Leave_Period);
             i_free1d(MIGRATION[sp].MinYearsAway);
@@ -2801,11 +2804,7 @@ void Allocate_Arrays_Post_Load(MSEBoxModel *bm, FILE *llogfp) {
 
 	//printf("Creating PostLoad arrays\n");
 
-	/* Allocate memory for vertebrate parameter arrays */
-	/* Setup all arrays for vertebrate processes */
-	VERTabund_check = Util_Alloc_Init_2D_Double(ncohorts * ngenetypes, bm->K_num_tot_sp, 0.0);
-	VERTinfo = Util_Alloc_Init_3D_Double(3, ncohorts * ngenetypes, bm->K_num_tot_sp, 0.0);
-    totdenCheck = Util_Alloc_Init_2D_Double(2, ncohorts * ngenetypes, 0.0);
+	/* Vertebrate work arrays (VERTinfo, shiftVERT, ...) are allocated in Ecology_Allocate_Box_Work_Arrays() */
 
 	/* Set up arrays for migration out of model domain; total system state;
 	 other vertebrate state info, processes, and reproduction parameters.
@@ -2813,11 +2812,9 @@ void Allocate_Arrays_Post_Load(MSEBoxModel *bm, FILE *llogfp) {
 
 	/* Arrays - listed in alphabetical order for ease of access */
 	AGE_stock_struct_prop = (double ***) alloc3d(nstock, ncohorts * ngenetypes, bm->K_num_tot_sp);
-    active_den = Util_Alloc_Init_1D_Int((bm->K_num_max_cohort * bm->K_num_max_genetypes), 0);
     adults_spawning = Util_Alloc_Init_1D_Double(bm->K_num_stocks_per_sp, 0.0);
 
 	// No initial values are set. These are set in InitiliseArrays.
-	BED_scale = Util_Alloc_Init_1D_Double(bm->K_num_bed_types, 1.0);
 
 	for (i = 0; i < bm->K_num_tot_sp; i++) {
 		if ((FunctGroupArray[i].groupAgeType == AGE_STRUCTURED_BIOMASS) || (FunctGroupArray[i].groupAgeType == AGE_STRUCTURED)){  // Used to be for vertebrates only but now needed for any age structured due to demography code
@@ -2825,9 +2822,7 @@ void Allocate_Arrays_Post_Load(MSEBoxModel *bm, FILE *llogfp) {
 		}
 	}
 
-	cysts = Util_Alloc_Init_3D_Double(bm->num_active_habitats, bm->nbox, bm->K_num_tot_sp, 0.0);
-	CATCHEATINGinfo = (double **) alloc2d(ncohorts * ngenetypes, bm->K_num_tot_sp);
-	CATCHGRAZEinfo = (double **) alloc2d(ncohorts * ngenetypes, bm->K_num_tot_sp);
+    cysts = Util_Alloc_Init_3D_Double(bm->num_active_habitats, bm->nbox, bm->K_num_tot_sp, 0.0);
     coming_SPden = Util_Alloc_Init_1D_Double(bm->K_num_max_genetypes, 0.0);
 
     DIET_check = Util_Alloc_Init_5D_Double(2, bm->K_num_tot_sp, bm->K_num_stocks_per_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->K_num_tot_sp, 0.0);
@@ -2885,6 +2880,7 @@ void Allocate_Arrays_Post_Load(MSEBoxModel *bm, FILE *llogfp) {
 
 	spSTOCKprop = (double **) alloc2d(ncohorts * ngenetypes, nstock);
 	starve_vert = Util_Alloc_Init_2D_Int(ncells, bm->K_num_tot_sp, 0);
+    starve_check = Util_Alloc_Init_3D_Int(ncells,  ncohorts * ngenetypes, bm->K_num_tot_sp, 0);
 	bm->stock_struct_prop = (double ***) alloc3d(nstock, ncohorts * ngenetypes, bm->K_num_tot_sp);
 	stock_prop = (double **) alloc2d(nstock, bm->K_num_tot_sp);
 	sumSTOCK = (double **) alloc2d(bm->maxspage, nstock);
@@ -2941,6 +2937,75 @@ void Allocate_Arrays_Post_Load(MSEBoxModel *bm, FILE *llogfp) {
         Create_Evolution_Parameters(bm);
     }
 
+    /* Work arrays every box overwrites (one copy per thread in OpenMP builds) */
+    Ecology_Allocate_Box_Work_Arrays(bm);
+}
+
+/**************************************************************************************
+ * Box work arrays
+ *
+ * Every water box overwrites these arrays before it reads them. The main thread
+ * allocates them once at start-up. In OpenMP builds each extra thread calls
+ * Ecology_Allocate_Box_Work_Arrays() once to get its own set (the pointers are
+ * thread-local, see atBoxWorkspace.h).
+ */
+
+/**
+ * \brief Allocate the box work arrays for the calling thread.
+ */
+void Ecology_Allocate_Box_Work_Arrays(MSEBoxModel *bm) {
+	int ncohorts = bm->K_num_max_cohort;
+	int ngenetypes = bm->K_num_max_genetypes;
+    int totout = bm->K_num_tot_sp + 2; // Extra entries for remineralisation and final flux
+    //int totfluxout = bm->K_num_tot_sp + num_nut_flux_id; // Extra entries for nutrient fluxes
+    int totfluxout = bm->K_num_tot_sp + bm->K_num_physiochem;
+
+	/* Vertebrate work arrays */
+	VERTabund_check = Util_Alloc_Init_2D_Double(ncohorts * ngenetypes, bm->K_num_tot_sp, 0.0);
+	VERTinfo = Util_Alloc_Init_3D_Double(3, ncohorts * ngenetypes, bm->K_num_tot_sp, 0.0);
+	initVERTinfo = Util_Alloc_Init_3D_Double(3, ncohorts * ngenetypes, bm->K_num_tot_sp, 0.0);
+	shiftVERT = Util_Alloc_Init_3D_Double(3, ncohorts * ngenetypes, bm->K_num_tot_sp, 0.0);
+	shiftVERTON = Util_Alloc_Init_2D_Int(ncohorts * ngenetypes, bm->K_num_tot_sp, 0);
+    totdenCheck = Util_Alloc_Init_2D_Double(2, ncohorts * ngenetypes, 0.0);
+    active_den = Util_Alloc_Init_1D_Int((bm->K_num_max_cohort * bm->K_num_max_genetypes), 0);
+    lostden_zero = Util_Alloc_Init_1D_Double(bm->K_num_max_genetypes, 0.0);
+    ngene_done = Util_Alloc_Init_1D_Int(bm->K_num_max_genetypes, 0);
+    not_finished = Util_Alloc_Init_1D_Int(bm->K_num_max_genetypes, 0);
+    stock_done = Util_Alloc_Init_1D_Int(bm->K_num_stocks_per_sp, 0);
+	sizeMinMax = Util_Alloc_Init_1D_Double(4, 0.0);
+
+	// No initial values are set. These are set in InitiliseArrays.
+	BED_scale = Util_Alloc_Init_1D_Double(bm->K_num_bed_types, 1.0);
+
+	/* Feeding work arrays */
+	CATCHEATINGinfo = (double **) alloc2d(ncohorts * ngenetypes, bm->K_num_tot_sp);
+	CATCHGRAZEinfo = (double **) alloc2d(ncohorts * ngenetypes, bm->K_num_tot_sp);
+	EATINGinfo = (double ***) alloc3d(bm->num_active_habitats, ncohorts * ngenetypes, bm->K_num_tot_sp + 1);  // The +1 is the slot for aquaculture feed
+	FEEDinfo = (double ***) alloc3d(bm->num_active_habitats, ncohorts * ngenetypes, bm->K_num_tot_sp + 1);  // The +1 is the slot for aquaculture feed
+	GRAZEinfo = (double ***) alloc3d(bm->num_active_habitats, ncohorts * ngenetypes, bm->K_num_tot_sp + 1);  // The +1 is the slot for aquaculture feed
+	PREYinfo = (double ***) alloc3d(bm->num_active_habitats, ncohorts * ngenetypes, bm->K_num_tot_sp);
+    prey_counted = Util_Alloc_Init_2D_Int(bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->K_num_tot_sp, 0);
+
+	/* Diet totals - extra threads add into their own copy, summed after the parallel boxes */
+    DIET_check = Util_Alloc_Init_5D_Double(2, bm->K_num_tot_sp, bm->K_num_stocks_per_sp, bm->K_num_max_cohort * bm->K_num_max_genetypes, bm->K_num_tot_sp, 0.0);
+
+	/* Biomass at the start of the box (mass balance checks) */
+    initialBiomass = Util_Alloc_Init_1D_Double(bm->ntracer, 0.0);
+    initialSedBiomass = Util_Alloc_Init_1D_Double(bm->ntracer, 0.0);
+    initialEpiBiomass = Util_Alloc_Init_1D_Double(bm->ntracer, 0.0);
+    initialWaterBiomass = Util_Alloc_Init_1D_Double(bm->ntracer, 0.0);
+
+    if(bm->ice_on == TRUE){
+        initialIceBiomass = Util_Alloc_Init_1D_Double(bm->nicetracer, 0.0);
+    } else {
+        initialIceBiomass = NULL;
+    }
+    if (bm->terrestrial_on){
+        initialLandBiomass = Util_Alloc_Init_1D_Double(bm->nland, 0.0);
+    } else {
+        initialLandBiomass = NULL;
+    }
+
     // Array that used to be in Box_Bio_Processes()
     boxLayerInfo = (BoxLayerValues *) malloc(sizeof(BoxLayerValues));
     boxLayerInfo->NutsProd = Util_Alloc_Init_2D_Long_Double(K_num_nutrients, bm->num_active_habitats, 0.0);
@@ -2984,7 +3049,170 @@ void Allocate_Arrays_Post_Load(MSEBoxModel *bm, FILE *llogfp) {
     boxLayerInfo->PB_DR = 0.0;
 
     boxLayerInfo->DIN = 0.0;
-    
+}
+
+/**
+ * \brief Record the calling thread's box work array pointers.
+ */
+void Ecology_Get_Box_Work_Arrays(BoxWorkArrays *arrays) {
+	arrays->shiftVERTON = shiftVERTON;
+	arrays->prey_counted = prey_counted;
+	arrays->active_den = active_den;
+	arrays->not_finished = not_finished;
+	arrays->ngene_done = ngene_done;
+	arrays->stock_done = stock_done;
+	arrays->shiftVERT = shiftVERT;
+	arrays->initVERTinfo = initVERTinfo;
+	arrays->VERTinfo = VERTinfo;
+	arrays->VERTabund_check = VERTabund_check;
+	arrays->sizeMinMax = sizeMinMax;
+	arrays->BED_scale = BED_scale;
+	arrays->lostden_zero = lostden_zero;
+	arrays->PREYinfo = PREYinfo;
+	arrays->GRAZEinfo = GRAZEinfo;
+	arrays->EATINGinfo = EATINGinfo;
+	arrays->FEEDinfo = FEEDinfo;
+	arrays->CATCHEATINGinfo = CATCHEATINGinfo;
+	arrays->CATCHGRAZEinfo = CATCHGRAZEinfo;
+	arrays->totdenCheck = totdenCheck;
+	arrays->initialIceBiomass = initialIceBiomass;
+	arrays->initialLandBiomass = initialLandBiomass;
+	arrays->initialBiomass = initialBiomass;
+	arrays->initialSedBiomass = initialSedBiomass;
+	arrays->initialEpiBiomass = initialEpiBiomass;
+	arrays->initialWaterBiomass = initialWaterBiomass;
+	arrays->boxLayerInfo = boxLayerInfo;
+	arrays->DIET_check = DIET_check;
+}
+
+/**
+ * \brief Point the calling thread's box work arrays at a previously allocated set.
+ */
+void Ecology_Set_Box_Work_Arrays(const BoxWorkArrays *arrays) {
+	shiftVERTON = arrays->shiftVERTON;
+	prey_counted = arrays->prey_counted;
+	active_den = arrays->active_den;
+	not_finished = arrays->not_finished;
+	ngene_done = arrays->ngene_done;
+	stock_done = arrays->stock_done;
+	shiftVERT = arrays->shiftVERT;
+	initVERTinfo = arrays->initVERTinfo;
+	VERTinfo = arrays->VERTinfo;
+	VERTabund_check = arrays->VERTabund_check;
+	sizeMinMax = arrays->sizeMinMax;
+	BED_scale = arrays->BED_scale;
+	lostden_zero = arrays->lostden_zero;
+	PREYinfo = arrays->PREYinfo;
+	GRAZEinfo = arrays->GRAZEinfo;
+	EATINGinfo = arrays->EATINGinfo;
+	FEEDinfo = arrays->FEEDinfo;
+	CATCHEATINGinfo = arrays->CATCHEATINGinfo;
+	CATCHGRAZEinfo = arrays->CATCHGRAZEinfo;
+	totdenCheck = arrays->totdenCheck;
+	initialIceBiomass = arrays->initialIceBiomass;
+	initialLandBiomass = arrays->initialLandBiomass;
+	initialBiomass = arrays->initialBiomass;
+	initialSedBiomass = arrays->initialSedBiomass;
+	initialEpiBiomass = arrays->initialEpiBiomass;
+	initialWaterBiomass = arrays->initialWaterBiomass;
+	boxLayerInfo = arrays->boxLayerInfo;
+	DIET_check = arrays->DIET_check;
+}
+
+/**
+ * \brief Copy the values (not the pointers) of one set of box work arrays into another.
+ *
+ * Used at the start of each parallel stage so every thread begins from the
+ * main thread's values. Diet totals are not copied; see Ecology_Copy_Box_Work_Arrays callers.
+ */
+void Ecology_Copy_Box_Work_Arrays(MSEBoxModel *bm, BoxWorkArrays *to, const BoxWorkArrays *from) {
+	size_t ncohorts_x_genes = (size_t) (bm->K_num_max_cohort * bm->K_num_max_genetypes);
+	size_t nsp = (size_t) bm->K_num_tot_sp;
+	size_t nhab = (size_t) bm->num_active_habitats;
+	size_t nnut = (size_t) K_num_nutrients;
+	size_t nwc = (size_t) numwcvar;
+	BoxLayerValues *to_layer = to->boxLayerInfo;
+	const BoxLayerValues *from_layer = from->boxLayerInfo;
+
+	/* Vertebrate work arrays */
+	memcpy(to->shiftVERTON[0], from->shiftVERTON[0], ncohorts_x_genes * nsp * sizeof(int));
+	memcpy(to->prey_counted[0], from->prey_counted[0], ncohorts_x_genes * nsp * sizeof(int));
+	memcpy(to->active_den, from->active_den, ncohorts_x_genes * sizeof(int));
+	memcpy(to->not_finished, from->not_finished, (size_t) bm->K_num_max_genetypes * sizeof(int));
+	memcpy(to->ngene_done, from->ngene_done, (size_t) bm->K_num_max_genetypes * sizeof(int));
+	memcpy(to->stock_done, from->stock_done, (size_t) bm->K_num_stocks_per_sp * sizeof(int));
+	memcpy(to->shiftVERT[0][0], from->shiftVERT[0][0], 3 * ncohorts_x_genes * nsp * sizeof(double));
+	memcpy(to->initVERTinfo[0][0], from->initVERTinfo[0][0], 3 * ncohorts_x_genes * nsp * sizeof(double));
+	memcpy(to->VERTinfo[0][0], from->VERTinfo[0][0], 3 * ncohorts_x_genes * nsp * sizeof(double));
+	memcpy(to->VERTabund_check[0], from->VERTabund_check[0], ncohorts_x_genes * nsp * sizeof(double));
+	memcpy(to->sizeMinMax, from->sizeMinMax, 4 * sizeof(double));
+	memcpy(to->BED_scale, from->BED_scale, (size_t) bm->K_num_bed_types * sizeof(double));
+	memcpy(to->lostden_zero, from->lostden_zero, (size_t) bm->K_num_max_genetypes * sizeof(double));
+	memcpy(to->totdenCheck[0], from->totdenCheck[0], 2 * ncohorts_x_genes * sizeof(double));
+
+	/* Feeding work arrays */
+	memcpy(to->PREYinfo[0][0], from->PREYinfo[0][0], nhab * ncohorts_x_genes * nsp * sizeof(double));
+	memcpy(to->GRAZEinfo[0][0], from->GRAZEinfo[0][0], nhab * ncohorts_x_genes * (nsp + 1) * sizeof(double));
+	memcpy(to->EATINGinfo[0][0], from->EATINGinfo[0][0], nhab * ncohorts_x_genes * (nsp + 1) * sizeof(double));
+	memcpy(to->FEEDinfo[0][0], from->FEEDinfo[0][0], nhab * ncohorts_x_genes * (nsp + 1) * sizeof(double));
+	memcpy(to->CATCHEATINGinfo[0], from->CATCHEATINGinfo[0], ncohorts_x_genes * nsp * sizeof(double));
+	memcpy(to->CATCHGRAZEinfo[0], from->CATCHGRAZEinfo[0], ncohorts_x_genes * nsp * sizeof(double));
+
+	/* Start-of-box biomass */
+	memcpy(to->initialBiomass, from->initialBiomass, (size_t) bm->ntracer * sizeof(double));
+	memcpy(to->initialSedBiomass, from->initialSedBiomass, (size_t) bm->ntracer * sizeof(double));
+	memcpy(to->initialEpiBiomass, from->initialEpiBiomass, (size_t) bm->ntracer * sizeof(double));
+	memcpy(to->initialWaterBiomass, from->initialWaterBiomass, (size_t) bm->ntracer * sizeof(double));
+	if (from->initialIceBiomass != NULL)
+		memcpy(to->initialIceBiomass, from->initialIceBiomass, (size_t) bm->nicetracer * sizeof(double));
+	if (from->initialLandBiomass != NULL)
+		memcpy(to->initialLandBiomass, from->initialLandBiomass, (size_t) bm->nland * sizeof(double));
+
+	/* Box layer values: arrays first, then the scalar fields */
+	memcpy(to_layer->NutsProd[0], from_layer->NutsProd[0], nnut * nhab * sizeof(long double));
+	memcpy(to_layer->NutsLost[0], from_layer->NutsLost[0], nnut * nhab * sizeof(long double));
+	memcpy(to_layer->DetritusProd[0], from_layer->DetritusProd[0], nnut * nhab * sizeof(long double));
+	memcpy(to_layer->DetritusLost[0], from_layer->DetritusLost[0], nnut * nhab * sizeof(long double));
+	memcpy(to_layer->NutsProdGlobal[0][0], from_layer->NutsProdGlobal[0][0], nnut * nhab * nhab * sizeof(long double));
+	memcpy(to_layer->NutsLostGlobal[0][0], from_layer->NutsLostGlobal[0][0], nnut * nhab * nhab * sizeof(long double));
+	memcpy(to_layer->DetritusProdGlobal[0][0], from_layer->DetritusProdGlobal[0][0], nnut * nhab * nhab * sizeof(long double));
+	memcpy(to_layer->DetritusLostGlobal[0][0], from_layer->DetritusLostGlobal[0][0], nnut * nhab * nhab * sizeof(long double));
+
+	memcpy(to_layer->localWCTracers, from_layer->localWCTracers, (2 * nwc + (size_t) numepivar) * sizeof(double));
+	memcpy(to_layer->localWCFlux, from_layer->localWCFlux, (2 * nwc + (size_t) numepivar) * sizeof(double));
+	memcpy(to_layer->localSEDTracers, from_layer->localSEDTracers, nwc * sizeof(double));
+	memcpy(to_layer->localSEDFlux, from_layer->localSEDFlux, nwc * sizeof(double));
+	memcpy(to_layer->localEPITracers, from_layer->localEPITracers, nwc * sizeof(double));
+	memcpy(to_layer->localEPIFlux, from_layer->localEPIFlux, nwc * sizeof(double));
+	memcpy(to_layer->localICETracers, from_layer->localICETracers, nwc * sizeof(double));
+	memcpy(to_layer->localICEFlux, from_layer->localICEFlux, nwc * sizeof(double));
+	memcpy(to_layer->localLANDTracers, from_layer->localLANDTracers, nwc * sizeof(double));
+	memcpy(to_layer->localLANDFlux, from_layer->localLANDFlux, nwc * sizeof(double));
+	memcpy(to_layer->localDiagTracers, from_layer->localDiagTracers, (size_t) numdiagvar * sizeof(double));
+	memcpy(to_layer->localDiagFlux, from_layer->localDiagFlux, (size_t) numdiagvar * sizeof(double));
+	memcpy(to_layer->localFishTracers, from_layer->localFishTracers, (size_t) numfstatvar * sizeof(double));
+	memcpy(to_layer->localFishFlux, from_layer->localFishFlux, (size_t) numfstatvar * sizeof(double));
+	memcpy(to_layer->DebugInfo[0][0], from_layer->DebugInfo[0][0], (size_t) Diagnostnlevel_id * nhab * (nsp + 2) * sizeof(double));
+	memcpy(to_layer->DebugFluxInfo[0][0], from_layer->DebugFluxInfo[0][0], 2 * nhab * (nsp + (size_t) bm->K_num_physiochem) * sizeof(double));
+
+	to_layer->PB_DL = from_layer->PB_DL;
+	to_layer->PB_DR = from_layer->PB_DR;
+	to_layer->BB_DL = from_layer->BB_DL;
+	to_layer->BB_DR = from_layer->BB_DR;
+	to_layer->ICEB_DL = from_layer->ICEB_DL;
+	to_layer->ICEB_DR = from_layer->ICEB_DR;
+	to_layer->sDLscale = from_layer->sDLscale;
+	to_layer->sDRscale = from_layer->sDRscale;
+	to_layer->sDCscale = from_layer->sDCscale;
+	to_layer->DLscale = from_layer->DLscale;
+	to_layer->DRscale = from_layer->DRscale;
+	to_layer->DCscale = from_layer->DCscale;
+	to_layer->DIN = from_layer->DIN;
+	to_layer->DINs = from_layer->DINs;
+	to_layer->Remin = from_layer->Remin;
+	to_layer->Nitrification = from_layer->Nitrification;
+	to_layer->DONremin = from_layer->DONremin;
+	to_layer->Denitrification = from_layer->Denitrification;
 }
 /**
  * \brief Allocate the population ratios.

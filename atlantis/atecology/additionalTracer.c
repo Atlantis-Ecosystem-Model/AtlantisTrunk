@@ -16,6 +16,8 @@
 #include "string.h"
 #include "atecology.h"
 
+static void p_adsorption_calc(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitatType);
+
 /*
  * 	Allocate the atomic ratio structure.
  *
@@ -281,14 +283,14 @@ static int Calculate_Carbon_Respiration(MSEBoxModel *bm, BoxLayerValues *boxLaye
  * 		RLYS = phytoplankton decomposition rate in liter /mg day.
  *
  */
-//static int Calculate_Phosphorus_Decomposition(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitatType, double *PCM_decomp, double *TOP_decomp) {
-//
-//	*PCM_decomp = 0;//decomp; // Already taken into account elsewhere.
-//	*TOP_decomp = 0;
-//
-//	return 0;
-//
-//}
+static int Calculate_Phosphorus_Decomposition(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitatType, double *PCM_decomp, double *TOP_decomp) {
+
+	*PCM_decomp = 0; //Was decomp; But now zeroed out as already taken into account elsewhere.
+	*TOP_decomp = 0;
+
+	return 0;
+
+}
 
 static int Calculate_Carbon_Decomposition(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitatType, double *C_decomp) {
 
@@ -392,11 +394,15 @@ int Calculate_Phosphorus(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_
 	/* Respiration */
 	Calculate_Phosphorus_Respiration(bm, boxLayerInfo, habitatType, &bm->atomicRatioInfo->PCM_respiration, &bm->atomicRatioInfo->TOP_respiration);
 
-	/* Decomposition */
+	/* Decomposition - not called already accounted for in otehr routines */
 	//Calculate_Phosphorus_Decomposition(bm, boxLayerInfo, habitatType, &bm->atomicRatioInfo->PCM_decomp, &bm->atomicRatioInfo->TOP_decomp);
 
 	/* Transformation */
-	Calculate_Phosphorus_Transformation(bm, boxLayerInfo, habitatType, &bm->atomicRatioInfo->P_trans);
+    if (bm->flag_adv_P < 1){
+        Calculate_Phosphorus_Transformation(bm, boxLayerInfo, habitatType, &bm->atomicRatioInfo->P_trans);
+    } else {
+        p_adsorption_calc(bm, boxLayerInfo, habitatType);
+    }
 
 	return 0;
 }
@@ -1133,22 +1139,17 @@ void Transfer_To_Pred(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, double ***s
 			for (kij = 0; kij < FunctGroupArray[prey].numCohortsXnumGenes; kij++) {
 				for (habitat = WC; habitat < bm->num_active_habitats; habitat++) {
 					if (FunctGroupArray[prey].groupType != LAB_DET && FunctGroupArray[prey].groupType != REF_DET && FunctGroupArray[prey].groupType != CARRION) {
-						amount = scalar * E_SP * spGRAZEinfo[prey][kij][habitat];
-
-						if(habitat == EPIFAUNA){
-							if (FunctGroupArray[prey].groupType != MICROPHTYBENTHOS) {
-								amount = amount / smLayerThick;
-							}
-						}
+						/* Convert from the units of the habitat eaten from to the predator's units (as done for growth) */
+						amount = scalar * E_SP * spGRAZEinfo[prey][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat);
 
 
 						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, prey, 0, amount);
 
 					}
 					else if (FunctGroupArray[prey].groupType == LAB_DET){
-						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, LabDetIndex, 0, scalar * EDL_SP * spGRAZEinfo[prey][kij][habitat]);
+						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, LabDetIndex, 0, scalar * EDL_SP * spGRAZEinfo[prey][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat));
 					}else if(FunctGroupArray[prey].groupType == REF_DET){
-						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, RefDetIndex, 0, scalar * EDR_SP * spGRAZEinfo[prey][kij][habitat]);
+						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, RefDetIndex, 0, scalar * EDR_SP * spGRAZEinfo[prey][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat));
 					}
 				}
 			}
@@ -1191,13 +1192,8 @@ void Vertebrates_Transfer_To_Pred(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo,
 						habitat = h;
 					}
 
-					/* if this prey is epibenthic scale to get units in m^2 not m^3*/
-					if (FunctGroupArray[prey].habitatType == EPIFAUNA){
-						Gain_Element_Predation(bm, boxLayerInfo, WC, guild, cohort, prey, 0, densityScalar* E_Plant * spGRAZEinfo[prey][kij][habitat] / smLayerThick);
-
-					}else{
-						Gain_Element_Predation(bm, boxLayerInfo, WC, guild, cohort, prey, 0, densityScalar * E_Plant * spGRAZEinfo[prey][kij][habitat]);
-					}
+					/* Convert from the units of the habitat eaten from to the predator's units (as done for growth) */
+					Gain_Element_Predation(bm, boxLayerInfo, WC, guild, cohort, prey, 0, densityScalar * E_Plant * spGRAZEinfo[prey][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat));
 				}
 			}
 		}
@@ -1214,18 +1210,15 @@ void Vertebrates_Transfer_To_Pred(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo,
 					if (FunctGroupArray[prey].groupType != LAB_DET && FunctGroupArray[prey].groupType != REF_DET && FunctGroupArray[prey].groupType
 							!= CARRION) {
 
-						if(FunctGroupArray[prey].habitatType == EPIFAUNA){
-							amount = densityScalar* E_SP * GRAZEinfo[prey][kij][habitat]/smLayerThick;
-						}else{
-							amount = densityScalar* E_SP * GRAZEinfo[prey][kij][habitat];
-						}
+						/* Convert from the units of the habitat eaten from to the predator's units (as done for growth) */
+						amount = densityScalar * E_SP * GRAZEinfo[prey][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat);
 
 						Gain_Element_Predation(bm, boxLayerInfo, WC, guild, cohort, prey, 0, amount);
 					} else if (FunctGroupArray[prey].groupType == LAB_DET) {
-						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, LabDetIndex, 0, densityScalar * E3_sp * spGRAZEinfo[prey][kij][habitat]);
+						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, LabDetIndex, 0, densityScalar * E3_sp * spGRAZEinfo[prey][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat));
 
 					} else if(FunctGroupArray[prey].groupType == REF_DET) {
-						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, RefDetIndex, 0, densityScalar * E4_sp * spGRAZEinfo[prey][kij][habitat]);
+						Gain_Element_Predation(bm, boxLayerInfo, (HABITAT_TYPES)habitat, guild, cohort, RefDetIndex, 0, densityScalar * E4_sp * spGRAZEinfo[prey][kij][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat));
 
 					}
 				}
@@ -1286,7 +1279,6 @@ void Gain_Fish_Element(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TY
  *  Immobilisation only occurs in the sediments.
  *
  */
-
 
 void p_adsorption_setup(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, HABITAT_TYPES habitatType) {
     double *tracerArray = getTracerArray(boxLayerInfo, habitatType);

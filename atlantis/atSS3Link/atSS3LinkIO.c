@@ -31,6 +31,24 @@ static void WriteSSDat(MSEBoxModel *bm, FILE *fid, int sp, int maxyr);
  *
  *
  */
+/**
+ * Nov 2026: open an SS3 output file from the run folder (folderName/fileName). Falls back to the
+ * bare file name for callers that have already changed into the run folder (e.g. legacy WriteSSFiles).
+ */
+static FILE *Open_SS3_Output_File(char *folderName, char *fileName) {
+	char fullName[STRLEN * 2];
+	FILE *fid = NULL;
+
+	if ((folderName != NULL) && (strlen(folderName) > 0)) {
+		snprintf(fullName, sizeof(fullName), "%s/%s", folderName, fileName);
+		fid = fopen(fullName, "r");
+	}
+	if (fid == NULL)
+		fid = fopen(fileName, "r");
+
+	return fid;
+}
+
 double Read_SS3_Report_File(MSEBoxModel *bm, int species, int year, char *folderName) {
 
 	char outputFileName[] = "Report.sso";
@@ -58,11 +76,13 @@ double Read_SS3_Report_File(MSEBoxModel *bm, int species, int year, char *folder
 	_getcwd(buf, (int)STRLEN);
 	printf("getcwd = %s\n", buf);
 
-    if ((fid = fopen(outputFileName, "r")) == NULL) {
-		fprintf(bm->logFile,"Read_SS3_Report_File: Can't open %s\n", outputFileName);
+    if ((fid = Open_SS3_Output_File(folderName, outputFileName)) == NULL) {
+		fprintf(bm->logFile,"Read_SS3_Report_File: Can't open %s/%s\n", folderName, outputFileName);
         fprintf(bm->logFile, "yr: %d WARNING - Read_SS3_Report_File - SS3 failed to generate a Report.sso output file for %s\n", year, FunctGroupArray[species].groupCode);
         printf("yr: %d WARNING - Read_SS3_Report_File - SS3 failed to generate a Report.sso output file for %s\n", year, FunctGroupArray[species].groupCode);
         bm->RBCestimation.RBCspeciesParam[species][AssessFail_id] = 1;
+        free1d(values);
+        return 0.0;   // Nov 2026: previously carried on and read from a NULL file pointer
     }
 
 	/* Need to read in the RBC and total catch*/
@@ -140,6 +160,54 @@ double Read_SS3_Report_File(MSEBoxModel *bm, int species, int year, char *folder
                 bm->RBCestimation.RBCspeciesArray[species].RBC_by_year[year] = RBC;
                 bm->RBCestimation.RBCspeciesParam[species][RBCest_id] = RBC;
 			}
+
+			/* Nov 2026 (review item 27): if using Ratpack style RBC averaging also read the RBCs for the
+			   following forecast years (one row per year, same columns as the first row). Reading stops at
+			   the first row that does not start with a number. */
+			bm->RBCestimation.RBCspeciesArray[species].RBC_proj[0] = RBC;
+			bm->RBCestimation.RBCspeciesArray[species].nRBC_proj = 1;
+			if (((int)(bm->RBCestimation.RBCspeciesParam[species][UseRBCAveraging_id]) == ratpack_RBC_avg) && (bm->RBCestimation.nRBCaverage > 1)) {
+				int nproj = 1;
+				int nproj_max = bm->RBCestimation.nRBCaverage;
+				double RBCrow;
+				char *endp;
+
+				if (nproj_max > MAX_RBC_PROJ)
+					nproj_max = MAX_RBC_PROJ;
+
+				while ((nproj < nproj_max) && (fgets(buf, buflen, fid) != NULL)) {
+					varStr = strtok(buf, seps);
+					if (varStr == NULL)
+						break;
+					strtod(varStr, &endp);
+					if (endp == varStr)
+						break;   // Not a forecast data row
+
+					// Skip to the fleet columns (as for the first row)
+					n = 0;
+					while (varStr != NULL) {
+						varStr = strtok(NULL, seps);
+						n++;
+						if (n >= startOfFleetData)
+							break;
+					}
+
+					// Sum the 'Retain_B' column over the fleets (as for the first row)
+					n = 0;
+					RBCrow = 0.0;
+					while (varStr != NULL) {
+						if (n == 2)
+							RBCrow += atof(varStr);
+						varStr = strtok(NULL, seps);
+						n++;
+						if (n >= 8)
+							n = 0;
+					}
+					bm->RBCestimation.RBCspeciesArray[species].RBC_proj[nproj] = RBCrow;
+					nproj++;
+				}
+				bm->RBCestimation.RBCspeciesArray[species].nRBC_proj = nproj;
+			}
         }
         
         // Check on fit
@@ -190,6 +258,7 @@ double Read_SS3_Report_File(MSEBoxModel *bm, int species, int year, char *folder
 	fprintf(bm->logFile,"Time: %e %s EstB0 = %e, RBC = %e\n", bm->dayt, FunctGroupArray[species].groupCode, bm->RBCestimation.RBCspeciesParam[species][EstB0_id], RBC);
 
     free1d(values);
+    fclose(fid);
     
 	return RBC;
 }
@@ -216,11 +285,12 @@ double Read_SS3_Report_File_EstBo_Only(MSEBoxModel *bm, int species, int year, c
     _getcwd(buf, (int)STRLEN);
     printf("getcwd = %s\n", buf);
 
-    if ((fid = fopen(outputFileName, "r")) == NULL) {
-        fprintf(bm->logFile,"Read_SS3_Report_File: Can't open %s\n", outputFileName);
+    if ((fid = Open_SS3_Output_File(folderName, outputFileName)) == NULL) {
+        fprintf(bm->logFile,"Read_SS3_Report_File: Can't open %s/%s\n", folderName, outputFileName);
         fprintf(bm->logFile, "yr: %d WARNING - Read_SS3_Report_File - SS3 failed to generate a Report.sso output file for %s\n", year, FunctGroupArray[species].groupCode);
         printf("yr: %d WARNING - Read_SS3_Report_File - SS3 failed to generate a Report.sso output file for %s\n", year, FunctGroupArray[species].groupCode);
         bm->RBCestimation.RBCspeciesParam[species][AssessFail_id] = 1;
+        return 0.0;   // Nov 2026: previously carried on and read from a NULL file pointer
     }
 
     /* Need to read in the RBC and total catch*/
@@ -289,6 +359,8 @@ double Read_SS3_Report_File_EstBo_Only(MSEBoxModel *bm, int species, int year, c
     printf("EstB0 = %e, RBC = %e\n", bm->RBCestimation.RBCspeciesParam[species][EstB0_id], RBC);
     printf("Read_SS3_Report_File\n");
 
+    fclose(fid);
+
     return RBC;
 }
 
@@ -312,8 +384,8 @@ double Read_SS3_Par_File(MSEBoxModel *bm, int sp, int year, char *folderName) {
 	_getcwd(buf, STRLEN);
 	printf("getcwd = %s\n", buf);
     
-    if ((fid = fopen(outputFileName, "r")) == NULL) {
-		fprintf(bm->logFile,"Read_SS3_Report_File: Can't open %s\n", outputFileName);
+    if ((fid = Open_SS3_Output_File(folderName, outputFileName)) == NULL) {
+		fprintf(bm->logFile,"Read_SS3_Par_File: Can't open %s/%s\n", folderName, outputFileName);
         ans = 1000.0;
         fprintf(bm->logFile, "yr: %d WARNING - Read_SS3_Par_File - SS3 failed to generate an ss3.par output file for %s\n", year, FunctGroupArray[sp].groupCode);
         printf("yr: %d WARNING - Read_SS3_Par_File - SS3 failed to generate an ss3.par output file for %s\n", year, FunctGroupArray[sp].groupCode);
@@ -339,6 +411,8 @@ double Read_SS3_Par_File(MSEBoxModel *bm, int sp, int year, char *folderName) {
 	}
     
 	printf("MaxConvergCrit = %e for %s\n", ans, FunctGroupArray[sp].groupCode);
+
+	fclose(fid);
     
 	//printf("Read_SS3_Par_File\n");
     

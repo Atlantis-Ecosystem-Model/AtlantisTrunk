@@ -209,8 +209,8 @@ void Schafer_Production_Assessment(MSEBoxModel *bm, int sp, int funkflag, int bo
 		}
 
 		/** Fit the model using Amoeba **/
-		/* Set up tolerances and gridding */
-		for (i = 0; i < Ndim; i++) {
+		/* Set up tolerances and gridding - Nov 2026: Ndim+1 vertices (was Ndim, so last parameter never perturbed) */
+		for (i = 0; i < Ndim + 1; i++) {
 			for (j = 0; j < Ndim; j++) {
 				P[i][j] = X[j];
 				if (i - 1 == j)
@@ -218,7 +218,7 @@ void Schafer_Production_Assessment(MSEBoxModel *bm, int sp, int funkflag, int bo
 			}
 		}
 
-		for (i = 0; i < Ndim; i++) {
+		for (i = 0; i < Ndim + 1; i++) {
 			for (j = 0; j < Ndim; j++) {
 				X[j] = P[i][j];
 			}
@@ -437,8 +437,8 @@ void VPA_Assessment(MSEBoxModel *bm, int sp, int funkflag, int bootstrap, double
 		}
 
 		/** Fit the model using Amoeba **/
-		/* Set up tolerances and gridding */
-		for (i = 0; i < Ndim; i++) {
+		/* Set up tolerances and gridding - Nov 2026: Ndim+1 vertices (was Ndim, so last parameter never perturbed) */
+		for (i = 0; i < Ndim + 1; i++) {
 			for (j = 0; j < Ndim; j++) {
 				P[i][j] = X[j];
 				if (i - 1 == j)
@@ -446,7 +446,7 @@ void VPA_Assessment(MSEBoxModel *bm, int sp, int funkflag, int bootstrap, double
 			}
 		}
 
-		for (i = 0; i < Ndim; i++) {
+		for (i = 0; i < Ndim + 1; i++) {
 			for (j = 0; j < Ndim; j++) {
 				X[j] = P[i][j];
 			}

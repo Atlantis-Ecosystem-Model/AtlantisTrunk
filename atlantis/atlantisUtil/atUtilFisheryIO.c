@@ -112,12 +112,14 @@ int Util_Read_Fisheries_XML(MSEBoxModel *bm, char *fileName, FILE *llogfp) {
 			fisheryNode = fisheryList->nodesetval->nodeTab[fisheryIndex];
 
 			Util_XML_Get_Value_String(fileName, ATLANTIS_ATTRIBUTE, TRUE, fisheryNode, "Code", FisheryArray[fisheryIndex].fisheryCode);
-			if (verbose > 0)
+            
+            if (verbose > 0)
 				printf("Reading in definition of %s\n",  FisheryArray[fisheryIndex].fisheryCode);
-			Util_XML_Get_Value_Integer(fileName, ATLANTIS_ATTRIBUTE, 0, TRUE, fisheryNode, integer_check, "Index", &FisheryArray[fisheryIndex].index);
+
+            Util_XML_Get_Value_Integer(fileName, ATLANTIS_ATTRIBUTE, 0, TRUE, fisheryNode, integer_check, "Index", &FisheryArray[fisheryIndex].index);
 			Util_XML_Get_Value_String(fileName, ATLANTIS_ATTRIBUTE, TRUE, fisheryNode, "Name", FisheryArray[fisheryIndex].name);
 			Util_XML_Get_Value_Integer(fileName, ATLANTIS_ATTRIBUTE, 0, TRUE, fisheryNode, integer_check, "IsRec", &FisheryArray[fisheryIndex].isRec);
-			Util_XML_Get_Value_Integer(fileName, ATLANTIS_ATTRIBUTE, 0, TRUE, fisheryNode, integer_check, "NumSubFleets", &bm->FISHERYprms[fisheryIndex][nsubfleets_id]);
+			Util_XML_Get_Value_Double(fileName, ATLANTIS_ATTRIBUTE, 0, TRUE, fisheryNode, integer_check, "NumSubFleets", &bm->FISHERYprms[fisheryIndex][nsubfleets_id]);
 
 			if( bm->FISHERYprms[fisheryIndex][nsubfleets_id] > bm->K_max_num_subfleet)
 				bm->K_max_num_subfleet = (int)bm->FISHERYprms[fisheryIndex][nsubfleets_id];
@@ -126,7 +128,7 @@ int Util_Read_Fisheries_XML(MSEBoxModel *bm, char *fileName, FILE *llogfp) {
 	}else{
 		quit("ERROR: Error in the fishery XML input file %s\n", fileName);
 	}
-
+    
 	xmlFreeDoc(inputDoc);
 	/* Shutdown libxml */
 	xmlCleanupParser();

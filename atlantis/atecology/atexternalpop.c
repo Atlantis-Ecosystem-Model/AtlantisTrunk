@@ -78,11 +78,11 @@ void External_Box_Ecology(MSEBoxModel *bm, int b, double dt, FILE *llogfp) {
                                     /* Only do if there are actually numbers in this box */
                                     if(nums > bm->min_dens){
                             
-                                        /**/
+                                        /**
                                         if(bm->debug == debug_external){
                                             fprintf(bm->logFile, "Group %s-%d in migration array (mid: %d) extern pop with nums = %e", FunctGroupArray[species].groupCode, cohort, mid, nums);
                                         }
-                                        /**/
+                                        **/
                             
                                         //		Growth calculation
                                         //      ------------------

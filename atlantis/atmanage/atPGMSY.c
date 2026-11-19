@@ -334,7 +334,7 @@ void RunPGMSYProjection(MSEBoxModel *bm, int species, int this_year, double **Fm
                 }
             }
         }
-        // Do recruitment
+        // Do recruitment and check against Bo
         ASSESS_PROJECTION[species].SSB[iYr] = SSB;
         recruitNum = BHalpha_sp * SSB / (BHbeta_sp + SSB);
         ASSESS_PROJECTION[species].DEN[0][iYr] = recruitNum;
@@ -674,7 +674,8 @@ void Do_Atlantis_PGMSY(MSEBoxModel *bm, int this_year) {
             for (nf = 0; nf < bm->K_num_fisheries; nf++) {
                 TAC += bm->RBCestimation.RBCspeciesArray[sp].RBCupdated[nf][this_year];
             }
-            bm->RBCestimation.RBCspeciesArray[sp].RBC_by_year[this_year] = TAC;
+            bm->RBCestimation.RBCspeciesArray[sp].RBC_by_year[this_year] = TAC;   // PGMSY updated RBC is also the TAC
+            bm->RBCestimation.RBCspeciesArray[sp].TAC_by_year[this_year] = TAC;
 
             for (nf = 0; nf < bm->K_num_fisheries; nf++) {
                 if (!bm->FISHERYprms[nf][flagrecfish_id] && bm->inQuota[nf][sp]) {

@@ -53,6 +53,12 @@
 		},
 		{
 			"path": "atlantis/sjwlib"
+		},
+		{
+			"path": "../../runs/run_area/SEAP_runs/SEAP_wind/SEAP_Wind_Runs"
+		},
+		{
+			"path": "../../Git/PuntRatpackR"
 		}
 	]
 }

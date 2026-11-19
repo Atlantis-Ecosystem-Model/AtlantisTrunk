@@ -227,6 +227,7 @@ void writeMetierFile(MSEBoxModel *bm, int year, FILE *fid) {
 
 void Read_PGMSY_output(MSEBoxModel *bm, int year, FILE *llogfp) {
     double TheRBC, AveRBC, StateRBC, StateCatchOrig;
+    int startyr, nyr;
     char const *outname = "MULTRBC.RBC";
     FILE *fp;
     char buffer[STRLEN];
@@ -310,13 +311,22 @@ void Read_PGMSY_output(MSEBoxModel *bm, int year, FILE *llogfp) {
     
     /* Handle the RBC */
     for (sp = 0; sp < bm->K_num_tot_sp; sp++) {
-        if ((FunctGroupArray[sp].isAssessed == TRUE) && (bm->RBCestimation.RBCspeciesParam[sp][UseRBCAveraging_id])){
+        // Nov 2026 (review item 27): moving average only for UseRBCAveraging 1 (Ratpack style option 2 is not set up for PGMSY yet)
+        if ((FunctGroupArray[sp].isAssessed == TRUE) && ((int)(bm->RBCestimation.RBCspeciesParam[sp][UseRBCAveraging_id]) == moving_RBC_avg)){
             // Calculate the average RBC
+            /* Nov 2026: average the most recent nRBCaverage RBCs ending with this year, as in Averaged_RBC
+               (previously summed nRBCaverage-1 values starting at mgt_rbcYear and divided by nRBCaverage) */
             AveRBC = 0;
-            for (int yr = bm->RBCestimation.RBCspeciesArray[sp].mgt_rbcYear; yr < bm->RBCestimation.RBCspeciesArray[sp].mgt_rbcYear + bm->RBCestimation.nRBCaverage - 1; yr++) {
+            startyr = year - bm->RBCestimation.nRBCaverage + 1;
+            if (startyr < 0)
+                startyr = 0;
+            nyr = 0;
+            for (int yr = startyr; yr < year + 1; yr++) {
                 AveRBC += bm->RBCestimation.RBCspeciesArray[sp].RBC_by_year[yr];
+                nyr++;
             }
-            AveRBC /= ((float)(bm->RBCestimation.nRBCaverage));
+            if (nyr > 0)
+                AveRBC /= (double)nyr;
 
             // Replace the RBCs
             bm->RBCestimation.RBCspeciesArray[sp].RBC_by_year[year] = AveRBC;

@@ -121,7 +121,8 @@ SpeciesParamStruct speciesParamStructArray[tot_prms] =
 		{ "FLAG_LOG_MULT", log_mult_id, "_log_mult$", no_checking, 1.0, SP_AGE_STRUCTURED },
         { "FLAG_NORM_SIGMA", norm_sigma_id, "_norm_sigma$", no_checking, 1.0, SP_AGE_STRUCTURED },
         { "FLAG_STOCASTIC_REC", flag_recruit_stochastic_id, "_flag_recruit_stochastic$", binary_check, 1.0, SP_AGE_STRUCTURED },
-        
+        { "FLAG_INIT_REC", flag_flatinitrecruit_id, "_flag_flatinitrecruit$", binary_check, 1.0, SP_AGE_STRUCTURED },
+
         { "FLAG_PROD_ALPHA", prod_alpha_id, "^prod_alpha_", no_checking, 1.0, SP_AGE_STRUCTURED },
         { "FLAG_DDEPEND_BETA1", den_depend_beta1_id, "^den_depend_beta1_", no_checking, 1.0, SP_AGE_STRUCTURED },
         { "FLAG_DDEPEND_BETA2", den_depend_beta2_id, "^den_depend_beta2_", no_checking, 1.0, SP_AGE_STRUCTURED },
@@ -176,6 +177,9 @@ SpeciesParamStruct speciesParamStructArray[tot_prms] =
 		{ "FLAG_CATCHEATE", catcheater_id, "_catcheater$", integer_check, 1.0, SP_VERTS },
 		{ "FLAG_ACTIVE", flagactive_id, "day$", integer_check, 1.0, SP_PREDATOR },
 		{ "FLAG_VLA_T15", vla_T15_id, "vla_[A-Z]{2,3}_T15$", no_checking, 1.0, SP_VERTS },
+        
+        { "FLAG_FLAGSAT", flag_satiation_id, "^flagsatiation_([A-Z]{2,3})$", binary_check, 1.0, SP_PREDATOR },
+        
 		{ "FLAG_KL", KL_id, "^KL_([A-Z]{2,3})$", no_checking, 1.0, SP_PREDATOR },
 		{ "FLAG_KU", KU_id, "^KU_([A-Z]{2,3})$", no_checking, 1.0, SP_PREDATOR },
 		{ "FLAG_KUP", KUP_id, "^KUP_([A-Z]{2,3})$", no_checking, 1.0, SP_PREDATOR },
@@ -213,6 +217,8 @@ SpeciesParamStruct speciesParamStructArray[tot_prms] =
         { "FLAG_SNCOST", SNcost_id, "^SNcost_", no_checking, 1.0, SP_VERTS },
         { "FLAG_RNCOST", RNcost_id, "^RNcost_", no_checking, 1.0, SP_VERTS },
         { "FLAG_RSSTARVE", RSstarve_id, "^RSstarve_", no_checking, 1.0, SP_VERTS },
+        { "FLAG_SHRINKSSTARVE", shrinkStarve_id, "^shrinkStarve_", integer_check, 1.0, SP_VERTS },
+        { "FLAG_SHRINKPROP", shrinkProp_id, "^shrinkProp_", no_checking, 1.0, SP_VERTS },
         
 		/* Assimilation_Efficiency Diet parameters */
 		{ "FLAG_E", E1_id, "^E_([A-Z]{2,3})$", no_checking, 1.0, SP_PREDATOR },
@@ -275,10 +281,14 @@ SpeciesParamStruct speciesParamStructArray[tot_prms] =
 		{ "FLAG_KNEPI_SG", KNepi_id, "^KN_epi_", no_checking, 1.0, SP_SG },
 		{ "FLAG_BETAD", Beta_D_id, "^Beta_D_", no_checking, 1.0, SP_PP },
 		{ "FLAG_PBMAX", PBmax_D_id, "^PBmax_D_", no_checking, 1.0, SP_PP },
+        { "FLAG_LIGHTA", light_a_id, "^light_a_", no_checking, 1.0, SP_PP },
 
-		{ "FLAG_KsubEPI_SG", KsubEpi_id, "^KsubEpi_", no_checking, 1.0, SP_SG },
+        { "FLAG_KsubEPI_SG", KsubEpi_id, "^KsubEpi_", no_checking, 1.0, SP_SG },
 		{ "FLAG_Ktrans_SG", Ktrans_id, "^Ktrans_", no_checking, 1.0, SP_SG },
-
+        
+        { "FLAG_HAB_MUM", HAB_mum_scalar_id, "^HAB_mum_scalar_", no_checking, 1.0, SP_KN },
+        { "FLAG_HAB_MORT", HAB_mort_scalar_id, "^HAB_mort_scalar_", no_checking, 1.0, SP_KN },
+        
 		/* primary producer phosphorus values */
 		{ "FLAG_P_UPTAKE", P_max_uptake_id, "^P_uptake_.*", no_checking, 1.0, SP_PP },	//max phosphorus uptake rate per day
 		{ "FLAG_P_SCALE_UPTAKE", P_uptake_scale_id, "^P_scale_uptake_.*", no_checking, 1.0, SP_PP },	//affinity coefficient for phosphorus uptake mechanism
@@ -574,7 +584,7 @@ SpeciesParamStruct RBCSpeciesParamStructArray[num_rbc_species_params_id] =
 		{ "FLAG_MAXCHANGE", MaxChange_id, "^MaxChange_", no_checking, 1, SP_IMPACTED },
 
     // tier 6
-		{ "FLAG_TRIGRESP", TriggerResponseScen_id, "TriggerResponseScen_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_TRIGRESP", TriggerResponseScen_id, "^TriggerResponseScen_", integer_check, 1, SP_IMPACTED },
         
 	/** Other paremeters  */
 		{ "FLAG_MG_OFFSET", MG_offset_id, "^MG_offset_", integer_check, 1, SP_IMPACTED },
@@ -586,52 +596,95 @@ SpeciesParamStruct RBCSpeciesParamStructArray[num_rbc_species_params_id] =
 		{ "FLAG_BALLPARKF", BallParkF_id, "^BallParkF_", no_checking, 1, SP_FISHED },
 		{ "FLAG_BALLPARKYR", BallParkYr_id, "^BallParkYr_", no_checking, 1, SP_FISHED },
 		{ "FLAG_NUMCHANGELAM", NumChangeLambda_id, "^NumChangeLambda_", integer_check, 1, SP_FISHED },
-		{ "FLAG_NUMCHANGELAM", num_enviro_obs_id, "^num_enviro_obs_", integer_check, 1, SP_FISHED },
-		{ "FLAG_NUMCHANGELAM", num_growth_morphs_id, "^num_growth_morphs_", integer_check, 1, SP_FISHED },
+		{ "FLAG_NUMENVOBS", num_enviro_obs_id, "^num_enviro_obs_", integer_check, 1, SP_FISHED },
+		{ "FLAG_NUMGMORPH", num_growth_morphs_id, "^num_growth_morphs_", integer_check, 1, SP_FISHED },
         
 	// size parameters
-		{ "FLAG_NSEXSAMP", Nsex_samp_id, "Nsex_samp_", integer_check, 1, SP_IMPACTED },
-		{ "FLAG_MAXAGE", MaxAge_id, "MaxAge_", integer_check, 1, SP_IMPACTED },
-		{ "FLAG_NYFUT", Nyfuture_id, "Nyfuture_", integer_check, 1, SP_IMPACTED },
-        { "FLAG_NF", NumFisheries_id, "NumFisheries_", integer_check, 1, SP_IMPACTED },
-		{ "FLAG_NLEN", Nlen_id, "Nlen_", integer_check, 1, SP_IMPACTED },
-		{ "FLAG_LBIN", Lbin_id, "Lbin_", integer_check, 1, SP_IMPACTED },
-        { "FLAG_THRESHMAT", thresh_mat_id, "thresh_mat_", no_checking, 1, SP_IMPACTED },
-        { "FLAG_SEXRATIO", femsexratio_id, "femsexratio_", no_checking, 1, SP_IMPACTED },
+		{ "FLAG_NSEXSAMP", Nsex_samp_id, "^Nsex_samp_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_MAXAGE", MaxAge_id, "^MaxAge_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_NYFUT", Nyfuture_id, "^Nyfuture_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_NF", NumFisheries_id, "^NumFisheries_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_NLEN", Nlen_id, "^Nlen_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_LBIN", Lbin_id, "^Lbin_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_THRESHMAT", thresh_mat_id, "^thresh_mat_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_SEXRATIO", femsexratio_id, "^femsexratio_", no_checking, 1, SP_IMPACTED },
         
 	// SS3 Biological parameters
-		{ "FLAG_LADIRECT", flagLAdirect_id, "flagLAdirect_", integer_check, 1, SP_IMPACTED },
-		{ "FLAG_SLADIRECT", flagSLAdirect_id, "flagSLAdirect_", integer_check, 1, SP_IMPACTED },
-		{ "FLAG_WADIRECT", flagWAdirect_id, "flagWAdirect_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_LADIRECT", flagLAdirect_id, "^flagLAdirect_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_SLADIRECT", flagSLAdirect_id, "^flagSLAdirect_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_WADIRECT", flagWAdirect_id, "^flagWAdirect_", integer_check, 1, SP_IMPACTED },
 
 	// recruitment parameters
-		{ "FLAG_SIGMAR1", SigmaR1_id, "SigmaR1_", no_checking, 1, SP_IMPACTED },
-		{ "FLAG_SIGMAR2", SigmaR2_id, "SigmaR2_", no_checking, 1, SP_IMPACTED },
-		{ "FLAG_SIGMARFUT", SigmaR_future_id, "SigmaR_future_", no_checking, 1, SP_IMPACTED },
-		{ "FLAG_PSIGMAR1", PSigmaR1_id, "PSigmaR1_", no_checking, 1, SP_IMPACTED },
-		{ "FLAG_REGIMEYR", Regime_year_id, "Regime_year_", integer_check, 1, SP_IMPACTED },
-		{ "FLAG_RECDEVMINYR", RecDevMinYr_id, "RecDevMinYr_", integer_check, 1, SP_IMPACTED },
-		{ "FLAG_RECDEVMAXYR", RecDevMaxYr_id, "RecDevMaxYr_", integer_check, 1, SP_IMPACTED },
-		{ "FLAG_RECDEV", RecDevFlag_id, "RecDevFlag_", integer_check, 1, SP_IMPACTED },
-		{ "FLAG_AUTOCORRECDEV", AutoCorRecDev_id, "AutoCorRecDev_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_SIGMAR1", SigmaR1_id, "^SigmaR1_", no_checking, 1, SP_IMPACTED },
+		{ "FLAG_SIGMAR2", SigmaR2_id, "^SigmaR2_", no_checking, 1, SP_IMPACTED },
+		{ "FLAG_SIGMARFUT", SigmaR_future_id, "^SigmaR_future_", no_checking, 1, SP_IMPACTED },
+		{ "FLAG_PSIGMAR1", PSigmaR1_id, "^PSigmaR1_", no_checking, 1, SP_IMPACTED },
+		{ "FLAG_REGIMEYR", Regime_year_id, "^Regime_year_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_RECDEVMINYR", RecDevMinYr_id, "^RecDevMinYr_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_RECDEVMAXYR", RecDevMaxYr_id, "^RecDevMaxYr_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_RECDEV", RecDevFlag_id, "^RecDevFlag_", integer_check, 1, SP_IMPACTED },
+		{ "FLAG_AUTOCORRECDEV", AutoCorRecDev_id, "^AutoCorRecDev_", integer_check, 1, SP_IMPACTED },
         
     // Ratpack parameters
-        { "FLAG_LFSSLIM", LFSSlim_id, "LFSSlim_", integer_check, 1, SP_IMPACTED },
-        { "FLAG_AFSSLIM", AFSSlim_id, "AFSSlim_", integer_check, 1, SP_IMPACTED },
-        { "FLAG_NSURVEY", NumSurvey_id, "NumSurvey_", integer_check, 1, SP_IMPACTED },
-        { "FLAG_REGIMEYR", Regime_year_assess_id, "Regime_year_assess_", integer_check, 1, SP_IMPACTED },
-        { "FLAG_NBLOCK", NblockPattern_id, "NblockPattern_", integer_check, 1, SP_IMPACTED },
-        { "FLAG_SRBLOCK", SRBlock_id, "SRBlock_", no_checking, 1, SP_IMPACTED },
-        { "FLAG_REDDEVMIN", assRecDevMinYear_id, "assRecDevMinYear_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_LFSSLIM", LFSSlim_id, "^LFSSlim_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_AFSSLIM", AFSSlim_id, "^AFSSlim_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_NSURVEY", NumSurvey_id, "^NumSurvey_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_REGIMEYRASS", Regime_year_assess_id, "^Regime_year_assess_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_NBLOCK", NblockPattern_id, "^NblockPattern_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_SRBLOCK", SRBlock_id, "^SRBlock_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_REDDEVMIN", assRecDevMinYear_id, "^assRecDevMinYear_", integer_check, 1, SP_IMPACTED },
         
-        { "FLAG_MSASSESS", MultispAssessType_id, "MultispAssessType_", integer_check, 1, SP_IMPACTED },
-        { "FLAG_INDIC_SP", mgt_indicator_id, "mgt_indicator_", integer_check, 1, SP_IMPACTED },
-        { "FLAG_INITMGMT_CAT", init_mgt_category_id, "init_mgt_category_", integer_check, 1, SP_IMPACTED },
-        { "FLAG_INITMGMT_SP", init_mgt_sp_id, "init_mgt_sp_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_MSASSESS", MultispAssessType_id, "^MultispAssessType_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_INDIC_SP", mgt_indicator_id, "^mgt_indicator_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_INITMGMT_CAT", init_mgt_category_id, "^init_mgt_category_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_INITMGMT_SP", init_mgt_sp_id, "^init_mgt_sp_", integer_check, 1, SP_IMPACTED },
         
     // PGMSY parameters
         { "FLAG_PGMSYALPHA", PGMSYBHalpha_id, "^PGMSYBHalpha_", no_checking, 1, SP_FISHED },
-        { "FLAG_PGMSYBETA", PGMSYBHbeta_id, "^PGMSYBHbeta_", no_checking, 1, SP_FISHED }
+        { "FLAG_PGMSYBETA", PGMSYBHbeta_id, "^PGMSYBHbeta_", no_checking, 1, SP_FISHED },
+
+    // Ratpack dynamic Tier 4 parameters
+        { "FLAG_DT4LOGRINIT", DT4_logr_init_id, "^DT4_logr_init_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_DT4KINITMULT", DT4_K_init_mult_id, "^DT4_K_init_mult_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_DT4ALPHA", DT4_alpha_id, "^DT4_alpha_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_DT4BETA", DT4_beta_id, "^DT4_beta_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_DT4TARGET", DT4_target_id, "^DT4_target_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_DT4MSYPRIORY1", DT4_MSYPriorY1_id, "^DT4_MSYPriorY1_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_DT4MSYPRIORY2", DT4_MSYPriorY2_id, "^DT4_MSYPriorY2_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_DT4MSYL", DT4_MSYL_id, "^DT4_MSYL_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_DT4MSYRY1", DT4_MSYRY1_id, "^DT4_MSYRY1_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_DT4MSYRY2", DT4_MSYRY2_id, "^DT4_MSYRY2_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_DT4ESTR", DT4_EstR_id, "^DT4_EstR_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_DT4ESTZ", DT4_EstZ_id, "^DT4_EstZ_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_DT4PROCERR", DT4_ProcessError_id, "^DT4_ProcessError_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_DT4CVMSYL", DT4_CVMSYL_id, "^DT4_CVMSYL_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_DT4PRIORMEANR", DT4_PriorMeanR_id, "^DT4_PriorMeanR_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_DT4PRIORSDR", DT4_PriorSDr_id, "^DT4_PriorSDr_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_DT4ABCOPT", DT4_ABCoption_id, "^DT4_ABCoption_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_DT4PGMSYLIM", DT4_PGMSYlimit_id, "^DT4_PGMSYlimit_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_DT4CPUEFLEET", DT4_CPUEfleet_id, "^DT4_CPUEfleet_", integer_check, 1, SP_IMPACTED },
+
+    // ACLIM harvest control rule parameters
+        { "FLAG_HCRTYPE", HCRtype_id, "^HCRtype_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_HCRALPHA", HCR_alpha_id, "^HCR_alpha_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_HCRGAMMA", HCR_gamma_id, "^HCR_gamma_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_HCRTHETA", HCR_theta_id, "^HCR_theta_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_HCROMEGA1", HCR_omega1_id, "^HCR_omega1_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_HCROMEGA2", HCR_omega2_id, "^HCR_omega2_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_HCROMEGA3", HCR_omega3_id, "^HCR_omega3_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_HCRCOV", HCR_cov_id, "^HCR_cov_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_HCRBLIM", HCR_Blim_id, "^HCR_Blim_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_HCRBTARGET", HCR_Btarget_id, "^HCR_Btarget_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_HCRFREF", HCR_Fref_id, "^HCR_Fref_", integer_check, 1, SP_IMPACTED },
+
+    // Ratpack options for existing tiers and meta-rules
+        { "FLAG_TIER1HCROPT", Tier1_HCRoption_id, "^Tier1_HCRoption_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_TIER4USEHCRTARG", Tier4_UseHCRtarget_id, "^Tier4_UseHCRtarget_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_TIER4USEMAXCATCH", Tier4_UseMaxCatch_id, "^Tier4_UseMaxCatch_", integer_check, 1, SP_IMPACTED },
+        { "FLAG_TIER4MAXCATCH", Tier4_MaxCatch_id, "^Tier4_MaxCatch_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_BUFFSTALERATE", Buffer_stale_rate_id, "^Buffer_stale_rate_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_BUFFMIN", Buffer_min_id, "^Buffer_min_", no_checking, 1, SP_IMPACTED },
+        { "FLAG_TIER3REPLICATEOLD", Tier3_replicate_old_id, "^Tier3_replicate_old_", integer_check, 1, SP_IMPACTED }
 	};
 
 

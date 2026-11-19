@@ -117,7 +117,7 @@ void Grow_Coral_Symbionts(MSEBoxModel *bm, BoxLayerValues *boxLayerInfo, FILE *l
 	*sphN = hN_sp;
 
 	prop_daylight = bm->boxes[bm->current_box].prop_light_time;
-	hI_sp = Light_Lim(bm, bm->flaglight, IRR, FunctGroupArray[guild].speciesParams[KI_id], FunctGroupArray[guild].SP_IRR, prop_daylight, 0.0);
+	hI_sp = Light_Lim(bm, bm->flaglight, IRR, FunctGroupArray[guild].speciesParams[KI_id], FunctGroupArray[guild].SP_IRR, prop_daylight, 0.0, 1.0);
 
 	/* TODO: Calculate pH limitation  - leave out for now as captured through changed growth rates
 	k_pH = FunctGroupArray[guild].speciesParams[KpH_id];
@@ -288,9 +288,10 @@ void Coral_Consumer_Activities(MSEBoxModel *bm, HABITAT_TYPES habitatType, FILE 
 	SPgrazeDR = 0.0;
 	SPgrazeDL = 0.0;
 
+	/* Detritus eaten is in the units of the habitat it was eaten from so convert to the predator's units */
 	for (habitat = WC; habitat <= EPIFAUNA; habitat++) {
-		SPgrazeDR += spGRAZEinfo[RefDetIndex][0][habitat];
-		SPgrazeDL += spGRAZEinfo[LabDetIndex][0][habitat];
+		SPgrazeDR += spGRAZEinfo[RefDetIndex][0][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat);
+		SPgrazeDL += spGRAZEinfo[LabDetIndex][0][habitat] * Get_Graze_To_Pred_Scalar(bm, guild, habitat);
 	}
 
 	/* Start with grazing on bacteria - in m-3 */
@@ -299,7 +300,7 @@ void Coral_Consumer_Activities(MSEBoxModel *bm, HABITAT_TYPES habitatType, FILE 
 	SPgrazeBB = (spGRAZEinfo[LabDetIndex][0][SED] * sedbact_DL / (DLsed + small_num) + spGRAZEinfo[RefDetIndex][0][SED] * sedbact_DR / (DRsed + small_num))
 			* BB_scale;
 
-	FunctGroupArray[guild].GrazeLive[cohort] += SPgrazePB + SPgrazeBB;
+	FunctGroupArray[guild].GrazeLive[cohort] += SPgrazePB * Get_Graze_To_Pred_Scalar(bm, guild, WC) + SPgrazeBB * Get_Graze_To_Pred_Scalar(bm, guild, SED);
 
 	/* Handle grazing of aquaculture feed - unlikely to be an aquaculture species, but just in case */
 	if(FunctGroupArray[guild].isCultured || FunctGroupArray[guild].isSupplemented)

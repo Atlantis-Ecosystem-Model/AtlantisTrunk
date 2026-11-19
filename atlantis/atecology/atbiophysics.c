@@ -233,7 +233,7 @@ void Box_Light_Process(MSEBoxModel *bm, Box *pBox, FILE *llogfp) {
 
 		if(bm->ice_on == TRUE){
 			if(pBox->ice.currentnz > 0){
-				lighttop = pBox->tot_ice_prop * pBox->ice.bottom_light + (1.0 - pBox->tot_ice_prop ) *lighttop;
+				lighttop = pBox->tot_ice_prop * pBox->ice.bottom_light + (1.0 - pBox->tot_ice_prop) * lighttop;
 			}
 		}
 	}else {
@@ -417,11 +417,9 @@ void Box_Light_Process(MSEBoxModel *bm, Box *pBox, FILE *llogfp) {
 	}
 
 	if (!(_finite(Y1[Light_i]))) {
-		fprintf(bm->logFile, "Box_Light_Process - box: %d. Invalid light value calculated for the sediment layer.\n",
-								pBox->n);
-				quit("Box_Light_Process - box: %d. Invalid light value calculated for the sediment layer.\n",
-						pBox->n);
-			}
+		fprintf(bm->logFile, "Box_Light_Process - box: %d. Invalid light value calculated for the sediment layer - flaglightopt: %d, lighttop: %e, lightbot: %e, Kd: %e, dz: %e\n", pBox->n, bm->flaglightopt, lighttop, lightbot, Kd, dz);
+        quit("Box_Light_Process - box: %d. Invalid light value calculated for the sediment layer.\n", pBox->n);
+    }
 
 	/* from the second sediment cell, LightIntensity is 0. */
 	for (ij = pBox->sm.topk + 1; ij < numsmlayer; ij++) {

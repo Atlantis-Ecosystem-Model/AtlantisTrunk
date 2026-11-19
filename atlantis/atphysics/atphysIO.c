@@ -395,12 +395,13 @@ void writeBMphysInfo(int fid, MSEBoxModel *bm, int dtype) {
 		ncattput(fid, i, "units", NC_CHAR, (int) strlen("1") + 1, "1");
 		ncattput(fid, i, "long_name", NC_CHAR, (int) strlen("Eddy strength") + 1, "Eddy strength");
 
-        /* Define the coastal strip variable */
-        i = ncvardef(fid, "coastal", dt, 2, dim);
-        ncattput(fid, i, "bmtype", NC_CHAR, (int) strlen("phys") + 1, "phys");
-        ncattput(fid, i, "units", NC_CHAR, (int) strlen("1") + 1, "1");
-        ncattput(fid, i, "long_name", NC_CHAR, (int) strlen("Percent coastal strip cover") + 1, "Percent coastal cover");
-
+        if(bm->flagIncludesCoastal > 0) {
+            /* Define the coastal strip variable */
+            i = ncvardef(fid, "coastal", dt, 2, dim);
+            ncattput(fid, i, "bmtype", NC_CHAR, (int) strlen("phys") + 1, "phys");
+            ncattput(fid, i, "units", NC_CHAR, (int) strlen("1") + 1, "1");
+            ncattput(fid, i, "long_name", NC_CHAR, (int) strlen("Percent coastal strip cover") + 1, "Percent coastal cover");
+        }
 	}
 }
 
@@ -637,15 +638,17 @@ void readBMphysData(int fid, int dump, MSEBoxModel *bm, FILE *llogfp) {
 	for (b = 0; b < bm->nbox; b++)
 		bm->boxes[b].eddy = fptmp[b];
     
-    printf("About to read coastal\n");
     
-    /* Percent coastal strip */
-    id = ncvarid(fid, "coastal");
-    if (id >= 0) {
-        ncvarread(fid, "coastal", sizeof(doubleINPUT), start, count, (void *) fptmp);
-        checkNetCDFData1D("readBMphysData", "coastal", fptmp,  bm->nbox);
-        for (b = 0; b < bm->nbox; b++) {
-            bm->boxes[b].coastal = fptmp[b];
+    if(bm->flagIncludesCoastal > 0) {
+        printf("About to read coastal\n");
+        /* Percent coastal strip */
+        id = ncvarid(fid, "coastal");
+        if (id >= 0) {
+            ncvarread(fid, "coastal", sizeof(doubleINPUT), start, count, (void *) fptmp);
+            checkNetCDFData1D("readBMphysData", "coastal", fptmp,  bm->nbox);
+            for (b = 0; b < bm->nbox; b++) {
+                bm->boxes[b].coastal = fptmp[b];
+            }
         }
     }
     
@@ -911,11 +914,12 @@ void writeBMphysData(int fid, int dump, MSEBoxModel *bm, int dtype) {
         }
 		ncvarput(fid, ncvarid(fid, "eddy"), start, count, fptmp);
 
-        for (b = 0; b < bm->nbox; b++){
-            fptmp[b] = bm->boxes[b].coastal;
+        if(bm->flagIncludesCoastal) {
+            for (b = 0; b < bm->nbox; b++){
+                fptmp[b] = bm->boxes[b].coastal;
+            }
+            ncvarput(fid, ncvarid(fid, "coastal"), start, count, fptmp);
         }
-        ncvarput(fid, ncvarid(fid, "coastal"), start, count, fptmp);
-
 	}
 
 	free1dInput((doubleINPUT *) fptmp);

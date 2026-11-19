@@ -638,13 +638,20 @@ int readModelAssessmentParameters(MSEBoxModel *bm, char *filename) {
     
     if (bm->useMultispAssess) {
         bm->RBCestimation.earliestYr = MAXINT;
+        
+        if(bm->RBCestimation.UseAtlantisPGMSY > 0) {
+            bm->PGMSY_on = TRUE;
+        }
+        
         for(sp=0; sp<bm->K_num_tot_sp; sp++){
-            if (speciesParamStructArray[sp].paramType == SP_IMPACTED) {
-                if ((FunctGroupArray[sp].speciesParams[MultispAssessType_id] > 0) && ((int)(FunctGroupArray[sp].speciesParams[MultispAssessType_id]) < (IndicatorSpPGMSY + 1))) {
+            // Nov 2026: was testing speciesParamStructArray[sp] (indexed by species not parameter) and reading
+            // MultispAssessType from the biological speciesParams array rather than RBCspeciesParam
+            if (FunctGroupArray[sp].isImpacted == TRUE) {
+                if ((bm->RBCestimation.RBCspeciesParam[sp][MultispAssessType_id] > 0) && ((int)(bm->RBCestimation.RBCspeciesParam[sp][MultispAssessType_id]) < (IndicatorSpPGMSY + 1))) {
                     bm->PGMSY_on = TRUE;
                     // Make sure the R file is in place
                 
-                    fprintf(bm->logFile,"Set PGMSY_on as %s has MultispAssessType %e vs threshold %d\n", FunctGroupArray[sp].groupCode,FunctGroupArray[sp].speciesParams[MultispAssessType_id], (IndicatorSpPGMSY + 1));
+                    fprintf(bm->logFile,"Set PGMSY_on as %s has MultispAssessType %e vs threshold %d\n", FunctGroupArray[sp].groupCode, bm->RBCestimation.RBCspeciesParam[sp][MultispAssessType_id], (IndicatorSpPGMSY + 1));
                 
                 }
             }
@@ -969,8 +976,10 @@ void readKeyTierParamXML(MSEBoxModel *bm, char *fileName, xmlNodePtr rootnode) {
 	bm->RBCestimation.UseSS = (int) (Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseSS"));
     bm->RBCestimation.AssessDelay = (int) (Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "AssessDelay"));
     bm->RBCestimation.UseTierBuffers = (int) (Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, binary_check, "UseTierBuffers"));
-    bm->RBCestimation.myTACbuffer = (int) (Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "myTACbuffer"));
+    bm->RBCestimation.myTACbuffer = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "myTACbuffer");   // Nov 2026: was cast to int so fractions became 0
     bm->RBCestimation.myTACperiod = (int) (Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "myTACperiod"));
+    bm->RBCestimation.myTACperiod_MCT = (int) (Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "myTACperiod_MCT"));
+    
     bm->RBCestimation.sexratio_cv = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "sexratio_cv");
     
     bm->RBCestimation.ReviewPeriod = (int) Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "ReviewPeriod");
@@ -1138,15 +1147,19 @@ void readTierAssessmentManagementXML(MSEBoxModel *bm, char *fileName, xmlNodePtr
 	bm->RBCestimation.Use_TAC_mult = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "Use_TAC_mult");
 	get_TAC_mult(bm,"TAC_mult", &bm->tsTACmult, bm->t_units, warn);
 
-	bm->RBCestimation.min_TACchange = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "RBC_TACchange_min");
+	bm->RBCestimation.min_TACchange = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "RBC_TACchange_min");   // Nov 2026: was cast to int so fractions became 0
 
     bm->RBCestimation.MULTISPestNspecies = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "MULTISPestNspecies");
     bm->RBCestimation.nRBCaverage = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, integer_check, "nRBCaverage");
     bm->RBCestimation.MaxCritConvergeValue = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "MaxCritConvergeValue");
     bm->RBCestimation.ConvergeThresh = Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE, bm->ecotest, 1, groupingNode, no_checking, "ConvergeThresh");
     
-    if (bm->useMultispAssess) {        
+    // Nov 2026: ss3Name now also read when using SS for Tier 1 (was only read for multispecies assessments)
+    if (bm->useMultispAssess || bm->RBCestimation.UseSS) {
         Util_XML_Get_Value_String(fileName, ATLANTIS_ATTRIBUTE, 1, groupingNode, "ss3Name", bm->ss3Name);
+    }
+
+    if (bm->useMultispAssess) {        
         
         bm->NumRAssessScriptNames = (int)Util_XML_Read_Value(fileName, ATLANTIS_ATTRIBUTE,  bm->ecotest, 1, groupingNode, integer_check, "NumRAssessScriptNames");
         bm->RAssessRscriptName = c_alloc2d(BMSLEN, bm->NumRAssessScriptNames);
@@ -1552,6 +1565,54 @@ void readTierAssessmentManagementXML(MSEBoxModel *bm, char *fileName, xmlNodePtr
     Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, isTriggerSpecies_id);
     Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, UseRBCAveraging_id);
     Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, trigger_threshold_id);
+
+    // Ratpack options
+    childGroupingNode = Util_XML_Get_Node(ATLANTIS_ATTRIBUTE_SUB_GROUP, groupingNode, "Ratpack");
+	if (childGroupingNode == NULL)
+		quit("readTierAssessmentManagementXML: Ratpack attribute group not found in input file %s.\n", fileName);
+
+    // Dynamic Tier 4
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_logr_init_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_K_init_mult_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_alpha_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_beta_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_target_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_MSYPriorY1_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_MSYPriorY2_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_MSYL_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_MSYRY1_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_MSYRY2_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_EstR_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_EstZ_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_ProcessError_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_CVMSYL_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_PriorMeanR_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_PriorSDr_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_ABCoption_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_PGMSYlimit_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, DT4_CPUEfleet_id);
+
+    // ACLIM harvest control rules
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, HCRtype_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, HCR_alpha_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, HCR_gamma_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, HCR_theta_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, HCR_omega1_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, HCR_omega2_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, HCR_omega3_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, HCR_cov_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, HCR_Blim_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, HCR_Btarget_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, HCR_Fref_id);
+
+    // Ratpack options for existing tiers and meta-rules
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, Tier1_HCRoption_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, Tier4_UseHCRtarget_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, Tier4_UseMaxCatch_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, Tier4_MaxCatch_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, Buffer_stale_rate_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, Buffer_min_id);
+    Util_XML_Read_Species_RBCParam(bm, fileName, childGroupingNode, Tier3_replicate_old_id);
 
 
 }
